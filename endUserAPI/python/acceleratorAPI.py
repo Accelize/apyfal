@@ -625,7 +625,7 @@ class AcceleratorClass(object):
         try :
             self.ping_server()
             data = self.accelerator_instance.stop_accelerator()
-            return data.__dict__
+            return data
         except Exception as e :
             #Return Issue
             logger.error(  str(e))
