@@ -17,7 +17,7 @@ import ConfigParser
 import os.path
 from urllib2 import urlopen, URLError, HTTPError
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 config = ConfigParser.ConfigParser(allow_no_value=True)
 #Should be present in the execution folder
 config.read("accelerator.conf" )
@@ -102,19 +102,20 @@ class GenericAcceleratorClass(object):
             parameters = {"env":envserver,"app":accelerator_parameters}
             logger.debug( "configuration_create:"+str(json.dumps(parameters))+" datafile: "+datafile)
             api_response = api_instance.configuration_create(parameters=json.dumps(parameters), datafile=datafile)
-            #logger.debug( "configuration_create api_response:"+str(api_response))
+            logger.debug( "configuration_create api_response:"+str(api_response))
             id = api_response.id
 
             self.accelerator_configuration_url = api_response.url
 
 
             dictparameters = eval(api_response.parametersresult)
+            dictparameters['url']= api_response.url
             logger.info( "=>status:"+str(dictparameters['app']['status']) )
             logger.info( "=>msg:\n"+dictparameters['app']['msg'] )
             api_response_read = api_instance.configuration_read(id)
             if api_response_read.inerror :
                 raise ValueError('Cannot start the confirguration '+str(api_response_read.url))
-            return api_response_read
+            return dictparameters
         except ApiException as e:
             logger.error(  "Exception when calling ConfigurationApi->configuration_create: %s\n" % e)
             return {'error':str(e)}
@@ -269,11 +270,8 @@ class AWSClass(CSPGenericClass):
     def configuration_csp(self,accelerator):
         #call webservice
         self.csp_parameter= self.get_accelize_configuration(accelerator)
-        self.template_instance = {'AGFI':self.csp_parameter["fpgaimage"]}
-        self.imageId = self.csp_parameter["image"]
-        self.agfi= self.csp_parameter["fpgaimage"] 
+        self.template_instance = self.get_csp_format(self.csp_parameter)
         self.accelerator = accelerator
-        self.instanceType = self.csp_parameter["instancetype"]
         self.credential_check_csp()
         self.ssh_key_csp()
         policy_arn = self.policy_csp('AccelizePolicy')
@@ -282,6 +280,13 @@ class AWSClass(CSPGenericClass):
         self.attach_role_policy_csp(policy_arn)
         self.security_group_csp()
         return self.start_instance_csp(),self.template_instance
+    def get_csp_format(self,csp_parameter):
+        self.template_instance = {'AGFI':csp_parameter["fpgaimage"]}
+        self.imageId = csp_parameter["image"]
+        self.agfi= csp_parameter["fpgaimage"] 
+        
+        self.instanceType = csp_parameter["instancetype"]
+        return self.template_instance
     def loadsession (self):
         try :
             import boto3
@@ -567,20 +572,24 @@ class AcceleratorClass(object):
         socket.setdefaulttimeout( 900 )  # timeout in seconds
 
 
-    def start_accelerator(self,startinstance=True, datafile="",template_instance="",ip_address="",accelerator_parameters="",accelerator="") :
+    def start_accelerator(self,start_instance=True, datafile="",template_instance="",ip_address=config.get("configuration", "ip_address"),accelerator_parameters="",accelerator="") :
         #try :
-
-            if startinstance and  accelerator<>"":
+            if start_instance and  accelerator<>"":
                 logger.debug("Starting an Instance")
                 instance, template_instance=self.csp_instance.configuration_csp(accelerator=accelerator)
                 instance_id = instance.id
                 ip_address = instance.public_ip_address
-            elif not startinstance:
-                if template_instance=="" or ip_address=="":
+                self.sign_handler.append_ip_address(ip_address,instance_id)
+            elif not start_instance:
+                if ip_address=="":
                     raise ValueError('You choose reuse an existing instance, please provide ip_address and template_instance value')
+                if template_instance=="" and  accelerator<>"":
+                    csp_parameter = self.csp_instance.get_accelize_configuration(accelerator=accelerator)
+                    template_instance = self.csp_instance.get_csp_format(csp_parameter)
+                    logger.debug(  "template_instance: "+str(template_instance))
             else :
                 ValueError('A parameter is missing, please check the documentation.')
-            self.sign_handler.append_ip_address(ip_address,instance_id)
+            
             self.url_instance ='http://'+str(ip_address)
             logger.info(  "=>Accelerator URL: "+self.url_instance)
             self.accelerator_instance = GenericAcceleratorClass(url=self.url_instance)
