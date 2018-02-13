@@ -59,7 +59,7 @@ class SignalHandlerAccelerator(object):
             logger.warn( "=>###########################################################")
 
         logger.info("=>Accelerator API Closed properly")
-        sys.exit(0)
+        os._exit(0)
         
 
 ################################# Rest API material [begin]########################################################
@@ -220,7 +220,7 @@ class CSPGenericClass(object):
                     
                     return configuration_accelerator[self.provider][accelerator][self.region]
                except Exception as e:
-                    raise Exception("Not able to find a configuration for provider:"+self.provider+" accelerator: "+accelerator+" region"+self.region+ " Error:"+str(e))
+                    raise Exception("Not able to find a configuration for provider:"+self.provider+" accelerator: "+accelerator+" region "+self.region+ " Error:"+str(e))
             
         except Exception as e:
             raise Exception("Cannot get Accelize accelerator configuration : "+str(e))
