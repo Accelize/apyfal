@@ -615,7 +615,7 @@ class AcceleratorClass(object):
                 self.accelerator_instance.accelerator_configuration_url = url_configuration
             self.ping_server()
             logger.debug("Using URL configuration:"+str(self.accelerator_instance.accelerator_configuration_url))
-            return self.accelerator_instance.process(file_in=file_in,file_out=file_out,accelerator_parameters=process_parameter).__dict__
+            return self.accelerator_instance.process(file_in=file_in,file_out=file_out,accelerator_parameters=process_parameter)
         except Exception as e :
             #Return Issue
             logger.error(  str(e))
@@ -625,7 +625,7 @@ class AcceleratorClass(object):
         try :
             self.ping_server()
             data = self.accelerator_instance.stop_accelerator()
-            return data.__dict__
+            return data
         except Exception as e :
             #Return Issue
             logger.error(  str(e))
