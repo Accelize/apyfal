@@ -110,6 +110,7 @@ class GenericAcceleratorClass(object):
 
             dictparameters = eval(api_response.parametersresult)
             dictparameters['url']= api_response.url
+            dictparameters['url_instance']= self.url_instance
             logger.info( "=>status:"+str(dictparameters['app']['status']) )
             logger.info( "=>msg:\n"+dictparameters['app']['msg'] )
             api_response_read = api_instance.configuration_read(id)
@@ -571,7 +572,6 @@ class AcceleratorClass(object):
             raise ValueError("Cannot reach url :"+str(self.url_instance)+ " error:"+str(e))
         socket.setdefaulttimeout( 900 )  # timeout in seconds
 
-
     def start_accelerator(self,start_instance=True, datafile="",template_instance="",ip_address=config.get("configuration", "ip_address"),accelerator_parameters="",accelerator="") :
         #try :
             if start_instance and  accelerator<>"":
@@ -621,8 +621,10 @@ class AcceleratorClass(object):
             logger.error(  str(e))
             return {'error':str(e)}
 
-    def stop_accelerator(self):
+    def stop_accelerator(self,url_instance=""):
         try :
+            if url_instance == "":
+                self.url_instance =url_instance
             self.ping_server()
             data = self.accelerator_instance.stop_accelerator()
             return data
