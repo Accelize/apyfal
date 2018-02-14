@@ -110,7 +110,7 @@ class GenericAcceleratorClass(object):
 
             dictparameters = eval(api_response.parametersresult)
             dictparameters['url']= api_response.url
-            dictparameters['url_instance']= self.url_instance
+            dictparameters['url_instance']= self.api_configuration.host
             logger.info( "=>status:"+str(dictparameters['app']['status']) )
             logger.info( "=>msg:\n"+dictparameters['app']['msg'] )
             api_response_read = api_instance.configuration_read(id)
