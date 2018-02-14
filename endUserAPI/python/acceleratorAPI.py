@@ -625,7 +625,7 @@ class AcceleratorClass(object):
         try :
             if url_instance == "":
                 self.accelerator_instance.api_configuration.host = url_instance
-                self.accelerator_instance.url_instance= url_instance
+                self.url_instance= url_instance
             self.ping_server()
             data = self.accelerator_instance.stop_accelerator()
             return data
