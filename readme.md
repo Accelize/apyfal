@@ -56,7 +56,7 @@ Check the accelerator metering information on your [AccelStore account](https://
 + Simplified API
 
 ## Limitations
-+ Max data file is limited to 45 G ( in case of usage of pycurl) or 2G using urllib 
++ Max data file is limited to 30 G ( in case of usage of pycurl) or 2G using urllib 
 + Timeout will appear if request take more than 900s
 
 
