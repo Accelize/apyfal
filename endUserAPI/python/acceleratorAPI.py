@@ -115,7 +115,7 @@ class GenericAcceleratorClass(object):
             logger.info( "=>msg:\n"+dictparameters['app']['msg'] )
             api_response_read = api_instance.configuration_read(id)
             if api_response_read.inerror :
-                raise ValueError('Cannot start the confirguration '+str(api_response_read.url))
+                raise ValueError('Cannot start the configuration '+str(api_response_read.url))
             return dictparameters
         except ApiException as e:
             logger.error(  "Exception when calling ConfigurationApi->configuration_create: %s\n" % e)
@@ -566,6 +566,7 @@ class AcceleratorClass(object):
         '''
         socket.setdefaulttimeout( 10 )  # timeout in seconds
         try :
+            logger.debug("Server to ping :"+str(self.url_instance))
             response = urlopen( self.url_instance )
         except Exception as e:
             logger.error("Cannot reach url :"+str(self.url_instance)+ " error:"+str(e))
@@ -623,9 +624,9 @@ class AcceleratorClass(object):
 
     def stop_accelerator(self,url_instance=""):
         try :
-            if url_instance == "":
+            if url_instance <> "":
                 self.accelerator_instance.api_configuration.host = url_instance
-                self.url_instance= url_instance
+                self.url_instance = url_instance
             self.ping_server()
             data = self.accelerator_instance.stop_accelerator()
             return data
