@@ -111,8 +111,8 @@ class GenericAcceleratorClass(object):
             dictparameters = eval(api_response.parametersresult)
             dictparameters['url']= api_response.url
             dictparameters['url_instance']= self.api_configuration.host
-            logger.info( "=>status:"+str(dictparameters['app']['status']) )
-            logger.info( "=>msg:\n"+dictparameters['app']['msg'] )
+            logger.debug( "=>status:"+str(dictparameters['app']['status']) )
+            logger.debug( "=>msg:\n"+dictparameters['app']['msg'] )
             api_response_read = api_instance.configuration_read(id)
             if api_response_read.inerror :
                 raise ValueError('Cannot start the configuration '+str(api_response_read.url))
@@ -156,7 +156,6 @@ class GenericAcceleratorClass(object):
                 api_response = api_instance.process_create(configuration, parameters=json.dumps(accelerator_parameters), datafile=datafile)
                 id = api_response.id
                 processed = api_response.processed
-
             while processed <> True :
                 api_response = api_instance.process_read(id)
                 processed = api_response.processed
@@ -168,8 +167,8 @@ class GenericAcceleratorClass(object):
             logger.debug( "process_delete api_response: "+str(id) )
             api_response_delete = api_instance.process_delete(id)
             dictparameters = eval(api_response.parametersresult)
-            logger.info(  "=>status:"+str(dictparameters['app']['status']))
-            logger.info(  "=>msg:\n"+dictparameters['app']['msg'])
+            logger.debug(  "=>status:"+str(dictparameters['app']['status']))
+            logger.debug(  "=>msg:\n"+dictparameters['app']['msg'])
             return dictparameters
         except ApiException as e:
             logger.error(  "Exception when calling ProcessApi->process_create: %s\n" % e)
@@ -416,6 +415,7 @@ class AWSClass(CSPGenericClass):
                 instance_profile.add_role(
                                     RoleName=self.role
                                 )
+                time.sleep(5)
                 logger.debug( "Instance profile : "+str(instance_profile))
             except Exception as e:
                 logger.debug(str(e))
