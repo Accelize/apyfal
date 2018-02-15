@@ -47,18 +47,18 @@ class SignalHandlerAccelerator(object):
         logger.debug( "signal_handler_accelerator")
         if self.stop_instances:
             for instance in self.instances:
-               logger.info("=>Stopping instance with Public IP address: " +instance["ip"]+ " instance_id:"+instance["instance_id"])
+               logger.info("Stopping instance with Public IP address: " +instance["ip"]+ " instance_id:"+instance["instance_id"])
                self.csp_instance.stop_instance_csp(instance["instance_id"],self.terminate)
         elif self.instances:
             iplist =""
             for instance in self.instances:
                iplist+=instance["ip"]+ " instance_id:"+instance["instance_id"]+" "
-            logger.warn( "=>###########################################################")
-            logger.warn( "=>##Warning : instances are still running with public IPs :"+ str(iplist))
-            logger.warn( "=>######Make sure you will stop them manually later.########")
-            logger.warn( "=>###########################################################")
+            logger.warn( "###########################################################")
+            logger.warn( "##Warning : instances are still running with public IPs :"+ str(iplist))
+            logger.warn( "######Make sure you will stop them manually later.########")
+            logger.warn( "###########################################################")
 
-        logger.info("=>Accelerator API Closed properly")
+        logger.info("Accelerator API Closed properly")
         os._exit(0)
         
 
@@ -96,7 +96,7 @@ class GenericAcceleratorClass(object):
             api_instance = swagger_client.ConfigurationApi(api_client=self.api_configuration.api_client)
 
             if accelerator_parameters == "":
-                logger.debug( "=>Using default configuration")
+                logger.debug( "Using default configuration")
                 accelerator_parameters=self.accelerator_parameters_configuration
 
             parameters = {"env":envserver,"app":accelerator_parameters}
@@ -111,8 +111,8 @@ class GenericAcceleratorClass(object):
             dictparameters = eval(api_response.parametersresult)
             dictparameters['url']= api_response.url
             dictparameters['url_instance']= self.api_configuration.host
-            logger.debug( "=>status:"+str(dictparameters['app']['status']) )
-            logger.debug( "=>msg:\n"+dictparameters['app']['msg'] )
+            logger.debug( "status:"+str(dictparameters['app']['status']) )
+            logger.debug( "msg:\n"+dictparameters['app']['msg'] )
             api_response_read = api_instance.configuration_read(id)
             if api_response_read.inerror :
                 raise ValueError('Cannot start the configuration '+str(api_response_read.url))
@@ -124,7 +124,7 @@ class GenericAcceleratorClass(object):
         # create an instance of the API class
         api_instance = swagger_client.ProcessApi(api_client=self.api_configuration.api_client)
         if accelerator_parameters == "":
-            logger.debug( "=>Using default configuration")
+            logger.debug( "Using default configuration")
             accelerator_parameters=self.accelerator_parameters_process
         configuration =self.accelerator_configuration_url
         datafile = file_in # file | If needed, file to be processed by the accelerator. (optional)
@@ -167,8 +167,8 @@ class GenericAcceleratorClass(object):
             logger.debug( "process_delete api_response: "+str(id) )
             api_response_delete = api_instance.process_delete(id)
             dictparameters = eval(api_response.parametersresult)
-            logger.debug(  "=>status:"+str(dictparameters['app']['status']))
-            logger.debug(  "=>msg:\n"+dictparameters['app']['msg'])
+            logger.debug(  "status:"+str(dictparameters['app']['status']))
+            logger.debug(  "msg:\n"+dictparameters['app']['msg'])
             return dictparameters
         except ApiException as e:
             logger.error(  "Exception when calling ProcessApi->process_create: %s\n" % e)
@@ -203,6 +203,16 @@ class CSPGenericClass(object):
         self.instanceType=instanceType
         self.securityGroup=securityGroup
         self.role=role
+    def get_public_ip(self):
+        try :
+            r = requests.get('http://ipinfo.io/ip')
+            logger.debug( "Public IP  answer : "+str(r.text))
+            r.raise_for_status()
+            if r.status_code == 200 :
+              return r.text.strip()+"/32"
+            return "0.0.0.0/0"
+        except Exception as e:
+            raise Exception("Cannot get Accelize accelerator configuration : "+str(e))
     def get_accelize_configuration(self,accelerator):
         try :
             r = requests.post('https://master.metering.accelize.com/o/token/',data={"grant_type":"client_credentials"} , auth=(self.client_id, self.client_secret))
@@ -252,7 +262,7 @@ class CSPGenericClass(object):
             except Exception as e:
                 pass
             time.sleep(5)
-        logger.info("Server ruuning:"+str(done))
+        logger.info("Server running:"+str(done))
         socket.setdefaulttimeout( 900 )  # timeout in seconds
     def check_accelize_credential(self,client_id="",client_secret=""):
         try :
@@ -311,7 +321,7 @@ class AWSClass(CSPGenericClass):
             try :
                 ec2 = self.session.client('ec2')
                 key_pair = ec2.describe_key_pairs( KeyNames=[self.sshKey])
-                logger.info( "KeyPair exist on CSP: "+str(key_pair['KeyPairs'][0]['KeyName'])+ ", nothing to do.")
+                logger.info( "KeyPair on AWS named: "+str(key_pair['KeyPairs'][0]['KeyName'])+" already exists, nothing to do.")
             except Exception as e:
                 logger.debug(str(e))
                 logger.info("Create KeyPair "+str(self.sshKey)+".")
@@ -347,10 +357,10 @@ class AWSClass(CSPGenericClass):
                             PolicyDocument=json.dumps(my_managed_policy)
                 )
                 logger.debug( "Policy: "+str(response))
+                logger.info("Policy: "+str(instance_profile_name)+" created.")
             except Exception as e:
                 logger.debug(str(e))
-                iam = self.session.resource('iam')
-                logger.debug( "Policy:"+str(policy)+" already exists.")
+                logger.info( "Policy on AWS named: "+str(policy)+" already exists, nothing to do.")
 
             iam = self.session.client('iam')
             response = iam.list_policies(
@@ -363,7 +373,6 @@ class AWSClass(CSPGenericClass):
                     return policyitem['Arn']
                     break
             return None
-            logger.debug( "Policy ARN:"+str(response)+" already exists.")
         except Exception as e:
             raise Exception("Failed to create policy: "+str(e))
     def role_csp(self):
@@ -378,7 +387,7 @@ class AWSClass(CSPGenericClass):
                 logger.debug( "role: "+str(role))
             except Exception as e:
                 logger.debug(str(e))
-                logger.info( "Role: "+str(self.role)+" already exists.")
+                logger.info( "Role on AWS named: "+str(self.role)+" already exists, nothing to do.")
             iam = self.session.client('iam')
             response = iam.get_role(
                                 RoleName=self.role
@@ -389,7 +398,7 @@ class AWSClass(CSPGenericClass):
             raise Exception("Failed to create role: "+str(e))
     def attach_role_policy_csp(self,policy):
         try:
-            logger.info("Attach policy "+str(policy)+" to role "+str(self.role)+" exists.")
+            logger.info("Create or check if policy "+str(policy)+" is attached to role "+str(self.role)+" exists.")
             try :
                 iam = self.session.client('iam')
                 # Create a policy 
@@ -398,9 +407,12 @@ class AWSClass(CSPGenericClass):
                                         RoleName=self.role
                                     )
                 logger.debug( "Policy: "+str(response))
+                logger.info("Attach policy "+str(policy)+" to role "+str(self.role)+" done.")
             except Exception as e:
                 logger.debug(str(e))
-                logger.info( "Attach: "+str(policy)+" and role: "+str(self.role)+" already exists.")
+                logger.info( "Role on AWS named: "+str(self.role)+" and policy named:"+str(policy)+" already attached, nothing to do.")
+                
+
         except Exception as e:
             raise Exception("Failed to attach policy to role: "+str(e))
     def instance_profile_csp(self):
@@ -417,17 +429,18 @@ class AWSClass(CSPGenericClass):
                                 )
                 time.sleep(5)
                 logger.debug( "Instance profile : "+str(instance_profile))
+                logger.info("Instance profile  "+str(instance_profile_name)+" created.")
             except Exception as e:
                 logger.debug(str(e))
-                logger.info( "instance profile name: "+str(instance_profile_name)+" already exists.")
+                logger.info( "Instance profile on AWS named: :"+str(instance_profile_name)+" already exists, nothing to do.")
         except Exception as e:
             raise Exception("Failed to attach policy to role: "+str(e))
     def security_group_csp(self):
         try:
             logger.info("Create or Check if securitygroup  "+str(self.securityGroup)+" exists.")
+            ec2 = self.session.client('ec2')
+            public_ip = self.get_public_ip()
             try :
-                ec2 = self.session.client('ec2')
-                
                 response = ec2.describe_vpcs()
                 vpc_id = response.get('Vpcs', [{}])[0].get('VpcId', '')
                 logger.info( "Default VPC: "+str(vpc_id))
@@ -436,21 +449,38 @@ class AWSClass(CSPGenericClass):
                                          VpcId=vpc_id)
                 security_group_id = response_create_security_group['GroupId']
                 logger.info( 'Security Group Created %s in vpc %s.' % (security_group_id, vpc_id))
-                data = ec2.authorize_security_group_ingress(
-                                                    GroupId=security_group_id,
-                                                    IpPermissions=[
-                                                        {'IpProtocol': 'tcp',
-                                                         'FromPort': 80,
-                                                         'ToPort': 80,
-                                                         'IpRanges': [{'CidrIp': '0.0.0.0/0'}]},
-                                                        {'IpProtocol': 'tcp',
-                                                         'FromPort': 22,
-                                                         'ToPort': 22,
-                                                         'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}
-                                                    ])
-                logger.debug( "Successfully Set "+str(data))
+                
+                
+                
             except Exception as e:
-                logger.debug( "securitygroup : "+str(self.securityGroup)+" already exists."+str(e))
+                logger.debug(str(e))
+                logger.info( "Securitygroup on AWS named: :"+str(self.securityGroup)+" already exists.")
+            my_sg = ec2.describe_security_groups( GroupNames=[
+                                self.securityGroup,
+                            ],)
+            try :
+                my_sg = ec2.describe_security_groups( GroupNames=[
+                                self.securityGroup,
+                            ],)
+                data = ec2.authorize_security_group_ingress(
+                                                        GroupId=my_sg['SecurityGroups'][0]['GroupId'],
+                                                        IpPermissions=[
+                                                            {'IpProtocol': 'tcp',
+                                                             'FromPort': 80,
+                                                             'ToPort': 80,
+                                                             'IpRanges': [{'CidrIp': public_ip}]},
+                                                            {'IpProtocol': 'tcp',
+                                                             'FromPort': 22,
+                                                             'ToPort': 22,
+                                                             'IpRanges': [{'CidrIp': public_ip}]}
+                                                        ])
+                                                        
+                logger.debug( "Successfully Set "+str(data))
+                logger.info( "Added in security group:"+self.securityGroup +" SSH and HTTP for IP:"+str(public_ip))
+            except Exception as e:
+                logger.debug(str(e))
+                logger.info( "Right for IP "+str(public_ip)+" on AWS already exists, nothing to do.")
+
         except Exception as e:
             raise Exception("Failed to create securityGroup: "+str(e))
     def start_instance_csp(self):
@@ -592,12 +622,12 @@ class AcceleratorClass(object):
                 ValueError('A parameter is missing, please check the documentation.')
             
             self.url_instance ='http://'+str(ip_address)
-            logger.info(  "=>Accelerator URL: "+self.url_instance)
+            logger.info("Accelerator URL: "+self.url_instance)
             self.accelerator_instance = GenericAcceleratorClass(url=self.url_instance)
             envserver={"client_id":self.client_id,"client_secret":self.client_secret}
             envserver.update(template_instance)
             self.ping_server()
-            logger.info(  "=>Starting internal configuration "+self.provider+" region: "+self.region)
+            logger.info("Starting internal instance configuration.")
             return self.accelerator_instance.configure_accelerator(envserver=envserver,accelerator_parameters=accelerator_parameters,datafile = datafile)
 
         #except Exception as e :
