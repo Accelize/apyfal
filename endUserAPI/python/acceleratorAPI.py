@@ -44,7 +44,7 @@ class SignalHandlerAccelerator(object):
         signal.signal(signal.SIGQUIT, self.signal_handler_accelerator)
     def signal_handler_accelerator(self, _signo="", _stack_frame=""):
         '''Try to stop all instances running or inform user'''
-        logger.warn( "signal_handler_accelerator")
+        logger.debug( "signal_handler_accelerator")
         if self.stop_instances:
             for instance in self.instances:
                logger.info("=>Stopping instance with Public IP address: " +instance["ip"]+ " instance_id:"+instance["instance_id"])
