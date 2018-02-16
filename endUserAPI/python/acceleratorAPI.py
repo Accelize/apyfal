@@ -18,9 +18,9 @@ import os.path
 from urllib2 import urlopen, URLError, HTTPError
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+DEFAULT_CONFIG_FILE = "accelerator.conf"
 config = ConfigParser.ConfigParser(allow_no_value=True)
-#Should be present in the execution folder
-config.read("accelerator.conf" )
 
 class SignalHandlerAccelerator(object):
     '''Signal handler for Instances'''
@@ -60,7 +60,7 @@ class SignalHandlerAccelerator(object):
 
         logger.info("Accelerator API Closed properly")
         os._exit(0)
-        
+
 
 ################################# Rest API material [begin]########################################################
 class GenericAcceleratorClass(object):
@@ -70,19 +70,15 @@ class GenericAcceleratorClass(object):
     ############################################
     '''
     #Variable Shared
-    accelerator_configuration_url=config.get("process", "url_configuration")
-    accelerator_parameters_configuration=eval(config.get("configuration", "parameters"))
-    accelerator_parameters_process=eval(config.get("process", "parameters"))
-
-    api_configuration = swagger_client.Configuration()
+    #api_configuration = swagger_client.Configuration()
 
     def __init__(self,url='http://localhost', accelerator_configuration_url=""):
         #A regular API has fixed url. In our case we want to change it dynamically.
         self.api_configuration = swagger_client.Configuration()
         self.api_configuration.host = url
-
         #The last configuration URL should be keep in order to not request it to user.
-        self.accelerator_configuration_url=accelerator_configuration_url
+        self.accelerator_configuration_url = accelerator_configuration_url if accelerator_configuration_url!="" else config.get("process", "url_configuration")
+        self.accelerator_parameters_process = eval(config.get("process", "parameters"))
 
         #envserver = json env
     def configure_accelerator(self,envserver,accelerator_parameters="",datafile = "") :
@@ -97,7 +93,7 @@ class GenericAcceleratorClass(object):
 
             if accelerator_parameters == "":
                 logger.debug( "Using default configuration")
-                accelerator_parameters=self.accelerator_parameters_configuration
+                accelerator_parameters=eval(config.get("configuration", "parameters"))
 
             parameters = {"env":envserver,"app":accelerator_parameters}
             logger.debug( "configuration_create:"+str(json.dumps(parameters))+" datafile: "+datafile)
@@ -194,15 +190,15 @@ class GenericAcceleratorClass(object):
 ################################# CSP material [begin]########################################################
 class CSPGenericClass(object):
 
-    def __init__(self,provider=config.get("csp", "provider"),role=config.get("csp", "role"), client_id_csp="", secret_id_csp="",region=config.get("csp", "region"),sshKey=config.get("csp", "sshKey"),instanceType="",securityGroup=config.get("csp", "securityGroup")):
-        self.provider = provider
-        self.client_id_csp=client_id_csp
-        self.secret_id_csp=secret_id_csp
-        self.region= region
-        self.sshKey=sshKey
-        self.instanceType=instanceType
-        self.securityGroup=securityGroup
-        self.role=role
+    def __init__(self, provider=None,role=None, client_id_csp=None, secret_id_csp=None, region=None, sshKey=None, instanceType=None, securityGroup=None):
+        self.provider = provider if provider else config.get("csp", "provider")
+        self.client_id_csp = client_id_csp if client_id_csp else config.get("csp", "client_id")
+        self.secret_id_csp = secret_id_csp if secret_id_csp else config.get("csp", "secret_id")
+        self.region = region if region else config.get("csp", "region")
+        self.sshKey = sshKey if sshKey else config.get("csp", "sshKey")
+        self.instanceType = instanceType if instanceType else config.get("csp", "instanceType")
+        self.securityGroup = securityGroup if securityGroup else config.get("csp", "securityGroup")
+        self.role = role if role else config.get("csp", "role")
     def get_public_ip(self):
         try :
             r = requests.get('http://ipinfo.io/ip')
@@ -227,15 +223,15 @@ class CSPGenericClass(object):
                r.raise_for_status()
                try :
                     configuration_accelerator = json.loads(r.text)
-                    
+
                     return configuration_accelerator[self.provider][accelerator][self.region]
                except Exception as e:
                     raise Exception("Not able to find a configuration for provider:"+self.provider+" accelerator: "+accelerator+" region "+self.region+ " Error:"+str(e))
-            
+
         except Exception as e:
             raise Exception("Cannot get Accelize accelerator configuration : "+str(e))
 
-        
+
     def stop_instance_csp(self,instance_id):
         logger.warn( "Stop instance with id "+str(instance_id))
         pass
@@ -293,8 +289,8 @@ class AWSClass(CSPGenericClass):
     def get_csp_format(self,csp_parameter):
         self.template_instance = {'AGFI':csp_parameter["fpgaimage"]}
         self.imageId = csp_parameter["image"]
-        self.agfi= csp_parameter["fpgaimage"] 
-        
+        self.agfi= csp_parameter["fpgaimage"]
+
         self.instanceType = csp_parameter["instancetype"]
         return self.template_instance
     def loadsession (self):
@@ -312,7 +308,7 @@ class AWSClass(CSPGenericClass):
             self.loadsession()
             ec2 = self.session.client('ec2')
             response = ec2.describe_key_pairs()
-            
+
         except Exception as e:
             raise Exception("CSP authentication failed: "+str(e))
     def ssh_key_csp(self):
@@ -339,7 +335,7 @@ class AWSClass(CSPGenericClass):
             logger.info("Create or check if policy "+str(policy)+" exists.")
             try :
                 iam = self.session.client('iam')
-                # Create a policy 
+                # Create a policy
                 my_managed_policy = {    "Version": "2012-10-17",
                                         "Statement": [
                                                     {
@@ -401,7 +397,7 @@ class AWSClass(CSPGenericClass):
             logger.info("Create or check if policy "+str(policy)+" is attached to role "+str(self.role)+" exists.")
             try :
                 iam = self.session.client('iam')
-                # Create a policy 
+                # Create a policy
                 response =iam.attach_role_policy(
                                         PolicyArn=policy,
                                         RoleName=self.role
@@ -411,7 +407,7 @@ class AWSClass(CSPGenericClass):
             except Exception as e:
                 logger.debug(str(e))
                 logger.info( "Role on AWS named: "+str(self.role)+" and policy named:"+str(policy)+" already attached, nothing to do.")
-                
+
 
         except Exception as e:
             raise Exception("Failed to attach policy to role: "+str(e))
@@ -449,9 +445,9 @@ class AWSClass(CSPGenericClass):
                                          VpcId=vpc_id)
                 security_group_id = response_create_security_group['GroupId']
                 logger.info( 'Security Group Created %s in vpc %s.' % (security_group_id, vpc_id))
-                
-                
-                
+
+
+
             except Exception as e:
                 logger.debug(str(e))
                 logger.info( "Securitygroup on AWS named: :"+str(self.securityGroup)+" already exists.")
@@ -474,7 +470,7 @@ class AWSClass(CSPGenericClass):
                                                              'ToPort': 22,
                                                              'IpRanges': [{'CidrIp': public_ip}]}
                                                         ])
-                                                        
+
                 logger.debug( "Successfully Set "+str(data))
                 logger.info( "Added in security group:"+self.securityGroup +" SSH and HTTP for IP:"+str(public_ip))
             except Exception as e:
@@ -498,7 +494,7 @@ class AWSClass(CSPGenericClass):
                                                 'Name': 'AccelizeLoadFPGA'
                                             },
                                             InstanceInitiatedShutdownBehavior='stop',
-                                            TagSpecifications=[ 
+                                            TagSpecifications=[
                                                 {
                                                     'ResourceType': 'instance',
                                                     'Tags': [
@@ -533,7 +529,7 @@ class AWSClass(CSPGenericClass):
     def stop_instance_csp(self,instance_id,terminate =True):
         logger.warn( "Stop instance with id: "+str(instance_id))
         ec2 = self.session.resource('ec2')
-        
+
         instance =  ec2.Instance(instance_id)
         logger.debug( "Stop instance: "+str(instance))
         if terminate:
@@ -563,30 +559,40 @@ class CSPClassFactory(object):
 class AcceleratorClass(object):
     '''
     This Call is hidden complexity of using GenericAcceleratorClass and CSPGenericClass
-
     '''
-    provider=""
-    instance_id=""
-    url_instance=""
-    client_id=""
-    client_secret=""
-    csp_instance=CSPGenericClass()
-    accelerator_instance= GenericAcceleratorClass()
-    def __init__(self,provider, instance_id="",region=config.get("csp", "region"),client_id=config.get("accelize", "client_id"),client_secret=config.get("accelize", "secret_id"),stop_instance=False,client_id_csp=config.get("csp", "client_id"),secret_id_csp=config.get("csp", "secret_id"),sshKey=config.get("csp", "sshKey"),instanceType=config.get("csp", "instanceType"),securityGroup=config.get("csp", "securityGroup"),role=config.get("csp", "role")):
-        self.provider = provider
-        self.instance_id = instance_id
-        self.region = region
-        self.client_id=client_id
-        self.client_secret=client_secret
-        self.stop_instance=stop_instance
-        #load from file is exist
-        self.configuration_envserver =''
-        ##Checking If Credential are valid otherwise no sense to continue
-        self.csp_instance = CSPClassFactory(region=region,provider=provider,client_id_csp=client_id_csp,secret_id_csp=secret_id_csp,sshKey=sshKey,instanceType=instanceType,securityGroup=securityGroup,role=role)
-        self.sign_handler = SignalHandlerAccelerator(self.csp_instance)
-        self.sign_handler.definestop_instances(stop_instance)
-        self.csp_instance.check_accelize_credential(client_id=client_id,client_secret=client_secret)
 
+    def __init__(self, configPath=None, stop_instance=False, provider=None, instance_id=None, region=None, client_id=None, client_secret=None, client_id_csp=None, secret_id_csp=None, sshKey=None, instanceType=None, securityGroup=None, role=None):
+        global config
+        if configPath is None:
+            configPath = DEFAULT_CONFIG_FILE
+        if not os.path.isfile(configPath):
+            raise Exception("Could not find configuration file: %s" % configPath)
+        config.read(configPath)
+        logger.debug("Using configuration file: %s", configPath)
+        self.provider = provider if provider else config.get("csp", "provider")
+        self.instance_id = instance_id  if instance_id else config.get("csp", "instance_id")
+        self.region = region  if region else config.get("csp", "region")
+        self.client_id = client_id  if client_id else config.get("accelize", "client_id")
+        self.client_secret = client_secret  if client_secret else config.get("accelize", "secret_id")
+        self.stop_instance = stop_instance
+        self.configuration_envserver =''
+        if client_id_csp is None:
+            client_id_csp = config.get("csp", "client_id")
+        if secret_id_csp is None:
+            secret_id_csp = config.get("csp", "secret_id")
+        if sshKey is None:
+            sshKey = config.get("csp", "sshKey")
+        if instanceType is None:
+            instanceType = config.get("csp", "instanceType")
+        if securityGroup is None:
+            securityGroup = config.get("csp", "securityGroup")
+        if role is None:
+            role = config.get("csp", "role")
+        ##Checking If Credential are valid otherwise no sense to continue
+        self.csp_instance = CSPClassFactory(region=self.region,provider=self.provider,client_id_csp=client_id_csp,secret_id_csp=secret_id_csp,sshKey=sshKey,instanceType=instanceType,securityGroup=securityGroup,role=role)
+        self.sign_handler = SignalHandlerAccelerator(self.csp_instance)
+        self.sign_handler.definestop_instances(self.stop_instance)
+        self.csp_instance.check_accelize_credential(client_id=self.client_id,client_secret=self.client_secret)
 
     def __del__(self):
         self.sign_handler.signal_handler_accelerator()
@@ -603,8 +609,10 @@ class AcceleratorClass(object):
             raise ValueError("Cannot reach url :"+str(self.url_instance)+ " error:"+str(e))
         socket.setdefaulttimeout( 900 )  # timeout in seconds
 
-    def start_accelerator(self,start_instance=True, datafile="",template_instance="",ip_address=config.get("configuration", "ip_address"),accelerator_parameters="",accelerator="") :
+    def start_accelerator(self,start_instance=True, datafile="",template_instance="",ip_address=None,accelerator_parameters="",accelerator="") :
         #try :
+            if ip_address is None:
+                ip_address = config.get("configuration", "ip_address")
             if start_instance and  accelerator<>"":
                 logger.debug("Starting an Instance")
                 instance, template_instance=self.csp_instance.configuration_csp(accelerator=accelerator)
@@ -620,11 +628,12 @@ class AcceleratorClass(object):
                     logger.debug(  "template_instance: "+str(template_instance))
             else :
                 ValueError('A parameter is missing, please check the documentation.')
-            
+
             self.url_instance ='http://'+str(ip_address)
             logger.info("Accelerator URL: "+self.url_instance)
             self.accelerator_instance = GenericAcceleratorClass(url=self.url_instance)
             envserver={"client_id":self.client_id,"client_secret":self.client_secret}
+            print "template_instance=", template_instance
             envserver.update(template_instance)
             self.ping_server()
             logger.info("Starting internal instance configuration.")
