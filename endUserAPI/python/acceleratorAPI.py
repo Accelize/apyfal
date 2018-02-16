@@ -54,8 +54,8 @@ class SignalHandlerAccelerator(object):
             for instance in self.instances:
                iplist+=instance["ip"]+ " instance_id:"+instance["instance_id"]+" "
             logger.warn( "###########################################################")
-            logger.warn( "##Warning : instances are still running with public IPs :"+ str(iplist))
-            logger.warn( "######Make sure you will stop them manually later.########")
+            logger.warn( "## Warning : instances are still running with public IPs :"+ str(iplist))
+            logger.warn( "###### Make sure you will stop them manually later. ########")
             logger.warn( "###########################################################")
 
         logger.info("Accelerator API Closed properly")
