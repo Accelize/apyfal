@@ -183,7 +183,7 @@ class GenericAcceleratorClass(object):
             # /v1.0/stop
             return api_instance.stop_list()
         except ApiException as e:
-            logger.exception("Exception when calling StopApi->stop_list: %s", e)
+            logger.error("Exception when calling StopApi->stop_list: %s", e)
             return {'error':str(e)}
 ################################# Rest API material [end]########################################################
 ################################# CSP material [begin]########################################################
