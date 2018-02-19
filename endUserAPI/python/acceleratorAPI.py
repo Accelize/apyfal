@@ -6,7 +6,6 @@ parentdir =  os.path.abspath(os.path.join(os.path.join(os.path.join(os.path.join
 sys.path.insert(0,parentdir)
 import swagger_client
 from swagger_client.rest import ApiException
-from pprint import pprint
 import shutil, urllib3, os
 from multiprocessing import Pool
 import requests
@@ -184,7 +183,7 @@ class GenericAcceleratorClass(object):
             # /v1.0/stop
             return api_instance.stop_list()
         except ApiException as e:
-            print "Exception when calling StopApi->stop_list: %s\n" % e
+            logger.exception("Exception when calling StopApi->stop_list: %s", e)
             return {'error':str(e)}
 ################################# Rest API material [end]########################################################
 ################################# CSP material [begin]########################################################
@@ -633,7 +632,6 @@ class AcceleratorClass(object):
             logger.info("Accelerator URL: "+self.url_instance)
             self.accelerator_instance = GenericAcceleratorClass(url=self.url_instance)
             envserver={"client_id":self.client_id,"client_secret":self.client_secret}
-            print "template_instance=", template_instance
             envserver.update(template_instance)
             self.ping_server()
             logger.info("Starting internal instance configuration.")
