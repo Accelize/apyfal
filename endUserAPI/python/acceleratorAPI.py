@@ -556,7 +556,7 @@ class AcceleratorClass(object):
     This Call is hidden complexity of using GenericAcceleratorClass and CSPGenericClass
     '''
 
-    def __init__(self, configPath=None, stop_instance=False, provider=None, instance_id=None, region=None, client_id=None, client_secret=None, client_id_csp=None, secret_id_csp=None, sshKey=None, instanceType=None, securityGroup=None, role=None):
+    def __init__(self, configPath=None, stop_instance=True, provider=None, instance_id=None, region=None, client_id=None, client_secret=None, client_id_csp=None, secret_id_csp=None, sshKey=None, instanceType=None, securityGroup=None, role=None):
         global config
         if configPath is None:
             configPath = DEFAULT_CONFIG_FILE
