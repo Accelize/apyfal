@@ -99,7 +99,6 @@ class GenericAcceleratorClass(object):
 
             self.accelerator_configuration_url = api_response.url
 
-
             dictparameters = eval(api_response.parametersresult)
             dictparameters['url']= api_response.url
             dictparameters['url_instance']= self.api_configuration.host
@@ -571,7 +570,7 @@ class AcceleratorClass(object):
         self.client_id = client_id  if client_id else config.get("accelize", "client_id")
         self.client_secret = client_secret  if client_secret else config.get("accelize", "secret_id")
         self.stop_instance = stop_instance
-        self.configuration_envserver =''
+        self.configuration_envserver =""
         if client_id_csp is None:
             client_id_csp = config.get("csp", "client_id")
         if secret_id_csp is None:
@@ -605,9 +604,9 @@ class AcceleratorClass(object):
             raise ValueError("Cannot reach url :"+str(self.url_instance)+ " error:"+str(e))
         socket.setdefaulttimeout( 900 )  # timeout in seconds
 
-    def start_accelerator(self,start_instance=True, datafile="",template_instance="",ip_address=None,accelerator_parameters="",accelerator="") :
+    def start_accelerator(self,start_instance=True, datafile="",template_instance="",ip_address="",accelerator_parameters="",accelerator="") :
         #try :
-            if ip_address is None:
+            if ip_address == "":
                 ip_address = config.get("configuration", "ip_address")
             if start_instance and  accelerator<>"":
                 logger.debug("Starting an Instance")
