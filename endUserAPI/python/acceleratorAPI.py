@@ -68,9 +68,6 @@ class GenericAcceleratorClass(object):
     #####  Objective of this API it to remove complex user actions
     ############################################
     '''
-    #Variable Shared
-    #api_configuration = swagger_client.Configuration()
-
     def __init__(self,url='http://localhost', accelerator_configuration_url=""):
         #A regular API has fixed url. In our case we want to change it dynamically.
         self.api_configuration = swagger_client.Configuration()
