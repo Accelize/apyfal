@@ -28,7 +28,7 @@ class SignalHandlerAccelerator(object):
         self.instances = []
         self.csp_instance =csp_instance
         self.set_signals()
-        self.stop_instances=False
+        self.stop_instances=True
         self.terminate = True
     def append_ip_address(self, ip, instance_id):
         self.instances.append({"ip":ip,"instance_id":instance_id})
