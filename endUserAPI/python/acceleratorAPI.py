@@ -418,7 +418,7 @@ class AWSClass(CSPGenericClass):
                 instance_profile.add_role(
                                     RoleName=self.role
                                 )
-                time.sleep(5)
+                time.sleep(15)
                 logger.debug( "Instance profile : "+str(instance_profile))
                 logger.info("Instance profile  "+str(instance_profile_name)+" created.")
             except Exception as e:
