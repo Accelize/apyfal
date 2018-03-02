@@ -415,10 +415,11 @@ class AWSClass(CSPGenericClass):
                 instance_profile = iam.create_instance_profile(
                                         InstanceProfileName=instance_profile_name
                                     )
+                time.sleep(5) #To workaround replication time
                 instance_profile.add_role(
                                     RoleName=self.role
                                 )
-                time.sleep(15)
+                
                 logger.debug( "Instance profile : "+str(instance_profile))
                 logger.info("Instance profile  "+str(instance_profile_name)+" created.")
             except Exception as e:
