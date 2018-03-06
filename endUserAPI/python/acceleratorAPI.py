@@ -131,7 +131,7 @@ class SignalHandlerAccelerator(object):
                    self.csp_instance.stop_instance_csp(terminate)
         if exit:
             logger.info("Accelerator API Closed properly")
-            #os._exit(0)
+            os._exit(0)
 
 
 ################################# Rest API material [begin] ########################################################
@@ -240,7 +240,7 @@ class GenericAcceleratorClass(object):
         return True
         
     # Create an Accelerator configuration
-    def configure_accelerator(self, envserver, accelerator_parameters=None, datafile=None):
+    def start_accelerator(self, envserver, accelerator_parameters=None, datafile=None):
         try:
             # /v1.0/configuration/
             # create an instance of the API class
@@ -276,7 +276,7 @@ class GenericAcceleratorClass(object):
             
     def process_file(self, file_in, file_out, accelerator_parameters=None) :
         if self.accelerator_configuration_url is None:
-            logger.error("Accelerator has not been configured. Use 'configure_accelerator' function.")
+            logger.error("Accelerator has not been configured. Use 'start_accelerator' function.")
             return {'app': {'status':-1, 'msg':"Accelerator is not configured."}}
         # create an instance of the API class
         api_instance = swagger_client.ProcessApi(api_client=self.api_configuration.api_client)
@@ -342,7 +342,7 @@ class GenericAcceleratorClass(object):
 
     def process_directory(self,dirsource="",dirdestination="",parameters='{}',processes=4) :
         #if self.accelerator_configuration_url is None:
-        #    logger.error("Accelerator has not been configured. Use configure_accelerator")
+        #    logger.error("Accelerator has not been configured. Use start_accelerator")
         #    return {'app': {'status':-1, 'msg':"Accelerator is not configured."}}
         #pool = Pool(processes=processes)              # start 4 worker processes
         for file in os.listdir(dirsource):
@@ -411,7 +411,6 @@ class AWSClass(CSPGenericClass):
                 aws_secret_access_key = self.secret_id,
                 region_name = self.region
             )
-            logger.info("Region: %s", self.session)
             return True
         except:
             logger.exception("Caught following exception:")
@@ -593,7 +592,7 @@ class AWSClass(CSPGenericClass):
     def wait_instance_ready(self):
         try:
             # Waiting for the instance to be running
-            logger.info("Waiting for the instance to setup...")
+            logger.info("Waiting for the instance to start...")
             while True:
                 instance = self.get_instance_csp()  # Absolutely mandatory to update the state of object (state is not updated automatically)
                 if instance is None:
@@ -720,6 +719,7 @@ class AWSClass(CSPGenericClass):
             instance = self.start_existing_instance_csp()
         if instance is None:
             return False
+        logger.info("Region: %s", self.session.region_name)
         logger.info("Private IP: %s", instance.private_ip_address)
         logger.info("Public IP: %s", instance.public_ip_address)
         self.instance_url = "http://%s" % instance.public_ip_address
@@ -861,16 +861,17 @@ class AcceleratorClass(object):
         
     def configure_accelerator(self, datafile=None, accelerator_parameters=None, template_instance=None):
         try :
-            logger.debug("Starting accelerator '%s' on instance ID %s", self.accelerator_instance.accelerator, self.csp_instance.instance_id)
+            logger.debug("Configuring accelerator '%s' on instance ID %s", self.accelerator_instance.accelerator, self.csp_instance.instance_id)
             if not ping(self.accelerator_instance.getUrl(), 10):
+                self.configResult = {'app': {'status':-1, 'msg':"Failed to ping url: %s" % self.accelerator_instance.getUrl()}}
                 return False
             if template_instance is not None:
                 self.csp_instance.template_instance = template_instance
-                logger.warn("Overwrite factory requirements with custom configuration:\n%s", prettyDict(template_instance)) 
+                logger.warn("Overwrite factory requirements with custom configuration:\n%s", prettyDict(template_instance))
             logger.debug("template_instance: %s", str(self.csp_instance.template_instance))
             envserver = { "client_id":self.accelerator_instance.client_id, "client_secret":self.accelerator_instance.secret_id }
             envserver.update(self.csp_instance.template_instance)
-            self.configResult = self.accelerator_instance.configure_accelerator(envserver=envserver, accelerator_parameters=accelerator_parameters, datafile=datafile)
+            self.configResult = self.accelerator_instance.start_accelerator(envserver=envserver, accelerator_parameters=accelerator_parameters, datafile=datafile)
             ret, msg = self.getInfoFromResult(self.configResult)
             if ret:
                 logger.error("Configuration of accelerator failed: %s", msg)
@@ -879,6 +880,7 @@ class AcceleratorClass(object):
             return True
         except Exception as e:
             logger.exception("Caught following exception:")
+            self.configResult = {'app': {'status':-1, 'msg':"Following error occurred: %s" % str(e)}}
             return False
 
     def start(self, stop_mode=TERM, datafile=None, accelerator_parameters=None, template_instance=None):
@@ -887,10 +889,10 @@ class AcceleratorClass(object):
         if not self.start_instance(stop_mode):
             return False            
         # Configure accelerator if needed
-        if self.accelerator_instance.accelerator_configuration_url is None:
-            return self.configure_accelerator(datafile, accelerator_parameters, template_instance)
-        else:
-            self.configResult = {'app': {'status':0, 'msg':"Already loaded with configuration: %s" % self.accelerator_instance.accelerator_configuration_url}}
+        if template_instance or (self.accelerator_instance.accelerator_configuration_url is None):
+            return self.configure_accelerator(datafile, accelerator_parameters, template_instance)            
+        logger.debug("Accelerator is already configured")
+        self.configResult = {'app': {'status':0, 'msg':"Reusing last configuration"}}
         return True
 
     def process(self, file_in, file_out, process_parameter=None):
