@@ -937,7 +937,7 @@ class AcceleratorClass(object):
                 return True
             terminate = True if stop_mode == TERM else False
             self.csp_instance.stop_instance_csp(terminate)
-            self.sign_handler.remove_instance(self.csp_instance.instance.id)
+            #self.sign_handler.remove_instance(self.csp_instance.instance.id)
             return True
         except:
             logger.exception("Caught following exception:")
