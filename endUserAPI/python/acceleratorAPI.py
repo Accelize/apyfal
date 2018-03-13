@@ -916,6 +916,7 @@ class OpenStackClass(CSPGenericClass):
         image = self.connection.compute.find_image(self.imageId)
         logger.debug("Set image '%s' with ID %s", image.name, self.imageId)
         # Get flavor
+        flavor_name = accel_parameters_in_region['instancetype']
         self.instance_type = self.connection.compute.find_flavor(flavor_name).id
         logger.debug("Set flavor '%s' with ID %s", flavor_name, self.instance_type)
         return True
