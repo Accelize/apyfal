@@ -9,7 +9,13 @@ import time
 import signal
 import shutil
 import copy
+import urllib2
 import urllib3
+import ast
+import json
+import requests
+import socket
+import ConfigParser
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REST_API_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, os.pardir, os.pardir, "REST_API", "python"))
@@ -17,21 +23,13 @@ sys.path.append(REST_API_DIR)
 
 import swagger_client
 from swagger_client.rest import ApiException
-import shutil, urllib3
-from multiprocessing import Pool
-import requests
-import json
-import socket
-import ConfigParser
-import os.path
-import ast
-import urllib2
 
-#urllib3.disable_warnings()
+
 
 # Module logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARN)
+
 # Rotating file handler
 LOG_FILENAME = os.path.basename(__file__).replace(".py",".log")
 MAX_BYTES = 100*1024*1024
@@ -97,7 +95,7 @@ class SignalHandlerAccelerator(object):
         logger.debug("Added instance to auto-stop handler.")
 
     def remove_instance(self):
-        ret = self.csp.get_instance_csp()             
+        ret = self.csp.get_instance_csp()
         if ret:
             logger.debug("Removed instance ID %s from to auto-stop handler.", self.csp.instance.id)
         self.csp = None
@@ -323,7 +321,7 @@ class GenericAcceleratorClass(object):
                 shutil.copyfileobj(r, out_file)
             logger.debug( "process_delete api_response: "+str(id) )
             api_response_delete = api_instance.process_delete(id)
-            dictparameters = eval(api_response.parametersresult)
+            dictparameters = ast.literal_eval(api_response.parametersresult)
             logger.debug(  "status:"+str(dictparameters['app']['status']))
             logger.debug(  "msg:\n"+dictparameters['app']['msg'])
             return dictparameters
@@ -333,16 +331,6 @@ class GenericAcceleratorClass(object):
         except:
             logger.exception("Caught following exception:")
             return {'app': {'status':-1, 'msg':"Caugth unsupported exception"}}
-
-    def process_directory(self,dirsource="",dirdestination="",parameters='{}',processes=4) :
-        #if self.accelerator_configuration_url is None:
-        #    logger.error("Accelerator has not been configured. Use start_accelerator")
-        #    return {'app': {'status':-1, 'msg':"Accelerator is not configured."}}
-        #pool = Pool(processes=processes)              # start 4 worker processes
-        for file in os.listdir(dirsource):
-            #pool.apply_async(process, (os.path.join(dirsource, file),os.path.join(dirdestination, file),configuration,parameters))
-            #pool.apply(self.process, (os.path.join(dirsource, file),os.path.join(dirdestination, file)))
-            self.process_file(os.path.join(dirsource, file), os.path.join(dirdestination, file+'.processed'))
 
     def stop_accelerator(self):
         # create an instance of the API class
@@ -372,8 +360,8 @@ class CSPGenericClass(object):
         except:
             return None
 
-    def __init__(self, config_parser, client_id=None, secret_id=None, region=None, 
-            instance_type=None, ssh_key=None, security_group=None, instance_id=None, 
+    def __init__(self, config_parser, client_id=None, secret_id=None, region=None,
+            instance_type=None, ssh_key=None, security_group=None, instance_id=None,
             instance_url=None):
         self.config_parser = config_parser
         self.provider = self.getFromConfig('csp', 'provider')
@@ -389,7 +377,7 @@ class CSPGenericClass(object):
             self.security_group = "MySecurityGroup"
         self.instance_id = self.getFromConfig('csp', 'instance_id', instance_id)
         self.instance_url = self.getFromConfig('csp', 'instance_url', instance_url)
-    
+
     def getFromConfig(self, section, key, default=None):
         if default:
             return default
@@ -400,19 +388,17 @@ class CSPGenericClass(object):
             else:
                 return None
         except:
-            return None        
+            return None
 
     def get_public_ip(self):
         try :
             r = requests.get('http://ipinfo.io/ip')
             logger.debug("Public IP answer: %s", str(r.text))
             r.raise_for_status()
-            if r.status_code == 200 :
-              return r.text.strip()+"/32"
-            return "0.0.0.0/0"
+            return r.text.strip()+"/32"
         except:
             logger.exception("Caught following exception:")
-            raise Exception("Cannot get Accelize accelerator configuration")
+            raise Exception("Cannot get your current pubblic IP address")
 
 
 #===================================
@@ -424,10 +410,10 @@ class AWSClass(CSPGenericClass):
         self.role = self.getFromConfig('csp', 'role', role)
         self.instance = None
         self.config_env = {}
-        
+
     def __str__(self):
         return ', '.join("%s:%s" % item for item in vars(self).items())
-        
+
     def loadsession(self):
         try :
             import boto3
@@ -455,7 +441,7 @@ class AWSClass(CSPGenericClass):
 
     def ssh_key_csp(self):
         try:
-            logger.info("Create or check if KeyPair "+str(self.ssh_key)+" exists.")
+            logger.debug("Create or check if KeyPair "+str(self.ssh_key)+" exists.")
             try :
                 ec2 = self.session.client('ec2')
                 key_pair = ec2.describe_key_pairs( KeyNames=[self.ssh_key])
@@ -478,7 +464,7 @@ class AWSClass(CSPGenericClass):
 
     def policy_csp(self, policy):
         try:
-            logger.info("Create or check if policy "+str(policy)+" exists.")
+            logger.debug("Create or check if policy "+str(policy)+" exists.")
             try :
                 iam = self.session.client('iam')
                 # Create a policy
@@ -515,7 +501,7 @@ class AWSClass(CSPGenericClass):
 
     def role_csp(self):
         try :
-            logger.info("Create or check if role %s exists", str(self.role))
+            logger.debug("Create or check if role %s exists", str(self.role))
             try :
                 iam = self.session.resource('iam')
                 role = iam.create_role(RoleName=self.role,
@@ -536,13 +522,13 @@ class AWSClass(CSPGenericClass):
 
     def attach_role_policy_csp(self,policy):
         try:
-            logger.info("Create or check if policy "+str(policy)+" is attached to role "+str(self.role)+" exists.")
+            logger.debug("Create or check if policy "+str(policy)+" is attached to role "+str(self.role)+" exists.")
             try :
                 iam = self.session.client('iam')
                 # Create a policy
                 response =iam.attach_role_policy(PolicyArn=policy, RoleName=self.role)
                 logger.debug("Policy: "+str(response))
-                logger.info("Attach policy "+str(policy)+" to role "+str(self.role)+" done.")
+                logger.info("Attached policy "+str(policy)+" to role "+str(self.role)+" done.")
             except Exception as e:
                 logger.debug(str(e))
                 logger.info("Role on AWS named: "+str(self.role)+" and policy named:"+str(policy)+" already attached, nothing to do.")
@@ -554,7 +540,7 @@ class AWSClass(CSPGenericClass):
     def instance_profile_csp(self):
         try:
             instance_profile_name ='AccelizeLoadFPGA'
-            logger.info("Create or check if instance profile  "+str(instance_profile_name)+" exists.")
+            logger.debug("Create or check if instance profile  "+str(instance_profile_name)+" exists.")
             try :
                 iam = self.session.client('iam')
                 instance_profile = iam.create_instance_profile( InstanceProfileName=instance_profile_name)
@@ -572,7 +558,7 @@ class AWSClass(CSPGenericClass):
 
     def security_group_csp(self):
         try:
-            logger.info("Create or Check if security group '%s' exists.", self.security_group)
+            logger.debug("Create or Check if security group '%s' exists.", self.security_group)
             ec2 = self.session.client('ec2')
             public_ip = self.get_public_ip()
             try :
@@ -580,8 +566,8 @@ class AWSClass(CSPGenericClass):
                 vpc_id = response.get('Vpcs', [{}])[0].get('VpcId', '')
                 logger.info( "Default VPC: "+str(vpc_id))
                 response_create_security_group = ec2.create_security_group(GroupName=self.security_group,
-                                         Description="Generated by script",
-                                         VpcId=vpc_id)
+                             Description="Generated by '%s' API" % self.accelerator,
+                             VpcId=vpc_id)
                 security_group_id = response_create_security_group['GroupId']
                 logger.info("Created security group with ID %s in vpc %s", security_group_id, vpc_id)
             except Exception as e:
@@ -589,7 +575,7 @@ class AWSClass(CSPGenericClass):
                 logger.info( "A security group '%s' is already existing on AWS.", self.security_group)
             my_sg = ec2.describe_security_groups( GroupNames=[self.security_group,],)
             try :
-                my_sg = ec2.describe_security_groups( GroupNames=[self.security_group,],)
+                my_sg = ec2.describe_security_groups(GroupNames=[self.security_group,],)
                 data = ec2.authorize_security_group_ingress(
                         GroupId=my_sg['SecurityGroups'][0]['GroupId'],
                         IpPermissions=[
@@ -616,8 +602,8 @@ class AWSClass(CSPGenericClass):
 
     def wait_instance_ready(self):
         try:
-            # Waiting for the instance to be running
-            logger.info("Waiting for the instance to start...")
+            # Waiting for the instance provisioning
+            logger.info("Waiting for the instance provisioning...")
             while True:
                 if not self.get_instance_csp():  # Absolutely mandatory to update the state of object (state is not updated automatically)
                     return None
@@ -626,10 +612,9 @@ class AWSClass(CSPGenericClass):
                 if status == "running":
                     break
                 time.sleep(5)
-            logger.info("Instance %s!", status)
-            # Waiting for the instance to respond to ping
-            logger.info("Waiting for the instance to boot...")
-            url = "http://%s" % self.instance.public_ip_address
+            # Waiting for the instance to boot
+            logger.info("Instance is now booting")
+            url = "http://%s" % str(self.instance.public_ip_address)
             if not ping( url, 1, 72, 5 ): # 6 minutes timeout
                 logger.error("Timed out while waiting CSP instance to boot.")
                 return None
@@ -642,7 +627,7 @@ class AWSClass(CSPGenericClass):
     def get_instance_csp(self):
         if self.instance_id is None:
             logger.error("Invalid instance ID: %s", str(self.intance_id))
-            return False        
+            return False
         ec2 = self.session.resource('ec2')
         self.instance = ec2.Instance(self.instance_id)
         try:
@@ -667,7 +652,7 @@ class AWSClass(CSPGenericClass):
 
     def getConfigurationEnv(self, **kwargs):
         newenv = dict()
-        agfi = self.getFromArgs('AGFI', **kwargs)        
+        agfi = self.getFromArgs('AGFI', **kwargs)
         if agfi:
             newenv['AGFI'] = agfi
         currenv = copy.deepcopy(self.config_env)
@@ -677,7 +662,7 @@ class AWSClass(CSPGenericClass):
         else:
             logger.debug("Using factory configuration: %s", prettyDict(currenv))
         return currenv
-            
+
     def create_instance_csp(self):
         #call webservice
         if not self.ssh_key_csp():
@@ -800,14 +785,14 @@ class OpenStackClass(CSPGenericClass):
         self.connection = None
         self.instance = None
         self.config_env = {}
-        
+
     def __str__(self):
         return ', '.join("%s:%s" % item for item in vars(self).items())
-        
+
     def loadsession(self):
         try :
             import openstack
-            self.connection = openstack.connection.Connection(           
+            self.connection = openstack.connection.Connection(
                 region_name=self.region,
                 auth=dict(
                     auth_url=self.auth_url,
@@ -827,7 +812,7 @@ class OpenStackClass(CSPGenericClass):
     def check_csp_credential(self):
         try :
             if not self.loadsession():
-                return False            
+                return False
             network_list = self.connection.network.networks()
             self.connection.compute.find_keypair("FPGAOVH", ignore_missing=True)
             return True
@@ -836,6 +821,7 @@ class OpenStackClass(CSPGenericClass):
             return False
 
     def ssh_key_csp(self):
+        logger.debug("Create or check if KeyPair %s exists", self.ssh_key)
         try:
             ssh_dir = os.path.expanduser('~/.ssh')
             private_keypair_file = os.path.join(ssh_dir, "%s.pem" % self.ssh_key)
@@ -843,7 +829,7 @@ class OpenStackClass(CSPGenericClass):
             keypair = self.connection.compute.find_keypair(self.ssh_key, ignore_missing=True)
             if not keypair:
                 logger.debug("Create KeyPair '%s'", self.ssh_key)
-                keypair = self.connection.compute.create_keypair(name=self.ssh_key)                            
+                keypair = self.connection.compute.create_keypair(name=self.ssh_key)
                 # Save private key locally if not existing
                 logger.debug("Creating private ssh key file: %s", private_keypair_file)
                 if not os.path.isdir(ssh_dir):
@@ -862,12 +848,12 @@ class OpenStackClass(CSPGenericClass):
 
     def security_group_csp(self):
         try:
-            logger.info("Create or Check if securitygroup '%s' exists", self.security_group)
+            logger.debug("Create or check if securitygroup '%s' exists", self.security_group)
             security_group = self.connection.get_security_group(self.security_group)
             if security_group is None:
                 security_group = self.connection.create_security_group(
                     self.security_group, "Generated by '%s' API" % self.accelerator, project_id=self.project_id
-                )  
+                )
                 logger.info("Created security group: %s", security_group.name)
                 # Create Security Group Rules if not provided
             else:
@@ -876,8 +862,8 @@ class OpenStackClass(CSPGenericClass):
             public_ip = self.get_public_ip()
             # Create rule on SSH
             try:
-                self.connection.create_security_group_rule(security_group.id, port_range_min=22, port_range_max=22, 
-                    protocol="tcp", remote_ip_prefix=public_ip, remote_group_id=None, direction='ingress', 
+                self.connection.create_security_group_rule(security_group.id, port_range_min=22, port_range_max=22,
+                    protocol="tcp", remote_ip_prefix=public_ip, remote_group_id=None, direction='ingress',
                     ethertype='IPv4', project_id=self.project_id
                 )
             except:
@@ -885,8 +871,8 @@ class OpenStackClass(CSPGenericClass):
                 pass
             # Create rule on HTTP
             try:
-                self.connection.create_security_group_rule(security_group.id, port_range_min=80, port_range_max=80, 
-                    protocol="tcp", remote_ip_prefix=public_ip, remote_group_id=None, direction='ingress', 
+                self.connection.create_security_group_rule(security_group.id, port_range_min=80, port_range_max=80,
+                    protocol="tcp", remote_ip_prefix=public_ip, remote_group_id=None, direction='ingress',
                     ethertype='IPv4', project_id=self.project_id
                 )
             except:
@@ -920,10 +906,10 @@ class OpenStackClass(CSPGenericClass):
         self.instance_type = self.connection.compute.find_flavor(flavor_name).id
         logger.debug("Set flavor '%s' with ID %s", flavor_name, self.instance_type)
         return True
-        
+
     def getConfigurationEnv(self, **kwargs):
         return self.config_env
-            
+
     def getPublicIp(self):
         public_ip = None
         try:
@@ -941,6 +927,7 @@ class OpenStackClass(CSPGenericClass):
             # Waiting for the instance provisioning
             logger.info("Waiting for the instance provisioning...")
             self.instance = self.connection.compute.wait_for_server(self.instance)
+            logger.debug("Instance status: %s", self.instance.status)
             # Waiting for the instance to boot
             self.instance_url = "http://%s" % self.getPublicIp()
             logger.info("Instance is now booting")
@@ -951,18 +938,18 @@ class OpenStackClass(CSPGenericClass):
         except:
             logger.exception("Caught following exception:")
             return False
-            
+
     def get_instance_csp(self):
         if self.instance_id is None:
             return False
         try:
-            self.instance = self.connection.get_server(self.instance_id)            
+            self.instance = self.connection.get_server(self.instance_id)
             logger.debug("Found an instance with ID %s in the following state: %s", self.instance_id, self.instance.status)
             return True
-        except:                                       
+        except:
             logger.error("Could not find an instance with ID %s", self.instance_id)
             return False
-    
+
     def start_new_instance_csp(self):
         try :
             logger.debug("Starting instance")
@@ -1076,7 +1063,7 @@ class AcceleratorClass(object):
         self.stopResult = {'app': {'status':-1, 'msg':"Not run"}}
         # Create CSP object
         self.sign_handler = SignalHandlerAccelerator()
-        self.csp = CSPClassFactory(config_file=config_file, client_id=csp_client_id, secret_id=csp_secret_id, 
+        self.csp = CSPClassFactory(config_file=config_file, client_id=csp_client_id, secret_id=csp_secret_id,
             region=region, ssh_key=ssh_key, instance_id=instance_id, instance_url=instance_url)
         self.sign_handler.add_instance(self.csp)
         # Create Accelerator object
@@ -1216,9 +1203,11 @@ class AcceleratorClass(object):
             logger.exception("Caught following exception:")
             return False
 
-    def stop(self, stop_mode):
+    def stop(self, stop_mode=None):
         logger.debug("Stopping accelerator '%s' running on '%s' instance ID '%s'", self.accelerator.name, self.csp.provider, self.csp.instance_id)
         try:
+            if stop_mode is None:
+                stop_mode = self.sign_handler.stop_mode
             if stop_mode == KEEP:
                 self.stop_accelerator()
                 return True
