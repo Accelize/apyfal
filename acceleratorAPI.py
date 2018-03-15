@@ -1189,13 +1189,13 @@ class AcceleratorClass(object):
     def stop_instance(self, terminate=True):
         logger.debug("Stopping instance (ID: %s) on '%s'", self.csp.instance_id, self.csp.provider)
         try:
-            self.stop_accelerator()
+            res = self.stop_accelerator()
             self.sign_handler.remove_instance()
             self.csp.stop_instance_csp(terminate)
-            return True
-        except:
+            return res
+        except Exception as e:
             logger.exception("Caught following exception:")
-            return False
+            return False, {'app': {'status':-1, 'msg':"Following error occurred: %s" % str(e)}}
 
     def stop(self, stop_mode=None):
         logger.debug("Stopping accelerator '%s' running on '%s' instance ID '%s'", self.accelerator.name, self.csp.provider, self.csp.instance_id)
@@ -1203,13 +1203,12 @@ class AcceleratorClass(object):
             if stop_mode is None:
                 stop_mode = self.sign_handler.stop_mode
             if stop_mode == KEEP:
-                self.stop_accelerator()
-                return True
+                return self.stop_accelerator()
             terminate = True if stop_mode == TERM else False
             return self.stop_instance(terminate)
-        except:
+        except Exception as e:
             logger.exception("Caught following exception:")
-            return False
+            return False, {'app': {'status':-1, 'msg':"Following error occurred: %s" % str(e)}}
 
     def getInfo(self):
         d = dict()
