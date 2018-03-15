@@ -1067,13 +1067,10 @@ class AcceleratorClass(object):
             instance_url = "http://" + instance_ip
         else:
             instance_url = None
-        self.configResult = {'app': {'status':-1, 'msg':"Not run"}}
-        self.processResult = {'app': {'status':-1, 'msg':"Not run"}}
-        self.stopResult = {'app': {'status':-1, 'msg':"Not run"}}
         # Create CSP object
         self.sign_handler = SignalHandlerAccelerator()
-        self.csp = CSPClassFactory(config_file=config_file, provider=provider, client_id=csp_client_id, 
-            secret_id=csp_secret_id, region=region, ssh_key=ssh_key, instance_id=instance_id, 
+        self.csp = CSPClassFactory(config_file=config_file, provider=provider, client_id=csp_client_id,
+            secret_id=csp_secret_id, region=region, ssh_key=ssh_key, instance_id=instance_id,
             instance_url=instance_url)
         self.sign_handler.add_instance(self.csp)
         # Create Accelerator object
@@ -1093,15 +1090,6 @@ class AcceleratorClass(object):
 
     def __del__(self):
         self.sign_handler.signal_handler_accelerator(exit=False)
-
-    def getConfigResult(self):
-        return self.configResult
-
-    def getProcessResult(self):
-        return self.processResult
-
-    def getStopResult(self):
-        return self.stopResult
 
     # Start a new instance or use a running instance
     def start_instance(self, stop_mode=None):
@@ -1141,20 +1129,18 @@ class AcceleratorClass(object):
         try :
             logger.debug("Configuring accelerator '%s' on instance ID %s", self.accelerator.name, self.csp.instance_id)
             if not checkUrl(self.accelerator.getUrl(), 10):
-                self.configResult = {'app': {'status':-1, 'msg':"Failed to ping url: %s" % self.accelerator.getUrl()}}
-                return False
+                return False, {'app': {'status':-1, 'msg':"Failed to reach accelerator url: %s" % self.accelerator.getUrl()}}
             csp_env = self.csp.getConfigurationEnv(**kwargs)
-            self.configResult = self.accelerator.start_accelerator(datafile=datafile, accelerator_parameters=accelerator_parameters, csp_env=csp_env)
-            ret, msg = self.getInfoFromResult(self.configResult)
+            configResult = self.accelerator.start_accelerator(datafile=datafile, accelerator_parameters=accelerator_parameters, csp_env=csp_env)
+            ret, msg = self.getInfoFromResult(configResult)
             if ret:
                 logger.error("Configuration of accelerator failed: %s", msg)
-                return False
+                return False, configResult
             logger.info("Configuration of accelerator is complete")
-            return True
+            return True, configResult
         except Exception as e:
             logger.exception("Caught following exception:")
-            self.configResult = {'app': {'status':-1, 'msg':"Following error occurred: %s" % str(e)}}
-            return False
+            return False, {'app': {'status':-1, 'msg':"Following error occurred: %s" % str(e)}}
 
     def start(self, stop_mode=TERM, datafile=None, accelerator_parameters=None, **kwargs):
         logger.debug("Starting accelerator server '%s' on '%s'", self.accelerator.name, self.csp.provider)
@@ -1165,8 +1151,7 @@ class AcceleratorClass(object):
         if kwargs or (self.accelerator.accelerator_configuration_url is None):
             return self.configure_accelerator(datafile, accelerator_parameters, **kwargs)
         logger.debug("Accelerator is already configured")
-        self.configResult = {'app': {'status':0, 'msg':"Reusing last configuration"}}
-        return True
+        return True, {'app': {'status':0, 'msg':"Reusing last configuration: %s" % self.accelerator_configuration_url}}
 
     def process(self, file_in, file_out, process_parameter=None):
         logger.debug("Starting a processing job: in=%s, out=%s", file_in, file_out)
@@ -1174,33 +1159,32 @@ class AcceleratorClass(object):
             accel_url = self.accelerator.getUrl()
             logger.debug("Accelerator URL: %s", accel_url)
             if not checkUrl(accel_url, 10):
-                return False
-            self.processResult = self.accelerator.process_file(file_in=file_in, file_out=file_out, accelerator_parameters=process_parameter)
-            ret, msg = self.getInfoFromResult(self.processResult)
+                return False, {'app': {'status':-1, 'msg':"Failed to reach accelerator url: %s" % self.accelerator.getUrl()}}
+            processResult = self.accelerator.process_file(file_in=file_in, file_out=file_out, accelerator_parameters=process_parameter)
+            ret, msg = self.getInfoFromResult(processResult)
             if ret:
-                return False
+                return False, processResult
             logger.info("Processing on accelerator is complete")
-            return True
+            return True, processResult
         except Exception as e:
             logger.exception("Caught following exception:")
-            return False
+            return False, {'app': {'status':-1, 'msg':"Exception occured: %s" % str(e)}}
 
     def stop_accelerator(self):
         logger.debug("Stopping accelerator '%s' on instance ID %s", self.accelerator.name, self.csp.instance_id)
         try :
             if not checkUrl(self.accelerator.getUrl(), 10):
-                return False
-            self.stopResult = self.accelerator.stop_accelerator()
-            ret, msg = self.getInfoFromResult(self.stopResult)
+                return False, {'app': {'status':-1, 'msg':"Failed to reach accelerator url: %s" % self.accelerator.getUrl()}}
+            stopResult = self.accelerator.stop_accelerator()
+            ret, msg = self.getInfoFromResult(stopResult)
             if ret:
                 logger.error("Stopping accelerator failed: %s", msg)
-                return False
+                return False, stopResult
             logger.info("Stopping accelerator is complete")
-            return True
+            return True, stopResult
         except Exception as e :
             logger.exception("Caught following exception:")
-            self.stopResult = {'app': {'status':-1, 'msg':"Following error occurred: %s" % str(e)}}
-            return False
+            return False, {'app': {'status':-1, 'msg':"Following error occurred: %s" % str(e)}}
 
     def stop_instance(self, terminate=True):
         logger.debug("Stopping instance (ID: %s) on '%s'", self.csp.instance_id, self.csp.provider)
