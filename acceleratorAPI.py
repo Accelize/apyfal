@@ -272,7 +272,7 @@ class GenericAcceleratorClass(object):
         if accelerator_parameters == None:
             logger.debug( "Using default processing parameters")
             accelerator_parameters = ast.literal_eval(config.get("process", "parameters"))
-        logger.info("Using configuration: %s", self.accelerator_configuration_url)
+        logger.debug("Using configuration: %s", self.accelerator_configuration_url)
         datafile = file_in # file | If needed, file to be processed by the accelerator. (optional)
         try:
             try: # Bypass REST API because upload issue with big file using python https://bugs.python.org/issue8450
