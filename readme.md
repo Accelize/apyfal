@@ -1,3 +1,4 @@
+
 # Overview
 Accelize AcceleratorAPI is a powerful and flexible toolkit for testing and operate FPGA accelerated function .
 
@@ -9,6 +10,9 @@ Some reasons you might want to use AcceleratorAPI :
 
 ## Requirements
 + Python 2.7
++ System packages gcc , python-pip,  python-devel  :
+	+ On Redhat : sudo yum install gcc python-pip python-devel curl 
+	+ On Ubuntu :  sudo apt-get install gcc python-pip python-dev curl 
 + Access Key (create it within your [AccelStore account](https://accelstore.accelize.com/user/application))
 + Optional pycurl python module to reach good upload performance
 
@@ -20,7 +24,7 @@ Download the acceleratorAPI
 
 Install using pip...
 
-    sudo pip install -r acceleratorAPI/endUserAPI/python/requirements.txt
+    sudo pip install -r acceleratorAPI/requirements.txt
 
 
 ## All the accelerated functions
@@ -28,24 +32,44 @@ Install using pip...
 Browse our web site https://accelstore.accelize.com
 
 ## Configuration
-Edit the accelerator.conf to provide the Accelize ID and the CSP credential in case you want the script manage the Configuration and Instance start/stop.
+Edit the accelerator.conf to provide the Accelize ID and the CSP credential in case you want the script manage the configuration and Instance start/stop.
 
-    [accelize]
-    #Create your free account and access keys  on https://accelstore.accelize.com/user/applications
-    client_id =
-    secret_id =
+    [general]
     
     [csp]
-    #Create AccessKey from your CSP Provider
+    #Name of your provider AWS, OVH ...
+    provider = 
+    #Set your CSP information
     client_id =
     secret_id =
+    region = 
+    project_id = 
+    #Defaut CSP environement value
+    instance_type =
+    ssh_key = MySSHKEY
+    security_group = MySecurityGROUP
+    role = MyRole 
+    instance_id =
+    instance_ip =
+    # Instance stop mode: 0=TERMINATE, 1=STOP, 2=KEEP
+    stop_mode = 0
+    
+    [accelize]
+    #Set Accelerator Access Key from your Accelize account on https://accelstore.accelize.com/user/applications
+    client_id = 
+    secret_id = 
+    
+
+    
 
 ## Simple Demo
 
-    myacceleratorinstance = acceleratorAPI.AcceleratorClass(provider='AWS', stop_instance=True)
-    myacceleratorinstance.start_accelerator(start_instance=True,  accelerator='accelize_gzip')
-    myacceleratorinstance.process(file_in='myfile',  file_out='result')
-    myacceleratorinstance.stop_accelerator()
+    python
+    from acceleratorAPI import *
+    myaccel = AcceleratorClass(provider='AWS',accelerator='cast_gzip')
+    myaccel.start()
+    myaccel.process(file_in='myfile',  file_out='result')
+    myaccel.stop()
     
 ## Metering
 Check the accelerator metering information on your [AccelStore account](https://accelstore.accelize.com/user/metering). 
