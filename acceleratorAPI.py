@@ -9,7 +9,6 @@ import time
 import signal
 import shutil
 import copy
-import urllib2
 import urllib3
 import ast
 import json
@@ -59,8 +58,6 @@ def checkUrl(url, timeout=None, retryCount=0, retryPeriod=5):
                 if status_code == 200:
                     logger.debug("... hit!")
                     return True
-                logger.error("Getting url '%s' returned an HTTP error %d", url, status_code)
-                return False
             except Exception as e:
                 logger.debug("... miss")
                 missCnt += 1
