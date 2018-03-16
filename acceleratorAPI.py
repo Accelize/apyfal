@@ -1146,7 +1146,7 @@ class AcceleratorClass(object):
         logger.debug("Starting accelerator server '%s' on '%s'", self.accelerator.name, self.csp.provider)
         # Start a new instance or use a running instance
         if not self.start_instance(stop_mode):
-            return False
+            return False, {'app': {'status':0, 'msg':"Failed to creation instance"}}
         # Configure accelerator if needed
         if kwargs or (self.accelerator.accelerator_configuration_url is None):
             return self.configure_accelerator(datafile, accelerator_parameters, **kwargs)
@@ -1164,7 +1164,7 @@ class AcceleratorClass(object):
             ret, msg = self.getInfoFromResult(processResult)
             if ret:
                 return False, processResult
-            logger.info("Processing on accelerator is complete")
+            logger.debug("Processing on accelerator is complete")
             return True, processResult
         except Exception as e:
             logger.exception("Caught following exception:")
@@ -1180,7 +1180,7 @@ class AcceleratorClass(object):
             if ret:
                 logger.error("Stopping accelerator failed: %s", msg)
                 return False, stopResult
-            logger.info("Stopping accelerator is complete")
+            logger.debug("Stopping accelerator is complete")
             return True, stopResult
         except Exception as e :
             logger.exception("Caught following exception:")
