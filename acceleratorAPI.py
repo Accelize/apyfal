@@ -1151,7 +1151,7 @@ class AcceleratorClass(object):
         if kwargs or (self.accelerator.accelerator_configuration_url is None):
             return self.configure_accelerator(datafile, accelerator_parameters, **kwargs)
         logger.debug("Accelerator is already configured")
-        return True, {'app': {'status':0, 'msg':"Reusing last configuration: %s" % self.accelerator_configuration_url}}
+        return True, {'app': {'status':0, 'msg':"Reusing last configuration: %s" % self.accelerator.accelerator_configuration_url}}
 
     def process(self, file_in, file_out, process_parameter=None):
         logger.debug("Starting a processing job: in=%s, out=%s", file_in, file_out)
