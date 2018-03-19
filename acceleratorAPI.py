@@ -16,7 +16,6 @@ import requests
 import socket
 import ConfigParser
 
-
 import rest_api.swagger_client
 from rest_api.swagger_client.rest import ApiException
 
@@ -405,6 +404,7 @@ class AWSClass(CSPGenericClass):
         self.role = self.getFromConfig('csp', 'role', role)
         if self.role is None:
             raise Exception("No 'role' field has been specified for %s" % self.provider)
+        self.loadsession()
         self.instance = None
         self.config_env = {}
 
@@ -419,10 +419,9 @@ class AWSClass(CSPGenericClass):
                 aws_secret_access_key = self.secret_id,
                 region_name = self.region
             )
-            return True
         except:
             logger.exception("Caught following exception:")
-            return False
+            raise Exception("Could not authenticate to your %s account", self.provider)
 
     def check_csp_credential(self):
         try :
@@ -596,6 +595,19 @@ class AWSClass(CSPGenericClass):
             logger.exception("Failed to create security group with message:")
             return False
 
+    def get_instance_csp(self):
+        if self.instance_id is None:
+            logger.error("Invalid instance ID: %s", str(self.intance_id))
+            return False
+        ec2 = self.session.resource('ec2')
+        self.instance = ec2.Instance(self.instance_id)
+        try:
+            logger.debug("Found an instance with ID %s in the following state: %s", self.instance_id, str(self.instance.state))
+            return True
+        except:
+            logger.error("Could not find an instance with ID %s", self.instance_id)
+            return False
+
     def wait_instance_ready(self):
         try:
             # Waiting for the instance provisioning
@@ -619,19 +631,6 @@ class AWSClass(CSPGenericClass):
         except:
             logger.exception("Caught following exception:")
             return None
-
-    def get_instance_csp(self):
-        if self.instance_id is None:
-            logger.error("Invalid instance ID: %s", str(self.intance_id))
-            return False
-        ec2 = self.session.resource('ec2')
-        self.instance = ec2.Instance(self.instance_id)
-        try:
-            logger.debug("Found an instance with ID %s in the following state: %s", self.instance_id, str(self.instance.state))
-            return True
-        except:
-            logger.error("Could not find an instance with ID %s", self.instance_id)
-            return False
 
     def set_accelerator_requirements(self, accel_parameters):
         if self.region not in accel_parameters.keys():
@@ -925,6 +924,17 @@ class OpenStackClass(CSPGenericClass):
             logger.error("Failed to get public IP address.")
         return public_ip
 
+    def get_instance_csp(self):
+        if self.instance_id is None:
+            return False
+        try:
+            self.instance = self.connection.get_server(self.instance_id)
+            logger.debug("Found an instance with ID %s in the following state: %s", self.instance_id, self.instance.status)
+            return True
+        except:
+            logger.error("Could not find an instance with ID %s", self.instance_id)
+            return False
+
     def wait_instance_ready(self):
         try:
             # Waiting for the instance provisioning
@@ -947,17 +957,6 @@ class OpenStackClass(CSPGenericClass):
             logger.exception("Caught following exception:")
             return False
 
-    def get_instance_csp(self):
-        if self.instance_id is None:
-            return False
-        try:
-            self.instance = self.connection.get_server(self.instance_id)
-            logger.debug("Found an instance with ID %s in the following state: %s", self.instance_id, self.instance.status)
-            return True
-        except:
-            logger.error("Could not find an instance with ID %s", self.instance_id)
-            return False
-
     def start_new_instance_csp(self):
         try :
             logger.debug("Starting instance")
@@ -969,6 +968,7 @@ class OpenStackClass(CSPGenericClass):
             return self.wait_instance_ready()
         except:
             logger.exception("Caught following exception:")
+            raise Exception("Could not start a new server")
             return None
 
     def start_existing_instance_csp(self):
@@ -1072,7 +1072,6 @@ class AcceleratorClass(object):
         self.csp = CSPClassFactory(config_file=config_file, provider=provider, client_id=csp_client_id,
             secret_id=csp_secret_id, region=region, ssh_key=ssh_key, instance_id=instance_id,
             instance_url=instance_url)
-        self.sign_handler.add_instance(self.csp)
         # Create Accelerator object
         config = ConfigParser.ConfigParser(allow_no_value=True)
         config.read(config_file)
@@ -1087,6 +1086,9 @@ class AcceleratorClass(object):
             except:
                 raise Exception("Accelize client ID and secret ID are mandatory. Provide them in the configuration file or through function arguments.")
         self.accelerator = GenericAcceleratorClass(accelerator, client_id=xlz_client_id, secret_id=xlz_secret_id)
+        # Checking if credentials are valid otherwise no sense to continue
+        if not self.accelerator.check_accelize_credential():
+            raise Exception("Could not authenticate to your Accelize account")
 
     def __del__(self):
         self.sign_handler.signal_handler_accelerator(exit=False)
@@ -1094,11 +1096,9 @@ class AcceleratorClass(object):
     # Start a new instance or use a running instance
     def start_instance(self, stop_mode=None):
         stop_mode = self.csp.getFromConfig("csp", "stop_mode", stop_mode)
-        if stop_mode:
+        if stop_mode is not None:
             self.sign_handler.set_stop_mode(stop_mode)
-        # Checking if credentials are valid otherwise no sense to continue
-        if not self.accelerator.check_accelize_credential():
-            return False
+        self.sign_handler.add_instance(self.csp)
         if self.csp.instance_url is None:
             if not self.csp.check_csp_credential():
                 return False
