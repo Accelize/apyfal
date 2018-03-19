@@ -425,8 +425,6 @@ class AWSClass(CSPGenericClass):
 
     def check_csp_credential(self):
         try :
-            if not self.loadsession():
-                return False
             ec2 = self.session.client('ec2')
             response = ec2.describe_key_pairs()
             logger.debug("Response of 'describe_key_pairs': %s", str(response))
