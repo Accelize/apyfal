@@ -32,6 +32,7 @@ fileHandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)-8s: %(nam
 logger.addHandler(fileHandler)
 
 DEFAULT_CONFIG_FILE = "accelerator.conf"
+SOCKET_TIMEOUT = 1200
 
 TERM = 0
 STOP = 1
@@ -83,7 +84,9 @@ class SignalHandlerAccelerator(object):
         self.csp = None
         self.stop_mode = TERM
         self.set_signals()
-
+        self.defaultSocketTimeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(SOCKET_TIMEOUT)
+        
     def add_instance(self, instance):
         self.csp = instance
         logger.debug("Added instance to auto-stop handler.")
@@ -118,6 +121,7 @@ class SignalHandlerAccelerator(object):
                 terminate = True if self.stop_mode == TERM else False
                 self.csp.stop_instance_csp(terminate)
         if exit:
+            socket.setdefaulttimeout(self.defaultSocketTimeout)
             logger.info("Accelerator API Closed properly")
             os._exit(0)
 
@@ -303,21 +307,24 @@ class GenericAcceleratorClass(object):
                 api_response = api_instance.process_create(self.accelerator_configuration_url, parameters=json.dumps(accelerator_parameters), datafile=datafile)
                 id = api_response.id
                 processed = api_response.processed
-            while processed != True :
-                api_response = api_instance.process_read(id)
-                processed = api_response.processed
-                if api_response.inerror :
-                    msg = "Cannot start the process: %s" % prettyDict(api_response.parametersresult)
-                    logger.error(msg)
-                    return {'app': {'status':-1, 'msg':msg}}
-            http = urllib3.PoolManager()
-            with http.request('GET', api_response.datafileresult, preload_content=False) as r, open(file_out, 'wb') as out_file:
-                shutil.copyfileobj(r, out_file)
-            logger.debug( "process_delete api_response: "+str(id) )
-            api_response_delete = api_instance.process_delete(id)
-            dictparameters = ast.literal_eval(api_response.parametersresult)
-            logger.debug(  "status:"+str(dictparameters['app']['status']))
-            logger.debug(  "msg:\n"+dictparameters['app']['msg'])
+            try:
+                while processed != True :
+                    api_response = api_instance.process_read(id)
+                    processed = api_response.processed
+                    if api_response.inerror :
+                        msg = "Cannot start the process: %s" % prettyDict(api_response.parametersresult)
+                        logger.error(msg)
+                        return {'app': {'status':-1, 'msg':msg}}
+                url = 'http://example.com/img.png'
+                response = requests.get(api_response.datafileresult, stream=True)
+                with open(file_out, 'wb') as out_file:
+                    shutil.copyfileobj(response.raw, out_file)
+                dictparameters = ast.literal_eval(api_response.parametersresult)
+                logger.debug(  "status:"+str(dictparameters['app']['status']))
+                logger.debug(  "msg:\n"+dictparameters['app']['msg'])
+            finally:
+                logger.debug( "process_delete api_response: "+str(id) )
+                api_response_delete = api_instance.process_delete(id)                
             return dictparameters
         except ApiException as e:
             logger.error("Caught following exception while calling ProcessApi->process_create: %s", str(e))
@@ -370,6 +377,26 @@ class CSPGenericClass(object):
             self.security_group = "MySecurityGroup"
         self.instance_id = self.getFromConfig('csp', 'instance_id', instance_id)
         self.instance_url = self.getFromConfig('csp', 'instance_url', instance_url)
+        self.createSSHFolder()      # If not existing create SSH folder in HOME folder
+
+    def createSSHFolder(self):
+        self.ssh_dir = os.path.expanduser('~/.ssh')
+        if not os.path.isdir(self.ssh_dir):
+            os.mkdir(self.ssh_dir, 0o700)
+
+    def createSSHKeyFileName(self):
+        ssh_key_file = os.path.join(self.ssh_dir, self.ssh_key + ".pem")
+        ssh_files = os.listdir( os.path.join(self.ssh_dir, "*.pem") )
+        if ssh_key_file not in ssh_files:
+            return
+        idx = 1
+        while True:
+            ssh_key_file = self.ssh_key + "%d.pem" % idx 
+            if ssh_key_file not in ssh_files:
+                break
+            idx += 1           
+        logger.warn("A SSH key file named '%s' is already existing in ~/.ssh. To avaid overwritting an existing key, he new SSH key file will be named '%s'.", self.ssh_key, ssh_key_file)
+        return ssh_key_file
 
     def getFromConfig(self, section, key, default=None):
         if default:
@@ -383,16 +410,67 @@ class CSPGenericClass(object):
         except:
             return None
 
-    def get_public_ip(self):
-        try :
-            r = requests.get('http://ipinfo.io/ip')
-            logger.debug("Public IP answer: %s", str(r.text))
+    @staticmethod
+    def get_public_ip_case1():
+        try :            
+            url = 'http://ipinfo.io/ip'
+            logger.debug("Get public IP answer using: %s", url)
+            r = requests.get(url)
             r.raise_for_status()
-            return r.text.strip()+"/32"
+            ip_address = str(r.text)
+            logger.debug("Public IP answer: %s", ip_address)            
+            return ip_address.strip()+"/32"
         except:
             logger.exception("Caught following exception:")
-            raise Exception("Cannot get your current pubblic IP address")
+            return None
 
+    @staticmethod
+    def get_public_ip_case2():
+        try :
+            import xml.etree.ElementTree as ET
+            url = 'http://ip-api.com/xml'
+            logger.debug("Get public IP answer using: %s", url)
+            r = requests.get(url)
+            r.raise_for_status()
+            root = ET.fromstring(r.text.encode('utf-8'))
+            ip_address = str(root.findall("query")[0].text)
+            logger.debug("Public IP answer: %s", ip_address)            
+            return ip_address.strip()+"/32"
+        except:
+            logger.exception("Caught following exception:")
+            return None
+        
+    @staticmethod
+    def get_public_ip_case3():
+        try :
+            import xml.etree.ElementTree as ET
+            url = 'http://freegeoip.net/xml'
+            logger.debug("Get public IP answer using: %s", url)
+            r = requests.get(url)
+            r.raise_for_status()
+            root = ET.fromstring(r.text.encode('utf-8'))
+            ip_address = str(root.findall("IP")[0].text)
+            logger.debug("Public IP answer: %s", ip_address)            
+            return ip_address.strip()+"/32"
+        except:
+            logger.exception("Caught following exception:")
+            return None
+        
+    @staticmethod
+    def get_public_ip():
+        ip_address = get_public_ip_case1()
+        if ip_address:
+            return ip_address
+        ip_address = get_public_ip_case1()
+        if ip_address:
+            return ip_address
+        ip_address = get_public_ip_case1()
+        if ip_address:
+            return ip_address
+        logger.error("Failed to find your external IP address after attempts to 3 different sites.")
+        raise Exception("Failed to find your external IP address. Your internet connection might be broken.")
+        
+    
 
 #===================================
 class AWSClass(CSPGenericClass):
@@ -439,19 +517,21 @@ class AWSClass(CSPGenericClass):
             try :
                 ec2 = self.session.client('ec2')
                 key_pair = ec2.describe_key_pairs( KeyNames=[self.ssh_key])
-                logger.info( "KeyPair on AWS named: "+str(key_pair['KeyPairs'][0]['KeyName'])+" already exists, nothing to do.")
-                return True
+                logger.info("KeyPair on %s named '%s' already exists.", self.provider, str(key_pair['KeyPairs'][0]['KeyName']))
             except Exception as e:
+                # Key does not exist on the CSP, create it. 
                 logger.debug(str(e))
                 logger.info("Create KeyPair %s", str(self.ssh_key))
                 ec2 = self.session.resource('ec2')
                 key_pair = ec2.create_key_pair(KeyName=self.ssh_key)
-                with open(self.ssh_key+".pem", "w") as text_file:
+                ssh_key_file = createSSHKeyFileName()
+                logger.debug("Creating private ssh key file: %s", ssh_key_file)                
+                with open(ssh_key_file, "w") as text_file:
                     text_file.write(key_pair.key_material)
-                os.chmod(self.ssh_key+".pem", 0600)
+                os.chmod(ssh_key_file, 0o600)
                 logger.debug("Key Content: %s", str(key_pair.key_material))
-                logger.info("Key write in the current directory: %s.pem", self.ssh_key)
-                return True
+                logger.info("New SSH Key '%s' has been written in '%s'", ssh_key_file, self.ssh_dir)
+            return True
         except:
             logger.exception("Failed to create SSH Key with exception:")
             return False
@@ -825,22 +905,21 @@ class OpenStackClass(CSPGenericClass):
         try:
             ssh_dir = os.path.expanduser('~/.ssh')
             private_keypair_file = os.path.join(ssh_dir, "%s.pem" % self.ssh_key)
-            logger.info("Check if KeyPair '%s' exists and create it if not.", self.ssh_key)
             keypair = self.connection.compute.find_keypair(self.ssh_key, ignore_missing=True)
             if not keypair:
+                # Create 
                 logger.debug("Create KeyPair '%s'", self.ssh_key)
                 keypair = self.connection.compute.create_keypair(name=self.ssh_key)
                 # Save private key locally if not existing
-                logger.debug("Creating private ssh key file: %s", private_keypair_file)
-                if not os.path.isdir(ssh_dir):
-                    os.mkdir(ssh_dir, 0o700)
-                with open(private_keypair_file, 'w') as f:
-                    f.write("%s" % keypair.private_key)
-                os.chmod(private_keypair_file, 0o400)
-            elif not os.path.isfile(private_keypair_file):
-                logger.warn("Could not find a ssh key public file: %s", private_keypair_file)
+                ssh_key_file = createSSHKeyFileName()
+                logger.debug("Creating private ssh key file: %s", ssh_key_file)
+                with open(ssh_key_file, "w") as text_file:
+                    text_file.write(key_pair.key_material)
+                os.chmod(ssh_key_file, 0o600)
+                logger.debug("Key Content: %s", str(key_pair.key_material))
+                logger.info("New SSH Key '%s' has been written in '%s'", ssh_key_file, self.ssh_dir)
             else:
-                logger.info("KeyPair '%s' is already existing in your home.", self.ssh_key)
+                logger.info("KeyPair on %s named '%s' already exists.", self.provider, str(key_pair['KeyPairs'][0]['KeyName']))                
             return True
         except:
             logger.exception("Failed to create SSH Key with message:")
@@ -966,8 +1045,7 @@ class OpenStackClass(CSPGenericClass):
             return self.wait_instance_ready()
         except:
             logger.exception("Caught following exception:")
-            raise Exception("Could not start a new server")
-            return None
+            return False
 
     def start_existing_instance_csp(self):
         try:
@@ -1023,6 +1101,15 @@ class OpenStackClass(CSPGenericClass):
 
 
 #===================================
+class OVHClass(OpenStackClass):
+#===================================
+    def start_instance_csp(self):
+        if not super(OVHClass, self).start_instance_csp():
+            raise Exception("Failed to create OVH instance, please refer to: https://horizon.cloud.ovh.net")
+        
+        
+
+#===================================
 class CSPClassFactory(object):
 #===================================
     def __new__(cls, config_file, provider=None, **kwargs):
@@ -1037,7 +1124,7 @@ class CSPClassFactory(object):
         if provider.lower() == 'aws':
             return AWSClass(provider, config_parser, **kwargs)
         elif provider.lower() == 'ovh':
-            return OpenStackClass(provider, config_parser, **kwargs)
+            return OVHClass(provider, config_parser, **kwargs)
         else:
             raise ValueError('Cannot initate a CSP class with this provider:'+str(provider))
 
