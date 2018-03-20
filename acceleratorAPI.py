@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARN)
 
 # Rotating file handler
-LOG_FILENAME = os.path.basename(__file__).replace(".py",".log")
+LOG_FILENAME = os.path.splitext(os.path.basename(__file__))[0] + ".log"
 MAX_BYTES = 100*1024*1024
 fileHandler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=MAX_BYTES, backupCount=5)
 fileHandler.setLevel(logging.DEBUG)
@@ -86,7 +86,7 @@ class SignalHandlerAccelerator(object):
         self.set_signals()
         self.defaultSocketTimeout = socket.getdefaulttimeout()
         socket.setdefaulttimeout(SOCKET_TIMEOUT)
-        
+
     def add_instance(self, instance):
         self.csp = instance
         logger.debug("Added instance to auto-stop handler.")
@@ -324,7 +324,7 @@ class GenericAcceleratorClass(object):
                 logger.debug(  "msg:\n"+dictparameters['app']['msg'])
             finally:
                 logger.debug( "process_delete api_response: "+str(id) )
-                api_response_delete = api_instance.process_delete(id)                
+                api_response_delete = api_instance.process_delete(id)
             return dictparameters
         except ApiException as e:
             logger.error("Caught following exception while calling ProcessApi->process_create: %s", str(e))
@@ -391,10 +391,10 @@ class CSPGenericClass(object):
             return
         idx = 1
         while True:
-            ssh_key_file = self.ssh_key + "%d.pem" % idx 
+            ssh_key_file = self.ssh_key + "%d.pem" % idx
             if ssh_key_file not in ssh_files:
                 break
-            idx += 1           
+            idx += 1
         logger.warn("A SSH key file named '%s' is already existing in ~/.ssh. To avaid overwritting an existing key, he new SSH key file will be named '%s'.", self.ssh_key, ssh_key_file)
         return ssh_key_file
 
@@ -412,13 +412,13 @@ class CSPGenericClass(object):
 
     @staticmethod
     def get_public_ip_case1():
-        try :            
+        try :
             url = 'http://ipinfo.io/ip'
             logger.debug("Get public IP answer using: %s", url)
             r = requests.get(url)
             r.raise_for_status()
             ip_address = str(r.text)
-            logger.debug("Public IP answer: %s", ip_address)            
+            logger.debug("Public IP answer: %s", ip_address)
             return ip_address.strip()+"/32"
         except:
             logger.exception("Caught following exception:")
@@ -434,12 +434,12 @@ class CSPGenericClass(object):
             r.raise_for_status()
             root = ET.fromstring(r.text.encode('utf-8'))
             ip_address = str(root.findall("query")[0].text)
-            logger.debug("Public IP answer: %s", ip_address)            
+            logger.debug("Public IP answer: %s", ip_address)
             return ip_address.strip()+"/32"
         except:
             logger.exception("Caught following exception:")
             return None
-        
+
     @staticmethod
     def get_public_ip_case3():
         try :
@@ -450,27 +450,27 @@ class CSPGenericClass(object):
             r.raise_for_status()
             root = ET.fromstring(r.text.encode('utf-8'))
             ip_address = str(root.findall("IP")[0].text)
-            logger.debug("Public IP answer: %s", ip_address)            
+            logger.debug("Public IP answer: %s", ip_address)
             return ip_address.strip()+"/32"
         except:
             logger.exception("Caught following exception:")
             return None
-        
+
     @staticmethod
     def get_public_ip():
-        ip_address = get_public_ip_case1()
+        ip_address = CSPGenericClass.get_public_ip_case1()
         if ip_address:
             return ip_address
-        ip_address = get_public_ip_case1()
+        ip_address = CSPGenericClass.get_public_ip_case1()
         if ip_address:
             return ip_address
-        ip_address = get_public_ip_case1()
+        ip_address = CSPGenericClass.get_public_ip_case1()
         if ip_address:
             return ip_address
         logger.error("Failed to find your external IP address after attempts to 3 different sites.")
         raise Exception("Failed to find your external IP address. Your internet connection might be broken.")
-        
-    
+
+
 
 #===================================
 class AWSClass(CSPGenericClass):
@@ -517,18 +517,18 @@ class AWSClass(CSPGenericClass):
             try :
                 ec2 = self.session.client('ec2')
                 key_pair = ec2.describe_key_pairs( KeyNames=[self.ssh_key])
-                logger.info("KeyPair on %s named '%s' already exists.", self.provider, str(key_pair['KeyPairs'][0]['KeyName']))
+                logger.info("KeyPair '%s' is already existing on %s.", str(key_pair['KeyPairs'][0]['KeyName']), self.provider)
             except Exception as e:
-                # Key does not exist on the CSP, create it. 
+                # Key does not exist on the CSP, create it.
                 logger.debug(str(e))
                 logger.info("Create KeyPair %s", str(self.ssh_key))
                 ec2 = self.session.resource('ec2')
                 key_pair = ec2.create_key_pair(KeyName=self.ssh_key)
                 ssh_key_file = createSSHKeyFileName()
-                logger.debug("Creating private ssh key file: %s", ssh_key_file)                
+                logger.debug("Creating private ssh key file: %s", ssh_key_file)
                 with open(ssh_key_file, "w") as text_file:
                     text_file.write(key_pair.key_material)
-                os.chmod(ssh_key_file, 0o600)
+                os.chmod(ssh_key_file, 0o400)
                 logger.debug("Key Content: %s", str(key_pair.key_material))
                 logger.info("New SSH Key '%s' has been written in '%s'", ssh_key_file, self.ssh_dir)
             return True
@@ -689,7 +689,7 @@ class AWSClass(CSPGenericClass):
     def wait_instance_ready(self):
         try:
             # Waiting for the instance provisioning
-            logger.info("Waiting for the instance provisioning...")
+            logger.info("Waiting for the instance provisioning on %s ...", self.provider)
             while True:
                 if not self.get_instance_csp():  # Absolutely mandatory to update the state of object (state is not updated automatically)
                     return None
@@ -862,7 +862,7 @@ class OpenStackClass(CSPGenericClass):
         self.interface = self.getFromConfig('csp', 'interface', interface)
         if self.interface is None:
             raise Exception("No 'interface' field has been specified for %s" % self.provider)
-        self.connection = None
+        self.loadsession()
         self.instance = None
         self.config_env = {}
 
@@ -884,17 +884,13 @@ class OpenStackClass(CSPGenericClass):
                 identity_interface=self.interface
             )
             logger.debug("Connection object created for CSP '%s'", self.provider)
-            return True
         except:
             logger.exception("Caugth following exception:")
-            return False
+            raise Exception("Could not authenticate to your %s account", self.provider)
 
     def check_csp_credential(self):
         try :
-            if not self.loadsession():
-                return False
             network_list = self.connection.network.networks()
-            self.connection.compute.find_keypair("FPGAOVH", ignore_missing=True)
             return True
         except:
             logger.exception("Failed to authenticate to CSP '%s'.", self.provider)
@@ -903,23 +899,22 @@ class OpenStackClass(CSPGenericClass):
     def ssh_key_csp(self):
         logger.debug("Create or check if KeyPair %s exists", self.ssh_key)
         try:
-            ssh_dir = os.path.expanduser('~/.ssh')
-            private_keypair_file = os.path.join(ssh_dir, "%s.pem" % self.ssh_key)
-            keypair = self.connection.compute.find_keypair(self.ssh_key, ignore_missing=True)
-            if not keypair:
-                # Create 
+            key_pair = self.connection.compute.find_keypair(self.ssh_key, ignore_missing=True)
+            if key_pair:
+                # Use existing key
+                logger.info("KeyPair '%s' is already existing on %s.", str(key_pair.name), self.provider)
+            else:
+                # Create key pair
                 logger.debug("Create KeyPair '%s'", self.ssh_key)
-                keypair = self.connection.compute.create_keypair(name=self.ssh_key)
+                key_pair = self.connection.compute.create_keypair(name=self.ssh_key)
                 # Save private key locally if not existing
                 ssh_key_file = createSSHKeyFileName()
                 logger.debug("Creating private ssh key file: %s", ssh_key_file)
                 with open(ssh_key_file, "w") as text_file:
-                    text_file.write(key_pair.key_material)
-                os.chmod(ssh_key_file, 0o600)
+                    text_file.write(key_pair.private_key)
+                os.chmod(ssh_key_file, 0o400)
                 logger.debug("Key Content: %s", str(key_pair.key_material))
                 logger.info("New SSH Key '%s' has been written in '%s'", ssh_key_file, self.ssh_dir)
-            else:
-                logger.info("KeyPair on %s named '%s' already exists.", self.provider, str(key_pair['KeyPairs'][0]['KeyName']))                
             return True
         except:
             logger.exception("Failed to create SSH Key with message:")
@@ -1015,7 +1010,7 @@ class OpenStackClass(CSPGenericClass):
     def wait_instance_ready(self):
         try:
             # Waiting for the instance provisioning
-            logger.info("Waiting for the instance provisioning...")
+            logger.info("Waiting for the instance provisioning on %s ...", self.provider)
             self.instance = self.connection.compute.wait_for_server(self.instance)
             state = self.instance.status
             logger.debug("Instance status: %s", state)
@@ -1106,8 +1101,9 @@ class OVHClass(OpenStackClass):
     def start_instance_csp(self):
         if not super(OVHClass, self).start_instance_csp():
             raise Exception("Failed to create OVH instance, please refer to: https://horizon.cloud.ovh.net")
-        
-        
+        return True
+
+
 
 #===================================
 class CSPClassFactory(object):
@@ -1231,7 +1227,7 @@ class AcceleratorClass(object):
         logger.debug("Starting accelerator server '%s' on '%s'", self.accelerator.name, self.csp.provider)
         # Start a new instance or use a running instance
         if not self.start_instance(stop_mode):
-            return False, {'app': {'status':0, 'msg':"Failed to creation instance"}}
+            return False, {'app': {'status':0, 'msg':"Failed to create instance on %s" % self.csp.provider}}
         # Configure accelerator if needed
         if kwargs or (self.accelerator.accelerator_configuration_url is None):
             return self.configure_accelerator(datafile, accelerator_parameters, **kwargs)
