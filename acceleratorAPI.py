@@ -9,7 +9,6 @@ import time
 import signal
 import shutil
 import copy
-import urllib3
 import ast
 import json
 import requests
