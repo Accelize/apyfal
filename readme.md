@@ -109,6 +109,16 @@ Edit the accelerator.conf to provide the Accelize ID and the CSP credential in c
     ...
     myaccel.process(file_in='/path/myfile.dat',  file_out='/path/result.dat')
     myaccel.stop()
+## Simple reusing a running instance already configured ( previous run didn't call the myaccel.stop())
+
+    python
+    from acceleratorAPI.acceleratorAPI import *
+    myaccel = AcceleratorClass(accelerator='axonerve_hyperfire',instance_ip='<Address IP>')
+    myaccel.start(stop_mode=KEEP)
+    myaccel.process(file_in='/path/myfile.dat',  file_out='/path/result.dat')
+    ...
+    myaccel.process(file_in='/path/myfile.dat',  file_out='/path/result.dat')
+    myaccel.stop()
 
 # All the accelerated functions
 
