@@ -38,7 +38,7 @@ STOP = 1
 KEEP = 2
 
 
-def checkUrl(url, timeout=None, retryCount=0, retryPeriod=5):
+def check_url(url, timeout=None, retryCount=0, retryPeriod=5):
     '''
         Checking if an HTTP is up and running.
     '''
@@ -67,7 +67,7 @@ def checkUrl(url, timeout=None, retryCount=0, retryPeriod=5):
         socket.setdefaulttimeout( t )  # set back to default value
 
 
-def prettyDict(obj):
+def pretty_dict(obj):
     return json.dumps(ast.literal_eval(str(obj)), indent=4)
 
 
@@ -91,6 +91,8 @@ class SignalHandlerAccelerator(object):
         logger.debug("Added instance to auto-stop handler.")
 
     def remove_instance(self):
+        if self.csp is None:
+            return
         ret = self.csp.get_instance_csp()
         if ret:
             logger.debug("Removed instance ID %s from to auto-stop handler.", self.csp.instance.id)
@@ -98,7 +100,7 @@ class SignalHandlerAccelerator(object):
 
     def set_stop_mode(self, stop_mode):
         self.stop_mode = int(stop_mode)
-        logger.info("Auto-stop mode now is: %s", self.STOPMODE[self.stop_mode])
+        logger.info("Auto-stop mode is: %s", self.STOPMODE[self.stop_mode])
 
     def set_signals(self):
         '''Set a list of interrupt signals to be handled asynchronously'''
@@ -150,16 +152,16 @@ class GenericAcceleratorClass(object):
             if r.status_code != 200 :
                 logger.error("Accelize authentication failed: %s", r.text)
                 return False
-            logger.info("Accelize authentication is successful")
+            logger.info("Accelize authentication for '%s' is successful", self.name)
             return True
         except:
             logger.exception("Caught following exception:")
             return False
 
-    def setUrl(self, url):
+    def set_url(self, url):
         self.api_configuration.host = url
 
-    def getUrl(self):
+    def get_url(self):
         return self.api_configuration.host
 
     def get_accelerator_requirements(self, provider):
@@ -175,7 +177,7 @@ class GenericAcceleratorClass(object):
                 logger.debug( "Accelize config answer: %s, status: %s", r.text , str(r.status_code))
                 r.raise_for_status()
                 configuration_accelerator = json.loads(r.text)
-                logger.debug("Accelerator requirements:\n%s", prettyDict(configuration_accelerator))
+                logger.debug("Accelerator requirements:\n%s", pretty_dict(configuration_accelerator))
                 if provider not in configuration_accelerator.keys():
                     logger.error("CSP '%s' is not supported. Available CSP are: %s", provider, ', '.join(configuration_accelerator.keys()))
                     return None
@@ -200,7 +202,7 @@ class GenericAcceleratorClass(object):
             logger.debug("Get list of configurations...")
             api_response = api_instance.configuration_list()
             configList = api_response.results
-            logger.debug("configuration_list api_response:\n%s", prettyDict(api_response))
+            logger.debug("configuration_list api_response:\n%s", pretty_dict(api_response))
             #if api_response.inerror :
             #    raise ValueError("Cannot get list of configurations")
             #    return None
@@ -258,7 +260,7 @@ class GenericAcceleratorClass(object):
             if api_response_read.inerror:
                 return {'app': {'status':-1, 'msg':"Cannot start the configuration %s" % api_response_read.url}}
             return dictparameters
-        except ApiException:
+        except ApiException as e:
             logger.exception("Caught following exception while calling ConfigurationApi->configuration_create:")
             return {'app': {'status':-1, 'msg':str(e)}}
         except Exception as e:
@@ -311,7 +313,7 @@ class GenericAcceleratorClass(object):
                     api_response = api_instance.process_read(id)
                     processed = api_response.processed
                     if api_response.inerror :
-                        msg = "Cannot start the process: %s" % prettyDict(api_response.parametersresult)
+                        msg = "Cannot start the process: %s" % pretty_dict(api_response.parametersresult)
                         logger.error(msg)
                         return {'app': {'status':-1, 'msg':msg}}
                 url = 'http://example.com/img.png'
@@ -354,63 +356,14 @@ class GenericAcceleratorClass(object):
 class CSPGenericClass(object):
 #===================================
     @staticmethod
-    def getFromArgs(key, **kwargs):
+    def get_from_args(key, **kwargs):
         try:
             return kwargs.pop(key)
         except:
             return None
 
-    def __init__(self, config_parser, client_id=None, secret_id=None, region=None,
-            instance_type=None, ssh_key=None, security_group=None, instance_id=None,
-            instance_url=None):
-        self.config_parser = config_parser
-        self.client_id = self.getFromConfig('csp', 'client_id', client_id)
-        self.secret_id = self.getFromConfig('csp', 'secret_id', secret_id)
-        self.region = self.getFromConfig('csp', 'region', region)
-        self.instance_type = self.getFromConfig('csp', 'instance_type', instance_type)
-        self.ssh_key = self.getFromConfig('csp', 'ssh_key', ssh_key)
-        if self.ssh_key is None:
-            self.ssh_key = "MySSHKey"
-        self.security_group = self.getFromConfig('csp', 'security_group', security_group)
-        if self.security_group is None:
-            self.security_group = "MySecurityGroup"
-        self.instance_id = self.getFromConfig('csp', 'instance_id', instance_id)
-        self.instance_url = self.getFromConfig('csp', 'instance_url', instance_url)
-        self.createSSHFolder()      # If not existing create SSH folder in HOME folder
-
-    def createSSHFolder(self):
-        self.ssh_dir = os.path.expanduser('~/.ssh')
-        if not os.path.isdir(self.ssh_dir):
-            os.mkdir(self.ssh_dir, 0o700)
-
-    def createSSHKeyFileName(self):
-        ssh_key_file = os.path.join(self.ssh_dir, self.ssh_key + ".pem")
-        ssh_files = os.listdir( os.path.join(self.ssh_dir, "*.pem") )
-        if ssh_key_file not in ssh_files:
-            return
-        idx = 1
-        while True:
-            ssh_key_file = self.ssh_key + "%d.pem" % idx
-            if ssh_key_file not in ssh_files:
-                break
-            idx += 1
-        logger.warn("A SSH key file named '%s' is already existing in ~/.ssh. To avaid overwritting an existing key, he new SSH key file will be named '%s'.", self.ssh_key, ssh_key_file)
-        return ssh_key_file
-
-    def getFromConfig(self, section, key, default=None):
-        if default:
-            return default
-        try:
-            new_val = self.config_parser.get(section, key)
-            if new_val:
-                return new_val
-            else:
-                return None
-        except:
-            return None
-
     @staticmethod
-    def get_public_ip_case1():
+    def get_host_public_ip_case1():
         try :
             url = 'http://ipinfo.io/ip'
             logger.debug("Get public IP answer using: %s", url)
@@ -424,7 +377,7 @@ class CSPGenericClass(object):
             return None
 
     @staticmethod
-    def get_public_ip_case2():
+    def get_host_public_ip_case2():
         try :
             import xml.etree.ElementTree as ET
             url = 'http://ip-api.com/xml'
@@ -440,7 +393,7 @@ class CSPGenericClass(object):
             return None
 
     @staticmethod
-    def get_public_ip_case3():
+    def get_host_public_ip_case3():
         try :
             import xml.etree.ElementTree as ET
             url = 'http://freegeoip.net/xml'
@@ -456,18 +409,67 @@ class CSPGenericClass(object):
             return None
 
     @staticmethod
-    def get_public_ip():
-        ip_address = CSPGenericClass.get_public_ip_case1()
+    def get_host_public_ip():
+        ip_address = CSPGenericClass.get_host_public_ip_case1()
         if ip_address:
             return ip_address
-        ip_address = CSPGenericClass.get_public_ip_case1()
+        ip_address = CSPGenericClass.get_host_public_ip_case2()
         if ip_address:
             return ip_address
-        ip_address = CSPGenericClass.get_public_ip_case1()
+        ip_address = CSPGenericClass.get_host_public_ip_case3()
         if ip_address:
             return ip_address
         logger.error("Failed to find your external IP address after attempts to 3 different sites.")
         raise Exception("Failed to find your external IP address. Your internet connection might be broken.")
+
+    def __init__(self, config_parser, client_id=None, secret_id=None, region=None,
+            instance_type=None, ssh_key=None, security_group=None, instance_id=None,
+            instance_url=None):
+        self.config_parser = config_parser
+        self.client_id = self.get_from_config('csp', 'client_id', client_id)
+        self.secret_id = self.get_from_config('csp', 'secret_id', secret_id)
+        self.region = self.get_from_config('csp', 'region', region)
+        self.instance_type = self.get_from_config('csp', 'instance_type', instance_type)
+        self.ssh_key = self.get_from_config('csp', 'ssh_key', ssh_key)
+        if self.ssh_key is None:
+            self.ssh_key = "MySSHKey"
+        self.security_group = self.get_from_config('csp', 'security_group', security_group)
+        if self.security_group is None:
+            self.security_group = "MySecurityGroup"
+        self.instance_id = self.get_from_config('csp', 'instance_id', instance_id)
+        self.instance_url = self.get_from_config('csp', 'instance_url', instance_url)
+        self.create_SSH_folder()      # If not existing create SSH folder in HOME folder
+
+    def create_SSH_folder(self):
+        self.ssh_dir = os.path.expanduser('~/.ssh')
+        if not os.path.isdir(self.ssh_dir):
+            os.mkdir(self.ssh_dir, 0o700)
+
+    def create_SSH_key_filename(self):
+        ssh_key_file = os.path.join(self.ssh_dir, self.ssh_key + ".pem")
+        ssh_files = os.listdir( os.path.join(self.ssh_dir, "*.pem") )
+        if ssh_key_file not in ssh_files:
+            return
+        idx = 1
+        while True:
+            ssh_key_file = self.ssh_key + "%d.pem" % idx
+            if ssh_key_file not in ssh_files:
+                break
+            idx += 1
+        logger.warn("A SSH key file named '%s' is already existing in ~/.ssh. To avaid overwritting an existing key, he new SSH key file will be named '%s'.", self.ssh_key, ssh_key_file)
+        return ssh_key_file
+
+    def get_from_config(self, section, key, default=None):
+        if default:
+            return default
+        try:
+            new_val = self.config_parser.get(section, key)
+            if new_val:
+                return new_val
+            else:
+                return None
+        except:
+            return None
 
 
 
@@ -476,19 +478,19 @@ class AWSClass(CSPGenericClass):
 #===================================
     def __init__(self, provider, config_parser, **kwargs):
         self.provider = provider
-        role = CSPGenericClass.getFromArgs('role', **kwargs)
+        role = CSPGenericClass.get_from_args('role', **kwargs)
         super(AWSClass, self).__init__(config_parser, **kwargs)
-        self.role = self.getFromConfig('csp', 'role', role)
+        self.role = self.get_from_config('csp', 'role', role)
         if self.role is None:
             raise Exception("No 'role' field has been specified for %s" % self.provider)
-        self.loadsession()
+        self.load_session()
         self.instance = None
         self.config_env = {}
 
     def __str__(self):
         return ', '.join("%s:%s" % item for item in vars(self).items())
 
-    def loadsession(self):
+    def load_session(self):
         try :
             import boto3
             self.session = boto3.session.Session(
@@ -523,7 +525,7 @@ class AWSClass(CSPGenericClass):
                 logger.info("Create KeyPair %s", str(self.ssh_key))
                 ec2 = self.session.resource('ec2')
                 key_pair = ec2.create_key_pair(KeyName=self.ssh_key)
-                ssh_key_file = createSSHKeyFileName()
+                ssh_key_file = self.create_SSH_key_filename()
                 logger.debug("Creating private ssh key file: %s", ssh_key_file)
                 with open(ssh_key_file, "w") as text_file:
                     text_file.write(key_pair.key_material)
@@ -633,7 +635,7 @@ class AWSClass(CSPGenericClass):
         try:
             logger.debug("Create or Check if security group '%s' exists.", self.security_group)
             ec2 = self.session.client('ec2')
-            public_ip = self.get_public_ip()
+            public_ip = CSPGenericClass.get_host_public_ip()    # Find the host public IP
             try :
                 response = ec2.describe_vpcs()
                 vpc_id = response.get('Vpcs', [{}])[0].get('VpcId', '')
@@ -644,7 +646,7 @@ class AWSClass(CSPGenericClass):
                 logger.info("Created security group with ID %s in vpc %s", security_group_id, vpc_id)
             except Exception as e:
                 logger.debug(str(e))
-                logger.info( "A security group '%s' is already existing on AWS.", self.security_group)
+                logger.info( "A security group '%s' is already existing on %s.", self.security_group, self.provider)
             my_sg = ec2.describe_security_groups( GroupNames=[self.security_group,],)
             try :
                 my_sg = ec2.describe_security_groups(GroupNames=[self.security_group,],)
@@ -685,30 +687,6 @@ class AWSClass(CSPGenericClass):
             logger.error("Could not find an instance with ID %s", self.instance_id)
             return False
 
-    def wait_instance_ready(self):
-        try:
-            # Waiting for the instance provisioning
-            logger.info("Waiting for the instance provisioning on %s ...", self.provider)
-            while True:
-                if not self.get_instance_csp():  # Absolutely mandatory to update the state of object (state is not updated automatically)
-                    return None
-                status = self.instance.state["Name"]
-                logger.debug("Instance status: %s", status)
-                if status == "running":
-                    break
-                time.sleep(5)
-            # Waiting for the instance to boot
-            logger.info("Instance is now booting")
-            url = "http://%s" % str(self.instance.public_ip_address)
-            if not checkUrl( url, 1, 72, 5 ): # 6 minutes timeout
-                logger.error("Timed out while waiting CSP instance to boot.")
-                return None
-            logger.info("Instance booted!")
-            return self.instance
-        except:
-            logger.exception("Caught following exception:")
-            return None
-
     def set_accelerator_requirements(self, accel_parameters):
         if self.region not in accel_parameters.keys():
             logger.error("Region '%s' is not supported. Available regions are: %s", self.region, ', '.join(accel_parameters.keys()))
@@ -722,17 +700,17 @@ class AWSClass(CSPGenericClass):
         logger.debug("Set instance type: %s", self.instance_type)
         return True
 
-    def getConfigurationEnv(self, **kwargs):
+    def get_configuration_env(self, **kwargs):
         newenv = dict()
-        agfi = self.getFromArgs('AGFI', **kwargs)
+        agfi = self.get_from_args('AGFI', **kwargs)
         if agfi:
             newenv['AGFI'] = agfi
         currenv = copy.deepcopy(self.config_env)
         currenv.update(newenv)
         if newenv:
-            logger.warn("Overwrite factory requirements with custom configuration:\n%s", prettyDict(currenv))
+            logger.warn("Overwrite factory requirements with custom configuration:\n%s", pretty_dict(currenv))
         else:
-            logger.debug("Using factory configuration: %s", prettyDict(currenv))
+            logger.debug("Using factory configuration: %s", pretty_dict(currenv))
         return currenv
 
     def create_instance_csp(self):
@@ -751,6 +729,35 @@ class AWSClass(CSPGenericClass):
         if not self.security_group_csp():
             return False
         return True
+
+    def get_instance_url(self):
+        if self.instance is None:
+            return None
+        return "http://%s" % str(self.instance.public_ip_address)
+
+    def wait_instance_ready(self):
+        try:
+            # Waiting for the instance provisioning
+            logger.info("Waiting for the instance provisioning on %s ...", self.provider)
+            while True:
+                if not self.get_instance_csp():  # Absolutely mandatory to update the state of object (state is not updated automatically)
+                    return None
+                status = self.instance.state["Name"]
+                logger.debug("Instance status: %s", status)
+                if status == "running":
+                    break
+                time.sleep(5)
+            # Waiting for the instance to boot
+            logger.info("Instance is now booting")
+            instance_url = self.get_instance_url()
+            if not check_url( instance_url, 1, 72, 5 ): # 6 minutes timeout
+                logger.error("Timed out while waiting CSP instance to boot.")
+                return None
+            logger.info("Instance booted!")
+            return self.instance
+        except:
+            logger.exception("Caught following exception:")
+            return None
 
     def start_new_instance_csp(self):
         try :
@@ -792,11 +799,20 @@ class AWSClass(CSPGenericClass):
             logger.exception("Caught following exception:")
             return None
 
-    def start_existing_instance_csp(self):
+    def is_instance_ID_valid(self):
         try:
             if not self.get_instance_csp():
                 return False
             logger.info("Using instance ID: %s", self.instance_id)
+            return True
+        except openstack.compute.ResourceNotFound:
+            logger.error("Could not find a instance with ID: %s", self.instance_id)
+            return False
+
+    def start_existing_instance_csp(self):
+        try:
+            if not self.is_instance_ID_valid():
+                return False
             state = self.instance.state["Name"]
             if state == "stopped":
                 response = self.instance.start()
@@ -821,7 +837,6 @@ class AWSClass(CSPGenericClass):
         logger.info("Region: %s", self.session.region_name)
         logger.info("Private IP: %s", self.instance.private_ip_address)
         logger.info("Public IP: %s", self.instance.public_ip_address)
-        self.instance_url = "http://%s" % self.instance.public_ip_address
         logger.info("Your instance is now up and running")
         return True
 
@@ -847,28 +862,28 @@ class OpenStackClass(CSPGenericClass):
 #===================================
     def __init__(self, provider, config_parser, **kwargs):
         self.provider = provider
-        project_id = CSPGenericClass.getFromArgs('project_id', **kwargs)
-        auth_url = CSPGenericClass.getFromArgs('auth_url', **kwargs)
-        interface = CSPGenericClass.getFromArgs('interface', **kwargs)
+        project_id = CSPGenericClass.get_from_args('project_id', **kwargs)
+        auth_url = CSPGenericClass.get_from_args('auth_url', **kwargs)
+        interface = CSPGenericClass.get_from_args('interface', **kwargs)
         provider = config_parser.get('csp', 'provider')
         super(OpenStackClass, self).__init__(config_parser, **kwargs)
-        self.project_id = self.getFromConfig('csp', 'project_id', project_id)
+        self.project_id = self.get_from_config('csp', 'project_id', project_id)
         if self.project_id is None:
             raise Exception("No 'project_id' field has been specified for %s" % self.provider)
-        self.auth_url = self.getFromConfig('csp', 'auth_url', auth_url)
+        self.auth_url = self.get_from_config('csp', 'auth_url', auth_url)
         if self.auth_url is None:
             raise Exception("No 'auth_url' field has been specified for %s" % self.provider)
-        self.interface = self.getFromConfig('csp', 'interface', interface)
+        self.interface = self.get_from_config('csp', 'interface', interface)
         if self.interface is None:
             raise Exception("No 'interface' field has been specified for %s" % self.provider)
-        self.loadsession()
+        self.load_session()
         self.instance = None
         self.config_env = {}
 
     def __str__(self):
         return ', '.join("%s:%s" % item for item in vars(self).items())
 
-    def loadsession(self):
+    def load_session(self):
         try :
             import openstack
             self.connection = openstack.connection.Connection(
@@ -907,7 +922,7 @@ class OpenStackClass(CSPGenericClass):
                 logger.debug("Create KeyPair '%s'", self.ssh_key)
                 key_pair = self.connection.compute.create_keypair(name=self.ssh_key)
                 # Save private key locally if not existing
-                ssh_key_file = createSSHKeyFileName()
+                ssh_key_file = self.create_SSH_key_filename()
                 logger.debug("Creating private ssh key file: %s", ssh_key_file)
                 with open(ssh_key_file, "w") as text_file:
                     text_file.write(key_pair.private_key)
@@ -930,9 +945,9 @@ class OpenStackClass(CSPGenericClass):
                 logger.info("Created security group: %s", security_group.name)
                 # Create Security Group Rules if not provided
             else:
-                logger.info("Security group '%s' is already existing.", self.security_group)
+                logger.info("Security group '%s' is already existing on %s.", self.security_group, self.provider)
             # Verify rules associated to security group
-            public_ip = self.get_public_ip()
+            public_ip = CSPGenericClass.get_host_public_ip()    # Find the host public IP
             # Create rule on SSH
             try:
                 self.connection.create_security_group_rule(security_group.id, port_range_min=22, port_range_max=22,
@@ -980,20 +995,17 @@ class OpenStackClass(CSPGenericClass):
         logger.debug("Set flavor '%s' with ID %s", flavor_name, self.instance_type)
         return True
 
-    def getConfigurationEnv(self, **kwargs):
+    def get_configuration_env(self, **kwargs):
         return self.config_env
 
-    def getPublicIp(self):
-        public_ip = None
+    def get_instance_public_ip(self):
         try:
             for address in self.instance.addresses.values()[0]:
                 if address['version'] == 4:
-                    public_ip = str(address['addr'])
+                    return str(address['addr'])
+            return None
         except:
-            pass
-        if public_ip is None:
-            logger.error("Failed to get public IP address.")
-        return public_ip
+            return None
 
     def get_instance_csp(self):
         if self.instance_id is None:
@@ -1005,6 +1017,14 @@ class OpenStackClass(CSPGenericClass):
         except:
             logger.error("Could not find an instance with ID %s", self.instance_id)
             return False
+
+    def get_instance_url(self):
+        if self.instance is None:
+            return None
+        public_ip = self.get_instance_public_ip()
+        if public_ip is None:
+            return None
+        return "http://%s" % public_ip
 
     def wait_instance_ready(self):
         try:
@@ -1018,9 +1038,9 @@ class OpenStackClass(CSPGenericClass):
                 self.stop_instance_csp(True)
                 return False
             # Waiting for the instance to boot
-            self.instance_url = "http://%s" % self.getPublicIp()
+            self.instance_url = self.get_instance_url()
             logger.info("Instance is now booting")
-            if not checkUrl( self.instance_url, 1, 72, 5 ): # 6 minutes timeout
+            if not check_url( self.instance_url, 1, 72, 5 ): # 6 minutes timeout
                 logger.error("Timed out while waiting CSP instance to boot.")
                 return False
             return True
@@ -1041,19 +1061,24 @@ class OpenStackClass(CSPGenericClass):
             logger.exception("Caught following exception:")
             return False
 
-    def start_existing_instance_csp(self):
+    def is_instance_ID_valid(self):
         try:
             if not self.get_instance_csp():
                 return False
             logger.info("Using instance ID: %s", self.instance_id)
+            return True
         except openstack.compute.ResourceNotFound:
             logger.error("Could not find a instance with ID: %s", self.instance_id)
             return False
+
+    def start_existing_instance_csp(self):
         try:
+            if not self.is_instance_ID_valid():
+                return False
             state = self.instance.status
             logger.debug("Status of instance ID %s: %s", self.instance_id, state)
-            if state != "running":
-                logger.error("Instance ID %s is already in %s state.", self.instance_id, state)
+            if state.lower() == "active":
+                logger.debug("Instance ID %s is already in '%s' state.", self.instance_id, state)
                 return True
             self.connection.start_server(self.instance)
             if not self.wait_instance_ready():
@@ -1072,10 +1097,9 @@ class OpenStackClass(CSPGenericClass):
         if not ret:
             return False
         logger.info("Region: %s", self.region)
-        public_ip = self.getPublicIp()
+        public_ip = self.get_instance_public_ip()
         logger.info("Public IP: %s", public_ip)
-        self.instance_url = "http://%s" % public_ip
-        logger.info("Instance is ready to use!")
+        logger.info("Your instance is now up and running")
         return True
 
     def stop_instance_csp(self, terminate=True):
@@ -1169,13 +1193,19 @@ class AcceleratorClass(object):
         # Checking if credentials are valid otherwise no sense to continue
         if not self.accelerator.check_accelize_credential():
             raise Exception("Could not authenticate to your Accelize account")
+        if instance_id:
+            if not self.csp.is_instance_ID_valid():
+                raise Exception("Could not find instance with ID: %s" % instance_id)
+            self.accelerator.set_url(self.csp.get_instance_url())
+        if instance_url:
+            self.accelerator.set_url(instance_url)
 
     def __del__(self):
         self.sign_handler.signal_handler_accelerator(exit=False)
 
     # Start a new instance or use a running instance
     def start_instance(self, stop_mode=None):
-        stop_mode = self.csp.getFromConfig("csp", "stop_mode", stop_mode)
+        stop_mode = self.csp.get_from_config("csp", "stop_mode", stop_mode)
         if stop_mode is not None:
             self.sign_handler.set_stop_mode(stop_mode)
         self.sign_handler.add_instance(self.csp)
@@ -1192,13 +1222,13 @@ class AcceleratorClass(object):
                     return False
             if not self.csp.start_instance_csp():
                 return False
-        self.accelerator.setUrl(self.csp.instance_url)
-        logger.info("Accelerator URL: %s", self.csp.instance_url)
+        self.accelerator.set_url(self.csp.get_instance_url())
+        logger.info("Accelerator URL: %s", self.accelerator.get_url())
         # If possible use the last accelerator configuration (it can still be overwritten later)
         self.accelerator.use_last_configuration()
         return True
 
-    def getInfoFromResult(self, result):
+    def get_info_from_result(self, result):
         if 'app' not in result.keys():
             return -1, "No result returned!"
         retcode = result['app']['status']
@@ -1208,11 +1238,11 @@ class AcceleratorClass(object):
     def configure_accelerator(self, datafile=None, accelerator_parameters=None, **kwargs):
         try :
             logger.debug("Configuring accelerator '%s' on instance ID %s", self.accelerator.name, self.csp.instance_id)
-            if not checkUrl(self.accelerator.getUrl(), 10):
-                return False, {'app': {'status':-1, 'msg':"Failed to reach accelerator url: %s" % self.accelerator.getUrl()}}
-            csp_env = self.csp.getConfigurationEnv(**kwargs)
+            if not check_url(self.accelerator.get_url(), 10):
+                return False, {'app': {'status':-1, 'msg':"Failed to reach accelerator url: %s" % self.accelerator.get_url()}}
+            csp_env = self.csp.get_configuration_env(**kwargs)
             configResult = self.accelerator.start_accelerator(datafile=datafile, accelerator_parameters=accelerator_parameters, csp_env=csp_env)
-            ret, msg = self.getInfoFromResult(configResult)
+            ret, msg = self.get_info_from_result(configResult)
             if ret:
                 logger.error("Configuration of accelerator failed: %s", msg)
                 return False, configResult
@@ -1236,12 +1266,15 @@ class AcceleratorClass(object):
     def process(self, file_in, file_out, process_parameter=None):
         logger.debug("Starting a processing job: in=%s, out=%s", file_in, file_out)
         try :
-            accel_url = self.accelerator.getUrl()
+            if not os.path.isfile(file_in):
+                logger.error("Could not find input file: %s", file_in)
+                return False, {'app': {'status':-1, 'msg':"Invalid input file path: %s" % file_in}}
+            accel_url = self.accelerator.get_url()
             logger.debug("Accelerator URL: %s", accel_url)
-            if not checkUrl(accel_url, 10):
-                return False, {'app': {'status':-1, 'msg':"Failed to reach accelerator url: %s" % self.accelerator.getUrl()}}
+            if not check_url(accel_url, 10):
+                return False, {'app': {'status':-1, 'msg':"Failed to reach accelerator url: %s" % self.accelerator.get_url()}}
             processResult = self.accelerator.process_file(file_in=file_in, file_out=file_out, accelerator_parameters=process_parameter)
-            ret, msg = self.getInfoFromResult(processResult)
+            ret, msg = self.get_info_from_result(processResult)
             if ret:
                 return False, processResult
             logger.debug("Processing on accelerator is complete")
@@ -1253,10 +1286,10 @@ class AcceleratorClass(object):
     def stop_accelerator(self):
         logger.debug("Stopping accelerator '%s' on instance ID %s", self.accelerator.name, self.csp.instance_id)
         try :
-            if not checkUrl(self.accelerator.getUrl(), 10):
-                return False, {'app': {'status':-1, 'msg':"Failed to reach accelerator url: %s" % self.accelerator.getUrl()}}
+            if not check_url(self.accelerator.get_url(), 10):
+                return False, {'app': {'status':-1, 'msg':"Failed to reach accelerator url: %s" % self.accelerator.get_url()}}
             stopResult = self.accelerator.stop_accelerator()
-            ret, msg = self.getInfoFromResult(stopResult)
+            ret, msg = self.get_info_from_result(stopResult)
             if ret:
                 logger.error("Stopping accelerator failed: %s", msg)
                 return False, stopResult
@@ -1289,13 +1322,6 @@ class AcceleratorClass(object):
         except Exception as e:
             logger.exception("Caught following exception:")
             return False, {'app': {'status':-1, 'msg':"Following error occurred: %s" % str(e)}}
-
-    def getInfo(self):
-        d = dict()
-        d['publicIP'] = self.csp.instance.public_ip_address
-        d['privateIP'] = self.csp.instance.private_ip_address
-        d['configuration_url'] = self.accelerator.accelerator_configuration_url
-        return d
 
 
 ################################# Accelerator Class [end] ########################################################

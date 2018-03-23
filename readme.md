@@ -1,7 +1,4 @@
 
-
-
-
 # Overview
 Accelize AcceleratorAPI is a powerful and flexible toolkit for testing and operate FPGA accelerated function .
 
@@ -9,6 +6,7 @@ Some reasons you might want to use AcceleratorAPI :
 + The Accelize AcceleratorAPI provides an abstraction layer to use the power of FPGA devices in a cloud environment. 
 + The configuration and the provisioning is generated for you in your CSP context ( Keep your data on your Private Cloud)
 + Don't like python use one of the REST_API provided in most of the language to interact with the REST instance
+
 
 
 # Requirements
@@ -21,6 +19,7 @@ Some reasons you might want to use AcceleratorAPI :
 + Optional pycurl python module to reach good upload performance
 
 
+
 # Installation
 
 Download the acceleratorAPI 
@@ -30,8 +29,6 @@ Download the acceleratorAPI
 Install using pip...
 
     sudo pip install -r acceleratorAPI/requirements.txt
-
-
 
 
 
@@ -66,7 +63,6 @@ Edit the accelerator.conf to provide the Accelize ID and the CSP credential in c
     
 
     
-
 # Examples
 
 ## Simple example 
@@ -79,6 +75,7 @@ Edit the accelerator.conf to provide the Accelize ID and the CSP credential in c
     ...
     myaccel.process(file_in='/path/myfile.dat',  file_out='/path/result.dat')
     myaccel.stop()
+
 ## Simple example with  accelerator configuration
 
     python
@@ -89,6 +86,7 @@ Edit the accelerator.conf to provide the Accelize ID and the CSP credential in c
     ...
     myaccel.process(file_in='/path/myfile.dat',  file_out='/path/result.dat')
     myaccel.stop()
+
 ## Simple keeping CSP instance running for later use
 
     python
@@ -99,6 +97,7 @@ Edit the accelerator.conf to provide the Accelize ID and the CSP credential in c
     ...
     myaccel.process(file_in='/path/myfile.dat',  file_out='/path/result.dat')
     myaccel.stop()
+
 ## Simple reusing a running instance
 
     python
@@ -109,6 +108,7 @@ Edit the accelerator.conf to provide the Accelize ID and the CSP credential in c
     ...
     myaccel.process(file_in='/path/myfile.dat',  file_out='/path/result.dat')
     myaccel.stop()
+
 ## Simple reusing a running instance already configured ( previous run didn't call the myaccel.stop())
 
     python
@@ -120,17 +120,24 @@ Edit the accelerator.conf to provide the Accelize ID and the CSP credential in c
     myaccel.process(file_in='/path/myfile.dat',  file_out='/path/result.dat')
     myaccel.stop()
 
+
+
 # All the accelerated functions
 
 Browse our web site https://accelstore.accelize.com
 
+
+
 # Metering
 Check the accelerator metering information on your [AccelStore account](https://accelstore.accelize.com/user/metering). 
+
+
 
 # Feature Support
 + Configuration of CSP envrionement for AWS ( OVH is coming soon)
 + Remote or local execution facility
 + Simplified API
+
 
 
 # Class AcceleratorClass
@@ -227,9 +234,6 @@ Take a look accelerator documentation for more information.
 boolean, dict
 
 
-
-
-
 **Response example**
 
     (
@@ -296,7 +300,6 @@ boolean, dict
 	    }
     )
     
-
 ## stop(_**kwargs_)
 
 Stop your accelerator session and accelerator csp instance depending of the parameters
@@ -334,9 +337,13 @@ boolean, dict
 	    }
     )
 
+
+
 # Limitations
+
 + Max data file is limited to 30 G ( in case of usage of pycurl) or 2G using urllib 
 + Timeout will appear if request take more than 900s
+
 
 ## Support and enhancement requests
 [Contact us](https://accelstore.accelize.com/contact-us/) if you have any support or enhancement request.
