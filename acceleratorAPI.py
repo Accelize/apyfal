@@ -446,18 +446,18 @@ class CSPGenericClass(object):
             os.mkdir(self.ssh_dir, 0o700)
 
     def create_SSH_key_filename(self):
-        ssh_key_file = os.path.join(self.ssh_dir, self.ssh_key + ".pem")
+        ssh_key_file =  self.ssh_key + ".pem"
         ssh_files = os.listdir( self.ssh_dir )
         if ssh_key_file not in ssh_files:
-            return
+            return ssh_key_file
         idx = 1
         while True:
-            ssh_key_file = self.ssh_key + "%d.pem" % idx
+            ssh_key_file = self.ssh_key + "_%d.pem" % idx
             if ssh_key_file not in ssh_files:
                 break
             idx += 1
-        logger.warn("A SSH key file named '%s' is already existing in ~/.ssh. To avaid overwritting an existing key, he new SSH key file will be named '%s'.", self.ssh_key, ssh_key_file)
-        return ssh_key_file
+        logger.warn("A SSH key file named '%s' is already existing in ~/.ssh. To avoid overwritting an existing key, The new SSH key file will be named '%s'.", self.ssh_key, ssh_key_file)
+        return os.path.join(self.ssh_dir,ssh_key_file)
 
     def get_from_config(self, section, key, default=None):
         if default:
@@ -927,7 +927,7 @@ class OpenStackClass(CSPGenericClass):
                 with open(ssh_key_file, "w") as text_file:
                     text_file.write(key_pair.private_key)
                 os.chmod(ssh_key_file, 0o400)
-                logger.debug("Key Content: %s", str(key_pair.key_material))
+                logger.debug("Key Content: %s", str(key_pair.private_key))
                 logger.info("New SSH Key '%s' has been written in '%s'", ssh_key_file, self.ssh_dir)
             return True
         except:
