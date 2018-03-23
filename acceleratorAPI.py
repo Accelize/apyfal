@@ -447,7 +447,7 @@ class CSPGenericClass(object):
 
     def create_SSH_key_filename(self):
         ssh_key_file = os.path.join(self.ssh_dir, self.ssh_key + ".pem")
-        ssh_files = os.listdir( os.path.join(self.ssh_dir, "*.pem") )
+        ssh_files = os.listdir( self.ssh_dir )
         if ssh_key_file not in ssh_files:
             return
         idx = 1
