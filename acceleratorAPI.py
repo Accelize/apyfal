@@ -460,7 +460,7 @@ class CSPGenericClass(object):
         return os.path.join(self.ssh_dir,ssh_key_file)
 
     def get_from_config(self, section, key, default=None):
-        if default:
+        if default != None:
             return default
         try:
             new_val = self.config_parser.get(section, key)
@@ -1209,7 +1209,7 @@ class AcceleratorClass(object):
         if stop_mode is not None:
             self.sign_handler.set_stop_mode(stop_mode)
         self.sign_handler.add_instance(self.csp)
-        if self.csp.instance_url is None:
+        if self.csp.get_instance_url() is None:
             if not self.csp.check_csp_credential():
                 return False
             accel_requirements = self.accelerator.get_accelerator_requirements(self.csp.provider)
