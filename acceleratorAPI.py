@@ -218,7 +218,7 @@ class GenericAcceleratorClass(object):
         # Get last configuration, if any
         configList = self.get_accelerator_configuration_list()
         if not configList:
-            logger.warn("Accelerator has not been configured yet.")
+            logger.info("Accelerator has not been configured yet.")
             return False
         last_config = configList[0]
         logger.debug("Last recorded configuration: Url:%s, Used:%d", last_config.url, last_config.used)
@@ -676,7 +676,7 @@ class AWSClass(CSPGenericClass):
 
     def get_instance_csp(self):
         if self.instance_id is None:
-            logger.error("Invalid instance ID: %s", str(self.intance_id))
+            logger.error("Invalid instance ID: %s", str(self.instance_id))
             return False
         ec2 = self.session.resource('ec2')
         self.instance = ec2.Instance(self.instance_id)
@@ -828,7 +828,7 @@ class AWSClass(CSPGenericClass):
             return False
 
     def start_instance_csp(self):
-        if self.instance_id is None:
+        if self.instance_id is None :
             ret = self.start_new_instance_csp()
         else:
             ret = self.start_existing_instance_csp()
@@ -1209,7 +1209,7 @@ class AcceleratorClass(object):
         if stop_mode is not None:
             self.sign_handler.set_stop_mode(stop_mode)
         self.sign_handler.add_instance(self.csp)
-        if self.csp.get_instance_url() is None:
+        if self.csp.instance_url is None:
             if not self.csp.check_csp_credential():
                 return False
             accel_requirements = self.accelerator.get_accelerator_requirements(self.csp.provider)
@@ -1222,7 +1222,12 @@ class AcceleratorClass(object):
                     return False
             if not self.csp.start_instance_csp():
                 return False
-        self.accelerator.set_url(self.csp.get_instance_url())
+            self.accelerator.set_url(self.csp.get_instance_url())
+        else :
+            accel_requirements = self.accelerator.get_accelerator_requirements(self.csp.provider)
+            if not self.csp.set_accelerator_requirements(accel_requirements):
+                return False
+            self.accelerator.set_url(self.csp.instance_url)
         logger.info("Accelerator URL: %s", self.accelerator.get_url())
         # If possible use the last accelerator configuration (it can still be overwritten later)
         self.accelerator.use_last_configuration()
