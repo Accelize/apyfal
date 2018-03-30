@@ -18,9 +18,36 @@ import ConfigParser
 import rest_api.swagger_client
 from rest_api.swagger_client.rest import ApiException
 
+
+#===================================
+# Custom logger that:
+# - Forwards records to parent logger if not an exception (but save it into the log file)
+# - Force the level to DEBUG for the file handler.
+class APILogger(logging.getLoggerClass()):
+#===================================
+    def setLevel(self, lvl):
+        self.LevelRequest = lvl
+        if self.name != __name__:
+            super(APILogger, self).setLevel(lvl)
+        else:
+            super(APILogger, self).setLevel(logging.DEBUG)
+    def handle(self, record):
+        for e in self.handlers:
+            e.emit(record)
+        if record.levelno < self.LevelRequest:
+            return
+        if record.name == __name__ and record.exc_info is not None:
+            record.msg = record.exc_info[1].message
+            record.exc_text = None
+            record.exc_info = None
+        self.parent.handle(record)
+
+# Register our logger
+logging.setLoggerClass(APILogger)
+
 # Module logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARN)
+logger.setLevel(logging.DEBUG)
 
 # Rotating file handler
 LOG_FILENAME = os.path.splitext(os.path.basename(__file__))[0] + ".log"
@@ -112,15 +139,15 @@ class SignalHandlerAccelerator(object):
         '''Try to stop all instances running or inform user'''
         if self.csp is None:
             logger.debug("There is no registered instance to stop")
-        elif self.csp.get_instance_csp():
-            if self.stop_mode == KEEP:
-                logger.warn("###########################################################")
-                logger.warn("## Warning : instance ID '%s' is still running!", self.csp.instance.id)
-                logger.warn("###### Make sure you will stop it manually. #######")
-                logger.warn("###########################################################")
-            elif self.csp.instance.id:
-                terminate = True if self.stop_mode == TERM else False
-                self.csp.stop_instance_csp(terminate)
+        if self.stop_mode == KEEP or not self.csp.get_instance_csp():
+            logger.warn("###########################################################")
+            if self.csp.instance_id is not None:
+                logger.warn("## Warning : instance ID '%s' is still running!", self.csp.instance_id)
+            logger.warn("## Make sure you will stop manually the instance.")
+            logger.warn("###########################################################")
+        else:
+            terminate = True if self.stop_mode == TERM else False
+            self.csp.stop_instance_csp(terminate)
         if exit:
             socket.setdefaulttimeout(self.defaultSocketTimeout)
             logger.info("Accelerator API Closed properly")
@@ -210,7 +237,7 @@ class GenericAcceleratorClass(object):
         except ApiException:
             logger.exception("Caught following exception while calling ConfigurationApi->configuration_list:")
             return None
-        except Exception as e:
+        except:
             logger.exception("Caught following exception:")
             return None
 
@@ -223,7 +250,7 @@ class GenericAcceleratorClass(object):
         last_config = configList[0]
         logger.debug("Last recorded configuration: Url:%s, Used:%d", last_config.url, last_config.used)
         if last_config.used == 0:
-            logger.warn("Accelerator has no active configuration. It needs to be configured before being used.")
+            logger.info("Accelerator has no active configuration. It needs to be configured before being used.")
             return False
         logger.info("Accelerator is loaded with configuration: %s", last_config.url)
         # The last configuration URL should be keep in order to not request it to user.
@@ -263,11 +290,11 @@ class GenericAcceleratorClass(object):
         except ApiException as e:
             logger.exception("Caught following exception while calling ConfigurationApi->configuration_create:")
             return {'app': {'status':-1, 'msg':str(e)}}
-        except Exception as e:
+        except:
             logger.exception("Caught following exception:")
-            return {'app': {'status':-1, 'msg':str(e)}}
+            return {'app': {'status':-1, 'msg':"Caught exception"}}
 
-    def process_file(self, file_in, file_out, accelerator_parameters=None) :
+    def process_file(self, file_in, file_out, accelerator_parameters=None):
         if self.accelerator_configuration_url is None:
             logger.error("Accelerator has not been configured. Use 'start_accelerator' function.")
             return {'app': {'status':-1, 'msg':"Accelerator is not configured."}}
@@ -332,7 +359,7 @@ class GenericAcceleratorClass(object):
             return {'app': {'status':-1, 'msg':str(e)}}
         except:
             logger.exception("Caught following exception:")
-            return {'app': {'status':-1, 'msg':"Caugth unsupported exception"}}
+            return {'app': {'status':-1, 'msg':"Caught exception"}}
 
     def stop_accelerator(self):
         # create an instance of the API class
@@ -446,21 +473,21 @@ class CSPGenericClass(object):
             os.mkdir(self.ssh_dir, 0o700)
 
     def create_SSH_key_filename(self):
-        ssh_key_file =  self.ssh_key + ".pem"
+        ssh_key_file = self.ssh_key + ".pem"
         ssh_files = os.listdir( self.ssh_dir )
         if ssh_key_file not in ssh_files:
-            return ssh_key_file
+            return os.path.join(self.ssh_dir, ssh_key_file)
         idx = 1
         while True:
             ssh_key_file = self.ssh_key + "_%d.pem" % idx
             if ssh_key_file not in ssh_files:
                 break
             idx += 1
-        logger.warn("A SSH key file named '%s' is already existing in ~/.ssh. To avoid overwritting an existing key, The new SSH key file will be named '%s'.", self.ssh_key, ssh_key_file)
-        return os.path.join(self.ssh_dir,ssh_key_file)
+        logger.warn("A SSH key file named '%s' is already existing in ~/.ssh. To avoid overwritting an existing key, the new SSH key file will be named '%s'.", self.ssh_key, ssh_key_file)
+        return os.path.join(self.ssh_dir, ssh_key_file)
 
     def get_from_config(self, section, key, default=None):
-        if default != None:
+        if default is not None:
             return default
         try:
             new_val = self.config_parser.get(section, key)
@@ -676,7 +703,7 @@ class AWSClass(CSPGenericClass):
 
     def get_instance_csp(self):
         if self.instance_id is None:
-            logger.error("Invalid instance ID: %s", str(self.instance_id))
+            logger.warn("No instance ID provided")
             return False
         ec2 = self.session.resource('ec2')
         self.instance = ec2.Instance(self.instance_id)
@@ -828,7 +855,7 @@ class AWSClass(CSPGenericClass):
             return False
 
     def start_instance_csp(self):
-        if self.instance_id is None :
+        if self.instance_id is None:
             ret = self.start_new_instance_csp()
         else:
             ret = self.start_existing_instance_csp()
@@ -1139,7 +1166,7 @@ class CSPClassFactory(object):
                 provider = config_parser.get("csp", "provider")
             except:
                 raise Exception("Could not find a 'provider' key in the 'csp' section.")
-        logger.info("Targetting CSP: %s.", provider)
+        logger.info("Targeted CSP: %s.", provider)
         if provider.lower() == 'aws':
             return AWSClass(provider, config_parser, **kwargs)
         elif provider.lower() == 'ovh':
@@ -1162,6 +1189,8 @@ class AcceleratorClass(object):
                 region=None, xlz_client_id=None, xlz_secret_id=None, csp_client_id=None,
                 csp_secret_id=None, ssh_key=None, instance_id=None, instance_ip=None):
         global config
+        logger.debug("")
+        logger.debug("/"*100)
         if config_file is None:
             config_file = DEFAULT_CONFIG_FILE
         if not os.path.isfile(config_file):
@@ -1193,45 +1222,17 @@ class AcceleratorClass(object):
         # Checking if credentials are valid otherwise no sense to continue
         if not self.accelerator.check_accelize_credential():
             raise Exception("Could not authenticate to your Accelize account")
+        # Check CSP ID if provided
         if instance_id:
             if not self.csp.is_instance_ID_valid():
                 raise Exception("Could not find instance with ID: %s" % instance_id)
             self.accelerator.set_url(self.csp.get_instance_url())
+        # Set CSP URL if provided
         if instance_url:
             self.accelerator.set_url(instance_url)
 
     def __del__(self):
         self.sign_handler.signal_handler_accelerator(exit=False)
-
-    # Start a new instance or use a running instance
-    def start_instance(self, stop_mode=None):
-        stop_mode = self.csp.get_from_config("csp", "stop_mode", stop_mode)
-        if stop_mode is not None:
-            self.sign_handler.set_stop_mode(stop_mode)
-        self.sign_handler.add_instance(self.csp)
-        if self.csp.instance_url is None:
-            if not self.csp.check_csp_credential():
-                return False
-            accel_requirements = self.accelerator.get_accelerator_requirements(self.csp.provider)
-            if accel_requirements is None:
-                return False
-            if not self.csp.set_accelerator_requirements(accel_requirements):
-                return False
-            if self.csp.instance_id is None:
-                if not self.csp.create_instance_csp():
-                    return False
-            if not self.csp.start_instance_csp():
-                return False
-            self.accelerator.set_url(self.csp.get_instance_url())
-        else :
-            accel_requirements = self.accelerator.get_accelerator_requirements(self.csp.provider)
-            if not self.csp.set_accelerator_requirements(accel_requirements):
-                return False
-            self.accelerator.set_url(self.csp.instance_url)
-        logger.info("Accelerator URL: %s", self.accelerator.get_url())
-        # If possible use the last accelerator configuration (it can still be overwritten later)
-        self.accelerator.use_last_configuration()
-        return True
 
     def get_info_from_result(self, result):
         if 'app' not in result.keys():
@@ -1239,6 +1240,43 @@ class AcceleratorClass(object):
         retcode = result['app']['status']
         msg = result['app']['msg']
         return (retcode, msg)
+
+    def get_profiling_from_result(self, result):
+        if 'app' not in result.keys():
+            return -1, "No profiling returned!"
+        return result['app']['profiling']
+
+    # Start a new instance or use a running instance
+    def start_instance(self, stop_mode=None):
+        try:
+            logger.debug("Starting instance on '%s'", self.csp.provider)
+            stop_mode = self.csp.get_from_config("csp", "stop_mode", stop_mode)
+            if stop_mode is not None:
+                self.sign_handler.set_stop_mode(stop_mode)
+            self.sign_handler.add_instance(self.csp)
+            # Get configuration information from webservice
+            accel_requirements = self.accelerator.get_accelerator_requirements(self.csp.provider)
+            if accel_requirements is None:
+                return False
+            if not self.csp.set_accelerator_requirements(accel_requirements):
+                return False
+            # Start CSP instance if needed
+            if self.csp.instance_url is None:
+                if not self.csp.check_csp_credential():
+                    return False
+                if self.csp.instance_id is None:
+                    if not self.csp.create_instance_csp():
+                        return False
+                if not self.csp.start_instance_csp():
+                    return False
+                    self.accelerator.set_url(self.csp.get_instance_url())
+            logger.info("Accelerator URL: %s", self.accelerator.get_url())
+            # If possible use the last accelerator configuration (it can still be overwritten later)
+            self.accelerator.use_last_configuration()
+            return True
+        except:
+            logger.exception("Exception occurred:")
+            return False
 
     def configure_accelerator(self, datafile=None, accelerator_parameters=None, **kwargs):
         try :
@@ -1253,24 +1291,27 @@ class AcceleratorClass(object):
                 return False, configResult
             logger.info("Configuration of accelerator is complete")
             return True, configResult
-        except Exception as e:
-            logger.exception("Caught following exception:")
-            return False, {'app': {'status':-1, 'msg':"Following error occurred: %s" % str(e)}}
+        except:
+            logger.exception("Exception occurred:")
+            return False, {'app': {'status':-1, 'msg':"Exception occurred"}}
 
     def start(self, stop_mode=TERM, datafile=None, accelerator_parameters=None, **kwargs):
-        logger.debug("Starting accelerator server '%s' on '%s'", self.accelerator.name, self.csp.provider)
-        # Start a new instance or use a running instance
-        if not self.start_instance(stop_mode):
-            return False, {'app': {'status':0, 'msg':"Failed to create instance on %s" % self.csp.provider}}
-        # Configure accelerator if needed
-        if kwargs or (self.accelerator.accelerator_configuration_url is None):
-            return self.configure_accelerator(datafile, accelerator_parameters, **kwargs)
-        logger.debug("Accelerator is already configured")
-        return True, {'app': {'status':0, 'msg':"Reusing last configuration: %s" % self.accelerator.accelerator_configuration_url}}
+        try:
+            # Start a new instance or use a running instance
+            if not self.start_instance(stop_mode):
+                return False, {'app': {'status':0, 'msg':"Failed to create instance on %s" % self.csp.provider}}
+            # Configure accelerator if needed
+            if kwargs or (self.accelerator.accelerator_configuration_url is None):
+                return self.configure_accelerator(datafile, accelerator_parameters, **kwargs)
+            logger.debug("Accelerator is already configured")
+            return True, {'app': {'status':0, 'msg':"Reusing last configuration: %s" % self.accelerator.accelerator_configuration_url}}
+        except:
+            logger.exception("Exception occurred:")
+            return False, {'app': {'status':-1, 'msg':"Exception occurred"}}
 
     def process(self, file_in, file_out, process_parameter=None):
-        logger.debug("Starting a processing job: in=%s, out=%s", file_in, file_out)
         try :
+            logger.debug("Starting a processing job: in=%s, out=%s", file_in, file_out)
             if not os.path.isfile(file_in):
                 logger.error("Could not find input file: %s", file_in)
                 return False, {'app': {'status':-1, 'msg':"Invalid input file path: %s" % file_in}}
@@ -1282,11 +1323,13 @@ class AcceleratorClass(object):
             ret, msg = self.get_info_from_result(processResult)
             if ret:
                 return False, processResult
-            logger.debug("Processing on accelerator is complete")
+            profiling = self.get_profiling_from_result(processResult)
+            logger.info("Processing on accelerator is complete: time = %f s, sent bytes = %d B, received bytes = %d B",
+                    profiling['fpga-elapsed-time'], profiling['total-bytes-written'], profiling['total-bytes-read'])
             return True, processResult
-        except Exception as e:
-            logger.exception("Caught following exception:")
-            return False, {'app': {'status':-1, 'msg':"Exception occured: %s" % str(e)}}
+        except:
+            logger.exception("Exception occurred:")
+            return False, {'app': {'status':-1, 'msg':"Exception occurred"}}
 
     def stop_accelerator(self):
         logger.debug("Stopping accelerator '%s' on instance ID %s", self.accelerator.name, self.csp.instance_id)
@@ -1300,9 +1343,9 @@ class AcceleratorClass(object):
                 return False, stopResult
             logger.debug("Stopping accelerator is complete")
             return True, stopResult
-        except Exception as e :
-            logger.exception("Caught following exception:")
-            return False, {'app': {'status':-1, 'msg':"Following error occurred: %s" % str(e)}}
+        except:
+            logger.exception("Exception occurred:")
+            return False, {'app': {'status':-1, 'msg':"Exception occurred"}}
 
     def stop_instance(self, terminate=True):
         logger.debug("Stopping instance (ID: %s) on '%s'", self.csp.instance_id, self.csp.provider)
@@ -1311,12 +1354,11 @@ class AcceleratorClass(object):
             self.sign_handler.remove_instance()
             self.csp.stop_instance_csp(terminate)
             return res
-        except Exception as e:
-            logger.exception("Caught following exception:")
-            return False, {'app': {'status':-1, 'msg':"Following error occurred: %s" % str(e)}}
+        except:
+            logger.exception("Exception occurred:")
+            return False, {'app': {'status':-1, 'msg':"Exception occurred"}}
 
     def stop(self, stop_mode=None):
-        logger.debug("Stopping accelerator '%s' running on '%s' instance ID '%s'", self.accelerator.name, self.csp.provider, self.csp.instance_id)
         try:
             if stop_mode is None:
                 stop_mode = self.sign_handler.stop_mode
@@ -1324,9 +1366,9 @@ class AcceleratorClass(object):
                 return self.stop_accelerator()
             terminate = True if stop_mode == TERM else False
             return self.stop_instance(terminate)
-        except Exception as e:
-            logger.exception("Caught following exception:")
-            return False, {'app': {'status':-1, 'msg':"Following error occurred: %s" % str(e)}}
+        except:
+            logger.exception("Exception occurred:")
+            return False, {'app': {'status':-1, 'msg':"Exception occurred"}}
 
 
 ################################# Accelerator Class [end] ########################################################
