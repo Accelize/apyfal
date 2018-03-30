@@ -148,6 +148,7 @@ class SignalHandlerAccelerator(object):
         else:
             terminate = True if self.stop_mode == TERM else False
             self.csp.stop_instance_csp(terminate)
+        logger.info("For more details, refer to %s", fileHandler.baseFilename)
         if exit:
             socket.setdefaulttimeout(self.defaultSocketTimeout)
             logger.info("Accelerator API Closed properly")
@@ -1324,8 +1325,11 @@ class AcceleratorClass(object):
             if ret:
                 return False, processResult
             profiling = self.get_profiling_from_result(processResult)
-            logger.info("Processing on accelerator is complete: time = %f s, sent bytes = %d B, received bytes = %d B",
+            logger.info("Processing on %s is complete: time = %f s, sent bytes = %d B, received bytes = %d B", self.csp.provider,
                     profiling['fpga-elapsed-time'], profiling['total-bytes-written'], profiling['total-bytes-read'])
+            bw = (float(profiling['total-bytes-written']) + float(profiling['total-bytes-read'])) / float(profiling['fpga-elapsed-time']) / 1024 / 1024
+            fps = 1.0 / float(profiling['fpga-elapsed-time'])
+            logger.debug("Processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps", self.csp.provider, bw, fps)
             return True, processResult
         except:
             logger.exception("Exception occurred:")
