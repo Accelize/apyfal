@@ -37,9 +37,9 @@ The value set in these sections can be overridden be the AcceleratorClass functi
 Name of the CSP you want to target.
 Value : OVH | AWS
  - **client_id**(string) -- 
-The client_id you need to generate on your CSP [generate yours][dependencies/]
+The client_id you need to generate on your CSP [generate yours](https://github.com/Accelize/acceleratorAPI/blob/master/dependencies/)
  - **secret_id**(string) -- 
-The secret_id you need to generate on your CSP [generate yours][dependencies/]
+The secret_id you need to generate on your CSP [generate yours](https://github.com/Accelize/acceleratorAPI/blob/master/dependencies/)
  - **region**(string) -- 
 The CSP region you need to target, check with your provider which region are using instances with FPGA.
 Value : eu-west-1|us-east-1|us-west-2|GRA3
@@ -85,14 +85,14 @@ KEEP = 2 => Instance will stay in running mode
 
  **Parameters**   
  - **client_id**(string) -- 
-The client_id you need to generate on [Accelize website][https://accelsotre.accelize.com/user/applications]
+The client_id you need to generate on [Accelize website](https://accelsotre.accelize.com/user/applications)
  - **secret_id**(string) -- 
-The secret_id you need to generate on [Accelize website][https://accelsotre.accelize.com/user/applications]
+The secret_id you need to generate on [Accelize website](https://accelsotre.accelize.com/user/applications)
 
 
 
 
-## configuration section
+## Configuration section
 
 	[configuration]
 	# Default parameters for the configuration step
@@ -111,7 +111,7 @@ The secret_id you need to generate on [Accelize website][https://accelsotre.acce
 Parameters can be forwarded to the accelerator for the configuration step using this parameter.
 Take a look accelerator documentation for more information.
 
-## process section
+## Process section
 
 	[process]
 	# Default parameters for the process step

@@ -37,7 +37,7 @@ The CSP configuration in order to configure the CSP envrionnement without pain ,
 
 The second part is the Accelize credential, in order to unlock the accelerator.
 
-To help you in these actions, you can check the meaning of each [configuration paramters](https://github.com/Accelize/acceleratorAPI/blob/master/api-guide/configuration_file.md)
+To help you in these actions, you can check the meaning of each [configuration paramaters](https://github.com/Accelize/acceleratorAPI/blob/master/api-guide/configuration_file.md)
 
 Or use one of the preconfigured csp , where you only need to add the [CSP credential](https://github.com/Accelize/acceleratorAPI/blob/master/depdendencies/) and [Accelize credential](https://accelstore.accelize.com/user/applications)
 
