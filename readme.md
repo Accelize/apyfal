@@ -44,12 +44,16 @@ Install using pip...
     myaccel.process(file_in='/path/myfile.dat',  file_out='/path/result.dat')
     myaccel.stop()
 
-## Details exemples 
+## Details examples 
 
 [Standard usage](/tutorial/1-simple-exemple.md)
+
 [Example keeping CSP instance running for later use](tutorial/2-keeping_instance_running.md)
+
 [Example reusing a running instance with instance_id](tutorial/3-reusing_instance_with_instance_id.md)
+
 [Example reusing a running instance with instance_ip](tutorial/4-reusing_instance_with_instance_ip.md)
+
 [Example reusing a running instance already configured](tutorial/5-reusing_instance_already_configured.md)
 
 ## Documentation
