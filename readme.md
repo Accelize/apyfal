@@ -46,7 +46,7 @@ Install using pip...
 
 ## Details examples 
 
-[Standard usage](/tutorial/1-simple-exemple.md)
+[Standard usage](tutorial/1-simple-exemple.md)
 
 [Example keeping CSP instance running for later use](tutorial/2-keeping_instance_running.md)
 
@@ -58,12 +58,13 @@ Install using pip...
 
 ## Documentation
 
-[Configuration file](/api-guide/configuraton_file.md)
-[AcceleratorClass details](/api-guide/acceleratorclass.md)
+[Configuration file](api-guide/configuraton_file.md)
+
+[AcceleratorClass details](api-guide/acceleratorclass.md)
 
 # All the accelerated functions
 
-Browse our web site [AccelStore ](https://accelstore.accelize.com)
+Browse our web site [AccelStore](https://accelstore.accelize.com)
 
 
 

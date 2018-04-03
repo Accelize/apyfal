@@ -37,13 +37,13 @@ The CSP configuration in order to configure the CSP envrionnement without pain ,
 
 The second part is the Accelize credential, in order to unlock the accelerator.
 
-To help you in these actions, you can check the meaning of each [configuration paramters](repo/api-guide/configuration_file.md)
+To help you in these actions, you can check the meaning of each [configuration paramters](https://github.com/Accelize/acceleratorAPI/blob/master/api-guide/configuration_file.md)
 
-Or use one of the preconfigured csp , where you only need to add the [CSP credential](repo/depdendencies/) and [Accelize credential](https://accelstore.accelize.com/user/applications)
+Or use one of the preconfigured csp , where you only need to add the [CSP credential](https://github.com/Accelize/acceleratorAPI/blob/master/depdendencies/) and [Accelize credential](https://accelstore.accelize.com/user/applications)
 
 
 
-[Accelize/acceleratorAPI](repo) 
+[Accelize/acceleratorAPI](https://github.com/Accelize/acceleratorAPI/) 
 
 
 
@@ -81,3 +81,4 @@ Stop the accelerator. In this case , the previously created instance will stay r
 **Note**: The code for this tutorial is available in the [Accelize/acceleratorAPI](repo) repository on GitHub.  .
 
 ---
+[virtualenv]: http://www.virtualenv.org/en/latest/index.html
