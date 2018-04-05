@@ -82,7 +82,7 @@ def check_url(url, timeout=None, retryCount=0, retryPeriod=5):
             socket.setdefaulttimeout( timeout )  # timeout in seconds
         while missCnt <= retryCount:
             try :
-                logger.debug("Check URL server: %s ...", url)
+                logger.debug("Check URL server: %s...", url)
                 status_code = requests.get(url).status_code
                 if status_code == 200:
                     logger.debug("... hit!")
@@ -122,10 +122,9 @@ class SignalHandlerAccelerator(object):
 
     def remove_instance(self):
         if self.csp is None:
+            logger.debug("There is no registered instance to stop")
             return
-        ret = self.csp.get_instance_csp()
-        if ret:
-            logger.debug("Removed instance ID %s from to auto-stop handler.", self.csp.instance.id)
+        logger.debug("Removed instance with URL %s (ID=%s) from auto-stop handler.", self.csp.instance_url, self.csp.instance_id)
         self.csp = None
 
     def set_stop_mode(self, stop_mode):
@@ -140,24 +139,24 @@ class SignalHandlerAccelerator(object):
 
     def signal_handler_accelerator(self, _signo="", _stack_frame="", exit=True):
         '''Try to stop all instances running or inform user'''
-        if self.csp is None:
-            logger.debug("There is no registered instance to stop")
-        if self.stop_mode == KEEP or not self.csp.get_instance_csp():
-            logger.warn("###########################################################")
-            if self.csp.instance_id is not None:
-                logger.warn("## Warning : instance ID '%s' is still running!", self.csp.instance_id)
-            logger.warn("## Make sure you will stop manually the instance.")
-            logger.warn("###########################################################")
-        else:
-            terminate = True if self.stop_mode == TERM else False
-            self.csp.stop_instance_csp(terminate)
-        logger.info("For more details, refer to %s", fileHandler.baseFilename)
-        if exit:
-            socket.setdefaulttimeout(self.defaultSocketTimeout)
-            logger.info("Accelerator API Closed properly")
-            os._exit(0)
-
-
+        try:
+            if self.csp is None:
+                logger.debug("There is no registered instance to stop")
+                return
+            if self.stop_mode == KEEP or not self.csp.get_instance_csp():
+                logger.warn("###########################################################")
+                logger.warn("## Instance with URL %s (ID=%s) is still running!", self.csp.instance_url, self.csp.instance_id)
+                logger.warn("## Make sure you will stop manually the instance.")
+                logger.warn("###########################################################")
+            else:
+                terminate = True if self.stop_mode == TERM else False
+                self.csp.stop_instance_csp(terminate)
+        finally:
+            logger.info("More detailed messages can be found in %s", fileHandler.baseFilename)
+            if exit:
+                socket.setdefaulttimeout(self.defaultSocketTimeout)
+                logger.info("Accelerator API Closed properly")
+                os._exit(0)
 ################################# Rest API material [begin] ########################################################
 
 #===================================
@@ -272,7 +271,8 @@ class GenericAcceleratorClass(object):
                 accelerator_parameters = ast.literal_eval(config.get("configuration", "parameters"))
             envserver = { "client_id":self.client_id, "client_secret":self.secret_id }
             envserver.update(csp_env)
-            parameters = {"env":envserver, "app":accelerator_parameters}
+            parameters = {"env":envserver}
+            parameters.update(accelerator_parameters)
             logger.debug("parameters = \n%s", json.dumps(parameters, indent=4))
             logger.debug("datafile = %s", datafile)
             logger.info("Configuring accelerator...")
@@ -768,7 +768,7 @@ class AWSClass(CSPGenericClass):
     def wait_instance_ready(self):
         try:
             # Waiting for the instance provisioning
-            logger.info("Waiting for the instance provisioning on %s ...", self.provider)
+            logger.info("Waiting for the instance provisioning on %s...", self.provider)
             while True:
                 if not self.get_instance_csp():  # Absolutely mandatory to refresh the state of object (state is not updated automatically)
                     return None
@@ -778,7 +778,7 @@ class AWSClass(CSPGenericClass):
                     break
                 time.sleep(5)
             # Waiting for the instance to boot
-            logger.info("Instance is now booting")
+            logger.info("Instance is now booting...")
             instance_url = self.get_instance_url()
             if not check_url( instance_url, 1, 72, 5 ): # 6 minutes timeout
                 logger.error("Timed out while waiting CSP instance to boot.")
@@ -875,11 +875,11 @@ class AWSClass(CSPGenericClass):
             if not self.get_instance_csp():
                 return False
             if terminate:
-                logger.info("Terminating instance ID %s", self.instance_id)
                 response = self.instance.terminate()
+                logger.info("Instance ID %s has been terminated", self.instance_id)
             else:
-                logger.info("Stopping instance ID %s", self.instance_id)
                 response = self.instance.stop()
+                logger.info("Instance ID %s has been stopped", self.instance_id)
             logger.debug("Stop response: %s", str(response))
             return True
         except:
@@ -1020,7 +1020,13 @@ class OpenStackClass(CSPGenericClass):
         logger.debug("Set image '%s' with ID %s", image.name, self.imageId)
         # Get flavor
         flavor_name = accel_parameters_in_region['instancetype']
-        self.instance_type = self.connection.compute.find_flavor(flavor_name).id
+        try : 
+            self.instance_type = self.connection.compute.find_flavor(flavor_name).id
+        except:
+            custom_message = "The flavor "+str(flavor_name)+" is not available in your CSP account. Please contact you CSP to subscribe to this flavor."
+            #logger.critical(custom_message)
+            raise Exception(custom_message)
+
         logger.debug("Set flavor '%s' with ID %s", flavor_name, self.instance_type)
         return True
 
@@ -1058,7 +1064,7 @@ class OpenStackClass(CSPGenericClass):
     def wait_instance_ready(self):
         try:
             # Waiting for the instance provisioning
-            logger.info("Waiting for the instance provisioning on %s ...", self.provider)
+            logger.info("Waiting for the instance provisioning on %s...", self.provider)
             self.instance = self.connection.compute.wait_for_server(self.instance)
             state = self.instance.status
             logger.debug("Instance status: %s", state)
@@ -1068,10 +1074,11 @@ class OpenStackClass(CSPGenericClass):
                 return False
             # Waiting for the instance to boot
             self.instance_url = self.get_instance_url()
-            logger.info("Instance is now booting")
+            logger.info("Instance is now booting...")
             if not check_url( self.instance_url, 1, 72, 5 ): # 6 minutes timeout
                 logger.error("Timed out while waiting CSP instance to boot.")
                 return False
+            logger.info("Instance booted!")
             return True
         except:
             logger.exception("Caught following exception:")
@@ -1136,11 +1143,11 @@ class OpenStackClass(CSPGenericClass):
             if not self.get_instance_csp():
                 return False
             if terminate:
-                logger.info("Terminating instance ID %s", self.instance_id)
                 self.connection.delete_server(self.instance)
+                logger.info("Instance ID %s has been terminated", self.instance_id)
             else:
-                logger.info("Stopping instance ID %s", self.instance_id)
                 self.connection.stop_server(self.instance)
+                logger.info("Instance ID %s has been stopped", self.instance_id)
             return True
         except:
             logger.exception("Caught following exception:")
@@ -1284,7 +1291,7 @@ class AcceleratorClass(object):
                         return False
                 if not self.csp.start_instance_csp():
                     return False
-                    self.accelerator.set_url(self.csp.get_instance_url())
+                self.accelerator.set_url(self.csp.get_instance_url())
             logger.info("Accelerator URL: %s", self.accelerator.get_url())
             # If possible use the last accelerator configuration (it can still be overwritten later)
             self.accelerator.use_last_configuration()
@@ -1340,33 +1347,34 @@ class AcceleratorClass(object):
                 return False, processResult
             profiling = self.get_profiling_from_result(processResult)
             if profiling is not None:
-                profilingMsg = list()
                 totalBytes = 0
+                globalTime = 0.0
                 fpgaTime = 0.0
                 if 'wall-clock-time' in profiling.keys():
-                    profilingMsg.append("wall-clock time = %f s" % profiling['wall-clock-time'])
+                    globalTime = float(profiling['wall-clock-time'])
                 else:
                     logger.debug("No 'wall-clock-time' found in output JSON file.")
                 if 'fpga-elapsed-time' in profiling.keys():
-                    profilingMsg.append("FPGA elapsed time = %f s" % profiling['fpga-elapsed-time'])
                     fpgaTime = float(profiling['fpga-elapsed-time'])
                 else:
                     logger.debug("No 'fpga-elapsed-time' found in output JSON file.")
                 if 'total-bytes-written' in profiling.keys():
-                    profilingMsg.append("sent bytes = %d B" % profiling['total-bytes-written'])
-                    totalBytes += profiling['total-bytes-written']
+                    totalBytes += int(profiling['total-bytes-written'])
                 else:
                     logger.debug("No 'total-bytes-written' found in output JSON file.")
                 if 'total-bytes-read' in profiling.keys():
-                    profilingMsg.append("received bytes = %d B" % profiling['total-bytes-read'])
-                    totalBytes += profiling['total-bytes-read']
+                    totalBytes += int(profiling['total-bytes-read'])
                 else:
                     logger.debug("No 'total-bytes-read' found in output JSON file.")
-                logger.info("Processing on %s is complete: %s", self.csp.provider, ', '.join(profilingMsg))
+                logger.info("Processing on %s is complete: %s", self.csp.provider, ', '.join(["%s=%s" % (k,v) for k,v in profiling.items()]))
+                if totalBytes > 0 and globalTime > 0.0:
+                    bw = totalBytes / globalTime / 1024 / 1024
+                    fps = 1.0 / globalTime
+                    logger.debug("Server processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps", self.csp.provider, bw, fps)
                 if totalBytes > 0 and fpgaTime > 0.0:
-                    bw = (float(profiling['total-bytes-written']) + float(profiling['total-bytes-read'])) / float(profiling['fpga-elapsed-time']) / 1024 / 1024
-                    fps = 1.0 / float(profiling['fpga-elapsed-time'])
-                    logger.debug("Processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps", self.csp.provider, bw, fps)
+                    bw = totalBytes / fpgaTime / 1024 / 1024
+                    fps = 1.0 / fpgaTime
+                    logger.debug("FPGA processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps", self.csp.provider, bw, fps)
             specific = self.get_specific_from_result(processResult)
             if specific is not None and len(specific.keys()):
                 logger.info("Specific result: %s", ', '.join(["%s=%s" % (k,v) for k,v in specific.items()]))
@@ -1385,7 +1393,7 @@ class AcceleratorClass(object):
             if ret:
                 logger.error("Stopping accelerator failed: %s", msg)
                 return False, stopResult
-            logger.debug("Stopping accelerator is complete")
+            logger.info("Accelerator session is closed")
             return True, stopResult
         except:
             logger.exception("Exception occurred:")
@@ -1395,8 +1403,8 @@ class AcceleratorClass(object):
         logger.debug("Stopping instance (ID: %s) on '%s'", self.csp.instance_id, self.csp.provider)
         try:
             res = self.stop_accelerator()
-            self.sign_handler.remove_instance()
             self.csp.stop_instance_csp(terminate)
+            self.sign_handler.remove_instance()
             return res
         except:
             logger.exception("Exception occurred:")
