@@ -152,7 +152,7 @@ class SignalHandlerAccelerator(object):
                 terminate = True if self.stop_mode == TERM else False
                 self.csp.stop_instance_csp(terminate)
         finally:
-            logger.info("For more details, refer to %s", fileHandler.baseFilename)
+            logger.info("More detailed messages can be found in %s", fileHandler.baseFilename)
             if exit:
                 socket.setdefaulttimeout(self.defaultSocketTimeout)
                 logger.info("Accelerator API Closed properly")
