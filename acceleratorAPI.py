@@ -25,6 +25,7 @@ from rest_api.swagger_client.rest import ApiException
 # - Force the level to DEBUG for the file handler.
 class APILogger(logging.getLoggerClass()):
 #===================================
+    LevelRequest = logging.WARN
     def setLevel(self, lvl):
         self.LevelRequest = lvl
         if self.name != __name__:
@@ -34,7 +35,7 @@ class APILogger(logging.getLoggerClass()):
     def handle(self, record):
         for e in self.handlers:
             e.emit(record)
-        if record.levelno < self.LevelRequest:
+        if record.name == __name__ and record.levelno < self.LevelRequest:
             return
         if record.name == __name__ and record.exc_info is not None:
             record.msg = record.exc_info[1].message
@@ -42,19 +43,21 @@ class APILogger(logging.getLoggerClass()):
             record.exc_info = None
         self.parent.handle(record)
 
-# Register our logger
-logging.setLoggerClass(APILogger)
 
-# Module logger
+# Register our logger class and create local logger object
+refLoggerClass = logging.getLoggerClass()
+logging.setLoggerClass(APILogger)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARN)
+# Use the original Logger class for the others
+logging.setLoggerClass(refLoggerClass)
 
 # Rotating file handler
 LOG_FILENAME = os.path.splitext(os.path.basename(__file__))[0] + ".log"
 MAX_BYTES = 100*1024*1024
 fileHandler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=MAX_BYTES, backupCount=5)
 fileHandler.setLevel(logging.DEBUG)
-fileHandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)-8s: %(name)-20s, %(funcName)-28s, %(lineno)-4d: %(message)s"))
+fileHandler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)-8s: %(module)-20s, %(funcName)-28s, %(lineno)-4d: %(message)s"))
 logger.addHandler(fileHandler)
 
 DEFAULT_CONFIG_FILE = "accelerator.conf"
@@ -742,7 +745,6 @@ class AWSClass(CSPGenericClass):
         return currenv
 
     def create_instance_csp(self):
-        #call webservice
         if not self.ssh_key_csp():
             return False
         policy_arn = self.policy_csp('AccelizePolicy')
@@ -768,7 +770,7 @@ class AWSClass(CSPGenericClass):
             # Waiting for the instance provisioning
             logger.info("Waiting for the instance provisioning on %s ...", self.provider)
             while True:
-                if not self.get_instance_csp():  # Absolutely mandatory to update the state of object (state is not updated automatically)
+                if not self.get_instance_csp():  # Absolutely mandatory to refresh the state of object (state is not updated automatically)
                     return None
                 status = self.instance.state["Name"]
                 logger.debug("Instance status: %s", status)
@@ -893,7 +895,6 @@ class OpenStackClass(CSPGenericClass):
         project_id = CSPGenericClass.get_from_args('project_id', **kwargs)
         auth_url = CSPGenericClass.get_from_args('auth_url', **kwargs)
         interface = CSPGenericClass.get_from_args('interface', **kwargs)
-        provider = config_parser.get('csp', 'provider')
         super(OpenStackClass, self).__init__(config_parser, **kwargs)
         self.project_id = self.get_from_config('csp', 'project_id', project_id)
         if self.project_id is None:
@@ -1244,8 +1245,21 @@ class AcceleratorClass(object):
 
     def get_profiling_from_result(self, result):
         if 'app' not in result.keys():
-            return -1, "No profiling returned!"
+            logger.debug("No application information found in result JSON file")
+            return None
+        if 'profiling' not in result['app'].keys():
+            logger.debug("No profiling information found in result JSON file")
+            return None
         return result['app']['profiling']
+
+    def get_specific_from_result(self, result):
+        if 'app' not in result.keys():
+            logger.debug("No application information found in result JSON file")
+            return None
+        if 'specific' not in result['app'].keys():
+            logger.debug("No specific information found in result JSON file")
+            return None
+        return result['app']['specific']
 
     # Start a new instance or use a running instance
     def start_instance(self, stop_mode=None):
@@ -1325,11 +1339,37 @@ class AcceleratorClass(object):
             if ret:
                 return False, processResult
             profiling = self.get_profiling_from_result(processResult)
-            logger.info("Processing on %s is complete: time = %f s, sent bytes = %d B, received bytes = %d B", self.csp.provider,
-                    profiling['fpga-elapsed-time'], profiling['total-bytes-written'], profiling['total-bytes-read'])
-            bw = (float(profiling['total-bytes-written']) + float(profiling['total-bytes-read'])) / float(profiling['fpga-elapsed-time']) / 1024 / 1024
-            fps = 1.0 / float(profiling['fpga-elapsed-time'])
-            logger.debug("Processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps", self.csp.provider, bw, fps)
+            if profiling is not None:
+                profilingMsg = list()
+                totalBytes = 0
+                fpgaTime = 0.0
+                if 'wall-clock-time' in profiling.keys():
+                    profilingMsg.append("wall-clock time = %f s" % profiling['wall-clock-time'])
+                else:
+                    logger.debug("No 'wall-clock-time' found in output JSON file.")
+                if 'fpga-elapsed-time' in profiling.keys():
+                    profilingMsg.append("FPGA elapsed time = %f s" % profiling['fpga-elapsed-time'])
+                    fpgaTime = float(profiling['fpga-elapsed-time'])
+                else:
+                    logger.debug("No 'fpga-elapsed-time' found in output JSON file.")
+                if 'total-bytes-written' in profiling.keys():
+                    profilingMsg.append("sent bytes = %d B" % profiling['total-bytes-written'])
+                    totalBytes += profiling['total-bytes-written']
+                else:
+                    logger.debug("No 'total-bytes-written' found in output JSON file.")
+                if 'total-bytes-read' in profiling.keys():
+                    profilingMsg.append("received bytes = %d B" % profiling['total-bytes-read'])
+                    totalBytes += profiling['total-bytes-read']
+                else:
+                    logger.debug("No 'total-bytes-read' found in output JSON file.")
+                logger.info("Processing on %s is complete: %s", self.csp.provider, ', '.join(profilingMsg))
+                if totalBytes > 0 and fpgaTime > 0.0:
+                    bw = (float(profiling['total-bytes-written']) + float(profiling['total-bytes-read'])) / float(profiling['fpga-elapsed-time']) / 1024 / 1024
+                    fps = 1.0 / float(profiling['fpga-elapsed-time'])
+                    logger.debug("Processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps", self.csp.provider, bw, fps)
+            specific = self.get_specific_from_result(processResult)
+            if specific is not None and len(specific.keys()):
+                logger.info("Specific result: %s", ', '.join(["%s=%s" % (k,v) for k,v in specific.items()]))
             return True, processResult
         except:
             logger.exception("Exception occurred:")
