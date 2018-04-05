@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This tutorial will cover creating a simple accelerator instance and process a file.  Along the way it will introduce the various components that make up AcceleratorAPI, and give you a comprehensive understanding of how everything fits together.
+This tutorial will cover creating a simple accelerator instance and process a file without stopping this CSP instance in order to be resused later.  Along the way it will introduce the various components that make up AcceleratorAPI, and give you a comprehensive understanding of how everything fits together.
 
 ## Setting up a new environment
 

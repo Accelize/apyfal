@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This tutorial will cover creating a simple accelerator instance and process a file.  Along the way it will introduce the various components that make up AcceleratorAPI, and give you a comprehensive understanding of how everything fits together.
+This tutorial will cover how to reuse an instance and process a file.  Along the way it will introduce the various components that make up AcceleratorAPI, and give you a comprehensive understanding of how everything fits together.
 
 ## Setting up a new environment
 
@@ -60,7 +60,7 @@ Once that's done we can import our module.
     
 Choose an accelerator to use.
     
-    myaccel = AcceleratorClass(accelerator='cast_gzip',instance_i='<Instance ID>')
+    myaccel = AcceleratorClass(accelerator='cast_gzip',instance_id='<Instance ID>')
         
 Start the accelerator. In this case will reuse a CSP instance. 
 

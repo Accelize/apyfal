@@ -2,7 +2,8 @@
 
 ## Introduction
 
-This tutorial will cover creating a simple accelerator instance and process a file.  Along the way it will introduce the various components that make up AcceleratorAPI, and give you a comprehensive understanding of how everything fits together.
+This tutorial will cover how to reuse an instance and process a file using a instance IP address and without a CSP credential.  Along the way it will introduce the various components that make up AcceleratorAPI, and give you a comprehensive understanding of how everything fits together.
+
 
 ## Setting up a new environment
 

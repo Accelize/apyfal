@@ -46,15 +46,15 @@ Install using pip...
 
 ## Details examples 
 
-[Standard usage](tutorial/1-simple-exemple.md)
+[1 - Standard usage](tutorial/1-simple-exemple.md)
 
-[Example keeping CSP instance running for later use](tutorial/2-keeping_instance_running.md)
+[2 - Example keeping CSP instance running for later use](tutorial/2-keeping_instance_running.md)
 
-[Example reusing a running instance with instance_id](tutorial/3-reusing_instance_with_instance_id.md)
+[3 - Example reusing a running instance with instance_id](tutorial/3-reusing_instance_with_instance_id.md)
 
-[Example reusing a running instance with instance_ip](tutorial/4-reusing_instance_with_instance_ip.md)
+[4 - Example reusing a running instance with instance_ip](tutorial/4-reusing_instance_with_instance_ip.md)
 
-[Example reusing a running instance already configured](tutorial/5-reusing_instance_already_configured.md)
+[5 - Example reusing a running instance already configured](tutorial/5-reusing_instance_already_configured.md)
 
 ## Documentation
 
@@ -83,6 +83,15 @@ Check the accelerator metering information on your [AccelStore account](https://
 + Max data file is limited to 30 G ( in case of usage of pycurl) or 2G using urllib 
 + Timeout will appear if request take more than 900s
 
+## Troubleshooting
+
+- [Create an AWS account](https://portal.aws.amazon.com/billing/signup?nc2=h_ct&redirect_url=https%3A%2F%2Faws.amazon.com%2Fregistration-confirmation#/start)
+- [Guide to Create an AWS Access Keys](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)
+- [Create an OVH account](https://www.ovh.com/fr/support/new_nic.xml?redirectTo=https%3A%2F%2Fwww.ovh.com%2Fmanager%2Fcloud%2F%23%2F)
+- [Guide to Create an OVH Access Keys](https://docs.ovh.com/ie/en/public-cloud/configure_user_access_to_horizon/)
+- [Request an adjustment to the limit of AWS EC2 F1 instances](http://aws.amazon.com/contact-us/ec2-request) you can launch (0 by default)
+- [Documentation on configuration file](https://github.com/Accelize/AcceleratorAPI/docs/api-guide/configuration_file.md)
+- [Documentation on python API ](https://github.com/Accelize/AcceleratorAPI/docs/api-guide/acceleratorclass.md)
 
 ## Support and enhancement requests
 [Contact us](https://www.accelize.com/contact-us/) if you have any support or enhancement request.
