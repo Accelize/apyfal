@@ -157,6 +157,11 @@ class SignalHandlerAccelerator(object):
                 socket.setdefaulttimeout(self.defaultSocketTimeout)
                 logger.info("Accelerator API Closed properly")
                 os._exit(0)
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> refs/remotes/origin/dev
 ################################# Rest API material [begin] ########################################################
 
 #===================================
