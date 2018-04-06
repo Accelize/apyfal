@@ -1324,7 +1324,7 @@ class AcceleratorClass(object):
             if not self.start_instance(stop_mode):
                 return False, {'app': {'status':0, 'msg':"Failed to create instance on %s" % self.csp.provider}}
             # Configure accelerator if needed
-            if kwargs or (self.accelerator.accelerator_configuration_url is None):
+            if kwargs or (self.accelerator.accelerator_configuration_url is None) or datafile is not None :
                 return self.configure_accelerator(datafile, accelerator_parameters, **kwargs)
             logger.debug("Accelerator is already configured")
             return True, {'app': {'status':0, 'msg':"Reusing last configuration: %s" % self.accelerator.accelerator_configuration_url}}
