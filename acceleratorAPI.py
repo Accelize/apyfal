@@ -230,6 +230,7 @@ class GenericAcceleratorClass(object):
                 logger.error("An accelerator url is required to get the list of configurations.")
                 return None
             api_instance = rest_api.swagger_client.ConfigurationApi(api_client=self.api_configuration.api_client)
+            api_instance.api_client.rest_client.pool_manager.connection_pool_kw['retries'] = 3
             logger.debug("Get list of configurations...")
             api_response = api_instance.configuration_list()
             configList = api_response.results
@@ -267,6 +268,7 @@ class GenericAcceleratorClass(object):
             # /v1.0/configuration/
             # create an instance of the API class
             api_instance = rest_api.swagger_client.ConfigurationApi(api_client=self.api_configuration.api_client)
+            api_instance.api_client.rest_client.pool_manager.connection_pool_kw['retries'] = 3
             if accelerator_parameters is None:
                 logger.debug( "Using default configuration parameters")
                 accelerator_parameters = ast.literal_eval(config.get("configuration", "parameters"))
@@ -305,6 +307,7 @@ class GenericAcceleratorClass(object):
             return {'app': {'status':-1, 'msg':"Accelerator is not configured."}}
         # create an instance of the API class
         api_instance = rest_api.swagger_client.ProcessApi(api_client=self.api_configuration.api_client)
+        api_instance.api_client.rest_client.pool_manager.connection_pool_kw['retries'] = 3
         if accelerator_parameters == None:
             logger.debug( "Using default processing parameters")
             accelerator_parameters = ast.literal_eval(config.get("process", "parameters"))
@@ -315,18 +318,29 @@ class GenericAcceleratorClass(object):
                 import pycurl
                 from StringIO import StringIO
                 logger.debug( "pycurl process=%s datafile=%s", self.accelerator_configuration_url, str(datafile) )
-                storage = StringIO()
-                c = pycurl.Curl()
-                c.setopt(c.WRITEFUNCTION, storage.write)
-                c.setopt(c.URL, self.api_configuration.host+"/v1.0/process/")
-                c.setopt(c.POST, 1)
-                c.setopt(c.HTTPPOST, [("datafile", (c.FORM_FILE, file_in)),
-                                    ("parameters", json.dumps(accelerator_parameters)),
-                                    ("configuration", self.accelerator_configuration_url)])
-                c.setopt(c.HTTPHEADER, ['Content-Type: multipart/form-data'])
-                #c.setopt(c.VERBOSE, 1)
-                c.perform()
-                c.close()
+                retries_max = 3
+                retries_done = 1
+                while True:
+                    try:
+                        storage = StringIO()
+                        c = pycurl.Curl()
+                        c.setopt(c.WRITEFUNCTION, storage.write)
+                        c.setopt(c.URL, self.api_configuration.host+"/v1.0/process/")
+                        c.setopt(c.POST, 1)
+                        c.setopt(c.HTTPPOST, [("datafile", (c.FORM_FILE, file_in)),
+                                              ("parameters", json.dumps(accelerator_parameters)),
+                                              ("configuration", self.accelerator_configuration_url)])
+                        c.setopt(c.HTTPHEADER, ['Content-Type: multipart/form-data'])
+                        #c.setopt(c.VERBOSE, 1)
+                        c.perform()
+                        break
+                    except Exception as e:
+                        logger.error("Failed to post process request after %d/%d attempts because of: %s", retries_done, retries_max, str(e))
+                        if retries_done > retries_max:
+                            raise e
+                        retries_done += 1
+                    finally:
+                        c.close()
                 content = storage.getvalue()
                 logger.debug( "pycurl process:"+str(content) )
                 r2 = json.loads(content)
@@ -369,6 +383,7 @@ class GenericAcceleratorClass(object):
     def stop_accelerator(self):
         # create an instance of the API class
         api_instance = rest_api.swagger_client.StopApi(api_client=self.api_configuration.api_client)
+        api_instance.api_client.rest_client.pool_manager.connection_pool_kw['retries'] = 3
         try:
             # /v1.0/stop
             return api_instance.stop_list()
