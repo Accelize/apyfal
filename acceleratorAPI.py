@@ -1,4 +1,4 @@
-__version__ = "1.3"
+__version__ = "2.0.3"
 
 import os
 import sys
@@ -181,7 +181,7 @@ class GenericAcceleratorClass(object):
         try :
             r = requests.post('https://master.metering.accelize.com/o/token/',data={"grant_type":"client_credentials"} , auth=(self.client_id, self.secret_id))
             if r.status_code != 200 :
-                logger.error("Accelize authentication failed: %s", r.text)
+                logger.error("Accelize authentication failed (%d): %s", r.status_code, r.text)
                 return False
             logger.info("Accelize authentication for '%s' is successful", self.name)
             return True
@@ -234,7 +234,7 @@ class GenericAcceleratorClass(object):
             logger.debug("Get list of configurations...")
             api_response = api_instance.configuration_list()
             configList = api_response.results
-            logger.debug("configuration_list api_response:\n%s", pretty_dict(api_response))
+            #logger.debug("configuration_list api_response:\n%s", pretty_dict(api_response))
             #if api_response.inerror :
             #    raise ValueError("Cannot get list of configurations")
             #    return None
@@ -286,10 +286,10 @@ class GenericAcceleratorClass(object):
             id = api_response.id
             self.accelerator_configuration_url = api_response.url
             dictparameters = ast.literal_eval(api_response.parametersresult)
-            dictparameters['url_config']= api_response.url
-            dictparameters['url_instance']= self.api_configuration.host
-            logger.debug("status: %s", str(dictparameters['app']['status']) )
-            logger.debug("msg:\n%s", dictparameters['app']['msg'] )
+            dictparameters['url_config'] = api_response.url
+            dictparameters['url_instance'] = self.api_configuration.host
+            logger.debug("status: %s", str(dictparameters['app']['status']))
+            logger.debug("msg:\n%s", dictparameters['app']['msg'])
             api_response_read = api_instance.configuration_read(id)
             if api_response_read.inerror:
                 return {'app': {'status':-1, 'msg':"Cannot start the configuration %s" % api_response_read.url}}
@@ -345,8 +345,9 @@ class GenericAcceleratorClass(object):
                 logger.debug( "pycurl process:"+str(content) )
                 r2 = json.loads(content)
                 if 'id' not in r2.keys():
-                    logger.error("Processing failed with no message (host application did not run).")
-                    return {'app': {'status':-1, 'msg':""}}
+                    msg = "Processing failed with no message (host application did not run)."
+                    logger.error(msg)
+                    return {'app': {'status':-1, 'msg':msg}}
                 id = r2['id']
                 processed = r2['processed']
             except ImportError:
@@ -355,20 +356,20 @@ class GenericAcceleratorClass(object):
                 id = api_response.id
                 processed = api_response.processed
             try:
-                while processed != True :
+                while processed != True:
                     api_response = api_instance.process_read(id)
                     processed = api_response.processed
-                    if api_response.inerror :
-                        msg = "Cannot start the process: %s" % pretty_dict(api_response.parametersresult)
-                        logger.error(msg)
-                        return {'app': {'status':-1, 'msg':msg}}
+                dictparameters = ast.literal_eval(api_response.parametersresult)
+                if api_response.inerror:
+                    msg = "Failed to process data: %s" % pretty_dict(api_response.parametersresult)
+                    logger.error(msg)
+                    return {'app': {'status':-1, 'msg':msg}}
+                logger.debug("Process status: %s", str(dictparameters['app']['status']))
+                logger.debug("Process msg:\n%s", str(dictparameters['app']['msg']))
                 url = 'http://example.com/img.png'
                 response = requests.get(api_response.datafileresult, stream=True)
                 with open(file_out, 'wb') as out_file:
                     shutil.copyfileobj(response.raw, out_file)
-                dictparameters = ast.literal_eval(api_response.parametersresult)
-                logger.debug(  "status:"+str(dictparameters['app']['status']))
-                logger.debug(  "msg:\n"+dictparameters['app']['msg'])
             finally:
                 logger.debug( "process_delete api_response: "+str(id) )
                 api_response_delete = api_instance.process_delete(id)
@@ -473,18 +474,14 @@ class CSPGenericClass(object):
             instance_type=None, ssh_key=None, security_group=None, instance_id=None,
             instance_url=None):
         self.config_parser = config_parser
-        self.client_id = self.get_from_config('csp', 'client_id', client_id)
-        self.secret_id = self.get_from_config('csp', 'secret_id', secret_id)
-        self.region = self.get_from_config('csp', 'region', region)
-        self.instance_type = self.get_from_config('csp', 'instance_type', instance_type)
-        self.ssh_key = self.get_from_config('csp', 'ssh_key', ssh_key)
-        if self.ssh_key is None:
-            self.ssh_key = "MySSHKey"
-        self.security_group = self.get_from_config('csp', 'security_group', security_group)
-        if self.security_group is None:
-            self.security_group = "MySecurityGroup"
-        self.instance_id = self.get_from_config('csp', 'instance_id', instance_id)
-        self.instance_url = self.get_from_config('csp', 'instance_url', instance_url)
+        self.client_id = self.get_from_config('csp', 'client_id', overwrite=client_id)
+        self.secret_id = self.get_from_config('csp', 'secret_id', overwrite=secret_id)
+        self.region = self.get_from_config('csp', 'region', overwrite=region)
+        self.instance_type = self.get_from_config('csp', 'instance_type', overwrite=instance_type)
+        self.ssh_key = self.get_from_config('csp', 'ssh_key', overwrite=ssh_key, default="MySSHKey")
+        self.security_group = self.get_from_config('csp', 'security_group', overwrite=security_group, default="MySecurityGroup")
+        self.instance_id = self.get_from_config('csp', 'instance_id', overwrite=instance_id)
+        self.instance_url = self.get_from_config('csp', 'instance_url', overwrite=instance_url)
         self.create_SSH_folder()      # If not existing create SSH folder in HOME folder
 
     def create_SSH_folder(self):
@@ -506,17 +503,16 @@ class CSPGenericClass(object):
         logger.warn("A SSH key file named '%s' is already existing in ~/.ssh. To avoid overwritting an existing key, the new SSH key file will be named '%s'.", self.ssh_key, ssh_key_file)
         return os.path.join(self.ssh_dir, ssh_key_file)
 
-    def get_from_config(self, section, key, default=None):
-        if default is not None:
-            return default
+    def get_from_config(self, section, key, overwrite=None, default=None):
+        if overwrite is not None:
+            return overwrite
         try:
             new_val = self.config_parser.get(section, key)
             if new_val:
                 return new_val
-            else:
-                return None
+            return default
         except:
-            return None
+            return default
 
 
 
@@ -527,7 +523,7 @@ class AWSClass(CSPGenericClass):
         self.provider = provider
         role = CSPGenericClass.get_from_args('role', **kwargs)
         super(AWSClass, self).__init__(config_parser, **kwargs)
-        self.role = self.get_from_config('csp', 'role', role)
+        self.role = self.get_from_config('csp', 'role', overwrite=role)
         if self.role is None:
             raise Exception("No 'role' field has been specified for %s" % self.provider)
         self.load_session()
@@ -912,13 +908,13 @@ class OpenStackClass(CSPGenericClass):
         auth_url = CSPGenericClass.get_from_args('auth_url', **kwargs)
         interface = CSPGenericClass.get_from_args('interface', **kwargs)
         super(OpenStackClass, self).__init__(config_parser, **kwargs)
-        self.project_id = self.get_from_config('csp', 'project_id', project_id)
+        self.project_id = self.get_from_config('csp', 'project_id', overwrite=project_id)
         if self.project_id is None:
             raise Exception("No 'project_id' field has been specified for %s" % self.provider)
-        self.auth_url = self.get_from_config('csp', 'auth_url', auth_url)
+        self.auth_url = self.get_from_config('csp', 'auth_url', overwrite=auth_url)
         if self.auth_url is None:
             raise Exception("No 'auth_url' field has been specified for %s" % self.provider)
-        self.interface = self.get_from_config('csp', 'interface', interface)
+        self.interface = self.get_from_config('csp', 'interface', overwrite=interface)
         if self.interface is None:
             raise Exception("No 'interface' field has been specified for %s" % self.provider)
         self.load_session()
@@ -1032,15 +1028,21 @@ class OpenStackClass(CSPGenericClass):
         accel_parameters_in_region = accel_parameters[self.region]
         # Get image
         self.imageId = accel_parameters_in_region['image']
-        image = self.connection.compute.find_image(self.imageId)
+        try:
+            image = self.connection.compute.find_image(self.imageId)
+            image.name
+        except:
+            logger.exception("Failed to get image information for CSP '%s': ", self.provider)
+            custom_message = "The image " + str(self.imageId) + " is not available on your CSP account. Please contact Accelize."
+            raise Exception(custom_message)
         logger.debug("Set image '%s' with ID %s", image.name, self.imageId)
         # Get flavor
         flavor_name = accel_parameters_in_region['instancetype']
-        try : 
+        try:
             self.instance_type = self.connection.compute.find_flavor(flavor_name).id
         except:
-            custom_message = "The flavor "+str(flavor_name)+" is not available in your CSP account. Please contact you CSP to subscribe to this flavor."
-            #logger.critical(custom_message)
+            logger.exception("Failed to get flavor information for CSP '%s': ", self.provider)
+            custom_message = "The flavor " + str(flavor_name) + " is not available in your CSP account. Please contact you CSP to subscribe to this flavor."
             raise Exception(custom_message)
 
         logger.debug("Set flavor '%s' with ID %s", flavor_name, self.instance_type)
@@ -1097,6 +1099,12 @@ class OpenStackClass(CSPGenericClass):
             logger.info("Instance booted!")
             return True
         except:
+            try:
+                self.get_instance_csp()
+                msg = self.instance.fault.message
+                logger.error("CSP error message: %s ",msg)
+            except:
+                pass
             logger.exception("Caught following exception:")
             return False
 
@@ -1288,7 +1296,7 @@ class AcceleratorClass(object):
     def start_instance(self, stop_mode=None):
         try:
             logger.debug("Starting instance on '%s'", self.csp.provider)
-            stop_mode = self.csp.get_from_config("csp", "stop_mode", stop_mode)
+            stop_mode = self.csp.get_from_config("csp", "stop_mode", overwrite=stop_mode, default=TERM)
             if stop_mode is not None:
                 self.sign_handler.set_stop_mode(stop_mode)
             self.sign_handler.add_instance(self.csp)
@@ -1333,7 +1341,7 @@ class AcceleratorClass(object):
             logger.exception("Exception occurred:")
             return False, {'app': {'status':-1, 'msg':"Exception occurred"}}
 
-    def start(self, stop_mode=TERM, datafile=None, accelerator_parameters=None, **kwargs):
+    def start(self, stop_mode=None, datafile=None, accelerator_parameters=None, **kwargs):
         try:
             # Start a new instance or use a running instance
             if not self.start_instance(stop_mode):
@@ -1347,10 +1355,10 @@ class AcceleratorClass(object):
             logger.exception("Exception occurred:")
             return False, {'app': {'status':-1, 'msg':"Exception occurred"}}
 
-    def process(self, file_in, file_out, process_parameter=None):
+    def process(self,  file_out, file_in=None, process_parameter=None):
         try :
             logger.debug("Starting a processing job: in=%s, out=%s", file_in, file_out)
-            if not os.path.isfile(file_in):
+            if file_in and not os.path.isfile(file_in):
                 logger.error("Could not find input file: %s", file_in)
                 return False, {'app': {'status':-1, 'msg':"Invalid input file path: %s" % file_in}}
             accel_url = self.accelerator.get_url()
@@ -1358,9 +1366,6 @@ class AcceleratorClass(object):
             if not check_url(accel_url, 10):
                 return False, {'app': {'status':-1, 'msg':"Failed to reach accelerator url: %s" % self.accelerator.get_url()}}
             processResult = self.accelerator.process_file(file_in=file_in, file_out=file_out, accelerator_parameters=process_parameter)
-            ret, msg = self.get_info_from_result(processResult)
-            if ret:
-                return False, processResult
             profiling = self.get_profiling_from_result(processResult)
             if profiling is not None:
                 totalBytes = 0
@@ -1382,7 +1387,7 @@ class AcceleratorClass(object):
                     totalBytes += int(profiling['total-bytes-read'])
                 else:
                     logger.debug("No 'total-bytes-read' found in output JSON file.")
-                logger.info("Processing on %s is complete: %s", self.csp.provider, ', '.join(["%s=%s" % (k,v) for k,v in profiling.items()]))
+                logger.info("Profiling information from result:\n%s", json.dumps(profiling, indent=4).replace('\\n','\n').replace('\\t','\t'))
                 if totalBytes > 0 and globalTime > 0.0:
                     bw = totalBytes / globalTime / 1024 / 1024
                     fps = 1.0 / globalTime
@@ -1393,8 +1398,10 @@ class AcceleratorClass(object):
                     logger.debug("FPGA processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps", self.csp.provider, bw, fps)
             specific = self.get_specific_from_result(processResult)
             if specific is not None and len(specific.keys()):
-                logger.info("Specific result: %s", ', '.join(["%s=%s" % (k,v) for k,v in specific.items()]))
-            return True, processResult
+                logger.info("Specific information from result:\n%s", json.dumps(specific, indent=4).replace('\\n','\n').replace('\\t','\t'))
+            ret, msg = self.get_info_from_result(processResult)
+            bRet = False if ret else True
+            return bRet, processResult
         except:
             logger.exception("Exception occurred:")
             return False, {'app': {'status':-1, 'msg':"Exception occurred"}}
