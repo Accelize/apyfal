@@ -15,6 +15,9 @@ import requests
 import socket
 import ConfigParser
 
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
 import rest_api.swagger_client
 from rest_api.swagger_client.rest import ApiException
 
@@ -179,7 +182,9 @@ class GenericAcceleratorClass(object):
 
     def check_accelize_credential(self):
         try :
-            r = requests.post('https://master.metering.accelize.com/o/token/',data={"grant_type":"client_credentials"} , auth=(self.client_id, self.secret_id))
+            s = requests.Session()
+            s.mount('https://', HTTPAdapter(max_retries=2))
+            r = s.post('https://master.metering.accelize.com/o/token/',data={"grant_type":"client_credentials"} , auth=(self.client_id, self.secret_id))
             if r.status_code != 200 :
                 logger.error("Accelize authentication failed (%d): %s", r.status_code, r.text)
                 return False
@@ -197,14 +202,16 @@ class GenericAcceleratorClass(object):
 
     def get_accelerator_requirements(self, provider):
         try :
-            r = requests.post('https://master.metering.accelize.com/o/token/',data={"grant_type":"client_credentials"} , auth=(self.client_id, self.secret_id))
+            s = requests.Session()
+            s.mount('https://', HTTPAdapter(max_retries=2))
+            r = s.post('https://master.metering.accelize.com/o/token/',data={"grant_type":"client_credentials"} , auth=(self.client_id, self.secret_id))
             logger.debug( "Accelize token answer: %s", str(r.text))
             r.raise_for_status()
             if r.status_code == 200 :
                 #call WS
                 answer_token = json.loads(r.text)
                 headers = {"Authorization": "Bearer "+str(answer_token['access_token']),"Content-Type":"application/json","Accept":"application/vnd.accelize.v1+json"}
-                r = requests.get('https://master.metering.accelize.com/auth/getlastcspconfiguration/',headers=headers)
+                r = s.get('https://master.metering.accelize.com/auth/getlastcspconfiguration/',headers=headers)
                 logger.debug( "Accelize config answer: %s, status: %s", r.text , str(r.status_code))
                 r.raise_for_status()
                 configuration_accelerator = json.loads(r.text)
@@ -367,7 +374,9 @@ class GenericAcceleratorClass(object):
                 logger.debug("Process status: %s", str(dictparameters['app']['status']))
                 logger.debug("Process msg:\n%s", str(dictparameters['app']['msg']))
                 url = 'http://example.com/img.png'
-                response = requests.get(api_response.datafileresult, stream=True)
+                s = requests.Session()
+                s.mount('https://', HTTPAdapter(max_retries=2))
+                response = s.get(api_response.datafileresult, stream=True)
                 with open(file_out, 'wb') as out_file:
                     shutil.copyfileobj(response.raw, out_file)
             finally:
@@ -415,7 +424,9 @@ class CSPGenericClass(object):
         try :
             url = 'http://ipinfo.io/ip'
             logger.debug("Get public IP answer using: %s", url)
-            r = requests.get(url)
+            s = requests.Session()
+            s.mount(url, HTTPAdapter(max_retries=1))
+            r = s.get(url)
             r.raise_for_status()
             ip_address = str(r.text)
             logger.debug("Public IP answer: %s", ip_address)
@@ -430,7 +441,9 @@ class CSPGenericClass(object):
             import xml.etree.ElementTree as ET
             url = 'http://ip-api.com/xml'
             logger.debug("Get public IP answer using: %s", url)
-            r = requests.get(url)
+            s = requests.Session()
+            s.mount(url, HTTPAdapter(max_retries=1))
+            r = s.get(url)
             r.raise_for_status()
             root = ET.fromstring(r.text.encode('utf-8'))
             ip_address = str(root.findall("query")[0].text)
@@ -446,7 +459,9 @@ class CSPGenericClass(object):
             import xml.etree.ElementTree as ET
             url = 'http://freegeoip.net/xml'
             logger.debug("Get public IP answer using: %s", url)
-            r = requests.get(url)
+            s = requests.Session()
+            s.mount(url, HTTPAdapter(max_retries=1))
+            r = s.get(url)
             r.raise_for_status()
             root = ET.fromstring(r.text.encode('utf-8'))
             ip_address = str(root.findall("IP")[0].text)
