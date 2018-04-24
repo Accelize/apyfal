@@ -323,6 +323,12 @@ class GenericAcceleratorClass(object):
         try:
             try: # Bypass REST API because upload issue with big file using python https://bugs.python.org/issue8450
                 import pycurl
+            except ImportError:
+                logger.debug( "process_create process=%s datafile=%s", self.accelerator_configuration_url, str(datafile) )
+                api_response = api_instance.process_create(self.accelerator_configuration_url, parameters=json.dumps(accelerator_parameters), datafile=datafile)
+                id = api_response.id
+                processed = api_response.processed
+            else:
                 from StringIO import StringIO
                 logger.debug( "pycurl process=%s datafile=%s", self.accelerator_configuration_url, str(datafile) )
                 retries_max = 3
@@ -359,11 +365,6 @@ class GenericAcceleratorClass(object):
                     return {'app': {'status':-1, 'msg':msg}}
                 id = r2['id']
                 processed = r2['processed']
-            except ImportError:
-                logger.debug( "process_create process=%s datafile=%s", self.accelerator_configuration_url, str(datafile) )
-                api_response = api_instance.process_create(self.accelerator_configuration_url, parameters=json.dumps(accelerator_parameters), datafile=datafile)
-                id = api_response.id
-                processed = api_response.processed
             try:
                 while processed != True:
                     api_response = api_instance.process_read(id)
@@ -383,7 +384,7 @@ class GenericAcceleratorClass(object):
                     shutil.copyfileobj(response.raw, out_file)
             finally:
                 logger.debug( "process_delete api_response: "+str(id) )
-                api_response_delete = api_instance.process_delete(id)
+                api_instance.process_delete(id)
             return dictparameters
         except ApiException as e:
             logger.error("Caught following exception while calling ProcessApi->process_create: %s", str(e))
