@@ -334,9 +334,11 @@ class GenericAcceleratorClass(object):
                         c.setopt(c.WRITEFUNCTION, storage.write)
                         c.setopt(c.URL, self.api_configuration.host+"/v1.0/process/")
                         c.setopt(c.POST, 1)
-                        c.setopt(c.HTTPPOST, [("datafile", (c.FORM_FILE, file_in)),
-                                              ("parameters", json.dumps(accelerator_parameters)),
-                                              ("configuration", self.accelerator_configuration_url)])
+                        post = [ ("parameters", json.dumps(accelerator_parameters)),
+                                 ("configuration", self.accelerator_configuration_url)]
+                        if file_in is not None :
+                            post.append(("datafile", (c.FORM_FILE, file_in)))
+                        c.setopt(c.HTTPPOST,post )
                         c.setopt(c.HTTPHEADER, ['Content-Type: multipart/form-data'])
                         #c.setopt(c.VERBOSE, 1)
                         c.perform()
@@ -1370,7 +1372,7 @@ class AcceleratorClass(object):
             logger.exception("Exception occurred:")
             return False, {'app': {'status':-1, 'msg':"Exception occurred"}}
 
-    def process(self,  file_out, file_in=None, process_parameter=None):
+    def process(self, file_out, file_in=None, process_parameter=None):
         try :
             logger.debug("Starting a processing job: in=%s, out=%s", file_in, file_out)
             if file_in and not os.path.isfile(file_in):
