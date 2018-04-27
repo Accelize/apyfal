@@ -1,26 +1,24 @@
 __version__ = "2.0.3"
 
-import os
-import sys
-import inspect
+import ast
+import copy
+import json
 import logging
 import logging.handlers
-import time
-import signal
+import os
 import shutil
-import copy
-import ast
-import json
-import requests
+import signal
 import socket
+import time
+
 try:
     from configparser import ConfigParser
 except ImportError:
     # Python 2 compatibility
     from ConfigParser import ConfigParser
 
+import requests
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
 
 import rest_api.swagger_client
 from rest_api.swagger_client.rest import ApiException
@@ -1051,7 +1049,6 @@ class OpenStackClass(CSPGenericClass):
         self.imageId = accel_parameters_in_region['image']
         try:
             image = self.connection.compute.find_image(self.imageId)
-            image.name
         except:
             logger.exception("Failed to get image information for CSP '%s': ", self.provider)
             custom_message = "The image " + str(self.imageId) + " is not available on your CSP account. Please contact Accelize."
