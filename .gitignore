@@ -57,3 +57,10 @@ Thumbs.db
 #########################
 .cache/
 .coverage
+
+# Build generated files #
+#########################
+build/
+dist/
+.eggs/
+*.egg-info/

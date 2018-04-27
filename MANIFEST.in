@@ -1,0 +1,11 @@
+# Manifest file for setup.py
+
+# Exclude useless generated files from Swagger REST API
+prune acceleratorAPI/rest_api/test
+
+# Include configuration file
+recursive-include acceleratorAPI *.conf
+
+# Exclude tests and documentation
+prune docs
+prune tests
