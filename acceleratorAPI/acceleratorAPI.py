@@ -76,7 +76,7 @@ STOP = 1
 KEEP = 2
 
 
-def check_url(url, timeout=None, retryCount=0, retryPeriod=5):
+def check_url(url, timeout=None, retry_count=0, retry_period=5):
     '''
         Checking if an HTTP is up and running.
     '''
@@ -84,11 +84,11 @@ def check_url(url, timeout=None, retryCount=0, retryPeriod=5):
         logger.error("Invalid url: %s", str(url))
         return False
     t = socket.getdefaulttimeout()
-    missCnt = 0
+    miss_count = 0
     try:
         if timeout is not None:
             socket.setdefaulttimeout(timeout)  # timeout in seconds
-        while missCnt <= retryCount:
+        while miss_count <= retry_count:
             try:
                 logger.debug("Check URL server: %s...", url)
                 status_code = requests.get(url).status_code
@@ -97,9 +97,9 @@ def check_url(url, timeout=None, retryCount=0, retryPeriod=5):
                     return True
             except Exception:
                 logger.debug("... miss")
-                missCnt += 1
-                time.sleep(retryPeriod)
-        logger.error("Cannot reach url '%s' after %d attempts", url, retryCount)
+                miss_count += 1
+                time.sleep(retry_period)
+        logger.error("Cannot reach url '%s' after %d attempts", url, retry_count)
         return False
     finally:
         socket.setdefaulttimeout(t)  # set back to default value
@@ -254,12 +254,12 @@ class GenericAcceleratorClass(object):
             api_instance.api_client.rest_client.pool_manager.connection_pool_kw['retries'] = 3
             logger.debug("Get list of configurations...")
             api_response = api_instance.configuration_list()
-            configList = api_response.results
+            config_list = api_response.results
             # logger.debug("configuration_list api_response:\n%s", pretty_dict(api_response))
             # if api_response.inerror :
             #    raise ValueError("Cannot get list of configurations")
             #    return None
-            return configList
+            return config_list
         except ApiException:
             logger.exception("Caught following exception while calling ConfigurationApi->configuration_list:")
             return None
@@ -269,11 +269,11 @@ class GenericAcceleratorClass(object):
 
     def use_last_configuration(self):
         # Get last configuration, if any
-        configList = self.get_accelerator_configuration_list()
-        if not configList:
+        config_list = self.get_accelerator_configuration_list()
+        if not config_list:
             logger.info("Accelerator has not been configured yet.")
             return False
-        last_config = configList[0]
+        last_config = config_list[0]
         logger.debug("Last recorded configuration: Url:%s, Used:%d", last_config.url, last_config.used)
         if last_config.used == 0:
             logger.info("Accelerator has no active configuration. It needs to be configured before being used.")
@@ -304,14 +304,14 @@ class GenericAcceleratorClass(object):
                 datafile = ""
             api_response = api_instance.configuration_create(parameters=json.dumps(parameters), datafile=datafile)
             logger.debug("configuration_create api_response:\n%s", str(api_response))
-            id = api_response.id
+            api_resp_id = api_response.id
             self.accelerator_configuration_url = api_response.url
             dictparameters = ast.literal_eval(api_response.parametersresult)
             dictparameters['url_config'] = api_response.url
             dictparameters['url_instance'] = self.api_configuration.host
             logger.debug("status: %s", str(dictparameters['app']['status']))
             logger.debug("msg:\n%s", dictparameters['app']['msg'])
-            api_response_read = api_instance.configuration_read(id)
+            api_response_read = api_instance.configuration_read(api_resp_id)
             if api_response_read.inerror:
                 return {'app': {'status': -1, 'msg': "Cannot start the configuration %s" % api_response_read.url}}
             return dictparameters
@@ -342,7 +342,7 @@ class GenericAcceleratorClass(object):
                 api_response = api_instance.process_create(self.accelerator_configuration_url,
                                                            parameters=json.dumps(accelerator_parameters),
                                                            datafile=datafile)
-                id = api_response.id
+                api_resp_id = api_response.id
                 processed = api_response.processed
             else:
                 try:
@@ -385,11 +385,11 @@ class GenericAcceleratorClass(object):
                     msg = "Processing failed with no message (host application did not run)."
                     logger.error(msg)
                     return {'app': {'status': -1, 'msg': msg}}
-                id = r2['id']
+                api_resp_id = r2['id']
                 processed = r2['processed']
             try:
                 while processed is not True:
-                    api_response = api_instance.process_read(id)
+                    api_response = api_instance.process_read(api_resp_id)
                     processed = api_response.processed
                 dictparameters = ast.literal_eval(api_response.parametersresult)
                 if api_response.inerror:
@@ -404,8 +404,8 @@ class GenericAcceleratorClass(object):
                 with open(file_out, 'wb') as out_file:
                     shutil.copyfileobj(response.raw, out_file)
             finally:
-                logger.debug("process_delete api_response: " + str(id))
-                api_instance.process_delete(id)
+                logger.debug("process_delete api_response: " + str(api_resp_id))
+                api_instance.process_delete(api_resp_id)
             return dictparameters
         except ApiException as e:
             logger.error("Caught following exception while calling ProcessApi->process_create: %s", str(e))
@@ -1397,15 +1397,15 @@ class AcceleratorClass(object):
                 return False, {
                     'app': {'status': -1, 'msg': "Failed to reach accelerator url: %s" % self.accelerator.get_url()}}
             csp_env = self.csp.get_configuration_env(**kwargs)
-            configResult = self.accelerator.start_accelerator(datafile=datafile,
+            config_result = self.accelerator.start_accelerator(datafile=datafile,
                                                               accelerator_parameters=accelerator_parameters,
                                                               csp_env=csp_env)
-            ret, msg = self.get_info_from_result(configResult)
+            ret, msg = self.get_info_from_result(config_result)
             if ret:
                 logger.error("Configuration of accelerator failed: %s", msg)
-                return False, configResult
+                return False, config_result
             logger.info("Configuration of accelerator is complete")
-            return True, configResult
+            return True, config_result
         except Exception:
             logger.exception("Exception occurred:")
             return False, {'app': {'status': -1, 'msg': "Exception occurred"}}
@@ -1437,48 +1437,48 @@ class AcceleratorClass(object):
             if not check_url(accel_url, 10):
                 return False, {
                     'app': {'status': -1, 'msg': "Failed to reach accelerator url: %s" % self.accelerator.get_url()}}
-            processResult = self.accelerator.process_file(file_in=file_in, file_out=file_out,
+            process_result = self.accelerator.process_file(file_in=file_in, file_out=file_out,
                                                           accelerator_parameters=process_parameter)
-            profiling = self.get_profiling_from_result(processResult)
+            profiling = self.get_profiling_from_result(process_result)
             if profiling is not None:
-                totalBytes = 0
-                globalTime = 0.0
-                fpgaTime = 0.0
+                total_bytes = 0
+                global_time = 0.0
+                fpga_time = 0.0
                 if 'wall-clock-time' in profiling.keys():
-                    globalTime = float(profiling['wall-clock-time'])
+                    global_time = float(profiling['wall-clock-time'])
                 else:
                     logger.debug("No 'wall-clock-time' found in output JSON file.")
                 if 'fpga-elapsed-time' in profiling.keys():
-                    fpgaTime = float(profiling['fpga-elapsed-time'])
+                    fpga_time = float(profiling['fpga-elapsed-time'])
                 else:
                     logger.debug("No 'fpga-elapsed-time' found in output JSON file.")
                 if 'total-bytes-written' in profiling.keys():
-                    totalBytes += int(profiling['total-bytes-written'])
+                    total_bytes += int(profiling['total-bytes-written'])
                 else:
                     logger.debug("No 'total-bytes-written' found in output JSON file.")
                 if 'total-bytes-read' in profiling.keys():
-                    totalBytes += int(profiling['total-bytes-read'])
+                    total_bytes += int(profiling['total-bytes-read'])
                 else:
                     logger.debug("No 'total-bytes-read' found in output JSON file.")
                 logger.info("Profiling information from result:\n%s",
                             json.dumps(profiling, indent=4).replace('\\n', '\n').replace('\\t', '\t'))
-                if totalBytes > 0 and globalTime > 0.0:
-                    bw = totalBytes / globalTime / 1024 / 1024
-                    fps = 1.0 / globalTime
+                if total_bytes > 0 and global_time > 0.0:
+                    bw = total_bytes / global_time / 1024 / 1024
+                    fps = 1.0 / global_time
                     logger.debug("Server processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
                                  self.csp.provider, bw, fps)
-                if totalBytes > 0 and fpgaTime > 0.0:
-                    bw = totalBytes / fpgaTime / 1024 / 1024
-                    fps = 1.0 / fpgaTime
+                if total_bytes > 0 and fpga_time > 0.0:
+                    bw = total_bytes / fpga_time / 1024 / 1024
+                    fps = 1.0 / fpga_time
                     logger.debug("FPGA processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
                                  self.csp.provider, bw, fps)
-            specific = self.get_specific_from_result(processResult)
+            specific = self.get_specific_from_result(process_result)
             if specific is not None and len(specific.keys()):
                 logger.info("Specific information from result:\n%s",
                             json.dumps(specific, indent=4).replace('\\n', '\n').replace('\\t', '\t'))
-            ret, msg = self.get_info_from_result(processResult)
-            bRet = False if ret else True
-            return bRet, processResult
+            ret, msg = self.get_info_from_result(process_result)
+            b_ret = False if ret else True
+            return b_ret, process_result
         except Exception:
             logger.exception("Exception occurred:")
             return False, {'app': {'status': -1, 'msg': "Exception occurred"}}
@@ -1489,13 +1489,13 @@ class AcceleratorClass(object):
             if not check_url(self.accelerator.get_url(), 10):
                 return False, {
                     'app': {'status': -1, 'msg': "Failed to reach accelerator url: %s" % self.accelerator.get_url()}}
-            stopResult = self.accelerator.stop_accelerator()
-            ret, msg = self.get_info_from_result(stopResult)
+            stop_result = self.accelerator.stop_accelerator()
+            ret, msg = self.get_info_from_result(stop_result)
             if ret:
                 logger.error("Stopping accelerator failed: %s", msg)
-                return False, stopResult
+                return False, stop_result
             logger.info("Accelerator session is closed")
-            return True, stopResult
+            return True, stop_result
         except Exception:
             logger.exception("Exception occurred:")
             return False, {'app': {'status': -1, 'msg': "Exception occurred"}}
