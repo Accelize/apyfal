@@ -7,6 +7,7 @@
 *.o
 *.so
 *.pyc
+*.pyd
 
 # Packages #
 ############
@@ -37,6 +38,22 @@
 .Spotlight-V100
 .Trashes
 ehthumbs.db
+Desktop.ini
 Thumbs.db
 *~
 *.bak
+
+# IDE generated files #
+#######################
+.project
+.pydevproject
+.spyproject
+.spyderproject
+.settings/
+.idea/
+.vscode/
+
+# Tests generated files #
+#########################
+.cache/
+.coverage
