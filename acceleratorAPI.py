@@ -13,7 +13,11 @@ import ast
 import json
 import requests
 import socket
-import ConfigParser
+try:
+    from configparser import ConfigParser
+except ImportError:
+    # Python 2 compatibility
+    from ConfigParser import ConfigParser
 
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
@@ -1211,7 +1215,7 @@ class OVHClass(OpenStackClass):
 class CSPClassFactory(object):
 #===================================
     def __new__(cls, config_file, provider=None, **kwargs):
-        config_parser = ConfigParser.ConfigParser(allow_no_value=True)
+        config_parser = ConfigParser(allow_no_value=True)
         config_parser.read(config_file)
         if provider is None:
             try:
@@ -1258,7 +1262,7 @@ class AcceleratorClass(object):
             secret_id=csp_secret_id, region=region, ssh_key=ssh_key, instance_id=instance_id,
             instance_url=instance_url)
         # Create Accelerator object
-        config = ConfigParser.ConfigParser(allow_no_value=True)
+        config = ConfigParser(allow_no_value=True)
         config.read(config_file)
         if xlz_client_id is None:
             try:
