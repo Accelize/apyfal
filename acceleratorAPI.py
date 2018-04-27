@@ -136,9 +136,10 @@ class SignalHandlerAccelerator(object):
 
     def set_signals(self):
         '''Set a list of interrupt signals to be handled asynchronously'''
-        signal.signal(signal.SIGTERM, self.signal_handler_accelerator)
-        signal.signal(signal.SIGINT, self.signal_handler_accelerator)
-        signal.signal(signal.SIGQUIT, self.signal_handler_accelerator)
+        for signal_name in ('SIGTERM', 'SIGINT', 'SIGQUIT'):
+            # Check signal exist on current OS before setting it
+            if hasattr(signal, signal_name):
+                signal.signal(getattr(signal, signal_name), self.signal_handler_accelerator)
 
     def signal_handler_accelerator(self, _signo="", _stack_frame="", exit=True):
         '''Try to stop all instances running or inform user'''
