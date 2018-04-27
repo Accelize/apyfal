@@ -381,7 +381,6 @@ class GenericAcceleratorClass(object):
                     return {'app': {'status':-1, 'msg':msg}}
                 logger.debug("Process status: %s", str(dictparameters['app']['status']))
                 logger.debug("Process msg:\n%s", str(dictparameters['app']['msg']))
-                url = 'http://example.com/img.png'
                 s = requests.Session()
                 s.mount('https://', HTTPAdapter(max_retries=2))
                 response = s.get(api_response.datafileresult, stream=True)
@@ -713,7 +712,6 @@ class AWSClass(CSPGenericClass):
             except Exception as e:
                 logger.debug(str(e))
                 logger.info( "A security group '%s' is already existing on %s.", self.security_group, self.provider)
-            my_sg = ec2.describe_security_groups( GroupNames=[self.security_group,],)
             try :
                 my_sg = ec2.describe_security_groups(GroupNames=[self.security_group,],)
                 data = ec2.authorize_security_group_ingress(
