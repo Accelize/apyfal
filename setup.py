@@ -1,3 +1,4 @@
+# coding=utf-8
 """Accelerator API setup script"""
 from datetime import datetime
 from ast import literal_eval
