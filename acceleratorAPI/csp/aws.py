@@ -214,7 +214,7 @@ class AWSClass(_CSPGenericClass):
 
     def get_instance_csp(self):
         if self.instance_id is None:
-            logger.warn("No instance ID provided")
+            logger.warning("No instance ID provided")
             return False
         ec2 = self.session.resource('ec2')
         self.instance = ec2.Instance(self.instance_id)
@@ -248,7 +248,7 @@ class AWSClass(_CSPGenericClass):
         currenv = copy.deepcopy(self.config_env)
         currenv.update(newenv)
         if newenv:
-            logger.warn("Overwrite factory requirements with custom configuration:\n%s", pretty_dict(currenv))
+            logger.warning("Overwrite factory requirements with custom configuration:\n%s", pretty_dict(currenv))
         else:
             logger.debug("Using factory configuration: %s", pretty_dict(currenv))
         return currenv

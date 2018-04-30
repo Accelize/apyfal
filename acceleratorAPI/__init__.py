@@ -80,11 +80,11 @@ class _SignalHandlerAccelerator(object):
                 logger.debug("There is no registered instance to stop")
                 return
             if self.stop_mode == KEEP or not self.csp.get_instance_csp():
-                logger.warn("###########################################################")
-                logger.warn("## Instance with URL %s (ID=%s) is still running!", self.csp.instance_url,
+                logger.warning("###########################################################")
+                logger.warning("## Instance with URL %s (ID=%s) is still running!", self.csp.instance_url,
                             self.csp.instance_id)
-                logger.warn("## Make sure you will stop manually the instance.")
-                logger.warn("###########################################################")
+                logger.warning("## Make sure you will stop manually the instance.")
+                logger.warning("###########################################################")
             else:
                 terminate = True if self.stop_mode == TERM else False
                 self.csp.stop_instance_csp(terminate)

@@ -54,7 +54,7 @@ class APILogger(logging.Logger):
     - Force the level to DEBUG for the file handler.
     """
 
-    _level_request = logging.WARN
+    _level_request = logging.WARNING
     ref_name = ''
     filename = ''
 
@@ -102,7 +102,7 @@ def init_logger(name, filename):
         logging.setLoggerClass(APILogger)
         logger = logging.getLogger(name)
         logger.ref_name = name
-        logger.setLevel(logging.WARN)
+        logger.setLevel(logging.WARNING)
 
     # Use the original Logger class for the others
     finally:

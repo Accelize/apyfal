@@ -113,7 +113,7 @@ class CSPGenericClass(ABC):
             if ssh_key_file not in ssh_files:
                 break
             idx += 1
-        logger.warn(
+        logger.warning(
             ("A SSH key file named '%s' is already existing in ~/.ssh. "
              "To avoid overwriting an existing key, the new SSH key file will be named '%s'."),
             self.ssh_key, ssh_key_file)
