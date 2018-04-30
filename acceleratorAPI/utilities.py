@@ -47,7 +47,7 @@ def pretty_dict(obj):
     return json.dumps(ast.literal_eval(str(obj)), indent=4)
 
 
-class APILogger(logging.getLoggerClass()):
+class APILogger(logging.Logger):
     """
     Custom logger that:
     - Forwards records to parent logger if not an exception (but save it into the log file)
@@ -56,6 +56,7 @@ class APILogger(logging.getLoggerClass()):
 
     _level_request = logging.WARN
     ref_name = ''
+    filename = ''
 
     def setLevel(self, level):
         """Set logger level
@@ -116,7 +117,7 @@ def init_logger(name, filename):
         logging.Formatter("%(asctime)s - %(levelname)-8s: %(module)-20s, %(funcName)-28s, %(lineno)-4d: %(message)s"))
     logger.addHandler(file_handler)
 
-    # Insert filename inside logger for future use
+    # Save filename inside logger for future use
     logger.filename = file_handler.baseFilename
 
     return logger

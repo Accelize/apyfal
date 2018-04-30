@@ -3,9 +3,12 @@ import os
 try:
     # Python 3
     from configparser import ConfigParser
+    from abc import ABC, abstractmethod
 except ImportError:
     # Python 2
     from ConfigParser import ConfigParser
+    from abc import ABCMeta, abstractmethod
+    ABC = ABCMeta('ABC', (object,), {})
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -13,78 +16,7 @@ from requests.adapters import HTTPAdapter
 from acceleratorAPI import logger
 
 
-# ===================================
-class CSPGenericClass(object):
-    # ===================================
-    @staticmethod
-    def get_from_args(key, **kwargs):
-        return kwargs.pop(key, None)
-
-    @staticmethod
-    def get_host_public_ip_case1():
-        try:
-            url = 'http://ipinfo.io/ip'
-            logger.debug("Get public IP answer using: %s", url)
-            s = requests.Session()
-            s.mount(url, HTTPAdapter(max_retries=1))
-            r = s.get(url)
-            r.raise_for_status()
-            ip_address = str(r.text)
-            logger.debug("Public IP answer: %s", ip_address)
-            return ip_address.strip() + "/32"
-        except Exception:
-            logger.exception("Caught following exception:")
-            return None
-
-    @staticmethod
-    def get_host_public_ip_case2():
-        try:
-            import xml.etree.ElementTree as ET
-            url = 'http://ip-api.com/xml'
-            logger.debug("Get public IP answer using: %s", url)
-            s = requests.Session()
-            s.mount(url, HTTPAdapter(max_retries=1))
-            r = s.get(url)
-            r.raise_for_status()
-            root = ET.fromstring(r.text.encode('utf-8'))
-            ip_address = str(root.findall("query")[0].text)
-            logger.debug("Public IP answer: %s", ip_address)
-            return ip_address.strip() + "/32"
-        except Exception:
-            logger.exception("Caught following exception:")
-            return None
-
-    @staticmethod
-    def get_host_public_ip_case3():
-        try:
-            import xml.etree.ElementTree as ET
-            url = 'http://freegeoip.net/xml'
-            logger.debug("Get public IP answer using: %s", url)
-            s = requests.Session()
-            s.mount(url, HTTPAdapter(max_retries=1))
-            r = s.get(url)
-            r.raise_for_status()
-            root = ET.fromstring(r.text.encode('utf-8'))
-            ip_address = str(root.findall("IP")[0].text)
-            logger.debug("Public IP answer: %s", ip_address)
-            return ip_address.strip() + "/32"
-        except Exception:
-            logger.exception("Caught following exception:")
-            return None
-
-    @staticmethod
-    def get_host_public_ip():
-        ip_address = CSPGenericClass.get_host_public_ip_case1()
-        if ip_address:
-            return ip_address
-        ip_address = CSPGenericClass.get_host_public_ip_case2()
-        if ip_address:
-            return ip_address
-        ip_address = CSPGenericClass.get_host_public_ip_case3()
-        if ip_address:
-            return ip_address
-        logger.error("Failed to find your external IP address after attempts to 3 different sites.")
-        raise Exception("Failed to find your external IP address. Your internet connection might be broken.")
+class CSPGenericClass(ABC):
 
     def __init__(self, config_parser, client_id=None, secret_id=None, region=None,
                  instance_type=None, ssh_key=None, security_group=None, instance_id=None,
@@ -102,6 +34,69 @@ class CSPGenericClass(object):
 
         self.ssh_dir = os.path.expanduser('~/.ssh')
         self.create_SSH_folder()  # If not existing create SSH folder in HOME folder
+
+    def __str__(self):
+        return ', '.join("%s:%s" % item for item in vars(self).items())
+
+    @abstractmethod
+    def load_session(self):
+        """"""
+
+    @abstractmethod
+    def check_csp_credential(self):
+        """"""
+
+    @abstractmethod
+    def ssh_key_csp(self):
+        """"""
+
+    @abstractmethod
+    def security_group_csp(self):
+        """"""
+
+    @abstractmethod
+    def get_instance_csp(self):
+        """"""
+
+    @abstractmethod
+    def set_accelerator_requirements(self, accel_parameters):
+        """"""
+
+    @abstractmethod
+    def get_configuration_env(self, **kwargs):
+        """"""
+
+    @abstractmethod
+    def create_instance_csp(self):
+        """"""
+
+    @abstractmethod
+    def get_instance_url(self):
+        """"""
+
+    @abstractmethod
+    def wait_instance_ready(self):
+        """"""
+
+    @abstractmethod
+    def start_new_instance_csp(self):
+        """"""
+
+    @abstractmethod
+    def is_instance_ID_valid(self):
+        """"""
+
+    @abstractmethod
+    def start_existing_instance_csp(self):
+        """"""
+
+    @abstractmethod
+    def start_instance_csp(self):
+        """"""
+
+    @abstractmethod
+    def stop_instance_csp(self, terminate=True):
+        """"""
 
     def create_SSH_folder(self):
         if not os.path.isdir(self.ssh_dir):
@@ -134,6 +129,76 @@ class CSPGenericClass(object):
             return default
         except Exception:
             return default
+
+    @staticmethod
+    def _get_from_args(key, **kwargs):
+        return kwargs.pop(key, None)
+
+    @staticmethod
+    def _get_host_public_ip_case1():
+        try:
+            url = 'http://ipinfo.io/ip'
+            logger.debug("Get public IP answer using: %s", url)
+            s = requests.Session()
+            s.mount(url, HTTPAdapter(max_retries=1))
+            r = s.get(url)
+            r.raise_for_status()
+            ip_address = str(r.text)
+            logger.debug("Public IP answer: %s", ip_address)
+            return ip_address.strip() + "/32"
+        except Exception:
+            logger.exception("Caught following exception:")
+            return None
+
+    @staticmethod
+    def _get_host_public_ip_case2():
+        try:
+            import xml.etree.ElementTree as ET
+            url = 'http://ip-api.com/xml'
+            logger.debug("Get public IP answer using: %s", url)
+            s = requests.Session()
+            s.mount(url, HTTPAdapter(max_retries=1))
+            r = s.get(url)
+            r.raise_for_status()
+            root = ET.fromstring(r.text.encode('utf-8'))
+            ip_address = str(root.findall("query")[0].text)
+            logger.debug("Public IP answer: %s", ip_address)
+            return ip_address.strip() + "/32"
+        except Exception:
+            logger.exception("Caught following exception:")
+            return None
+
+    @staticmethod
+    def _get_host_public_ip_case3():
+        try:
+            import xml.etree.ElementTree as ET
+            url = 'http://freegeoip.net/xml'
+            logger.debug("Get public IP answer using: %s", url)
+            s = requests.Session()
+            s.mount(url, HTTPAdapter(max_retries=1))
+            r = s.get(url)
+            r.raise_for_status()
+            root = ET.fromstring(r.text.encode('utf-8'))
+            ip_address = str(root.findall("IP")[0].text)
+            logger.debug("Public IP answer: %s", ip_address)
+            return ip_address.strip() + "/32"
+        except Exception:
+            logger.exception("Caught following exception:")
+            return None
+
+    @staticmethod
+    def get_host_public_ip():
+        ip_address = CSPGenericClass._get_host_public_ip_case1()
+        if ip_address:
+            return ip_address
+        ip_address = CSPGenericClass._get_host_public_ip_case2()
+        if ip_address:
+            return ip_address
+        ip_address = CSPGenericClass._get_host_public_ip_case3()
+        if ip_address:
+            return ip_address
+        logger.error("Failed to find your external IP address after attempts to 3 different sites.")
+        raise Exception("Failed to find your external IP address. Your internet connection might be broken.")
 
 
 class CSPClassFactory(object):

@@ -10,9 +10,9 @@ class OpenStackClass(_CSPGenericClass):
 
     def __init__(self, provider, config_parser, **kwargs):
         self.provider = provider
-        project_id = _CSPGenericClass.get_from_args('project_id', **kwargs)
-        auth_url = _CSPGenericClass.get_from_args('auth_url', **kwargs)
-        interface = _CSPGenericClass.get_from_args('interface', **kwargs)
+        project_id = _CSPGenericClass._get_from_args('project_id', **kwargs)
+        auth_url = _CSPGenericClass._get_from_args('auth_url', **kwargs)
+        interface = _CSPGenericClass._get_from_args('interface', **kwargs)
         super(OpenStackClass, self).__init__(config_parser, **kwargs)
         self.project_id = self.get_from_config('csp', 'project_id', overwrite=project_id)
         if self.project_id is None:
@@ -26,9 +26,6 @@ class OpenStackClass(_CSPGenericClass):
         self.load_session()
         self.instance = None
         self.config_env = {}
-
-    def __str__(self):
-        return ', '.join("%s:%s" % item for item in vars(self).items())
 
     def load_session(self):
         try:

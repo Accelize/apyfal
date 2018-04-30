@@ -13,7 +13,7 @@ class AWSClass(_CSPGenericClass):
 
     def __init__(self, provider, config_parser, **kwargs):
         self.provider = provider
-        role = _CSPGenericClass.get_from_args('role', **kwargs)
+        role = _CSPGenericClass._get_from_args('role', **kwargs)
         super(AWSClass, self).__init__(config_parser, **kwargs)
         self.role = self.get_from_config('csp', 'role', overwrite=role)
         if self.role is None:
@@ -21,9 +21,6 @@ class AWSClass(_CSPGenericClass):
         self.load_session()
         self.instance = None
         self.config_env = {}
-
-    def __str__(self):
-        return ', '.join("%s:%s" % item for item in vars(self).items())
 
     def load_session(self):
         try:
@@ -245,7 +242,7 @@ class AWSClass(_CSPGenericClass):
 
     def get_configuration_env(self, **kwargs):
         newenv = dict()
-        agfi = self.get_from_args('AGFI', **kwargs)
+        agfi = self._get_from_args('AGFI', **kwargs)
         if agfi:
             newenv['AGFI'] = agfi
         currenv = copy.deepcopy(self.config_env)
