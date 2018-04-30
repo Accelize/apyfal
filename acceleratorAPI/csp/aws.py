@@ -15,7 +15,7 @@ class AWSClass(_CSPGenericClass):
         self.provider = provider
         role = _CSPGenericClass._get_from_args('role', **kwargs)
         super(AWSClass, self).__init__(config_parser, **kwargs)
-        self.role = self.get_from_config('csp', 'role', overwrite=role)
+        self.role = self._get_from_config('csp', 'role', overwrite=role)
         if self.role is None:
             raise Exception("No 'role' field has been specified for %s" % self.provider)
         self.load_session()

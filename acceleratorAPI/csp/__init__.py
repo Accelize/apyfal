@@ -22,15 +22,15 @@ class CSPGenericClass(ABC):
                  instance_type=None, ssh_key=None, security_group=None, instance_id=None,
                  instance_url=None):
         self.config_parser = config_parser
-        self.client_id = self.get_from_config('csp', 'client_id', overwrite=client_id)
-        self.secret_id = self.get_from_config('csp', 'secret_id', overwrite=secret_id)
-        self.region = self.get_from_config('csp', 'region', overwrite=region)
-        self.instance_type = self.get_from_config('csp', 'instance_type', overwrite=instance_type)
-        self.ssh_key = self.get_from_config('csp', 'ssh_key', overwrite=ssh_key, default="MySSHKey")
-        self.security_group = self.get_from_config('csp', 'security_group', overwrite=security_group,
-                                                   default="MySecurityGroup")
-        self.instance_id = self.get_from_config('csp', 'instance_id', overwrite=instance_id)
-        self.instance_url = self.get_from_config('csp', 'instance_url', overwrite=instance_url)
+        self.client_id = self._get_from_config('csp', 'client_id', overwrite=client_id)
+        self.secret_id = self._get_from_config('csp', 'secret_id', overwrite=secret_id)
+        self.region = self._get_from_config('csp', 'region', overwrite=region)
+        self.instance_type = self._get_from_config('csp', 'instance_type', overwrite=instance_type)
+        self.ssh_key = self._get_from_config('csp', 'ssh_key', overwrite=ssh_key, default="MySSHKey")
+        self.security_group = self._get_from_config('csp', 'security_group', overwrite=security_group,
+                                                    default="MySecurityGroup")
+        self.instance_id = self._get_from_config('csp', 'instance_id', overwrite=instance_id)
+        self.instance_url = self._get_from_config('csp', 'instance_url', overwrite=instance_url)
 
         self.ssh_dir = os.path.expanduser('~/.ssh')
         self.create_SSH_folder()  # If not existing create SSH folder in HOME folder
@@ -119,7 +119,7 @@ class CSPGenericClass(ABC):
             self.ssh_key, ssh_key_file)
         return os.path.join(self.ssh_dir, ssh_key_file)
 
-    def get_from_config(self, section, key, overwrite=None, default=None):
+    def _get_from_config(self, section, key, overwrite=None, default=None):
         if overwrite is not None:
             return overwrite
         try:
@@ -135,68 +135,37 @@ class CSPGenericClass(ABC):
         return kwargs.pop(key, None)
 
     @staticmethod
-    def _get_host_public_ip_case1():
-        try:
-            url = 'http://ipinfo.io/ip'
-            logger.debug("Get public IP answer using: %s", url)
-            s = requests.Session()
-            s.mount(url, HTTPAdapter(max_retries=1))
-            r = s.get(url)
-            r.raise_for_status()
-            ip_address = str(r.text)
-            logger.debug("Public IP answer: %s", ip_address)
-            return ip_address.strip() + "/32"
-        except Exception:
-            logger.exception("Caught following exception:")
-            return None
-
-    @staticmethod
-    def _get_host_public_ip_case2():
-        try:
-            import xml.etree.ElementTree as ET
-            url = 'http://ip-api.com/xml'
-            logger.debug("Get public IP answer using: %s", url)
-            s = requests.Session()
-            s.mount(url, HTTPAdapter(max_retries=1))
-            r = s.get(url)
-            r.raise_for_status()
-            root = ET.fromstring(r.text.encode('utf-8'))
-            ip_address = str(root.findall("query")[0].text)
-            logger.debug("Public IP answer: %s", ip_address)
-            return ip_address.strip() + "/32"
-        except Exception:
-            logger.exception("Caught following exception:")
-            return None
-
-    @staticmethod
-    def _get_host_public_ip_case3():
-        try:
-            import xml.etree.ElementTree as ET
-            url = 'http://freegeoip.net/xml'
-            logger.debug("Get public IP answer using: %s", url)
-            s = requests.Session()
-            s.mount(url, HTTPAdapter(max_retries=1))
-            r = s.get(url)
-            r.raise_for_status()
-            root = ET.fromstring(r.text.encode('utf-8'))
-            ip_address = str(root.findall("IP")[0].text)
-            logger.debug("Public IP answer: %s", ip_address)
-            return ip_address.strip() + "/32"
-        except Exception:
-            logger.exception("Caught following exception:")
-            return None
-
-    @staticmethod
     def get_host_public_ip():
-        ip_address = CSPGenericClass._get_host_public_ip_case1()
-        if ip_address:
-            return ip_address
-        ip_address = CSPGenericClass._get_host_public_ip_case2()
-        if ip_address:
-            return ip_address
-        ip_address = CSPGenericClass._get_host_public_ip_case3()
-        if ip_address:
-            return ip_address
+        for url, section in (('http://ipinfo.io/ip', ''),
+                             ('http://ip-api.com/xml', 'query'),
+                             ('http://freegeoip.net/xml', 'IP')):
+
+            try:
+                # Try to get response
+                logger.debug("Get public IP answer using: %s", url)
+                session = requests.Session()
+                session.mount(url, HTTPAdapter(max_retries=1))
+                response = session.get(url)
+                response.raise_for_status()
+
+                # Parse IP from response
+                if section:
+                    try:
+                        # Use lxml if available
+                        import lxml.etree as ET
+                    except ImportError:
+                        import xml.etree.ElementTree as ET
+
+                    root = ET.fromstring(response.text.encode('utf-8'))
+                    ip_address = str(root.findall(section)[0].text)
+                else:
+                    ip_address = str(response.text)
+
+                logger.debug("Public IP answer: %s", ip_address)
+                return "/32%s" % ip_address.strip()
+            except Exception:
+                logger.exception("Caught following exception:")
+
         logger.error("Failed to find your external IP address after attempts to 3 different sites.")
         raise Exception("Failed to find your external IP address. Your internet connection might be broken.")
 

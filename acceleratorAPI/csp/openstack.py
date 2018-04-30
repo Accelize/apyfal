@@ -14,13 +14,13 @@ class OpenStackClass(_CSPGenericClass):
         auth_url = _CSPGenericClass._get_from_args('auth_url', **kwargs)
         interface = _CSPGenericClass._get_from_args('interface', **kwargs)
         super(OpenStackClass, self).__init__(config_parser, **kwargs)
-        self.project_id = self.get_from_config('csp', 'project_id', overwrite=project_id)
+        self.project_id = self._get_from_config('csp', 'project_id', overwrite=project_id)
         if self.project_id is None:
             raise Exception("No 'project_id' field has been specified for %s" % self.provider)
-        self.auth_url = self.get_from_config('csp', 'auth_url', overwrite=auth_url)
+        self.auth_url = self._get_from_config('csp', 'auth_url', overwrite=auth_url)
         if self.auth_url is None:
             raise Exception("No 'auth_url' field has been specified for %s" % self.provider)
-        self.interface = self.get_from_config('csp', 'interface', overwrite=interface)
+        self.interface = self._get_from_config('csp', 'interface', overwrite=interface)
         if self.interface is None:
             raise Exception("No 'interface' field has been specified for %s" % self.provider)
         self.load_session()
