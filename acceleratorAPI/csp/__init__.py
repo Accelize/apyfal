@@ -2,11 +2,9 @@ import os
 
 try:
     # Python 3
-    from configparser import ConfigParser
     from abc import ABC, abstractmethod
 except ImportError:
     # Python 2
-    from ConfigParser import ConfigParser
     from abc import ABCMeta, abstractmethod
     ABC = ABCMeta('ABC', (object,), {})
 
@@ -122,15 +120,7 @@ class CSPGenericClass(ABC):
         return os.path.join(self.ssh_dir, ssh_key_file)
 
     def _get_from_config(self, section, key, overwrite=None, default=None):
-        if overwrite is not None:
-            return overwrite
-        try:
-            new_val = self.config_parser.get(section, key)
-            if new_val:
-                return new_val
-            return default
-        except Exception:
-            return default
+        return self.config_parser.get_default(section, key, overwrite, default)
 
     @staticmethod
     def _get_from_args(key, **kwargs):
@@ -174,9 +164,8 @@ class CSPGenericClass(ABC):
 
 class CSPClassFactory(object):
 
-    def __new__(cls, config_file, provider=None, **kwargs):
-        config_parser = ConfigParser(allow_no_value=True)
-        config_parser.read(config_file)
+    def __new__(cls, config_parser, provider=None, **kwargs):
+
         if provider is None:
             try:
                 provider = config_parser.get("csp", "provider")

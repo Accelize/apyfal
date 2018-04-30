@@ -8,13 +8,6 @@ import shutil
 import signal
 import socket
 
-try:
-    # Python 3
-    from configparser import ConfigParser
-except ImportError:
-    # Python 2
-    from ConfigParser import ConfigParser
-
 import requests
 from requests.adapters import HTTPAdapter
 
@@ -22,6 +15,7 @@ import rest_api.swagger_client
 from rest_api.swagger_client.rest import ApiException
 
 from acceleratorAPI.utilities import init_logger, check_url, pretty_dict
+from acceleratorAPI.configuration import Configuration
 
 # Initialize logger
 logger = init_logger("acceleratorAPI", __file__)
@@ -99,7 +93,7 @@ class _GenericAcceleratorClass(object):
     Objective of this API it to remove complex user actions
     '''
 
-    def __init__(self, accelerator, client_id, secret_id, url=None):
+    def __init__(self, accelerator, client_id, secret_id, url=None, config=None):
         # A regular API has fixed url. In our case we want to change it dynamically.
         self.name = accelerator
         self.api_configuration = rest_api.swagger_client.Configuration()
@@ -107,6 +101,9 @@ class _GenericAcceleratorClass(object):
         self.accelerator_configuration_url = None
         self.client_id = client_id
         self.secret_id = secret_id
+        if config is None:
+            config = Configuration()
+        self._config = config
 
     def check_accelize_credential(self):
         try:
@@ -213,7 +210,7 @@ class _GenericAcceleratorClass(object):
             api_instance.api_client.rest_client.pool_manager.connection_pool_kw['retries'] = 3
             if accelerator_parameters is None:
                 logger.debug("Using default configuration parameters")
-                accelerator_parameters = ast.literal_eval(config.get("configuration", "parameters"))
+                accelerator_parameters = ast.literal_eval(self._config.get("configuration", "parameters"))
             envserver = {"client_id": self.client_id, "client_secret": self.secret_id}
             envserver.update(csp_env)
             parameters = {"env": envserver}
@@ -252,7 +249,7 @@ class _GenericAcceleratorClass(object):
         api_instance.api_client.rest_client.pool_manager.connection_pool_kw['retries'] = 3
         if accelerator_parameters is None:
             logger.debug("Using default processing parameters")
-            accelerator_parameters = ast.literal_eval(config.get("process", "parameters"))
+            accelerator_parameters = ast.literal_eval(self._config.get("process", "parameters"))
         logger.debug("Using configuration: %s", self.accelerator_configuration_url)
         datafile = file_in  # file | If needed, file to be processed by the accelerator. (optional)
         try:
@@ -354,44 +351,41 @@ class AcceleratorClass(object):
     '''
     This Class is hiding complexity of using GenericAcceleratorClass and CSPGenericClass
     '''
-    DEFAULT_CONFIG_FILE = "accelerator.conf"
 
     def __init__(self, accelerator, config_file=None, provider=None,
                  region=None, xlz_client_id=None, xlz_secret_id=None, csp_client_id=None,
                  csp_secret_id=None, ssh_key=None, instance_id=None, instance_ip=None):
-        global config
+
         logger.debug("")
         logger.debug("/" * 100)
-        if config_file is None:
-            config_file = self.DEFAULT_CONFIG_FILE
-        if not os.path.isfile(config_file):
-            raise Exception("Could not find configuration file: %s" % config_file)
-        logger.info("Using configuration file: %s", config_file)
-        instance_url = ("http://%s" % instance_ip) if instance_ip else None
+
+        # Initialize configuration
+        self._config = Configuration(config_file)
+        logger.info("Using configuration file: %s", self._config.file_path)
 
         # Create CSP object
+        instance_url = ("http://%s" % instance_ip) if instance_ip else None
         self.sign_handler = _SignalHandlerAccelerator()
-        self.csp = CSPClassFactory(config_file=config_file, provider=provider, client_id=csp_client_id,
+        self.csp = CSPClassFactory(config_parser=self._config, provider=provider, client_id=csp_client_id,
                                    secret_id=csp_secret_id, region=region, ssh_key=ssh_key, instance_id=instance_id,
                                    instance_url=instance_url)
         # Create Accelerator object
-        config = ConfigParser(allow_no_value=True)
-        config.read(config_file)
         if xlz_client_id is None:
             try:
-                xlz_client_id = config.get('accelize', 'client_id')
+                xlz_client_id = self._config.get('accelize', 'client_id')
             except Exception:
                 raise Exception(
                     "Accelize client ID and secret ID are mandatory. "
                     "Provide them in the configuration file or through function arguments.")
         if xlz_secret_id is None:
             try:
-                xlz_secret_id = config.get('accelize', 'secret_id')
+                xlz_secret_id = self._config.get('accelize', 'secret_id')
             except Exception:
                 raise Exception(
                     "Accelize client ID and secret ID are mandatory. "
                     "Provide them in the configuration file or through function arguments.")
-        self.accelerator = _GenericAcceleratorClass(accelerator, client_id=xlz_client_id, secret_id=xlz_secret_id)
+        self.accelerator = _GenericAcceleratorClass(
+            accelerator, client_id=xlz_client_id, secret_id=xlz_secret_id, config=self._config)
         # Checking if credentials are valid otherwise no sense to continue
         if not self.accelerator.check_accelize_credential():
             raise Exception("Could not authenticate to your Accelize account")
@@ -439,7 +433,7 @@ class AcceleratorClass(object):
     def start_instance(self, stop_mode=None):
         try:
             logger.debug("Starting instance on '%s'", self.csp.provider)
-            stop_mode = self.csp.get_from_config("csp", "stop_mode", overwrite=stop_mode, default=TERM)
+            stop_mode = self._config.get_default("csp", "stop_mode", overwrite=stop_mode, default=TERM)
             if stop_mode is not None:
                 self.sign_handler.set_stop_mode(stop_mode)
             self.sign_handler.add_instance(self.csp)
