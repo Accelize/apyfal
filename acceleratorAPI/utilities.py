@@ -17,7 +17,7 @@ def check_url(url, timeout=None, retry_count=0, retry_period=5, logger=None):
         if logger:
             logger.error("Invalid url: %s", str(url))
         return False
-    t = socket.getdefaulttimeout()
+    default_timeout = socket.getdefaulttimeout()
     miss_count = 0
     try:
         if timeout is not None:
@@ -39,8 +39,10 @@ def check_url(url, timeout=None, retry_count=0, retry_period=5, logger=None):
         if logger:
             logger.error("Cannot reach url '%s' after %d attempts", url, retry_count)
         return False
+
+    # Set back to default value
     finally:
-        socket.setdefaulttimeout(t)  # set back to default value
+        socket.setdefaulttimeout(default_timeout)
 
 
 def pretty_dict(obj):
@@ -73,8 +75,8 @@ class APILogger(logging.Logger):
 
         Args:
             record: Logging record"""
-        for e in self.handlers:
-            e.emit(record)
+        for handler in self.handlers:
+            handler.emit(record)
 
         if record.name == self.ref_name and record.levelno < self._level_request:
             return

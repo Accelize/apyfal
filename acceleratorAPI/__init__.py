@@ -24,12 +24,9 @@ from rest_api.swagger_client.rest import ApiException
 from acceleratorAPI.utilities import init_logger, check_url, pretty_dict
 
 # Initialize logger
-logger = init_logger(__name__, __file__)
+logger = init_logger("acceleratorAPI", __file__)
 
 from acceleratorAPI.csp import CSPClassFactory
-
-DEFAULT_CONFIG_FILE = "accelerator.conf"
-SOCKET_TIMEOUT = 1200
 
 TERM = 0
 STOP = 1
@@ -37,8 +34,8 @@ KEEP = 2
 
 
 class _SignalHandlerAccelerator(object):
-
     '''Signal handler for Instances'''
+    SOCKET_TIMEOUT = 1200  # seconds
     STOPMODE = {TERM: "TERM",
                 STOP: "STOP",
                 KEEP: "KEEP"}
@@ -48,7 +45,7 @@ class _SignalHandlerAccelerator(object):
         self.stop_mode = TERM
         self.set_signals()
         self.defaultSocketTimeout = socket.getdefaulttimeout()
-        socket.setdefaulttimeout(SOCKET_TIMEOUT)
+        socket.setdefaulttimeout(self.SOCKET_TIMEOUT)
 
     def add_instance(self, instance):
         self.csp = instance
@@ -81,8 +78,8 @@ class _SignalHandlerAccelerator(object):
                 return
             if self.stop_mode == KEEP or not self.csp.get_instance_csp():
                 logger.warning("###########################################################")
-                logger.warning("## Instance with URL %s (ID=%s) is still running!", self.csp.instance_url,
-                            self.csp.instance_id)
+                logger.warning("## Instance with URL %s (ID=%s) is still running!",
+                               self.csp.instance_url, self.csp.instance_id)
                 logger.warning("## Make sure you will stop manually the instance.")
                 logger.warning("###########################################################")
             else:
@@ -113,12 +110,13 @@ class _GenericAcceleratorClass(object):
 
     def check_accelize_credential(self):
         try:
-            s = requests.Session()
-            s.mount('https://', HTTPAdapter(max_retries=2))
-            r = s.post('https://master.metering.accelize.com/o/token/', data={"grant_type": "client_credentials"},
-                       auth=(self.client_id, self.secret_id))
-            if r.status_code != 200:
-                logger.error("Accelize authentication failed (%d): %s", r.status_code, r.text)
+            session = requests.Session()
+            session.mount('https://', HTTPAdapter(max_retries=2))
+            response = session.post('https://master.metering.accelize.com/o/token/',
+                                    data={"grant_type": "client_credentials"},
+                                    auth=(self.client_id, self.secret_id))
+            if response.status_code != 200:
+                logger.error("Accelize authentication failed (%d): %s", response.status_code, response.text)
                 return False
             logger.info("Accelize authentication for '%s' is successful", self.name)
             return True
@@ -134,21 +132,23 @@ class _GenericAcceleratorClass(object):
 
     def get_accelerator_requirements(self, provider):
         try:
-            s = requests.Session()
-            s.mount('https://', HTTPAdapter(max_retries=2))
-            r = s.post('https://master.metering.accelize.com/o/token/', data={"grant_type": "client_credentials"},
-                       auth=(self.client_id, self.secret_id))
-            logger.debug("Accelize token answer: %s", str(r.text))
-            r.raise_for_status()
-            if r.status_code == 200:
+            session = requests.Session()
+            session.mount('https://', HTTPAdapter(max_retries=2))
+            response = session.post('https://master.metering.accelize.com/o/token/',
+                                    data={"grant_type": "client_credentials"},
+                                    auth=(self.client_id, self.secret_id))
+            logger.debug("Accelize token answer: %s", str(response.text))
+            response.raise_for_status()
+            if response.status_code == 200:
                 # call WS
-                answer_token = json.loads(r.text)
+                answer_token = json.loads(response.text)
                 headers = {"Authorization": "Bearer " + str(answer_token['access_token']),
                            "Content-Type": "application/json", "Accept": "application/vnd.accelize.v1+json"}
-                r = s.get('https://master.metering.accelize.com/auth/getlastcspconfiguration/', headers=headers)
-                logger.debug("Accelize config answer: %s, status: %s", r.text, str(r.status_code))
-                r.raise_for_status()
-                configuration_accelerator = json.loads(r.text)
+                response = session.get(
+                    'https://master.metering.accelize.com/auth/getlastcspconfiguration/', headers=headers)
+                logger.debug("Accelize config answer: %s, status: %s", response.text, str(response.status_code))
+                response.raise_for_status()
+                configuration_accelerator = json.loads(response.text)
                 logger.debug("Accelerator requirements:\n%s", pretty_dict(configuration_accelerator))
                 if provider not in configuration_accelerator.keys():
                     logger.error("CSP '%s' is not supported. Available CSP are: %s", provider,
@@ -278,27 +278,27 @@ class _GenericAcceleratorClass(object):
                 while True:
                     try:
                         storage = StringIO()
-                        c = pycurl.Curl()
-                        c.setopt(c.WRITEFUNCTION, storage.write)
-                        c.setopt(c.URL, self.api_configuration.host + "/v1.0/process/")
-                        c.setopt(c.POST, 1)
+                        curl = pycurl.Curl()
+                        curl.setopt(curl.WRITEFUNCTION, storage.write)
+                        curl.setopt(curl.URL, self.api_configuration.host + "/v1.0/process/")
+                        curl.setopt(curl.POST, 1)
                         post = [("parameters", json.dumps(accelerator_parameters)),
                                 ("configuration", self.accelerator_configuration_url)]
                         if file_in is not None:
-                            post.append(("datafile", (c.FORM_FILE, file_in)))
-                        c.setopt(c.HTTPPOST, post)
-                        c.setopt(c.HTTPHEADER, ['Content-Type: multipart/form-data'])
-                        # c.setopt(c.VERBOSE, 1)
-                        c.perform()
+                            post.append(("datafile", (curl.FORM_FILE, file_in)))
+                        curl.setopt(curl.HTTPPOST, post)
+                        curl.setopt(curl.HTTPHEADER, ['Content-Type: multipart/form-data'])
+                        # curl.setopt(curl.VERBOSE, 1)
+                        curl.perform()
                         break
-                    except Exception as e:
+                    except Exception as exception:
                         logger.error("Failed to post process request after %d/%d attempts because of: %s", retries_done,
-                                     retries_max, str(e))
+                                     retries_max, str(exception))
                         if retries_done > retries_max:
-                            raise e
+                            raise exception
                         retries_done += 1
                     finally:
-                        c.close()
+                        curl.close()
                 content = storage.getvalue()
                 logger.debug("pycurl process:" + str(content))
                 r2 = json.loads(content)
@@ -319,18 +319,18 @@ class _GenericAcceleratorClass(object):
                     return {'app': {'status': -1, 'msg': msg}}
                 logger.debug("Process status: %s", str(dictparameters['app']['status']))
                 logger.debug("Process msg:\n%s", str(dictparameters['app']['msg']))
-                s = requests.Session()
-                s.mount('https://', HTTPAdapter(max_retries=2))
-                response = s.get(api_response.datafileresult, stream=True)
+                session = requests.Session()
+                session.mount('https://', HTTPAdapter(max_retries=2))
+                response = session.get(api_response.datafileresult, stream=True)
                 with open(file_out, 'wb') as out_file:
                     shutil.copyfileobj(response.raw, out_file)
             finally:
                 logger.debug("process_delete api_response: " + str(api_resp_id))
                 api_instance.process_delete(api_resp_id)
             return dictparameters
-        except ApiException as e:
-            logger.error("Caught following exception while calling ProcessApi->process_create: %s", str(e))
-            return {'app': {'status': -1, 'msg': str(e)}}
+        except ApiException as exception:
+            logger.error("Caught following exception while calling ProcessApi->process_create: %s", str(exception))
+            return {'app': {'status': -1, 'msg': str(exception)}}
         except Exception:
             logger.exception("Caught following exception:")
             return {'app': {'status': -1, 'msg': "Caught exception"}}
@@ -342,18 +342,19 @@ class _GenericAcceleratorClass(object):
         try:
             # /v1.0/stop
             return api_instance.stop_list()
-        except ApiException as e:
+        except ApiException as exception:
             logger.exception("Caught following exception while calling StopApi->stop_list:")
-            return {'app': {'status': -1, 'msg': str(e)}}
-        except Exception as e:
+            return {'app': {'status': -1, 'msg': str(exception)}}
+        except Exception as exception:
             logger.exception("Caught following exception:")
-            return {'app': {'status': -1, 'msg': str(e)}}
+            return {'app': {'status': -1, 'msg': str(exception)}}
 
 
 class AcceleratorClass(object):
     '''
     This Class is hiding complexity of using GenericAcceleratorClass and CSPGenericClass
     '''
+    DEFAULT_CONFIG_FILE = "accelerator.conf"
 
     def __init__(self, accelerator, config_file=None, provider=None,
                  region=None, xlz_client_id=None, xlz_secret_id=None, csp_client_id=None,
@@ -362,14 +363,12 @@ class AcceleratorClass(object):
         logger.debug("")
         logger.debug("/" * 100)
         if config_file is None:
-            config_file = DEFAULT_CONFIG_FILE
+            config_file = self.DEFAULT_CONFIG_FILE
         if not os.path.isfile(config_file):
             raise Exception("Could not find configuration file: %s" % config_file)
         logger.info("Using configuration file: %s", config_file)
-        if instance_ip:
-            instance_url = "http://" + instance_ip
-        else:
-            instance_url = None
+        instance_url = ("http://%s" % instance_ip) if instance_ip else None
+
         # Create CSP object
         self.sign_handler = _SignalHandlerAccelerator()
         self.csp = CSPClassFactory(config_file=config_file, provider=provider, client_id=csp_client_id,

@@ -99,17 +99,19 @@ class CSPGenericClass(ABC):
         """"""
 
     def create_SSH_folder(self):
-        if not os.path.isdir(self.ssh_dir):
+        try:
             os.mkdir(self.ssh_dir, 0o700)
+        except OSError:
+            pass
 
     def create_SSH_key_filename(self):
-        ssh_key_file = self.ssh_key + ".pem"
+        ssh_key_file = "%s.pem" % self.ssh_key
         ssh_files = os.listdir(self.ssh_dir)
         if ssh_key_file not in ssh_files:
             return os.path.join(self.ssh_dir, ssh_key_file)
         idx = 1
         while True:
-            ssh_key_file = self.ssh_key + "_%d.pem" % idx
+            ssh_key_file = "%s_%d.pem" % (self.ssh_key, idx)
             if ssh_key_file not in ssh_files:
                 break
             idx += 1
