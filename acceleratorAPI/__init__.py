@@ -28,7 +28,9 @@ KEEP = 2
 
 
 class _SignalHandlerAccelerator(object):
-    '''Signal handler for Instances'''
+    """
+    Signal handler for instances
+    """
     _SOCKET_TIMEOUT = 1200  # seconds
     _STOPMODE = {TERM: "TERM",
                  STOP: "STOP",
@@ -40,6 +42,15 @@ class _SignalHandlerAccelerator(object):
         self.set_signals()
         self._default_socket_timeout = socket.getdefaulttimeout()
         socket.setdefaulttimeout(self._SOCKET_TIMEOUT)
+
+    @property
+    def stop_mode(self):
+        return self._stop_mode
+
+    @stop_mode.setter
+    def stop_mode(self, stop_mode):
+        self._stop_mode = int(stop_mode)
+        logger.info("Auto-stop mode is: %s", self._STOPMODE[self._stop_mode])
 
     def add_instance(self, instance):
         self._csp = instance
@@ -53,19 +64,26 @@ class _SignalHandlerAccelerator(object):
                      self._csp.instance_id)
         self._csp = None
 
-    def set_stop_mode(self, stop_mode):
-        self._stop_mode = int(stop_mode)
-        logger.info("Auto-stop mode is: %s", self._STOPMODE[self._stop_mode])
-
     def set_signals(self):
-        '''Set a list of interrupt signals to be handled asynchronously'''
+        """
+        Set a list of interrupt signals to be handled asynchronously
+        """
         for signal_name in ('SIGTERM', 'SIGINT', 'SIGQUIT'):
             # Check signal exist on current OS before setting it
             if hasattr(signal, signal_name):
                 signal.signal(getattr(signal, signal_name), self.signal_handler_accelerator)
 
     def signal_handler_accelerator(self, _signo="", _stack_frame="", exit=True):
-        '''Try to stop all instances running or inform user'''
+        """
+        Try to stop all instances running or inform user.
+
+        Args:
+            _signo:
+            _stack_frame:
+            exit (bool):
+
+        Returns:
+        """
         try:
             if self._csp is None:
                 logger.debug("There is no registered instance to stop")
@@ -88,17 +106,25 @@ class _SignalHandlerAccelerator(object):
 
 
 class AcceleratorApiClass(object):
-    '''
-    EndUser API based on the openAPI Accelize accelerator
-    Objective of this API it to remove complex user actions
-    '''
+    """
+    End user API based on the openAPI Accelize accelerator
+
+    Args:
+        accelerator:
+        client_id:
+        secret_id:
+        url:
+        config:
+    """
 
     def __init__(self, accelerator, client_id, secret_id, url=None, config=None):
-        # A regular API has fixed url. In our case we want to change it dynamically.
         self._name = accelerator
+
+        # A regular API has fixed url. In our case we want to change it dynamically.
         self._api_configuration = rest_api.swagger_client.Configuration()
         self._api_configuration.host = url
         self._accelerator_configuration_url = None
+
         self._client_id = client_id
         self._secret_id = secret_id
         if config is None:
@@ -358,14 +384,25 @@ class AcceleratorApiClass(object):
 
 
 class AcceleratorClass(object):
-    '''
-    This Class is hiding complexity of using GenericAcceleratorClass and CSPGenericClass
-    '''
+    """
+    This class automatically handle Accelerator API and CSP.
 
+    Args:
+        accelerator:
+        config_file:
+        provider:
+        region:
+        xlz_client_id:
+        xlz_secret_id:
+        csp_client_id:
+        csp_secret_id:
+        ssh_key:
+        instance_id:
+        instance_ip:
+    """
     def __init__(self, accelerator, config_file=None, provider=None,
                  region=None, xlz_client_id=None, xlz_secret_id=None, csp_client_id=None,
                  csp_secret_id=None, ssh_key=None, instance_id=None, instance_ip=None):
-
         logger.debug("")
         logger.debug("/" * 100)
 
@@ -445,7 +482,7 @@ class AcceleratorClass(object):
             logger.debug("Starting instance on '%s'", self._csp.provider)
             stop_mode = self._config.get_default("csp", "stop_mode", overwrite=stop_mode, default=TERM)
             if stop_mode is not None:
-                self._sign_handler.set_stop_mode(stop_mode)
+                self._sign_handler.stop_mode = stop_mode
             self._sign_handler.add_instance(self._csp)
             # Get configuration information from webservice
             accel_requirements = self._accelerator.get_accelerator_requirements(self._csp.provider)
@@ -595,7 +632,7 @@ class AcceleratorClass(object):
     def stop(self, stop_mode=None):
         try:
             if stop_mode is None:
-                stop_mode = self._sign_handler._stop_mode
+                stop_mode = self._sign_handler.stop_mode
             if stop_mode == KEEP:
                 return self.stop_accelerator()
             terminate = True if stop_mode == TERM else False

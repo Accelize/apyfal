@@ -120,7 +120,12 @@ class CSPGenericClass(ABC):
 
     @property
     def _ssh_dir(self):
-        """SSH keys directory"""
+        """
+        SSH keys directory
+
+        Returns:
+            path (str)
+        """
         if self._ssh_dir_cache is None:
             # Initialize value and check folder on first call
             self._ssh_dir_cache = os.path.expanduser('~/.ssh')
