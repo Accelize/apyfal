@@ -31,7 +31,7 @@ class Configuration(_configparser.ConfigParser):
                 file_path = os.path.join(os.path.dirname(__file__), self.DEFAULT_CONFIG_FILE)
 
         if not os.path.isfile(file_path):
-            raise IOError("Could not find configuration file: %s" % file_path)
+            raise IOError("Could not find configuration file: %s" % os.path.abspath(file_path))
 
         # Load file
         self.read(file_path)
@@ -46,7 +46,7 @@ class Configuration(_configparser.ConfigParser):
         return self._file_path
 
     def get_default(self, section, key, overwrite=None, default=None):
-        """Returns values from configuration of default value.
+        """Returns values from configuration or default value.
 
         Args:
             section (str): Configuration section

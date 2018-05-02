@@ -29,33 +29,33 @@ KEEP = 2
 
 class _SignalHandlerAccelerator(object):
     '''Signal handler for Instances'''
-    SOCKET_TIMEOUT = 1200  # seconds
-    STOPMODE = {TERM: "TERM",
-                STOP: "STOP",
-                KEEP: "KEEP"}
+    _SOCKET_TIMEOUT = 1200  # seconds
+    _STOPMODE = {TERM: "TERM",
+                 STOP: "STOP",
+                 KEEP: "KEEP"}
 
     def __init__(self):
-        self.csp = None
-        self.stop_mode = TERM
+        self._csp = None
+        self._stop_mode = TERM
         self.set_signals()
-        self.defaultSocketTimeout = socket.getdefaulttimeout()
-        socket.setdefaulttimeout(self.SOCKET_TIMEOUT)
+        self._default_socket_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(self._SOCKET_TIMEOUT)
 
     def add_instance(self, instance):
-        self.csp = instance
+        self._csp = instance
         logger.debug("Added instance to auto-stop handler.")
 
     def remove_instance(self):
-        if self.csp is None:
+        if self._csp is None:
             logger.debug("There is no registered instance to stop")
             return
-        logger.debug("Removed instance with URL %s (ID=%s) from auto-stop handler.", self.csp.instance_url,
-                     self.csp.instance_id)
-        self.csp = None
+        logger.debug("Removed instance with URL %s (ID=%s) from auto-stop handler.", self._csp.instance_url,
+                     self._csp.instance_id)
+        self._csp = None
 
     def set_stop_mode(self, stop_mode):
-        self.stop_mode = int(stop_mode)
-        logger.info("Auto-stop mode is: %s", self.STOPMODE[self.stop_mode])
+        self._stop_mode = int(stop_mode)
+        logger.info("Auto-stop mode is: %s", self._STOPMODE[self._stop_mode])
 
     def set_signals(self):
         '''Set a list of interrupt signals to be handled asynchronously'''
@@ -67,27 +67,27 @@ class _SignalHandlerAccelerator(object):
     def signal_handler_accelerator(self, _signo="", _stack_frame="", exit=True):
         '''Try to stop all instances running or inform user'''
         try:
-            if self.csp is None:
+            if self._csp is None:
                 logger.debug("There is no registered instance to stop")
                 return
-            if self.stop_mode == KEEP or not self.csp.get_instance_csp():
+            if self._stop_mode == KEEP or not self._csp.get_instance_csp():
                 logger.warning("###########################################################")
                 logger.warning("## Instance with URL %s (ID=%s) is still running!",
-                               self.csp.instance_url, self.csp.instance_id)
+                               self._csp.instance_url, self._csp.instance_id)
                 logger.warning("## Make sure you will stop manually the instance.")
                 logger.warning("###########################################################")
             else:
-                terminate = True if self.stop_mode == TERM else False
-                self.csp.stop_instance_csp(terminate)
+                terminate = True if self._stop_mode == TERM else False
+                self._csp.stop_instance_csp(terminate)
         finally:
             logger.info("More detailed messages can be found in %s", logger.filename)
             if exit:
-                socket.setdefaulttimeout(self.defaultSocketTimeout)
+                socket.setdefaulttimeout(self._default_socket_timeout)
                 logger.info("Accelerator API Closed properly")
                 os._exit(0)
 
 
-class _GenericAcceleratorClass(object):
+class AcceleratorApiClass(object):
     '''
     EndUser API based on the openAPI Accelize accelerator
     Objective of this API it to remove complex user actions
@@ -95,12 +95,12 @@ class _GenericAcceleratorClass(object):
 
     def __init__(self, accelerator, client_id, secret_id, url=None, config=None):
         # A regular API has fixed url. In our case we want to change it dynamically.
-        self.name = accelerator
-        self.api_configuration = rest_api.swagger_client.Configuration()
-        self.api_configuration.host = url
-        self.accelerator_configuration_url = None
-        self.client_id = client_id
-        self.secret_id = secret_id
+        self._name = accelerator
+        self._api_configuration = rest_api.swagger_client.Configuration()
+        self._api_configuration.host = url
+        self._accelerator_configuration_url = None
+        self._client_id = client_id
+        self._secret_id = secret_id
         if config is None:
             config = Configuration()
         self._config = config
@@ -111,21 +111,31 @@ class _GenericAcceleratorClass(object):
             session.mount('https://', HTTPAdapter(max_retries=2))
             response = session.post('https://master.metering.accelize.com/o/token/',
                                     data={"grant_type": "client_credentials"},
-                                    auth=(self.client_id, self.secret_id))
+                                    auth=(self._client_id, self._secret_id))
             if response.status_code != 200:
                 logger.error("Accelize authentication failed (%d): %s", response.status_code, response.text)
                 return False
-            logger.info("Accelize authentication for '%s' is successful", self.name)
+            logger.info("Accelize authentication for '%s' is successful", self._name)
             return True
         except Exception:
             logger.exception("Caught following exception:")
             return False
 
-    def set_url(self, url):
-        self.api_configuration.host = url
+    @property
+    def name(self):
+        return self._name
 
-    def get_url(self):
-        return self.api_configuration.host
+    @property
+    def configuration_url(self):
+        return self._accelerator_configuration_url
+
+    @property
+    def url(self):
+        return self._api_configuration.host
+
+    @url.setter
+    def url(self, url):
+        self._api_configuration.host = url
 
     def get_accelerator_requirements(self, provider):
         try:
@@ -133,7 +143,7 @@ class _GenericAcceleratorClass(object):
             session.mount('https://', HTTPAdapter(max_retries=2))
             response = session.post('https://master.metering.accelize.com/o/token/',
                                     data={"grant_type": "client_credentials"},
-                                    auth=(self.client_id, self.secret_id))
+                                    auth=(self._client_id, self._secret_id))
             logger.debug("Accelize token answer: %s", str(response.text))
             response.raise_for_status()
             if response.status_code == 200:
@@ -151,11 +161,11 @@ class _GenericAcceleratorClass(object):
                     logger.error("CSP '%s' is not supported. Available CSP are: %s", provider,
                                  ', '.join(configuration_accelerator.keys()))
                     return None
-                if self.name not in configuration_accelerator[provider].keys():
-                    logger.error("Accelerator '%s' is not supported on '%s'.", self.name, provider)
+                if self._name not in configuration_accelerator[provider].keys():
+                    logger.error("Accelerator '%s' is not supported on '%s'.", self._name, provider)
                     return None
-                info = configuration_accelerator[provider][self.name]
-                info['accelerator'] = self.name
+                info = configuration_accelerator[provider][self._name]
+                info['accelerator'] = self._name
                 return info
         except Exception:
             logger.exception("Caught following exception:")
@@ -165,10 +175,10 @@ class _GenericAcceleratorClass(object):
         try:
             # /v1.0/configuration/
             # create an instance of the API class
-            if self.api_configuration.host is None:
+            if self._api_configuration.host is None:
                 logger.error("An accelerator url is required to get the list of configurations.")
                 return None
-            api_instance = rest_api.swagger_client.ConfigurationApi(api_client=self.api_configuration.api_client)
+            api_instance = rest_api.swagger_client.ConfigurationApi(api_client=self._api_configuration.api_client)
             api_instance.api_client.rest_client.pool_manager.connection_pool_kw['retries'] = 3
             logger.debug("Get list of configurations...")
             api_response = api_instance.configuration_list()
@@ -198,7 +208,7 @@ class _GenericAcceleratorClass(object):
             return False
         logger.info("Accelerator is loaded with configuration: %s", last_config.url)
         # The last configuration URL should be keep in order to not request it to user.
-        self.accelerator_configuration_url = last_config.url
+        self._accelerator_configuration_url = last_config.url
         return True
 
     # Create an Accelerator configuration
@@ -206,12 +216,12 @@ class _GenericAcceleratorClass(object):
         try:
             # /v1.0/configuration/
             # create an instance of the API class
-            api_instance = rest_api.swagger_client.ConfigurationApi(api_client=self.api_configuration.api_client)
+            api_instance = rest_api.swagger_client.ConfigurationApi(api_client=self._api_configuration.api_client)
             api_instance.api_client.rest_client.pool_manager.connection_pool_kw['retries'] = 3
             if accelerator_parameters is None:
                 logger.debug("Using default configuration parameters")
                 accelerator_parameters = ast.literal_eval(self._config.get("configuration", "parameters"))
-            envserver = {"client_id": self.client_id, "client_secret": self.secret_id}
+            envserver = {"client_id": self._client_id, "client_secret": self._secret_id}
             envserver.update(csp_env)
             parameters = {"env": envserver}
             parameters.update(accelerator_parameters)
@@ -223,10 +233,10 @@ class _GenericAcceleratorClass(object):
             api_response = api_instance.configuration_create(parameters=json.dumps(parameters), datafile=datafile)
             logger.debug("configuration_create api_response:\n%s", str(api_response))
             api_resp_id = api_response.id
-            self.accelerator_configuration_url = api_response.url
+            self._accelerator_configuration_url = api_response.url
             dictparameters = ast.literal_eval(api_response.parametersresult)
             dictparameters['url_config'] = api_response.url
-            dictparameters['url_instance'] = self.api_configuration.host
+            dictparameters['url_instance'] = self._api_configuration.host
             logger.debug("status: %s", str(dictparameters['app']['status']))
             logger.debug("msg:\n%s", dictparameters['app']['msg'])
             api_response_read = api_instance.configuration_read(api_resp_id)
@@ -241,23 +251,23 @@ class _GenericAcceleratorClass(object):
             return {'app': {'status': -1, 'msg': "Caught exception"}}
 
     def process_file(self, file_in, file_out, accelerator_parameters=None):
-        if self.accelerator_configuration_url is None:
+        if self._accelerator_configuration_url is None:
             logger.error("Accelerator has not been configured. Use 'start_accelerator' function.")
             return {'app': {'status': -1, 'msg': "Accelerator is not configured."}}
         # create an instance of the API class
-        api_instance = rest_api.swagger_client.ProcessApi(api_client=self.api_configuration.api_client)
+        api_instance = rest_api.swagger_client.ProcessApi(api_client=self._api_configuration.api_client)
         api_instance.api_client.rest_client.pool_manager.connection_pool_kw['retries'] = 3
         if accelerator_parameters is None:
             logger.debug("Using default processing parameters")
             accelerator_parameters = ast.literal_eval(self._config.get("process", "parameters"))
-        logger.debug("Using configuration: %s", self.accelerator_configuration_url)
+        logger.debug("Using configuration: %s", self._accelerator_configuration_url)
         datafile = file_in  # file | If needed, file to be processed by the accelerator. (optional)
         try:
             try:  # Bypass REST API because upload issue with big file using python https://bugs.python.org/issue8450
                 import pycurl
             except ImportError:
-                logger.debug("process_create process=%s datafile=%s", self.accelerator_configuration_url, str(datafile))
-                api_response = api_instance.process_create(self.accelerator_configuration_url,
+                logger.debug("process_create process=%s datafile=%s", self._accelerator_configuration_url, str(datafile))
+                api_response = api_instance.process_create(self._accelerator_configuration_url,
                                                            parameters=json.dumps(accelerator_parameters),
                                                            datafile=datafile)
                 api_resp_id = api_response.id
@@ -269,7 +279,7 @@ class _GenericAcceleratorClass(object):
                 except ImportError:
                     # Python 3
                     from io import StringIO
-                logger.debug("pycurl process=%s datafile=%s", self.accelerator_configuration_url, str(datafile))
+                logger.debug("pycurl process=%s datafile=%s", self._accelerator_configuration_url, str(datafile))
                 retries_max = 3
                 retries_done = 1
                 while True:
@@ -277,10 +287,10 @@ class _GenericAcceleratorClass(object):
                         storage = StringIO()
                         curl = pycurl.Curl()
                         curl.setopt(curl.WRITEFUNCTION, storage.write)
-                        curl.setopt(curl.URL, self.api_configuration.host + "/v1.0/process/")
+                        curl.setopt(curl.URL, self._api_configuration.host + "/v1.0/process/")
                         curl.setopt(curl.POST, 1)
                         post = [("parameters", json.dumps(accelerator_parameters)),
-                                ("configuration", self.accelerator_configuration_url)]
+                                ("configuration", self._accelerator_configuration_url)]
                         if file_in is not None:
                             post.append(("datafile", (curl.FORM_FILE, file_in)))
                         curl.setopt(curl.HTTPPOST, post)
@@ -334,7 +344,7 @@ class _GenericAcceleratorClass(object):
 
     def stop_accelerator(self):
         # create an instance of the API class
-        api_instance = rest_api.swagger_client.StopApi(api_client=self.api_configuration.api_client)
+        api_instance = rest_api.swagger_client.StopApi(api_client=self._api_configuration.api_client)
         api_instance.api_client.rest_client.pool_manager.connection_pool_kw['retries'] = 3
         try:
             # /v1.0/stop
@@ -365,10 +375,10 @@ class AcceleratorClass(object):
 
         # Create CSP object
         instance_url = ("http://%s" % instance_ip) if instance_ip else None
-        self.sign_handler = _SignalHandlerAccelerator()
-        self.csp = CSPClassFactory(config_parser=self._config, provider=provider, client_id=csp_client_id,
-                                   secret_id=csp_secret_id, region=region, ssh_key=ssh_key, instance_id=instance_id,
-                                   instance_url=instance_url)
+        self._sign_handler = _SignalHandlerAccelerator()
+        self._csp = CSPClassFactory(config=self._config, provider=provider, client_id=csp_client_id,
+                                    secret_id=csp_secret_id, region=region, ssh_key=ssh_key, instance_id=instance_id,
+                                    instance_url=instance_url)
         # Create Accelerator object
         if xlz_client_id is None:
             try:
@@ -384,25 +394,25 @@ class AcceleratorClass(object):
                 raise Exception(
                     "Accelize client ID and secret ID are mandatory. "
                     "Provide them in the configuration file or through function arguments.")
-        self.accelerator = _GenericAcceleratorClass(
+        self._accelerator = AcceleratorApiClass(
             accelerator, client_id=xlz_client_id, secret_id=xlz_secret_id, config=self._config)
         # Checking if credentials are valid otherwise no sense to continue
-        if not self.accelerator.check_accelize_credential():
+        if not self._accelerator.check_accelize_credential():
             raise Exception("Could not authenticate to your Accelize account")
         # Check CSP ID if provided
         if instance_id:
-            if not self.csp.is_instance_ID_valid():
+            if not self._csp.is_instance_id_valid():
                 raise Exception("Could not find instance with ID: %s" % instance_id)
-            self.accelerator.set_url(self.csp.get_instance_url())
+            self._accelerator.url = self._csp.get_instance_url()
         # Set CSP URL if provided
         if instance_url:
-            self.accelerator.set_url(instance_url)
+            self._accelerator.url = instance_url
 
     def __del__(self):
-        self.sign_handler.signal_handler_accelerator(exit=False)
+        self._sign_handler.signal_handler_accelerator(exit=False)
 
     @staticmethod
-    def get_info_from_result(result):
+    def _get_info_from_result(result):
         if 'app' not in result.keys():
             return -1, "No result returned!"
         retcode = result['app']['status']
@@ -410,7 +420,7 @@ class AcceleratorClass(object):
         return retcode, msg
 
     @staticmethod
-    def get_profiling_from_result(result):
+    def _get_profiling_from_result(result):
         if 'app' not in result.keys():
             logger.debug("No application information found in result JSON file")
             return None
@@ -420,7 +430,7 @@ class AcceleratorClass(object):
         return result['app']['profiling']
 
     @staticmethod
-    def get_specific_from_result(result):
+    def _get_specific_from_result(result):
         if 'app' not in result.keys():
             logger.debug("No application information found in result JSON file")
             return None
@@ -432,30 +442,30 @@ class AcceleratorClass(object):
     # Start a new instance or use a running instance
     def start_instance(self, stop_mode=None):
         try:
-            logger.debug("Starting instance on '%s'", self.csp.provider)
+            logger.debug("Starting instance on '%s'", self._csp.provider)
             stop_mode = self._config.get_default("csp", "stop_mode", overwrite=stop_mode, default=TERM)
             if stop_mode is not None:
-                self.sign_handler.set_stop_mode(stop_mode)
-            self.sign_handler.add_instance(self.csp)
+                self._sign_handler.set_stop_mode(stop_mode)
+            self._sign_handler.add_instance(self._csp)
             # Get configuration information from webservice
-            accel_requirements = self.accelerator.get_accelerator_requirements(self.csp.provider)
+            accel_requirements = self._accelerator.get_accelerator_requirements(self._csp.provider)
             if accel_requirements is None:
                 return False
-            if not self.csp.set_accelerator_requirements(accel_requirements):
+            if not self._csp.set_accelerator_requirements(accel_requirements):
                 return False
             # Start CSP instance if needed
-            if self.csp.instance_url is None:
-                if not self.csp.check_csp_credential():
+            if self._csp.instance_url is None:
+                if not self._csp.check_csp_credential():
                     return False
-                if self.csp.instance_id is None:
-                    if not self.csp.create_instance_csp():
+                if self._csp.instance_id is None:
+                    if not self._csp.create_instance_csp():
                         return False
-                if not self.csp.start_instance_csp():
+                if not self._csp.start_instance_csp():
                     return False
-                self.accelerator.set_url(self.csp.get_instance_url())
-            logger.info("Accelerator URL: %s", self.accelerator.get_url())
+                self._accelerator.url = self._csp.get_instance_url()
+            logger.info("Accelerator URL: %s", self._accelerator.url)
             # If possible use the last accelerator configuration (it can still be overwritten later)
-            self.accelerator.use_last_configuration()
+            self._accelerator.use_last_configuration()
             return True
         except Exception:
             logger.exception("Exception occurred:")
@@ -463,15 +473,15 @@ class AcceleratorClass(object):
 
     def configure_accelerator(self, datafile=None, accelerator_parameters=None, **kwargs):
         try:
-            logger.debug("Configuring accelerator '%s' on instance ID %s", self.accelerator.name, self.csp.instance_id)
-            if not check_url(self.accelerator.get_url(), 10, logger=logger):
+            logger.debug("Configuring accelerator '%s' on instance ID %s", self._accelerator.name, self._csp.instance_id)
+            if not check_url(self._accelerator.url, 10, logger=logger):
                 return False, {
-                    'app': {'status': -1, 'msg': "Failed to reach accelerator url: %s" % self.accelerator.get_url()}}
-            csp_env = self.csp.get_configuration_env(**kwargs)
-            config_result = self.accelerator.start_accelerator(datafile=datafile,
-                                                               accelerator_parameters=accelerator_parameters,
-                                                               csp_env=csp_env)
-            ret, msg = self.get_info_from_result(config_result)
+                    'app': {'status': -1, 'msg': "Failed to reach accelerator url: %s" % self._accelerator.url}}
+            csp_env = self._csp.get_configuration_env(**kwargs)
+            config_result = self._accelerator.start_accelerator(datafile=datafile,
+                                                                accelerator_parameters=accelerator_parameters,
+                                                                csp_env=csp_env)
+            ret, msg = self._get_info_from_result(config_result)
             if ret:
                 logger.error("Configuration of accelerator failed: %s", msg)
                 return False, config_result
@@ -485,14 +495,14 @@ class AcceleratorClass(object):
         try:
             # Start a new instance or use a running instance
             if not self.start_instance(stop_mode):
-                return False, {'app': {'status': 0, 'msg': "Failed to create instance on %s" % self.csp.provider}}
+                return False, {'app': {'status': 0, 'msg': "Failed to create instance on %s" % self._csp.provider}}
             # Configure accelerator if needed
-            if kwargs or (self.accelerator.accelerator_configuration_url is None) or datafile is not None:
+            if kwargs or (self._accelerator.configuration_url is None) or datafile is not None:
                 return self.configure_accelerator(datafile, accelerator_parameters, **kwargs)
             logger.debug("Accelerator is already configured")
             return True, {'app': {'status': 0,
                                   'msg': "Reusing last configuration: %s" %
-                                         self.accelerator.accelerator_configuration_url}}
+                                         self._accelerator.configuration_url}}
         except Exception:
             logger.exception("Exception occurred:")
             return False, {'app': {'status': -1, 'msg': "Exception occurred"}}
@@ -503,14 +513,14 @@ class AcceleratorClass(object):
             if file_in and not os.path.isfile(file_in):
                 logger.error("Could not find input file: %s", file_in)
                 return False, {'app': {'status': -1, 'msg': "Invalid input file path: %s" % file_in}}
-            accel_url = self.accelerator.get_url()
+            accel_url = self._accelerator.url
             logger.debug("Accelerator URL: %s", accel_url)
             if not check_url(accel_url, 10, logger=logger):
                 return False, {
-                    'app': {'status': -1, 'msg': "Failed to reach accelerator url: %s" % self.accelerator.get_url()}}
-            process_result = self.accelerator.process_file(file_in=file_in, file_out=file_out,
-                                                           accelerator_parameters=process_parameter)
-            profiling = self.get_profiling_from_result(process_result)
+                    'app': {'status': -1, 'msg': "Failed to reach accelerator url: %s" % self._accelerator.url}}
+            process_result = self._accelerator.process_file(file_in=file_in, file_out=file_out,
+                                                            accelerator_parameters=process_parameter)
+            profiling = self._get_profiling_from_result(process_result)
             if profiling is not None:
                 total_bytes = 0
                 global_time = 0.0
@@ -537,17 +547,17 @@ class AcceleratorClass(object):
                     bw = total_bytes / global_time / 1024 / 1024
                     fps = 1.0 / global_time
                     logger.debug("Server processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
-                                 self.csp.provider, bw, fps)
+                                 self._csp.provider, bw, fps)
                 if total_bytes > 0 and fpga_time > 0.0:
                     bw = total_bytes / fpga_time / 1024 / 1024
                     fps = 1.0 / fpga_time
                     logger.debug("FPGA processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
-                                 self.csp.provider, bw, fps)
-            specific = self.get_specific_from_result(process_result)
+                                 self._csp.provider, bw, fps)
+            specific = self._get_specific_from_result(process_result)
             if specific is not None and len(specific.keys()):
                 logger.info("Specific information from result:\n%s",
                             json.dumps(specific, indent=4).replace('\\n', '\n').replace('\\t', '\t'))
-            ret, msg = self.get_info_from_result(process_result)
+            ret, msg = self._get_info_from_result(process_result)
             b_ret = False if ret else True
             return b_ret, process_result
         except Exception:
@@ -555,13 +565,13 @@ class AcceleratorClass(object):
             return False, {'app': {'status': -1, 'msg': "Exception occurred"}}
 
     def stop_accelerator(self):
-        logger.debug("Stopping accelerator '%s' on instance ID %s", self.accelerator.name, self.csp.instance_id)
+        logger.debug("Stopping accelerator '%s' on instance ID %s", self._accelerator.name, self._csp.instance_id)
         try:
-            if not check_url(self.accelerator.get_url(), 10, logger=logger):
+            if not check_url(self._accelerator.url, 10, logger=logger):
                 return False, {
-                    'app': {'status': -1, 'msg': "Failed to reach accelerator url: %s" % self.accelerator.get_url()}}
-            stop_result = self.accelerator.stop_accelerator()
-            ret, msg = self.get_info_from_result(stop_result)
+                    'app': {'status': -1, 'msg': "Failed to reach accelerator url: %s" % self._accelerator.url}}
+            stop_result = self._accelerator.stop_accelerator()
+            ret, msg = self._get_info_from_result(stop_result)
             if ret:
                 logger.error("Stopping accelerator failed: %s", msg)
                 return False, stop_result
@@ -572,11 +582,11 @@ class AcceleratorClass(object):
             return False, {'app': {'status': -1, 'msg': "Exception occurred"}}
 
     def stop_instance(self, terminate=True):
-        logger.debug("Stopping instance (ID: %s) on '%s'", self.csp.instance_id, self.csp.provider)
+        logger.debug("Stopping instance (ID: %s) on '%s'", self._csp.instance_id, self._csp.provider)
         try:
             res = self.stop_accelerator()
-            self.csp.stop_instance_csp(terminate)
-            self.sign_handler.remove_instance()
+            self._csp.stop_instance_csp(terminate)
+            self._sign_handler.remove_instance()
             return res
         except Exception:
             logger.exception("Exception occurred:")
@@ -585,7 +595,7 @@ class AcceleratorClass(object):
     def stop(self, stop_mode=None):
         try:
             if stop_mode is None:
-                stop_mode = self.sign_handler.stop_mode
+                stop_mode = self._sign_handler._stop_mode
             if stop_mode == KEEP:
                 return self.stop_accelerator()
             terminate = True if stop_mode == TERM else False

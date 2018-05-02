@@ -8,70 +8,74 @@ import openstack
 
 class OpenStackClass(_CSPGenericClass):
 
-    def __init__(self, provider, config_parser, **kwargs):
-        self.provider = provider
+    def __init__(self, provider, config, **kwargs):
+        super(OpenStackClass, self).__init__(provider, config, **kwargs)
+
         project_id = _CSPGenericClass._get_from_args('project_id', **kwargs)
         auth_url = _CSPGenericClass._get_from_args('auth_url', **kwargs)
         interface = _CSPGenericClass._get_from_args('interface', **kwargs)
-        super(OpenStackClass, self).__init__(config_parser, **kwargs)
-        self.project_id = self._get_from_config('csp', 'project_id', overwrite=project_id)
-        if self.project_id is None:
-            raise Exception("No 'project_id' field has been specified for %s" % self.provider)
-        self.auth_url = self._get_from_config('csp', 'auth_url', overwrite=auth_url)
-        if self.auth_url is None:
-            raise Exception("No 'auth_url' field has been specified for %s" % self.provider)
-        self.interface = self._get_from_config('csp', 'interface', overwrite=interface)
-        if self.interface is None:
-            raise Exception("No 'interface' field has been specified for %s" % self.provider)
+
+        self._project_id = self._get_from_config('csp', 'project_id', overwrite=project_id)
+        if self._project_id is None:
+            raise Exception("No 'project_id' field has been specified for %s" % self._provider)
+        self._auth_url = self._get_from_config('csp', 'auth_url', overwrite=auth_url)
+        if self._auth_url is None:
+            raise Exception("No 'auth_url' field has been specified for %s" % self._provider)
+        self._interface = self._get_from_config('csp', 'interface', overwrite=interface)
+        if self._interface is None:
+            raise Exception("No 'interface' field has been specified for %s" % self._provider)
         self.load_session()
-        self.instance = None
-        self.config_env = {}
+
+        self._connection = None
+        self._instance_url = None
+        self._instance_type = None
+        self._accelerator_name = None
 
     def load_session(self):
         try:
-            self.connection = openstack.connection.Connection(
-                region_name=self.region,
+            self._connection = openstack.connection.Connection(
+                region_name=self._region,
                 auth=dict(
-                    auth_url=self.auth_url,
-                    username=self.client_id,
-                    password=self.secret_id,
-                    project_id=self.project_id
+                    auth_url=self._auth_url,
+                    username=self._client_id,
+                    password=self._secret_id,
+                    project_id=self._project_id
                 ),
                 compute_api_version='2',
-                identity_interface=self.interface
+                identity_interface=self._interface
             )
-            logger.debug("Connection object created for CSP '%s'", self.provider)
+            logger.debug("Connection object created for CSP '%s'", self._provider)
         except Exception:
-            logger.exception("Caugth following exception:")
-            raise Exception("Could not authenticate to your %s account", self.provider)
+            logger.exception("Caught following exception:")
+            raise Exception("Could not authenticate to your %s account", self._provider)
 
     def check_csp_credential(self):
         try:
-            self.connection.network.networks()
+            self._connection.network.networks()
             return True
         except Exception:
-            logger.exception("Failed to authenticate to CSP '%s'.", self.provider)
+            logger.exception("Failed to authenticate to CSP '%s'.", self._provider)
             return False
 
     def ssh_key_csp(self):
-        logger.debug("Create or check if KeyPair %s exists", self.ssh_key)
+        logger.debug("Create or check if KeyPair %s exists", self._ssh_key)
         try:
-            key_pair = self.connection.compute.find_keypair(self.ssh_key, ignore_missing=True)
+            key_pair = self._connection.compute.find_keypair(self._ssh_key, ignore_missing=True)
             if key_pair:
                 # Use existing key
-                logger.info("KeyPair '%s' is already existing on %s.", str(key_pair.name), self.provider)
+                logger.info("KeyPair '%s' is already existing on %s.", str(key_pair.name), self._provider)
             else:
                 # Create key pair
-                logger.debug("Create KeyPair '%s'", self.ssh_key)
-                key_pair = self.connection.compute.create_keypair(name=self.ssh_key)
+                logger.debug("Create KeyPair '%s'", self._ssh_key)
+                key_pair = self._connection.compute.create_keypair(name=self._ssh_key)
                 # Save private key locally if not existing
-                ssh_key_file = self.create_SSH_key_filename()
+                ssh_key_file = self._create_ssh_key_filename()
                 logger.debug("Creating private ssh key file: %s", ssh_key_file)
                 with open(ssh_key_file, "w") as text_file:
                     text_file.write(key_pair.private_key)
                 os.chmod(ssh_key_file, 0o400)
                 logger.debug("Key Content: %s", str(key_pair.private_key))
-                logger.info("New SSH Key '%s' has been written in '%s'", ssh_key_file, self.ssh_dir)
+                logger.info("New SSH Key '%s' has been written in '%s'", ssh_key_file, self._ssh_dir)
             return True
         except Exception:
             logger.exception("Failed to create SSH Key with message:")
@@ -79,39 +83,39 @@ class OpenStackClass(_CSPGenericClass):
 
     def security_group_csp(self):
         try:
-            logger.debug("Create or check if securitygroup '%s' exists", self.security_group)
-            security_group = self.connection.get_security_group(self.security_group)
+            logger.debug("Create or check if securitygroup '%s' exists", self._security_group)
+            security_group = self._connection.get_security_group(self._security_group)
             if security_group is None:
-                security_group = self.connection.create_security_group(
-                    self.security_group, "Generated by accelize API", project_id=self.project_id
+                security_group = self._connection.create_security_group(
+                    self._security_group, "Generated by accelize API", project_id=self._project_id
                 )
                 logger.info("Created security group: %s", security_group.name)
                 # Create Security Group Rules if not provided
             else:
-                logger.info("Security group '%s' is already existing on %s.", self.security_group, self.provider)
+                logger.info("Security group '%s' is already existing on %s.", self._security_group, self._provider)
             # Verify rules associated to security group
             public_ip = _CSPGenericClass.get_host_public_ip()  # Find the host public IP
             # Create rule on SSH
             try:
-                self.connection.create_security_group_rule(security_group.id, port_range_min=22, port_range_max=22,
-                                                           protocol="tcp", remote_ip_prefix=public_ip,
-                                                           remote_group_id=None, direction='ingress',
-                                                           ethertype='IPv4', project_id=self.project_id
-                                                           )
+                self._connection.create_security_group_rule(security_group.id, port_range_min=22, port_range_max=22,
+                                                            protocol="tcp", remote_ip_prefix=public_ip,
+                                                            remote_group_id=None, direction='ingress',
+                                                            ethertype='IPv4', project_id=self._project_id
+                                                            )
             except Exception:
                 # except openstack.exceptions.HttpException:
                 pass
             # Create rule on HTTP
             try:
-                self.connection.create_security_group_rule(security_group.id, port_range_min=80, port_range_max=80,
-                                                           protocol="tcp", remote_ip_prefix=public_ip,
-                                                           remote_group_id=None, direction='ingress',
-                                                           ethertype='IPv4', project_id=self.project_id
-                                                           )
+                self._connection.create_security_group_rule(security_group.id, port_range_min=80, port_range_max=80,
+                                                            protocol="tcp", remote_ip_prefix=public_ip,
+                                                            remote_group_id=None, direction='ingress',
+                                                            ethertype='IPv4', project_id=self._project_id
+                                                            )
             except Exception:
                 # except openstack.exceptions.HttpException:
                 pass
-            logger.info("Added in security group '%s': SSH and HTTP for IP %s.", self.security_group, public_ip)
+            logger.info("Added in security group '%s': SSH and HTTP for IP %s.", self._security_group, public_ip)
             return True
         except Exception:
             logger.exception("Failed to create securityGroup with message:")
@@ -125,41 +129,41 @@ class OpenStackClass(_CSPGenericClass):
         return True
 
     def set_accelerator_requirements(self, accel_parameters):
-        if self.region not in accel_parameters.keys():
-            logger.error("Region '%s' is not supported. Available regions are: %s", self.region,
+        if self._region not in accel_parameters.keys():
+            logger.error("Region '%s' is not supported. Available regions are: %s", self._region,
                          ', '.join(accel_parameters.keys()))
             return False
-        self.accelerator_name = accel_parameters['accelerator']
-        accel_parameters_in_region = accel_parameters[self.region]
+        self._accelerator_name = accel_parameters['accelerator']
+        accel_parameters_in_region = accel_parameters[self._region]
         # Get image
-        self.imageId = accel_parameters_in_region['image']
+        self._image_id = accel_parameters_in_region['image']
         try:
-            image = self.connection.compute.find_image(self.imageId)
+            image = self._connection.compute.find_image(self._image_id)
         except Exception:
-            logger.exception("Failed to get image information for CSP '%s': ", self.provider)
+            logger.exception("Failed to get image information for CSP '%s': ", self._provider)
             custom_message = "The image " + str(
-                self.imageId) + " is not available on your CSP account. Please contact Accelize."
+                self._image_id) + " is not available on your CSP account. Please contact Accelize."
             raise Exception(custom_message)
-        logger.debug("Set image '%s' with ID %s", image.name, self.imageId)
+        logger.debug("Set image '%s' with ID %s", image.name, self._image_id)
         # Get flavor
         flavor_name = accel_parameters_in_region['instancetype']
         try:
-            self.instance_type = self.connection.compute.find_flavor(flavor_name).id
+            self._instance_type = self._connection.compute.find_flavor(flavor_name).id
         except Exception:
-            logger.exception("Failed to get flavor information for CSP '%s': ", self.provider)
+            logger.exception("Failed to get flavor information for CSP '%s': ", self._provider)
             raise Exception((
                                 "The flavor %s is not available in your CSP account. "
                                 "Please contact you CSP to subscribe to this flavor.") % str(flavor_name))
 
-        logger.debug("Set flavor '%s' with ID %s", flavor_name, self.instance_type)
+        logger.debug("Set flavor '%s' with ID %s", flavor_name, self._instance_type)
         return True
 
     def get_configuration_env(self, **kwargs):
-        return self.config_env
+        return self._config_env
 
     def get_instance_public_ip(self):
         try:
-            for address in self.instance.addresses.values()[0]:
+            for address in self._instance.addresses.values()[0]:
                 if address['version'] == 4:
                     return str(address['addr'])
             return None
@@ -167,19 +171,19 @@ class OpenStackClass(_CSPGenericClass):
             return None
 
     def get_instance_csp(self):
-        if self.instance_id is None:
+        if self._instance_id is None:
             return False
         try:
-            self.instance = self.connection.get_server(self.instance_id)
-            logger.debug("Found an instance with ID %s in the following state: %s", self.instance_id,
-                         self.instance.status)
+            self._instance = self._connection.get_server(self._instance_id)
+            logger.debug("Found an instance with ID %s in the following state: %s", self._instance_id,
+                         self._instance.status)
             return True
         except Exception:
-            logger.error("Could not find an instance with ID %s", self.instance_id)
+            logger.error("Could not find an instance with ID %s", self._instance_id)
             return False
 
     def get_instance_url(self):
-        if self.instance is None:
+        if self._instance is None:
             return None
         public_ip = self.get_instance_public_ip()
         if public_ip is None:
@@ -189,18 +193,18 @@ class OpenStackClass(_CSPGenericClass):
     def wait_instance_ready(self):
         try:
             # Waiting for the instance provisioning
-            logger.info("Waiting for the instance provisioning on %s...", self.provider)
-            self.instance = self.connection.compute.wait_for_server(self.instance)
-            state = self.instance.status
+            logger.info("Waiting for the instance provisioning on %s...", self._provider)
+            self._instance = self._connection.compute.wait_for_server(self._instance)
+            state = self._instance.status
             logger.debug("Instance status: %s", state)
             if state.lower() == "error":
                 logger.error("Instance has an invalid status: %s", state)
                 self.stop_instance_csp(True)
                 return False
             # Waiting for the instance to boot
-            self.instance_url = self.get_instance_url()
+            self._instance_url = self.get_instance_url()
             logger.info("Instance is now booting...")
-            if not check_url(self.instance_url, 1, 72, 5, logger=logger):  # 6 minutes timeout
+            if not check_url(self._instance_url, 1, 72, 5, logger=logger):  # 6 minutes timeout
                 logger.error("Timed out while waiting CSP instance to boot.")
                 return False
             logger.info("Instance booted!")
@@ -208,7 +212,7 @@ class OpenStackClass(_CSPGenericClass):
         except Exception:
             try:
                 self.get_instance_csp()
-                msg = self.instance.fault.message
+                msg = self._instance.fault.message
                 logger.error("CSP error message: %s ", msg)
             except Exception:
                 pass
@@ -218,52 +222,52 @@ class OpenStackClass(_CSPGenericClass):
     def start_new_instance_csp(self):
         try:
             logger.debug("Starting instance")
-            self.instance = self.connection.compute.create_server(
-                name=self.accelerator_name, image_id=self.imageId, flavor_id=self.instance_type,
-                key_name=self.ssh_key, security_groups=[{"name": self.security_group}])
-            self.instance_id = self.instance.id
-            logger.info("Created instance ID: %s", self.instance_id)
+            self._instance = self._connection.compute.create_server(
+                name=self._accelerator_name, image_id=self._image_id, flavor_id=self._instance_type,
+                key_name=self._ssh_key, security_groups=[{"name": self._security_group}])
+            self._instance_id = self._instance.id
+            logger.info("Created instance ID: %s", self._instance_id)
             return self.wait_instance_ready()
         except Exception:
             logger.exception("Caught following exception:")
             return False
 
-    def is_instance_ID_valid(self):
+    def is_instance_id_valid(self):
         try:
             if not self.get_instance_csp():
                 return False
-            logger.info("Using instance ID: %s", self.instance_id)
+            logger.info("Using instance ID: %s", self._instance_id)
             return True
         except openstack.compute.ResourceNotFound:
-            logger.error("Could not find a instance with ID: %s", self.instance_id)
+            logger.error("Could not find a instance with ID: %s", self._instance_id)
             return False
 
     def start_existing_instance_csp(self):
         try:
-            if not self.is_instance_ID_valid():
+            if not self.is_instance_id_valid():
                 return False
-            state = self.instance.status
-            logger.debug("Status of instance ID %s: %s", self.instance_id, state)
+            state = self._instance.status
+            logger.debug("Status of instance ID %s: %s", self._instance_id, state)
             if state.lower() == "active":
-                logger.debug("Instance ID %s is already in '%s' state.", self.instance_id, state)
+                logger.debug("Instance ID %s is already in '%s' state.", self._instance_id, state)
                 return True
-            self.connection.start_server(self.instance)
+            self._connection.start_server(self._instance)
             if not self.wait_instance_ready():
-                logger.error("Error occurred when waiting instance ID '%s' to be ready.", self.instance_id)
+                logger.error("Error occurred when waiting instance ID '%s' to be ready.", self._instance_id)
                 return False
             return True
         except Exception:
-            logger.exception("Caught following starting instance ID %s:", self.instance_id)
+            logger.exception("Caught following starting instance ID %s:", self._instance_id)
             return False
 
     def start_instance_csp(self):
-        if self.instance_id is None:
+        if self._instance_id is None:
             ret = self.start_new_instance_csp()
         else:
             ret = self.start_existing_instance_csp()
         if not ret:
             return False
-        logger.info("Region: %s", self.region)
+        logger.info("Region: %s", self._region)
         public_ip = self.get_instance_public_ip()
         logger.info("Public IP: %s", public_ip)
         logger.info("Your instance is now up and running")
@@ -274,11 +278,11 @@ class OpenStackClass(_CSPGenericClass):
             if not self.get_instance_csp():
                 return False
             if terminate:
-                self.connection.delete_server(self.instance)
-                logger.info("Instance ID %s has been terminated", self.instance_id)
+                self._connection.delete_server(self._instance)
+                logger.info("Instance ID %s has been terminated", self._instance_id)
             else:
-                self.connection.stop_server(self.instance)
-                logger.info("Instance ID %s has been stopped", self.instance_id)
+                self._connection.stop_server(self._instance)
+                logger.info("Instance ID %s has been stopped", self._instance_id)
             return True
         except Exception:
             logger.exception("Caught following exception:")

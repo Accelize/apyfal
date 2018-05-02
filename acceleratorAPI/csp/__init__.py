@@ -16,25 +16,47 @@ from acceleratorAPI import logger
 
 class CSPGenericClass(ABC):
 
-    def __init__(self, config_parser, client_id=None, secret_id=None, region=None,
+    def __init__(self, provider, config, client_id=None, secret_id=None, region=None,
                  instance_type=None, ssh_key=None, security_group=None, instance_id=None,
                  instance_url=None):
-        self.config_parser = config_parser
-        self.client_id = self._get_from_config('csp', 'client_id', overwrite=client_id)
-        self.secret_id = self._get_from_config('csp', 'secret_id', overwrite=secret_id)
-        self.region = self._get_from_config('csp', 'region', overwrite=region)
-        self.instance_type = self._get_from_config('csp', 'instance_type', overwrite=instance_type)
-        self.ssh_key = self._get_from_config('csp', 'ssh_key', overwrite=ssh_key, default="MySSHKey")
-        self.security_group = self._get_from_config('csp', 'security_group', overwrite=security_group,
-                                                    default="MySecurityGroup")
-        self.instance_id = self._get_from_config('csp', 'instance_id', overwrite=instance_id)
-        self.instance_url = self._get_from_config('csp', 'instance_url', overwrite=instance_url)
 
-        self.ssh_dir = os.path.expanduser('~/.ssh')
-        self.create_SSH_folder()  # If not existing create SSH folder in HOME folder
+        self._provider = provider
+
+        # Read configuration from file
+        self._config = config
+        self._get_from_config = config.get_default
+
+        self._client_id = self._get_from_config('csp', 'client_id', overwrite=client_id)
+        self._secret_id = self._get_from_config('csp', 'secret_id', overwrite=secret_id)
+        self._region = self._get_from_config('csp', 'region', overwrite=region)
+        self._instance_type = self._get_from_config('csp', 'instance_type', overwrite=instance_type)
+        self._ssh_key = self._get_from_config('csp', 'ssh_key', overwrite=ssh_key, default="MySSHKey")
+        self._security_group = self._get_from_config('csp', 'security_group', overwrite=security_group,
+                                                     default="MySecurityGroup")
+        self._instance_id = self._get_from_config('csp', 'instance_id', overwrite=instance_id)
+        self._instance_url = self._get_from_config('csp', 'instance_url', overwrite=instance_url)
+
+        # Default some subclass required attributes
+        self._instance = None
+        self._config_env = {}
+        self._image_id = None
+
+        self._ssh_dir_cache = None
 
     def __str__(self):
         return ', '.join("%s:%s" % item for item in vars(self).items())
+
+    @property
+    def provider(self):
+        return self._provider
+
+    @property
+    def instance_url(self):
+        return self._instance_url
+
+    @property
+    def instance_id(self):
+        return self._instance_id
 
     @abstractmethod
     def load_session(self):
@@ -81,7 +103,7 @@ class CSPGenericClass(ABC):
         """"""
 
     @abstractmethod
-    def is_instance_ID_valid(self):
+    def is_instance_id_valid(self):
         """"""
 
     @abstractmethod
@@ -96,31 +118,36 @@ class CSPGenericClass(ABC):
     def stop_instance_csp(self, terminate=True):
         """"""
 
-    def create_SSH_folder(self):
-        try:
-            os.mkdir(self.ssh_dir, 0o700)
-        except OSError:
-            pass
+    @property
+    def _ssh_dir(self):
+        """SSH keys directory"""
+        if self._ssh_dir_cache is None:
+            # Initialize value and check folder on first call
+            self._ssh_dir_cache = os.path.expanduser('~/.ssh')
 
-    def create_SSH_key_filename(self):
-        ssh_key_file = "%s.pem" % self.ssh_key
-        ssh_files = os.listdir(self.ssh_dir)
+            try:
+                os.mkdir(self._ssh_dir_cache, 0o700)
+            except OSError:
+                pass
+
+        return self._ssh_dir_cache
+
+    def _create_ssh_key_filename(self):
+        ssh_key_file = "%s.pem" % self._ssh_key
+        ssh_files = os.listdir(self._ssh_dir)
         if ssh_key_file not in ssh_files:
-            return os.path.join(self.ssh_dir, ssh_key_file)
+            return os.path.join(self._ssh_dir, ssh_key_file)
         idx = 1
         while True:
-            ssh_key_file = "%s_%d.pem" % (self.ssh_key, idx)
+            ssh_key_file = "%s_%d.pem" % (self._ssh_key, idx)
             if ssh_key_file not in ssh_files:
                 break
             idx += 1
         logger.warning(
             ("A SSH key file named '%s' is already existing in ~/.ssh. "
              "To avoid overwriting an existing key, the new SSH key file will be named '%s'."),
-            self.ssh_key, ssh_key_file)
-        return os.path.join(self.ssh_dir, ssh_key_file)
-
-    def _get_from_config(self, section, key, overwrite=None, default=None):
-        return self.config_parser.get_default(section, key, overwrite, default)
+            self._ssh_key, ssh_key_file)
+        return os.path.join(self._ssh_dir, ssh_key_file)
 
     @staticmethod
     def _get_from_args(key, **kwargs):
@@ -164,19 +191,20 @@ class CSPGenericClass(ABC):
 
 class CSPClassFactory(object):
 
-    def __new__(cls, config_parser, provider=None, **kwargs):
+    def __new__(cls, config, provider=None, **kwargs):
 
         if provider is None:
             try:
-                provider = config_parser.get("csp", "provider")
+                provider = config.get("csp", "provider")
             except Exception:
                 raise Exception("Could not find a 'provider' key in the 'csp' section.")
         logger.info("Targeted CSP: %s.", provider)
-        if provider.lower() == 'aws':
+
+        if provider == 'AWS':
             from acceleratorAPI.csp.aws import AWSClass
-            return AWSClass(provider, config_parser, **kwargs)
-        elif provider.lower() == 'ovh':
+            return AWSClass(provider, config, **kwargs)
+        elif provider == 'OVH':
             from acceleratorAPI.csp.ovh import OVHClass
-            return OVHClass(provider, config_parser, **kwargs)
+            return OVHClass(provider, config, **kwargs)
         else:
-            raise ValueError('Cannot initate a CSP class with this provider:' + str(provider))
+            raise ValueError('Cannot instantiate a CSP class with this provider:' + str(provider))
