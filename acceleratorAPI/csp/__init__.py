@@ -8,10 +8,16 @@ except ImportError:
     from abc import ABCMeta, abstractmethod
     ABC = ABCMeta('ABC', (object,), {})
 
-import requests
-from requests.adapters import HTTPAdapter
-
 from acceleratorAPI import logger
+import acceleratorAPI.utilities as _utils
+
+
+class CSPException(Exception):
+    """Generic CSP related exception"""
+
+
+class CSPInstanceException(Exception):
+    """Error with CSP instance"""
 
 
 class CSPGenericClass(ABC):
@@ -167,8 +173,7 @@ class CSPGenericClass(ABC):
             try:
                 # Try to get response
                 logger.debug("Get public IP answer using: %s", url)
-                session = requests.Session()
-                session.mount(url, HTTPAdapter(max_retries=1))
+                session = _utils.https_session(max_retries=1)
                 response = session.get(url)
                 response.raise_for_status()
 

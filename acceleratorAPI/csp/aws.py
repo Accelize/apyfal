@@ -6,7 +6,6 @@ from acceleratorAPI.utilities import pretty_dict, check_url
 from acceleratorAPI import logger
 from acceleratorAPI.csp import CSPGenericClass as _CSPGenericClass
 import boto3
-import openstack
 
 
 class AWSClass(_CSPGenericClass):
@@ -348,7 +347,7 @@ class AWSClass(_CSPGenericClass):
                 return False
             logger.info("Using instance ID: %s", self._instance_id)
             return True
-        except openstack.compute.ResourceNotFound:
+        except Exception:
             logger.error("Could not find a instance with ID: %s", self._instance_id)
             return False
 

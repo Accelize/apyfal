@@ -5,14 +5,23 @@ import logging.handlers
 import os
 import socket
 import time
-
 import requests
 
 
 def check_url(url, timeout=None, retry_count=0, retry_period=5, logger=None):
-    '''
-        Checking if an HTTP is up and running.
-    '''
+    """
+    Checking if an HTTP is up and running.
+
+    Args:
+        url (str): URL
+        timeout (float): Timeout value in seconds.
+        retry_count (int): Number of tries
+        retry_period (float): Period between retries in seconds.
+        logger (logging.Logger): Logger
+
+    Returns:
+        bool: True if success, False elsewhere
+    """
     if not url:
         if logger:
             logger.error("Invalid url: %s", str(url))
@@ -45,7 +54,28 @@ def check_url(url, timeout=None, retry_count=0, retry_period=5, logger=None):
         socket.setdefaulttimeout(default_timeout)
 
 
+def https_session(max_retries=2):
+    """
+    Instantiate HTTPS session
+
+    Returns:
+        session (requests.Session): Https session
+        max_retries (int): The maximum number of retries each connection should attempt
+    """
+    session = requests.Session()
+    session.mount('https://', requests.adapters.HTTPAdapter(max_retries=max_retries))
+    return session
+
+
 def pretty_dict(obj):
+    """
+
+    Args:
+        obj: Dict to format.
+
+    Returns:
+        str: formatted dict
+    """
     return json.dumps(ast.literal_eval(str(obj)), indent=4)
 
 
