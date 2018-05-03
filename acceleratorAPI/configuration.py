@@ -46,7 +46,7 @@ class Configuration(_configparser.ConfigParser):
         # Read configuration file
         if not self.read(configuration_file):
             # No file read
-            raise IOError("Could not find configuration file: %s" % os.path.abspath(configuration_file))
+            raise OSError("Could not find configuration file: %s" % os.path.abspath(configuration_file))
 
         self._file_path = configuration_file
 

@@ -1,19 +1,21 @@
 import os
 
-from acceleratorAPI import logger
-from acceleratorAPI.utilities import check_url
-from acceleratorAPI.csp import CSPGenericClass as _CSPGenericClass
 import openstack
 
+from acceleratorAPI import logger
+import acceleratorAPI.utilities as _utl
+import acceleratorAPI.csp as _csp
 
-class OpenStackClass(_CSPGenericClass):
+
+
+class OpenStackClass(_csp.CSPGenericClass):
 
     def __init__(self, provider, config, **kwargs):
         super(OpenStackClass, self).__init__(provider, config, **kwargs)
 
-        project_id = _CSPGenericClass._get_from_args('project_id', **kwargs)
-        auth_url = _CSPGenericClass._get_from_args('auth_url', **kwargs)
-        interface = _CSPGenericClass._get_from_args('interface', **kwargs)
+        project_id = self._get_from_args('project_id', **kwargs)
+        auth_url = self._get_from_args('auth_url', **kwargs)
+        interface = self._get_from_args('interface', **kwargs)
 
         self._project_id = self._get_from_config('csp', 'project_id', overwrite=project_id)
         if self._project_id is None:
@@ -94,7 +96,7 @@ class OpenStackClass(_CSPGenericClass):
             else:
                 logger.info("Security group '%s' is already existing on %s.", self._security_group, self._provider)
             # Verify rules associated to security group
-            public_ip = _CSPGenericClass.get_host_public_ip()  # Find the host public IP
+            public_ip = self.get_host_public_ip()  # Find the host public IP
             # Create rule on SSH
             try:
                 self._connection.create_security_group_rule(security_group.id, port_range_min=22, port_range_max=22,
@@ -204,7 +206,7 @@ class OpenStackClass(_CSPGenericClass):
             # Waiting for the instance to boot
             self._instance_url = self.get_instance_url()
             logger.info("Instance is now booting...")
-            if not check_url(self._instance_url, 1, 72, 5, logger=logger):  # 6 minutes timeout
+            if not _utl.check_url(self._instance_url, 1, 72, 5, logger=logger):  # 6 minutes timeout
                 logger.error("Timed out while waiting CSP instance to boot.")
                 return False
             logger.info("Instance booted!")

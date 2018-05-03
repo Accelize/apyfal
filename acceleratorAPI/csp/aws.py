@@ -2,18 +2,20 @@ import json
 import os
 import time
 import copy
-from acceleratorAPI.utilities import pretty_dict, check_url
-from acceleratorAPI import logger
-from acceleratorAPI.csp import CSPGenericClass as _CSPGenericClass
+
 import boto3
 
+from acceleratorAPI import logger
+import acceleratorAPI.utilities as _utl
+import acceleratorAPI.csp as _csp
 
-class AWSClass(_CSPGenericClass):
+
+class AWSClass(_csp.CSPGenericClass):
 
     def __init__(self, provider, config, **kwargs):
         super(AWSClass, self).__init__(provider, config, **kwargs)
 
-        role = _CSPGenericClass._get_from_args('role', **kwargs)
+        role = self._get_from_args('role', **kwargs)
         self._role = self._get_from_config('csp', 'role', overwrite=role)
         if self._role is None:
             raise Exception("No 'role' field has been specified for %s" % self._provider)
@@ -174,7 +176,7 @@ class AWSClass(_CSPGenericClass):
         try:
             logger.debug("Create or Check if security group '%s' exists.", self._security_group)
             ec2 = self._session.client('ec2')
-            public_ip = _CSPGenericClass.get_host_public_ip()  # Find the host public IP
+            public_ip = self.get_host_public_ip()  # Find the host public IP
             try:
                 response = ec2.describe_vpcs()
                 vpc_id = response.get('Vpcs', [{}])[0].get('VpcId', '')
@@ -249,9 +251,9 @@ class AWSClass(_CSPGenericClass):
         currenv = copy.deepcopy(self._config_env)
         currenv.update(newenv)
         if newenv:
-            logger.warning("Overwrite factory requirements with custom configuration:\n%s", pretty_dict(currenv))
+            logger.warning("Overwrite factory requirements with custom configuration:\n%s", _utl.pretty_dict(currenv))
         else:
-            logger.debug("Using factory configuration: %s", pretty_dict(currenv))
+            logger.debug("Using factory configuration: %s", _utl.pretty_dict(currenv))
         return currenv
 
     def create_instance_csp(self):
@@ -292,7 +294,7 @@ class AWSClass(_CSPGenericClass):
             # Waiting for the instance to boot
             logger.info("Instance is now booting...")
             instance_url = self.get_instance_url()
-            if not check_url(instance_url, 1, 72, 5, logger=logger):  # 6 minutes timeout
+            if not _utl.check_url(instance_url, 1, 72, 5, logger=logger):  # 6 minutes timeout
                 logger.error("Timed out while waiting CSP instance to boot.")
                 return None
             logger.info("Instance booted!")

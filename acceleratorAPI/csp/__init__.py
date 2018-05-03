@@ -9,7 +9,7 @@ except ImportError:
     ABC = ABCMeta('ABC', (object,), {})
 
 from acceleratorAPI import logger
-import acceleratorAPI.utilities as _utils
+import acceleratorAPI.utilities as _utl
 
 
 class CSPException(Exception):
@@ -173,7 +173,7 @@ class CSPGenericClass(ABC):
             try:
                 # Try to get response
                 logger.debug("Get public IP answer using: %s", url)
-                session = _utils.https_session(max_retries=1)
+                session = _utl.https_session(max_retries=1)
                 response = session.get(url)
                 response.raise_for_status()
 
