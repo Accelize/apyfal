@@ -68,7 +68,7 @@ class _SignalHandlerAccelerator(object):
             if self._csp is None:
                 logger.debug("There is no registered instance to stop")
                 return
-            if self._stop_mode == KEEP or not self._csp.get_instance_csp():
+            if self._stop_mode == KEEP or not self._csp.get_instance():
                 logger.warning("###########################################################")
                 logger.warning("## Instance with URL %s (ID=%s) is still running!",
                                self._csp.instance_url, self._csp.instance_id)
@@ -76,7 +76,7 @@ class _SignalHandlerAccelerator(object):
                 logger.warning("###########################################################")
             else:
                 terminate = True if self._stop_mode == TERM else False
-                self._csp.stop_instance_csp(terminate)
+                self._csp.stop_instance(terminate)
         finally:
             logger.info("More detailed messages can be found in %s", logger.filename)
             if exit:
@@ -120,8 +120,8 @@ class AcceleratorClass(object):
 
         # Create CSP object
         instance_url = ("http://%s" % instance_ip) if instance_ip else None
-        self._csp = _csp.CSPClassFactory(
-            config=self._config, provider=provider, client_id=csp_client_id, secret_id=csp_secret_id, region=region,
+        self._csp = _csp.CSPGenericClass(
+            provider=provider, config=self._config, client_id=csp_client_id, secret_id=csp_secret_id, region=region,
             ssh_key=ssh_key, instance_id=instance_id, instance_url=instance_url)
 
         # Handle CSP instance stop
@@ -213,12 +213,12 @@ class AcceleratorClass(object):
 
         # Start CSP instance if needed
         if self._csp.instance_url is None:
-            self._csp.check_csp_credential()
+            self._csp.check_credential()
 
             if self._csp.instance_id is None:
-                self._csp.create_instance_csp()
+                self._csp.create_instance()
 
-            self._csp.start_instance_csp()
+            self._csp.start_instance()
             self._accelerator.url = self._csp.get_instance_url()
 
         logger.info("Accelerator URL: %s", self._accelerator.url)
@@ -273,7 +273,10 @@ class AcceleratorClass(object):
 
     def stop_accelerator(self):
         logger.debug("Stopping accelerator '%s' on instance ID %s", self._accelerator.name, self._csp.instance_id)
-        self._accelerator.is_alive()
+        try:
+            self._accelerator.is_alive()
+        except _acc.AcceleratorRuntimeException:
+            return
 
         stop_result = self._accelerator.stop_accelerator()
         logger.info("Accelerator session is closed")
@@ -283,23 +286,23 @@ class AcceleratorClass(object):
         logger.debug("Stopping instance (ID: %s) on '%s'", self._csp.instance_id, self._csp.provider)
 
         stop_result = self.stop_accelerator()
-        self._csp.stop_instance_csp(terminate)
+        self._csp.stop_instance(terminate)
 
         return stop_result
 
     def stop(self, stop_mode=None):
         stop_mode = self.stop_mode if stop_mode is None else stop_mode
 
-        # Stop Accelerator
+        # Stops accelerator only
         if stop_mode == KEEP:
             return self.stop_accelerator()
 
-        # Stop instance
+        # Stops accelerator + instance
         return self.stop_instance(True if stop_mode == TERM else False)
 
     def _log_profiling_info(self, process_result):
         """
-        Show profiling and specific information in logger.
+        Shows profiling and specific information in logger.
 
         Args:
             process_result (dict): result from AcceleratorApiClass.process_file

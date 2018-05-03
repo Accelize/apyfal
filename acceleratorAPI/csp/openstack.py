@@ -1,3 +1,4 @@
+# coding=utf-8
 import os
 
 import openstack
@@ -7,15 +8,14 @@ import acceleratorAPI.utilities as _utl
 import acceleratorAPI.csp as _csp
 
 
-
 class OpenStackClass(_csp.CSPGenericClass):
 
     def __init__(self, provider, config, **kwargs):
         super(OpenStackClass, self).__init__(provider, config, **kwargs)
 
-        project_id = self._get_from_args('project_id', **kwargs)
-        auth_url = self._get_from_args('auth_url', **kwargs)
-        interface = self._get_from_args('interface', **kwargs)
+        project_id = kwargs.pop('project_id', None)
+        auth_url = kwargs.pop('auth_url', None)
+        interface = kwargs.pop('interface', None)
 
         self._project_id = self._get_from_config('csp', 'project_id', overwrite=project_id)
         if self._project_id is None:
@@ -51,7 +51,7 @@ class OpenStackClass(_csp.CSPGenericClass):
             logger.exception("Caught following exception:")
             raise Exception("Could not authenticate to your %s account", self._provider)
 
-    def check_csp_credential(self):
+    def check_credential(self):
         try:
             self._connection.network.networks()
             return True
@@ -59,7 +59,7 @@ class OpenStackClass(_csp.CSPGenericClass):
             logger.exception("Failed to authenticate to CSP '%s'.", self._provider)
             return False
 
-    def ssh_key_csp(self):
+    def ssh_key(self):
         logger.debug("Create or check if KeyPair %s exists", self._ssh_key)
         try:
             key_pair = self._connection.compute.find_keypair(self._ssh_key, ignore_missing=True)
@@ -83,7 +83,7 @@ class OpenStackClass(_csp.CSPGenericClass):
             logger.exception("Failed to create SSH Key with message:")
             return False
 
-    def security_group_csp(self):
+    def security_group(self):
         try:
             logger.debug("Create or check if securitygroup '%s' exists", self._security_group)
             security_group = self._connection.get_security_group(self._security_group)
@@ -96,7 +96,7 @@ class OpenStackClass(_csp.CSPGenericClass):
             else:
                 logger.info("Security group '%s' is already existing on %s.", self._security_group, self._provider)
             # Verify rules associated to security group
-            public_ip = self.get_host_public_ip()  # Find the host public IP
+            public_ip = _utl.get_host_public_ip(logger)  # Find the host public IP
             # Create rule on SSH
             try:
                 self._connection.create_security_group_rule(security_group.id, port_range_min=22, port_range_max=22,
@@ -123,10 +123,10 @@ class OpenStackClass(_csp.CSPGenericClass):
             logger.exception("Failed to create securityGroup with message:")
             return False
 
-    def create_instance_csp(self):
-        if not self.ssh_key_csp():
+    def create_instance(self):
+        if not self.ssh_key():
             return False
-        if not self.security_group_csp():
+        if not self.security_group():
             return False
         return True
 
@@ -172,7 +172,7 @@ class OpenStackClass(_csp.CSPGenericClass):
         except Exception:
             return None
 
-    def get_instance_csp(self):
+    def get_instance(self):
         if self._instance_id is None:
             return False
         try:
@@ -201,7 +201,7 @@ class OpenStackClass(_csp.CSPGenericClass):
             logger.debug("Instance status: %s", state)
             if state.lower() == "error":
                 logger.error("Instance has an invalid status: %s", state)
-                self.stop_instance_csp(True)
+                self.stop_instance(True)
                 return False
             # Waiting for the instance to boot
             self._instance_url = self.get_instance_url()
@@ -221,7 +221,7 @@ class OpenStackClass(_csp.CSPGenericClass):
             logger.exception("Caught following exception:")
             return False
 
-    def start_new_instance_csp(self):
+    def start_new_instance(self):
         try:
             logger.debug("Starting instance")
             self._instance = self._connection.compute.create_server(
@@ -244,7 +244,7 @@ class OpenStackClass(_csp.CSPGenericClass):
             logger.error("Could not find a instance with ID: %s", self._instance_id)
             return False
 
-    def start_existing_instance_csp(self):
+    def start_existing_instance(self):
         try:
             if not self.is_instance_id_valid():
                 return False
@@ -262,11 +262,11 @@ class OpenStackClass(_csp.CSPGenericClass):
             logger.exception("Caught following starting instance ID %s:", self._instance_id)
             return False
 
-    def start_instance_csp(self):
+    def start_instance(self):
         if self._instance_id is None:
-            ret = self.start_new_instance_csp()
+            ret = self.start_new_instance()
         else:
-            ret = self.start_existing_instance_csp()
+            ret = self.start_existing_instance()
         if not ret:
             return False
         logger.info("Region: %s", self._region)
@@ -275,7 +275,7 @@ class OpenStackClass(_csp.CSPGenericClass):
         logger.info("Your instance is now up and running")
         return True
 
-    def stop_instance_csp(self, terminate=True):
+    def stop_instance(self, terminate=True):
         try:
             if not self.get_instance_csp():
                 return False

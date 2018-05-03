@@ -1,3 +1,4 @@
+# coding=utf-8
 import os
 
 try:
@@ -6,30 +7,62 @@ try:
 except ImportError:
     # Python 2
     from abc import ABCMeta, abstractmethod
+
     ABC = ABCMeta('ABC', (object,), {})
 
 from acceleratorAPI import logger
-import acceleratorAPI.utilities as _utl
+import acceleratorAPI.configuration as _cfg
 
 
 class CSPException(Exception):
     """Generic CSP related exception"""
 
 
-class CSPInstanceException(Exception):
+class CSPInstanceException(CSPException):
     """Error with CSP instance"""
 
 
+class CSPAuthenticationException(CSPException):
+    """
+    Error while trying to authenticate user.
+    """
+
+
+class CSPConfigurationException(CSPException):
+    """Error with CSP configuration"""
+
+
 class CSPGenericClass(ABC):
+
+    def __new__(cls, provider, config, **kwargs):
+        if cls is not CSPGenericClass:
+            return ABC.__new__(cls)
+
+        # Generic CPS class is also a factory that replace itself dynamically
+        # by its subclasses depending on Provider
+        config = _cfg.create_configuration(config)
+        provider = cls._provider_from_config(provider, config)
+        logger.info("Targeted CSP: %s.", provider)
+
+        if provider == 'AWS':
+            from acceleratorAPI.csp.aws import AWSClass
+            return ABC.__new__(AWSClass)
+
+        elif provider == 'OVH':
+            from acceleratorAPI.csp.ovh import OVHClass
+            return ABC.__new__(OVHClass)
+
+        else:
+            raise CSPConfigurationException(
+                "Cannot instantiate a CSP class with this '%s' provider" % provider)
 
     def __init__(self, provider, config, client_id=None, secret_id=None, region=None,
                  instance_type=None, ssh_key=None, security_group=None, instance_id=None,
                  instance_url=None):
 
-        self._provider = provider
-
         # Read configuration from file
-        self._config = config
+        self._config = _cfg.create_configuration(config)
+        self._provider = self._provider_from_config(provider, config)
         self._get_from_config = config.get_default
 
         self._client_id = self._get_from_config('csp', 'client_id', overwrite=client_id)
@@ -56,10 +89,10 @@ class CSPGenericClass(ABC):
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.stop_instance_csp()
+        self.stop_instance()
 
     def __del__(self):
-        self.stop_instance_csp()
+        self.stop_instance()
 
     @property
     def provider(self):
@@ -78,19 +111,19 @@ class CSPGenericClass(ABC):
         """"""
 
     @abstractmethod
-    def check_csp_credential(self):
+    def check_credential(self):
         """"""
 
     @abstractmethod
-    def ssh_key_csp(self):
+    def ssh_key(self):
         """"""
 
     @abstractmethod
-    def security_group_csp(self):
+    def security_group(self):
         """"""
 
     @abstractmethod
-    def get_instance_csp(self):
+    def get_instance(self):
         """"""
 
     @abstractmethod
@@ -102,7 +135,7 @@ class CSPGenericClass(ABC):
         """"""
 
     @abstractmethod
-    def create_instance_csp(self):
+    def create_instance(self):
         """"""
 
     @abstractmethod
@@ -114,7 +147,7 @@ class CSPGenericClass(ABC):
         """"""
 
     @abstractmethod
-    def start_new_instance_csp(self):
+    def start_new_instance(self):
         """"""
 
     @abstractmethod
@@ -122,15 +155,15 @@ class CSPGenericClass(ABC):
         """"""
 
     @abstractmethod
-    def start_existing_instance_csp(self):
+    def start_existing_instance(self):
         """"""
 
     @abstractmethod
-    def start_instance_csp(self):
+    def start_instance(self):
         """"""
 
     @abstractmethod
-    def stop_instance_csp(self, terminate=True):
+    def stop_instance(self, terminate=True):
         """"""
 
     @property
@@ -141,10 +174,9 @@ class CSPGenericClass(ABC):
         Returns:
             path (str)
         """
+        # Initialize value and check folder on first call
         if self._ssh_dir_cache is None:
-            # Initialize value and check folder on first call
             self._ssh_dir_cache = os.path.expanduser('~/.ssh')
-
             try:
                 os.mkdir(self._ssh_dir_cache, 0o700)
             except OSError:
@@ -155,75 +187,27 @@ class CSPGenericClass(ABC):
     def _create_ssh_key_filename(self):
         ssh_key_file = "%s.pem" % self._ssh_key
         ssh_files = os.listdir(self._ssh_dir)
+
         if ssh_key_file not in ssh_files:
             return os.path.join(self._ssh_dir, ssh_key_file)
+
         idx = 1
         while True:
             ssh_key_file = "%s_%d.pem" % (self._ssh_key, idx)
             if ssh_key_file not in ssh_files:
                 break
             idx += 1
+
         logger.warning(
             ("A SSH key file named '%s' is already existing in ~/.ssh. "
              "To avoid overwriting an existing key, the new SSH key file will be named '%s'."),
             self._ssh_key, ssh_key_file)
+
         return os.path.join(self._ssh_dir, ssh_key_file)
 
     @staticmethod
-    def _get_from_args(key, **kwargs):
-        return kwargs.pop(key, None)
-
-    @staticmethod
-    def get_host_public_ip():
-        for url, section in (('http://ipinfo.io/ip', ''),
-                             ('http://ip-api.com/xml', 'query'),
-                             ('http://freegeoip.net/xml', 'IP')):
-
-            try:
-                # Try to get response
-                logger.debug("Get public IP answer using: %s", url)
-                session = _utl.https_session(max_retries=1)
-                response = session.get(url)
-                response.raise_for_status()
-
-                # Parse IP from response
-                if section:
-                    try:
-                        # Use lxml if available
-                        import lxml.etree as ET
-                    except ImportError:
-                        import xml.etree.ElementTree as ET
-
-                    root = ET.fromstring(response.text.encode('utf-8'))
-                    ip_address = str(root.findall(section)[0].text)
-                else:
-                    ip_address = str(response.text)
-
-                logger.debug("Public IP answer: %s", ip_address)
-                return "/32%s" % ip_address.strip()
-            except Exception:
-                logger.exception("Caught following exception:")
-
-        logger.error("Failed to find your external IP address after attempts to 3 different sites.")
-        raise Exception("Failed to find your external IP address. Your internet connection might be broken.")
-
-
-class CSPClassFactory(object):
-
-    def __new__(cls, config, provider=None, **kwargs):
-
+    def _provider_from_config(provider, config):
+        provider = config.get_default("csp", "provider", overwrite=provider)
         if provider is None:
-            try:
-                provider = config.get("csp", "provider")
-            except Exception:
-                raise Exception("Could not find a 'provider' key in the 'csp' section.")
-        logger.info("Targeted CSP: %s.", provider)
-
-        if provider == 'AWS':
-            from acceleratorAPI.csp.aws import AWSClass
-            return AWSClass(provider, config, **kwargs)
-        elif provider == 'OVH':
-            from acceleratorAPI.csp.ovh import OVHClass
-            return OVHClass(provider, config, **kwargs)
-        else:
-            raise ValueError('Cannot instantiate a CSP class with this provider:' + str(provider))
+            raise CSPConfigurationException("No CSP provider defined.")
+        return provider

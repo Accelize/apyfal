@@ -1,3 +1,4 @@
+# coding=utf-8
 import ast
 import json
 import logging
@@ -58,20 +59,73 @@ def https_session(max_retries=2):
     """
     Instantiate HTTPS session
 
-    Returns:
-        session (requests.Session): Https session
+    Args:
         max_retries (int): The maximum number of retries each connection should attempt
+
+    Returns:
+        requests.Session: Https session
     """
     session = requests.Session()
     session.mount('https://', requests.adapters.HTTPAdapter(max_retries=max_retries))
     return session
 
 
-def pretty_dict(obj):
+def get_host_public_ip(logger=None):
     """
+    Find current host IP address.
 
     Args:
-        obj: Dict to format.
+        logger (logging.Logger): Logger
+
+    Returns:
+        str: IP address
+
+    Raises:
+        OSError: Fail to get IP address
+    """
+    for url, section in (('http://ipinfo.io/ip', ''),
+                         ('http://ip-api.com/xml', 'query'),
+                         ('http://freegeoip.net/xml', 'IP')):
+
+        # Try to get response
+        if logger is not None:
+            logger.debug("Get public IP answer using: %s", url)
+        session = https_session(max_retries=1)
+        response = session.get(url)
+        try:
+            response.raise_for_status()
+        except requests.exceptions.RequestException:
+            if logger is not None:
+                logger.exception("Caught following exception with '%s':" % url)
+        else:
+            # Parse IP from response
+            if section:
+                # XML parser lazy import since not always used
+                try:
+                    # Use lxml if available
+                    import lxml.etree as ET
+                except ImportError:
+                    # Else use standard library
+                    import xml.etree.ElementTree as ET
+
+                root = ET.fromstring(response.text.encode('utf-8'))
+                ip_address = str(root.findall(section)[0].text)
+            else:
+                ip_address = str(response.text)
+
+            if logger is not None:
+                logger.debug("Public IP answer: %s", ip_address)
+            return "/32%s" % ip_address.strip()
+
+    raise OSError("Failed to find your external IP address. Your internet connection might be broken.")
+
+
+def pretty_dict(obj):
+    """
+    Format dictionary to text.
+
+    Args:
+        obj (dict): Dict to format.
 
     Returns:
         str: formatted dict
@@ -91,7 +145,8 @@ class APILogger(logging.Logger):
     filename = ''
 
     def setLevel(self, level):
-        """Set logger level
+        """
+        Set logger level
 
         Args:
             level (int): Logger level
@@ -101,10 +156,12 @@ class APILogger(logging.Logger):
             level if self.name != self.ref_name else logging.DEBUG)
 
     def handle(self, record):
-        """Conditionally emit the specified logging record.
+        """
+        Conditionally emit the specified logging record.
 
         Args:
-            record: Logging record"""
+            record: Logging record
+        """
         for handler in self.handlers:
             handler.emit(record)
 
@@ -119,14 +176,16 @@ class APILogger(logging.Logger):
 
 
 def init_logger(name, filename):
-    """Initialize logger
+    """
+    Initialize logger
 
     Args:
         name (str): Logger name
         filename (str): Script filename to use as base for logger filename
 
     Returns:
-       APILogger: logger instance"""
+       APILogger: logger instance
+    """
 
     # Register our logger class and create local logger object
     ref_logger_class = logging.getLoggerClass()
@@ -146,7 +205,7 @@ def init_logger(name, filename):
         maxBytes=100 * 1024 * 1024, backupCount=5)
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(
-        logging.Formatter("%(asctime)s - %(levelname)-8s: %(module)-20s, %(funcName)-28s, %(lineno)-4d: %(message)s"))
+        logging.Formatter("%(asctime)s - %(levelname)-8s: %(filename)-20s, %(funcName)-28s, %(lineno)-4d: %(message)s"))
     logger.addHandler(file_handler)
 
     # Save filename inside logger for future use
