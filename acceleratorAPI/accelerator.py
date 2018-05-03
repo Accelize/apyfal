@@ -155,6 +155,16 @@ class AcceleratorApiClass(object):
     def url(self, url):
         self._api_configuration.host = url
 
+    def is_alive(self):
+        """
+        Check if accelerator URL is alive.
+
+        Raises:
+            AcceleratorRuntimeException: If URL not alive
+        """
+        if not _utl.check_url(self.url, 10, logger=logger):
+            raise AcceleratorRuntimeException("Failed to reach accelerator url: %s" % self.url)
+
     def get_accelerator_requirements(self, provider):
         session = _utl.https_session()
         response = session.post('https://master.metering.accelize.com/o/token/',
@@ -258,21 +268,20 @@ class AcceleratorApiClass(object):
         api_response = api_instance.configuration_create(parameters=json.dumps(parameters), datafile=datafile)
         logger.debug("configuration_create api_response:\n%s", api_response)
 
-        api_resp_id = api_response.id
-        self._accelerator_configuration_url = api_response.url
+        config_result = ast.literal_eval(api_response.parametersresult)
+        self._raise_for_status(config_result, "Configuration of accelerator failed: ")
 
-        dictparameters = ast.literal_eval(api_response.parametersresult)
-        dictparameters['url_config'] = api_response.url
-        dictparameters['url_instance'] = self.url
+        config_result['url_config'] = self._accelerator_configuration_url = api_response.url
+        config_result['url_instance'] = self.url
 
-        logger.debug("status: %s", dictparameters['app']['status'])
-        logger.debug("msg:\n%s", dictparameters['app']['msg'])
+        logger.debug("status: %s", config_result['app']['status'])
+        logger.debug("msg:\n%s", config_result['app']['msg'])
 
-        api_response_read = api_instance.configuration_read(api_resp_id)
+        api_response_read = api_instance.configuration_read(api_response.id)
         if api_response_read.inerror:
             raise AcceleratorRuntimeException("Cannot start the configuration %s" % api_response_read.url)
 
-        return dictparameters
+        return config_result
 
     def process_file(self, file_in, file_out, accelerator_parameters=None):
 
@@ -350,9 +359,11 @@ class AcceleratorApiClass(object):
                 raise AcceleratorRuntimeException(
                     "Failed to process data: %s" % _utl.pretty_dict(api_response.parametersresult))
 
-            dictparameters = ast.literal_eval(api_response.parametersresult)
-            logger.debug("Process status: %s", dictparameters['app']['status'])
-            logger.debug("Process msg:\n%s", dictparameters['app']['msg'])
+            process_result = ast.literal_eval(api_response.parametersresult)
+            self._raise_for_status(process_result, "Processing failed: ")
+
+            logger.debug("Process status: %s", process_result['app']['status'])
+            logger.debug("Process msg:\n%s", process_result['app']['msg'])
 
             response = _utl.https_session().get(api_response.datafileresult, stream=True)
             with open(file_out, 'wb') as out_file:
@@ -362,10 +373,21 @@ class AcceleratorApiClass(object):
             logger.debug("process_delete api_response: %s", api_resp_id)
             api_instance.process_delete(api_resp_id)
 
-        return dictparameters
+        return process_result
 
     def stop_accelerator(self):
-        return self._rest_api_stop().stop_list()
+        stop_result = self._rest_api_stop().stop_list()
+        self._raise_for_status(stop_result, "Stopping accelerator failed: ")
+        return stop_result
+
+    @staticmethod
+    def _raise_for_status(api_result, message=""):
+        try:
+            status = api_result['app']['status']
+        except KeyError:
+            raise AcceleratorRuntimeException(message + 'No result returned')
+        if status:
+            raise AcceleratorRuntimeException(message + api_result['app']['msg'])
 
     def _init_rest_api_class(self, api):
         """

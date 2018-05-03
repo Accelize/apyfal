@@ -228,18 +228,11 @@ class AcceleratorClass(object):
 
     def configure_accelerator(self, datafile=None, accelerator_parameters=None, **kwargs):
         logger.debug("Configuring accelerator '%s' on instance ID %s", self._accelerator.name, self._csp.instance_id)
-        if not _utl.check_url(self._accelerator.url, 10, logger=logger):
-            raise _acc.AcceleratorRuntimeException("Failed to reach accelerator url: %s" % self._accelerator.url)
+        self._accelerator.is_alive()
 
         csp_env = self._csp.get_configuration_env(**kwargs)
         config_result = self._accelerator.start_accelerator(
             datafile=datafile, accelerator_parameters=accelerator_parameters, csp_env=csp_env)
-
-        try:
-            self._raise_for_status(config_result)
-        except _acc.AcceleratorRuntimeException as exception:
-            raise _acc.AcceleratorRuntimeException(
-                "Configuration of accelerator failed: %s", exception)
 
         logger.info("Configuration of accelerator is complete")
         return config_result
@@ -256,32 +249,33 @@ class AcceleratorClass(object):
     def process(self, file_out, file_in=None, process_parameter=None):
         logger.debug("Starting a processing job: in=%s, out=%s", file_in, file_out)
 
+        # Checks input file presence
         if file_in and not os.path.isfile(file_in):
             raise OSError("Could not find input file: %s", file_in)
 
-        logger.debug("Accelerator URL: %s", self._accelerator.url)
-        if not _utl.check_url(self._accelerator.url, 10, logger=logger):
-            raise _acc.AcceleratorRuntimeException("Failed to reach accelerator url: %s" % self._accelerator.url)
+        # Checks output directory presence, and creates it if not exists.
+        if file_out:
+            try:
+                os.makedirs(os.path.dirname(file_out))
+            except OSError:
+                pass
 
+        # Checks Accelerator URL
+        logger.debug("Accelerator URL: %s", self._accelerator.url)
+        self._accelerator.is_alive()
+
+        # Process file with accelerator
         process_result = self._accelerator.process_file(
             file_in=file_in, file_out=file_out, accelerator_parameters=process_parameter)
-        self._log_profiling_info(process_result)
 
-        self._raise_for_status(process_result)
+        self._log_profiling_info(process_result)
         return process_result
 
     def stop_accelerator(self):
         logger.debug("Stopping accelerator '%s' on instance ID %s", self._accelerator.name, self._csp.instance_id)
-        if not _utl.check_url(self._accelerator.url, 10, logger=logger):
-            return False, {
-                'app': {'status': -1, 'msg': "Failed to reach accelerator url: %s" % self._accelerator.url}}
+        self._accelerator.is_alive()
+
         stop_result = self._accelerator.stop_accelerator()
-
-        try:
-            self._raise_for_status(stop_result)
-        except _acc.AcceleratorRuntimeException as exception:
-            raise _acc.AcceleratorRuntimeException("Stopping accelerator failed: %s", exception)
-
         logger.info("Accelerator session is closed")
         return stop_result
 
@@ -296,19 +290,12 @@ class AcceleratorClass(object):
     def stop(self, stop_mode=None):
         stop_mode = self.stop_mode if stop_mode is None else stop_mode
 
+        # Stop Accelerator
         if stop_mode == KEEP:
             return self.stop_accelerator()
 
+        # Stop instance
         return self.stop_instance(True if stop_mode == TERM else False)
-
-    @staticmethod
-    def _raise_for_status(result):
-        try:
-            status = result['app']['status']
-        except KeyError:
-            raise _acc.AcceleratorRuntimeException('No result returned')
-        if status:
-            raise _acc.AcceleratorRuntimeException(result['app']['msg'])
 
     def _log_profiling_info(self, process_result):
         """
