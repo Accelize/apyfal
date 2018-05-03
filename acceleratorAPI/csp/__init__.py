@@ -52,6 +52,15 @@ class CSPGenericClass(ABC):
     def __str__(self):
         return ', '.join("%s:%s" % item for item in vars(self).items())
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.stop_instance_csp()
+
+    def __del__(self):
+        self.stop_instance_csp()
+
     @property
     def provider(self):
         return self._provider

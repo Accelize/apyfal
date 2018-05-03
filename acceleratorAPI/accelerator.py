@@ -81,6 +81,15 @@ class AcceleratorApiClass(object):
                 "Accelize client ID and secret ID are mandatory. "
                 "Provide them in the configuration file or through function arguments.")
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.stop_accelerator()
+
+    def __del__(self):
+        self.stop_accelerator()
+
     def check_accelize_credential(self):
         """
         Check user Accelerator credential
@@ -355,6 +364,9 @@ class AcceleratorApiClass(object):
 
         return dictparameters
 
+    def stop_accelerator(self):
+        return self._rest_api_stop().stop_list()
+
     def _init_rest_api_class(self, api):
         """
         Instantiate and configure REST API class.
@@ -397,6 +409,3 @@ class AcceleratorApiClass(object):
         """
         # /v1.0/stop
         return self._init_rest_api_class(_swc.StopApi)
-
-    def stop_accelerator(self):
-        return self._rest_api_stop().stop_list()

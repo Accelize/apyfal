@@ -147,6 +147,12 @@ class AcceleratorClass(object):
         elif instance_url:
             self._accelerator.url = instance_url
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.stop()
+
     def __del__(self):
         self.stop()
 
