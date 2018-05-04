@@ -11,9 +11,17 @@ import acceleratorAPI.utilities as _utl
 # Initialize logger
 logger = _utl.init_logger("acceleratorAPI", __file__)
 
+
+# Create base exception class
+class AccceleratorApiBaseException(Exception):
+    """Base exception for all exception from acceleratorAPI"""
+
+
+# Not imported on top since need AccceleratorApiBaseException
 import acceleratorAPI.csp as _csp
 import acceleratorAPI.accelerator as _acc
 import acceleratorAPI.configuration as _cfg
+
 
 TERM = 0
 STOP = 1
@@ -87,7 +95,7 @@ class _SignalHandlerAccelerator(object):
 
 class AcceleratorClass(object):
     """
-    This class automatically handle Accelerator API and CSP.
+    This class automatically handle Accelerator and CSP classes.
 
     Args:
         accelerator:
@@ -132,7 +140,7 @@ class AcceleratorClass(object):
             self._sign_handler = None
 
         # Create Accelerator object
-        self._accelerator = _acc.AcceleratorApiClass(
+        self._accelerator = _acc.Accelerator(
             accelerator, client_id=xlz_client_id, secret_id=xlz_secret_id, config=self._config)
 
         # Checking if credentials are valid otherwise no sense to continue
@@ -305,7 +313,7 @@ class AcceleratorClass(object):
         Shows profiling and specific information in logger.
 
         Args:
-            process_result (dict): result from AcceleratorApiClass.process_file
+            process_result (dict): result from Accelerator.process_file
         """
         # Skip method if logger not at least on INFO Level
         if not logger.isEnabledFor(20):

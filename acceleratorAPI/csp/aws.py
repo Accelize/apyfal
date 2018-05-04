@@ -4,7 +4,7 @@ import os
 import time
 import copy
 
-import boto3
+import boto3 as _boto3
 
 from acceleratorAPI import logger
 import acceleratorAPI.utilities as _utl
@@ -26,7 +26,7 @@ class AWSClass(_csp.CSPGenericClass):
         self.load_session()
 
     def load_session(self):
-        self._session = boto3.session.Session(
+        self._session = _boto3.session.Session(
             aws_access_key_id=self._client_id,
             aws_secret_access_key=self._secret_id,
             region_name=self._region
@@ -108,7 +108,7 @@ class AWSClass(_csp.CSPGenericClass):
             if policy_item['PolicyName'] == policy:
                 return policy_item['Arn']
 
-        raise _csp.CSPConfigurationException("Failed to create policy.")
+        raise _csp.CSPConfigurationException("Failed to create policy. Unable to find policy 'Arn'.")
 
     def role(self):
         logger.debug("Create or check if role %s exists", self._role)

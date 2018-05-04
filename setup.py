@@ -46,19 +46,19 @@ PACKAGE_INFOS = dict(
 
 # Get package __version__ from package
 SETUP_DIR = abspath(dirname(__file__))
-with open(join(SETUP_DIR, 'acceleratorAPI', 'acceleratorAPI.py')) as file:
-    for line in file:
+with open(join(SETUP_DIR, 'acceleratorAPI', '__init__.py')) as source_file:
+    for line in source_file:
         if line.rstrip().startswith('__version__'):
             PACKAGE_INFOS['version'] = line.split('=', 1)[1].strip(" \"\'\n")
             break
 
 # Get long description from readme
-with open(join(SETUP_DIR, 'README.md')) as file:
-    PACKAGE_INFOS['long_description'] = file.read()
+with open(join(SETUP_DIR, 'README.md')) as source_file:
+    PACKAGE_INFOS['long_description'] = source_file.read()
 
 # Get requirements from Swagger generated REST API
-with open(join(SETUP_DIR, 'acceleratorAPI', 'rest_api', 'setup.py')) as file:
-    for line in file:
+with open(join(SETUP_DIR, 'acceleratorAPI', 'rest_api', 'setup.py')) as source_file:
+    for line in source_file:
         if line.rstrip().startswith('REQUIRES = ['):
             PACKAGE_INFOS['install_requires'].extend(
                 literal_eval(line.split('=', 1)[1].strip(" \n")))

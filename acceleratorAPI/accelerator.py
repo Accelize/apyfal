@@ -20,13 +20,13 @@ except ImportError:
     _USE_PYCURL = False
 
 
-from acceleratorAPI import logger
+from acceleratorAPI import logger, AccceleratorApiBaseException as _AccceleratorApiBaseException
 import acceleratorAPI.utilities as _utl
 import acceleratorAPI.configuration as _cfg
 import acceleratorAPI.rest_api.swagger_client as _swc
 
 
-class AcceleratorException(Exception):
+class AcceleratorException(_AccceleratorApiBaseException):
     """
     Generic accelerator related exception.
     """
@@ -50,7 +50,7 @@ class AcceleratorRuntimeException(AcceleratorException):
     """
 
 
-class AcceleratorApiClass(object):
+class Accelerator(object):
     """
     End user API based on the openAPI Accelize accelerator
 

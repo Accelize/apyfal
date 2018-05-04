@@ -7,14 +7,13 @@ try:
 except ImportError:
     # Python 2
     from abc import ABCMeta, abstractmethod
-
     ABC = ABCMeta('ABC', (object,), {})
 
-from acceleratorAPI import logger
+from acceleratorAPI import logger, AccceleratorApiBaseException as _AccceleratorApiBaseException
 import acceleratorAPI.configuration as _cfg
 
 
-class CSPException(Exception):
+class CSPException(_AccceleratorApiBaseException):
     """Generic CSP related exception"""
 
 
@@ -23,9 +22,7 @@ class CSPInstanceException(CSPException):
 
 
 class CSPAuthenticationException(CSPException):
-    """
-    Error while trying to authenticate user.
-    """
+    """Error while trying to authenticate user."""
 
 
 class CSPConfigurationException(CSPException):
@@ -33,13 +30,30 @@ class CSPConfigurationException(CSPException):
 
 
 class CSPGenericClass(ABC):
+    """This is base abstract class for all CSP classes.
+
+    This is also a factory which instantiate CSP subclass related to
+    specified Cloud Service Provider.
+
+    Args:
+        provider (str): Cloud service provider name.
+        config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance
+        client_id:
+        secret_id:
+        region:
+        instance_type:
+        ssh_key:
+        security_group:
+        instance_id:
+        instance_url:
+    """
 
     def __new__(cls, provider, config, **kwargs):
+        # If call from a subclass, instantiate this subclass directly
         if cls is not CSPGenericClass:
             return ABC.__new__(cls)
 
-        # Generic CPS class is also a factory that replace itself dynamically
-        # by its subclasses depending on Provider
+        # If call form this class instantiate subclasses depending on Provider
         config = _cfg.create_configuration(config)
         provider = cls._provider_from_config(provider, config)
         logger.info("Targeted CSP: %s.", provider)

@@ -201,7 +201,7 @@ def init_logger(name, filename):
 
     # Rotating file handler
     file_handler = logging.handlers.RotatingFileHandler(
-        os.path.splitext(os.path.basename(filename))[0] + ".log",
+        os.path.join(os.path.dirname(filename), '%s.log' % name),
         maxBytes=100 * 1024 * 1024, backupCount=5)
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(
