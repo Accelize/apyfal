@@ -137,7 +137,7 @@ class CSPGenericClass(ABC):
         """"""
 
     @abstractmethod
-    def get_instance(self):
+    def get_instance_status(self):
         """"""
 
     @abstractmethod

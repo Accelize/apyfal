@@ -76,7 +76,7 @@ class _SignalHandlerAccelerator(object):
             if self._csp is None:
                 logger.debug("There is no registered instance to stop")
                 return
-            if self._stop_mode == KEEP or not self._csp.get_instance():
+            if self._stop_mode == KEEP or not self._csp.is_instance_id_valid():
                 logger.warning("###########################################################")
                 logger.warning("## Instance with URL %s (ID=%s) is still running!",
                                self._csp.instance_url, self._csp.instance_id)
@@ -148,7 +148,7 @@ class AcceleratorClass(object):
 
         # Check CSP ID if provided
         if instance_id:
-            self._csp.is_instance_id_valid()
+            self._csp.get_instance_status()
             self._accelerator.url = self._csp.get_instance_url()
 
         # Set CSP URL if provided

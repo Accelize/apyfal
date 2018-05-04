@@ -172,7 +172,7 @@ class OpenStackClass(_csp.CSPGenericClass):
         except Exception:
             return None
 
-    def get_instance(self):
+    def get_instance_status(self):
         if self._instance_id is None:
             return False
         try:
