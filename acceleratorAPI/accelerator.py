@@ -27,27 +27,19 @@ import acceleratorAPI.rest_api.swagger_client as _swc
 
 
 class AcceleratorException(_AccceleratorApiBaseException):
-    """
-    Generic accelerator related exception.
-    """
+    """Generic accelerator related exception."""
 
 
 class AcceleratorAuthenticationException(AcceleratorException):
-    """
-    Error while trying to authenticate user.
-    """
+    """Error while trying to authenticate user."""
 
 
 class AcceleratorConfigurationException(AcceleratorException):
-    """
-    Error with Accelerator configuration.
-    """
+    """Error with Accelerator configuration."""
 
 
 class AcceleratorRuntimeException(AcceleratorException):
-    """
-    Error with Accelerator running.
-    """
+    """Error with Accelerator running."""
 
 
 class Accelerator(object):
@@ -61,25 +53,41 @@ class Accelerator(object):
         url (str): Accelerator URL
         config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance
     """
+    DEFAULT_CONFIGURATION_PARAMETERS = {"app": {
+                "reset": 0,
+                "enable-sw-comparison": 0,
+                "logging": {"format": 1, "verbosity": 2}}}
+
+    DEFAULT_PROCESS_PARAMETERS = {"app": {
+                "reset": 0,
+                "enable-sw-comparison": 0,
+                "logging": {"format": 1, "verbosity": 2}}}
 
     def __init__(self, accelerator, client_id=None, secret_id=None, url=None, config=None):
         self._name = accelerator
+
+        # Read configuration
+        config = _cfg.create_configuration(config)
+        self._client_id = config.get_default('accelize', 'client_id', overwrite=client_id)
+        self._secret_id = config.get_default('accelize', 'secret_id', overwrite=secret_id)
+
+        self._configuration_parameters = config.get_default(
+            'configuration', 'parameters', is_literal=True,
+            default=self.DEFAULT_CONFIGURATION_PARAMETERS)
+        self._process_parameters = config.get_default(
+            'process', 'parameters', is_literal=True,
+            default=self.DEFAULT_PROCESS_PARAMETERS)
+
+        # Checks mandatory configuration values
+        if self._client_id is None or self._secret_id is None:
+            raise AcceleratorConfigurationException(
+                "Accelize client ID and secret ID are mandatory. "
+                "Provide them in the configuration file or through function arguments.")
 
         # A regular API has fixed url. In our case we want to change it dynamically.
         self._api_configuration = _swc.Configuration()
         self.url = url
         self._accelerator_configuration_url = None
-
-        # Initializes configuration
-        self._config = _cfg.create_configuration(config)
-        self._config.set_not_none('accelize', 'client_id', client_id)
-        self._config.set_not_none('accelize', 'secret_id', secret_id)
-
-        # Checks mandatory configuration values
-        if not self._config.is_valid(('accelize', 'client_id'), ('accelize', 'secret_id')):
-            raise AcceleratorConfigurationException(
-                "Accelize client ID and secret ID are mandatory. "
-                "Provide them in the configuration file or through function arguments.")
 
     def __enter__(self):
         return self
@@ -125,7 +133,7 @@ class Accelerator(object):
         Returns:
             str: ID
         """
-        return self._config.get('accelize', 'client_id')
+        return self._client_id
 
     @property
     def secret_id(self):
@@ -135,7 +143,7 @@ class Accelerator(object):
         Returns:
             str: ID
         """
-        return self._config.get('accelize', 'secret_id')
+        return self._secret_id
 
     @property
     def configuration_url(self):
@@ -249,7 +257,7 @@ class Accelerator(object):
         # Check parameters
         if accelerator_parameters is None:
             logger.debug("Using default configuration parameters")
-            accelerator_parameters = ast.literal_eval(self._config.get("configuration", "parameters"))
+            accelerator_parameters = self._configuration_parameters
 
         envserver = {"client_id": self.client_id, "client_secret": self.secret_id}
         envserver.update(csp_env)
@@ -291,7 +299,7 @@ class Accelerator(object):
 
         if accelerator_parameters is None:
             logger.debug("Using default processing parameters")
-            accelerator_parameters = ast.literal_eval(self._config.get("process", "parameters"))
+            accelerator_parameters = self._process_parameters
         logger.debug("Using configuration: %s", self._accelerator_configuration_url)
         datafile = file_in  # file | If needed, file to be processed by the accelerator. (optional)
 

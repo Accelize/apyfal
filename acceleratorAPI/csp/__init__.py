@@ -1,5 +1,5 @@
 # coding=utf-8
-import os
+"""Cloud Service Providers"""
 
 try:
     # Python 3
@@ -11,6 +11,7 @@ except ImportError:
 
 from acceleratorAPI import logger, AccceleratorApiBaseException as _AccceleratorApiBaseException
 import acceleratorAPI.configuration as _cfg
+import acceleratorAPI.utilities as _utl
 
 
 class CSPException(_AccceleratorApiBaseException):
@@ -46,16 +47,20 @@ class CSPGenericClass(ABC):
         security_group:
         instance_id:
         instance_url:
+        project_id:
+        auth_url:
+        interface:
+        role:
     """
 
-    def __new__(cls, provider, config, **kwargs):
+    def __new__(cls, **kwargs):
         # If call from a subclass, instantiate this subclass directly
         if cls is not CSPGenericClass:
             return ABC.__new__(cls)
 
         # If call form this class instantiate subclasses depending on Provider
-        config = _cfg.create_configuration(config)
-        provider = cls._provider_from_config(provider, config)
+        config = _cfg.create_configuration(kwargs.get('config'))
+        provider = cls._provider_from_config(kwargs.get('provider'), config)
         logger.info("Targeted CSP: %s.", provider)
 
         if provider == 'AWS':
@@ -70,29 +75,36 @@ class CSPGenericClass(ABC):
             raise CSPConfigurationException(
                 "Cannot instantiate a CSP class with this '%s' provider" % provider)
 
-    def __init__(self, provider, config, client_id=None, secret_id=None, region=None,
+    def __init__(self, provider=None, config=None, client_id=None, secret_id=None, region=None,
                  instance_type=None, ssh_key=None, security_group=None, instance_id=None,
-                 instance_url=None):
+                 instance_url=None, project_id=None, auth_url=None, interface=None, role=None):
 
         # Read configuration from file
         self._config = _cfg.create_configuration(config)
         self._provider = self._provider_from_config(provider, config)
-        self._get_from_config = config.get_default
 
-        self._client_id = self._get_from_config('csp', 'client_id', overwrite=client_id)
-        self._secret_id = self._get_from_config('csp', 'secret_id', overwrite=secret_id)
-        self._region = self._get_from_config('csp', 'region', overwrite=region)
-        self._instance_type = self._get_from_config('csp', 'instance_type', overwrite=instance_type)
-        self._ssh_key = self._get_from_config('csp', 'ssh_key', overwrite=ssh_key, default="MySSHKey")
-        self._security_group = self._get_from_config('csp', 'security_group', overwrite=security_group,
-                                                     default="MySecurityGroup")
-        self._instance_id = self._get_from_config('csp', 'instance_id', overwrite=instance_id)
-        self._instance_url = self._get_from_config('csp', 'instance_url', overwrite=instance_url)
+        self._client_id = config.get_default('csp', 'client_id', overwrite=client_id)
+        self._secret_id = config.get_default('csp', 'secret_id', overwrite=secret_id)
+        self._region = config.get_default('csp', 'region', overwrite=region)
+        self._instance_type = config.get_default('csp', 'instance_type', overwrite=instance_type)
+        self._ssh_key = config.get_default('csp', 'ssh_key', overwrite=ssh_key, default="MySSHKey")
+        self._security_group = config.get_default('csp', 'security_group', overwrite=security_group,
+                                                  default="MySecurityGroup")
+        self._instance_id = config.get_default('csp', 'instance_id', overwrite=instance_id)
+        self._instance_url = config.get_default('csp', 'instance_url', overwrite=instance_url)
+
+        self._role = config.get_default('csp', 'role', overwrite=role)
+
+        self._project_id = config.get_default('csp', 'project_id', overwrite=project_id)
+        self._auth_url = config.get_default('csp', 'auth_url', overwrite=auth_url)
+        self._interface = config.get_default('csp', 'interface', overwrite=interface)
 
         # Default some subclass required attributes
+        self._session = None
         self._instance = None
         self._config_env = {}
         self._image_id = None
+        self._accelerator = None
 
         self._ssh_dir_cache = None
 
@@ -121,15 +133,11 @@ class CSPGenericClass(ABC):
         return self._instance_id
 
     @abstractmethod
-    def load_session(self):
-        """"""
-
-    @abstractmethod
     def check_credential(self):
         """"""
 
     @abstractmethod
-    def ssh_key(self):
+    def _init_ssh_key(self):
         """"""
 
     @abstractmethod
@@ -180,44 +188,29 @@ class CSPGenericClass(ABC):
     def stop_instance(self, terminate=True):
         """"""
 
-    @property
-    def _ssh_dir(self):
-        """
-        SSH keys directory
+    def _get_region_parameters(self, accel_parameters):
+        # Check if region is valid
+        if self._region not in accel_parameters.keys():
+            raise CSPConfigurationException(
+                "Region '%s' is not supported. Available regions are: %s", self._region,
+                ', '.join(accel_parameters))
 
-        Returns:
-            path (str)
-        """
-        # Initialize value and check folder on first call
-        if self._ssh_dir_cache is None:
-            self._ssh_dir_cache = os.path.expanduser('~/.ssh')
-            try:
-                os.mkdir(self._ssh_dir_cache, 0o700)
-            except OSError:
-                pass
+        # Get accelerator name
+        self._accelerator = accel_parameters['accelerator']
 
-        return self._ssh_dir_cache
+        # Get parameters for current region
+        return accel_parameters[self._region]
 
-    def _create_ssh_key_filename(self):
-        ssh_key_file = "%s.pem" % self._ssh_key
-        ssh_files = os.listdir(self._ssh_dir)
+    def _wait_instance_boot(self):
+        logger.info("Instance is now booting...")
 
-        if ssh_key_file not in ssh_files:
-            return os.path.join(self._ssh_dir, ssh_key_file)
+        # Check URL with 6 minutes timeout
+        self._instance_url = self.get_instance_url()
+        if not _utl.check_url(self._instance_url, timeout=1,
+                              retry_count=72, logger=logger):
+            raise CSPInstanceException("Timed out while waiting CSP instance to boot.")
 
-        idx = 1
-        while True:
-            ssh_key_file = "%s_%d.pem" % (self._ssh_key, idx)
-            if ssh_key_file not in ssh_files:
-                break
-            idx += 1
-
-        logger.warning(
-            ("A SSH key file named '%s' is already existing in ~/.ssh. "
-             "To avoid overwriting an existing key, the new SSH key file will be named '%s'."),
-            self._ssh_key, ssh_key_file)
-
-        return os.path.join(self._ssh_dir, ssh_key_file)
+        logger.info("Instance booted!")
 
     @staticmethod
     def _provider_from_config(provider, config):

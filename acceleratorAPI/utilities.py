@@ -1,4 +1,6 @@
 # coding=utf-8
+"""Generic utilities used in acceleratorAPI code"""
+
 import ast
 import json
 import logging
@@ -24,9 +26,7 @@ def check_url(url, timeout=None, retry_count=0, retry_period=5, logger=None):
         bool: True if success, False elsewhere
     """
     if not url:
-        if logger:
-            logger.error("Invalid url: %s", str(url))
-        return False
+        raise ValueError('No URL to check')
     default_timeout = socket.getdefaulttimeout()
     miss_count = 0
     try:
@@ -131,6 +131,57 @@ def pretty_dict(obj):
         str: formatted dict
     """
     return json.dumps(ast.literal_eval(str(obj)), indent=4)
+
+
+def create_ssh_key_file(ssh_key, key_content, logger=None):
+    """
+    Create SSH key file.
+
+    Args:
+        ssh_key (str): key name
+        key_content (str): key content
+        logger (logging.Logger): Logger
+    """
+    # Path to SSH keys dir
+    ssh_dir = os.path.expanduser('~/.ssh')
+    try:
+        # Create if not exists
+        os.mkdir(ssh_dir, 0o700)
+    except OSError:
+        pass
+
+    # Find SSH key file path
+    ssh_key_file = "%s.pem" % ssh_key
+    ssh_files = os.listdir(ssh_dir)
+
+    if ssh_key_file not in ssh_files:
+        return os.path.join(ssh_dir, ssh_key_file)
+
+    idx = 1
+    while True:
+        ssh_key_file = "%s_%d.pem" % (ssh_key, idx)
+        if ssh_key_file not in ssh_files:
+            break
+        idx += 1
+
+    if logger is not None:
+        logger.warning(
+            ("A SSH key file named '%s' is already existing in ~/.ssh. "
+             "To avoid overwriting an existing key, the new SSH key file will be named '%s'."),
+            ssh_key, ssh_key_file)
+
+    key_filename = os.path.join(ssh_dir, ssh_key_file)
+
+    # Create file
+    if logger is not None:
+        logger.debug("Creating private ssh key file: %s", key_filename)
+
+    with open(key_filename, "wt") as key_file:
+        key_file.write(key_content)
+    os.chmod(key_filename, 0o400)
+
+    if logger is not None:
+        logger.info("New SSH Key '%s' has been written in '%s'", key_filename, ssh_dir)
 
 
 class APILogger(logging.Logger):

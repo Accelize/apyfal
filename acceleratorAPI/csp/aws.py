@@ -1,6 +1,7 @@
 # coding=utf-8
+"""Amazon Web Services"""
+
 import json
-import os
 import time
 import copy
 
@@ -14,19 +15,15 @@ import acceleratorAPI.csp as _csp
 
 class AWSClass(_csp.CSPGenericClass):
 
-    def __init__(self, provider, config, **kwargs):
-        super(AWSClass, self).__init__(provider, config, **kwargs)
+    def __init__(self, **kwargs):
+        super(AWSClass, self).__init__(**kwargs)
 
-        self._role = self._get_from_config('csp', 'role', overwrite=kwargs.pop('role', None))
+        # Checks mandatory configuration values
         if self._role is None:
-            raise Exception("No 'role' field has been specified for %s" % self._provider)
+            raise _csp.CSPConfigurationException(
+                "No 'role' has been specified for %s" % self._provider)
 
-        self._session = None
-        self._accelerator = None
-
-        self.load_session()
-
-    def load_session(self):
+        # Load session
         self._session = _boto3.session.Session(
             aws_access_key_id=self._client_id,
             aws_secret_access_key=self._secret_id,
@@ -42,7 +39,7 @@ class AWSClass(_csp.CSPGenericClass):
             raise _csp.CSPAuthenticationException("Failed to authenticate with your CSP access key.")
         logger.debug("Response of 'describe_key_pairs': %s", response)
 
-    def ssh_key(self):
+    def _init_ssh_key(self):
         logger.debug("Create or check if KeyPair %s exists.", self._ssh_key)
         ec2_client = self._session.client('ec2')
 
@@ -59,21 +56,14 @@ class AWSClass(_csp.CSPGenericClass):
             ec2_resource = self._session.resource('ec2')
             key_pair = ec2_resource.create_key_pair(KeyName=self._ssh_key)
 
-            key_filename = self._create_ssh_key_filename()
-            logger.debug("Creating private ssh key file: %s", key_filename)
-            with open(key_filename, "wt") as key_file:
-                key_file.write(key_pair.key_material)
-            os.chmod(key_filename, 0o400)
-
-            logger.debug("Key Content: %s", str(key_pair.key_material))
-            logger.info("New SSH Key '%s' has been written in '%s'", key_filename, self._ssh_dir)
+            _utl.create_ssh_key_file(self._ssh_key, key_pair.key_material)
 
         # Key does exist on the CSP
         else:
             logger.info("KeyPair '%s' is already existing on %s.", key_pair['KeyPairs'][0]['KeyName'],
                         self._provider)
 
-    def policy(self, policy):
+    def _init_policy(self, policy):
         logger.debug("Create or check if policy '%s' exists.", policy)
 
         # Create a policy
@@ -114,7 +104,7 @@ class AWSClass(_csp.CSPGenericClass):
         raise _csp.CSPConfigurationException(
             "Failed to create policy. Unable to find policy 'Arn'.")
 
-    def role(self):
+    def _init_role(self):
         logger.debug("Create or check if role %s exists", self._role)
 
         assume_role_policy_document = json.dumps({
@@ -146,7 +136,7 @@ class AWSClass(_csp.CSPGenericClass):
         logger.debug("Policy ARN:'%s' already exists.", arn)
         return arn
 
-    def attach_role_policy(self, policy):
+    def _attach_role_policy(self, policy):
         logger.debug(
             "Create or check if policy '%s' is attached to role '%s' exists.",
             policy, self._role)
@@ -167,9 +157,9 @@ class AWSClass(_csp.CSPGenericClass):
             logger.debug("Policy: %s", response)
             logger.info("Attached policy '%s' to role '%s' done.", policy, self._role)
 
-    def instance_profile(self):
+    def _init_instance_profile(self):
         instance_profile_name = 'AccelizeLoadFPGA'
-        logger.debug("Create or check if instance profile  '%s' exists.",
+        logger.debug("Create or check if instance profile '%s' exists.",
                      instance_profile_name)
 
         iam_client = self._session.client('iam')
@@ -257,15 +247,10 @@ class AWSClass(_csp.CSPGenericClass):
         return instance_state["Name"]
 
     def set_accelerator_requirements(self, accel_parameters):
-        # Check parameters
-        if self._region not in accel_parameters.keys():
-            raise _csp.CSPConfigurationException(
-                "Region '%s' is not supported. Available regions are: %s", self._region,
-                ', '.join(accel_parameters))
+        # Get parameters for region
+        accel_parameters_in_region = self._get_region_parameters(accel_parameters)
 
-        self._accelerator = accel_parameters['accelerator']
-
-        accel_parameters_in_region = accel_parameters[self._region]
+        # Set parameters
         self._config_env = {'AGFI': accel_parameters_in_region['fpgaimage']}
         self._image_id = accel_parameters_in_region['image']
         self._instance_type = accel_parameters_in_region['instancetype']
@@ -288,11 +273,11 @@ class AWSClass(_csp.CSPGenericClass):
         return currenv
 
     def create_instance(self):
-        self.ssh_key()
-        policy_arn = self.policy('AccelizePolicy')
-        self.role()
-        self.instance_profile()
-        self.attach_role_policy(policy_arn)
+        self._init_ssh_key()
+        policy_arn = self._init_policy('AccelizePolicy')
+        self._init_role()
+        self._init_instance_profile()
+        self._attach_role_policy(policy_arn)
         self.security_group()
 
     def get_instance_url(self):
@@ -316,13 +301,7 @@ class AWSClass(_csp.CSPGenericClass):
             time.sleep(5)
 
         # Waiting for the instance to boot
-        logger.info("Instance is now booting...")
-        instance_url = self.get_instance_url()
-        if not _utl.check_url(
-                instance_url, timeout=1, retry_count=72, logger=logger):  # 6 minutes timeout
-            raise _csp.CSPInstanceException("Timed out while waiting CSP instance to boot.")
-
-        logger.info("Instance booted!")
+        self._wait_instance_boot()
 
     def start_new_instance(self):
         logger.debug("Starting instance")

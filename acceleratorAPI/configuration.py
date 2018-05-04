@@ -1,5 +1,8 @@
+# coding=utf-8
 """Manages Accelerator and CSP configuration"""
+
 import os
+from ast import literal_eval as _literal_eval
 try:
     # Python 3
     import configparser as _configparser
@@ -36,19 +39,18 @@ class Configuration(_configparser.ConfigParser):
 
         # Finds configuration file
         if configuration_file is None:
+            # Search configuration file in current working directory
             if os.path.isfile(self.DEFAULT_CONFIG_FILE):
-                # Search configuration file in current working directory
                 configuration_file = self.DEFAULT_CONFIG_FILE
+
+            # Search configuration file in home directory
             else:
-                # Get default file in package directory
-                configuration_file = os.path.join(os.path.dirname(__file__), self.DEFAULT_CONFIG_FILE)
+                configuration_file = os.path.join(os.path.expanduser('~'), self.DEFAULT_CONFIG_FILE)
 
-        # Read configuration file
-        if not self.read(configuration_file):
-            # No file read
-            raise OSError("Could not find configuration file: %s" % os.path.abspath(configuration_file))
-
-        self._file_path = configuration_file
+        # Read configuration file if exists
+        # If not, return empty Configuration file, this will force
+        # CSP and accelerator classes to uses defaults values
+        self._file_path = configuration_file if self.read(configuration_file) else None
 
     @property
     def file_path(self):
@@ -58,7 +60,7 @@ class Configuration(_configparser.ConfigParser):
             path (str)"""
         return self._file_path
 
-    def get_default(self, section, option, overwrite=None, default=None):
+    def get_default(self, section, option, overwrite=None, default=None, is_literal=False):
         """Returns values from configuration or default value.
 
         Args:
@@ -66,6 +68,7 @@ class Configuration(_configparser.ConfigParser):
             option (str): Key in selected section
             overwrite: If None not, forces return of this value
             default: If section or key not found, return this value.
+            is_literal (bool): If True evaluated as literal.
         Returns:
             value (object)
             """
@@ -77,37 +80,9 @@ class Configuration(_configparser.ConfigParser):
         except (_configparser.NoSectionError, _configparser.NoOptionError):
             return default
 
-        if new_val:
-            return new_val
-        return default
+        if not new_val:
+            return default
 
-    def is_valid(self, *section_option):
-        """
-        For each section_key pairs, check if value exists in configuration
-        and if value if not empty.
-
-        Args:
-            *section_option (tuple of str): section option pairs.
-
-        Returns:
-            bool: True if all values exists and are not empty, False elsewhere.
-        """
-        for section, option in section_option:
-            try:
-                value = self.get(section, option)
-            except (_configparser.NoSectionError, _configparser.NoOptionError):
-                return False
-            if not value:
-                return False
-        return True
-
-    def set_not_none(self, section, option, value):
-        """
-        Set value for selected section and option if value is not None.
-
-        Args:
-            section (str): Configuration section
-            option (str): Configuration option
-            value: value"""
-        if value is not None:
-            self._config.set(section, option, value)
+        elif is_literal:
+            return _literal_eval(new_val)
+        return new_val

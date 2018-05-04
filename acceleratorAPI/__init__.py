@@ -14,7 +14,7 @@ logger = _utl.init_logger("acceleratorAPI", __file__)
 
 # Create base exception class
 class AccceleratorApiBaseException(Exception):
-    """Base exception for all exception from acceleratorAPI"""
+    """Base exception for acceleratorAPI exceptions"""
 
 
 # Not imported on top since need AccceleratorApiBaseException
@@ -123,17 +123,17 @@ class AcceleratorClass(object):
         logger.debug("/" * 100)
 
         # Initialize configuration
-        self._config = _cfg.create_configuration(config_file)
-        logger.info("Using configuration file: %s", self._config.file_path)
+        config = _cfg.create_configuration(config_file)
+        logger.info("Using configuration file: %s", config.file_path)
 
         # Create CSP object
         instance_url = ("http://%s" % instance_ip) if instance_ip else None
         self._csp = _csp.CSPGenericClass(
-            provider=provider, config=self._config, client_id=csp_client_id, secret_id=csp_secret_id, region=region,
+            provider=provider, config=config, client_id=csp_client_id, secret_id=csp_secret_id, region=region,
             ssh_key=ssh_key, instance_id=instance_id, instance_url=instance_url)
 
         # Handle CSP instance stop
-        self._stop_mode = TERM
+        self._stop_mode = config.get_default("csp", "stop_mode", default=TERM)
         if exit_instance_on_signal:
             self._sign_handler = _SignalHandlerAccelerator(self)
         else:
@@ -141,7 +141,7 @@ class AcceleratorClass(object):
 
         # Create Accelerator object
         self._accelerator = _acc.Accelerator(
-            accelerator, client_id=xlz_client_id, secret_id=xlz_secret_id, config=self._config)
+            accelerator, client_id=xlz_client_id, secret_id=xlz_secret_id, config=config)
 
         # Checking if credentials are valid otherwise no sense to continue
         self._accelerator.check_accelize_credential()
@@ -213,7 +213,8 @@ class AcceleratorClass(object):
         logger.debug("Starting instance on '%s'", self._csp.provider)
 
         # Updates stop mode
-        self.stop_mode = self._config.get_default("csp", "stop_mode", overwrite=stop_mode, default=TERM)
+        if stop_mode is not None:
+            self.stop_mode = stop_mode
 
         # Get configuration information from webservice
         accel_requirements = self._accelerator.get_accelerator_requirements(self._csp.provider)
