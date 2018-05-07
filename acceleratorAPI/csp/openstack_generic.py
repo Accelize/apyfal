@@ -5,7 +5,8 @@ import openstack as _openstack
 import keystoneauth1.exceptions.http as _keystoneauth_exceptions
 
 from acceleratorAPI import logger
-from acceleratorAPI import _utilities as _utl
+import acceleratorAPI._utilities  as _utl
+import acceleratorAPI.exceptions as _exc
 import acceleratorAPI.csp as _csp
 
 
@@ -16,15 +17,15 @@ class OpenStackClass(_csp.CSPGenericClass):
 
         # Checks mandatory configuration values
         if self._project_id is None:
-            raise _csp.CSPConfigurationException(
+            raise _exc.CSPConfigurationException(
                 "No 'project_id' has been specified for %s" % self._provider)
 
         if self._auth_url is None:
-            raise _csp.CSPConfigurationException(
+            raise _exc.CSPConfigurationException(
                 "No 'auth_url' has been specified for %s" % self._provider)
 
         if self._interface is None:
-            raise _csp.CSPConfigurationException(
+            raise _exc.CSPConfigurationException(
                 "No 'interface' has been specified for %s" % self._provider)
 
         # Initialize variables
@@ -51,7 +52,7 @@ class OpenStackClass(_csp.CSPGenericClass):
         try:
             list(self._session.network.networks())
         except _keystoneauth_exceptions.Unauthorized:
-            raise _csp.CSPAuthenticationException("Failed to authenticate with your CSP access key.")
+            raise _exc.CSPAuthenticationException("Failed to authenticate with your CSP access key.")
 
     def _init_ssh_key(self):
         logger.debug("Create or check if KeyPair %s exists", self._ssh_key)
@@ -105,7 +106,7 @@ class OpenStackClass(_csp.CSPGenericClass):
 
         logger.info("Added in security group '%s': SSH and HTTP for IP %s.", self._security_group, public_ip)
 
-    def create_instance(self):
+    def _create_instance(self):
         self._init_ssh_key()
         self.security_group()
 
@@ -118,7 +119,7 @@ class OpenStackClass(_csp.CSPGenericClass):
         try:
             image = self._session.compute.find_image(self._image_id)
         except _openstack.exceptions.ResourceNotFound:
-            raise _csp.CSPConfigurationException(
+            raise _exc.CSPConfigurationException(
                 ("Failed to get image information for CSP '%s':\n"
                  "The image '%s' is not available on your CSP account. "
                  "Please contact Accelize.") %
@@ -131,7 +132,7 @@ class OpenStackClass(_csp.CSPGenericClass):
         try:
             self._instance_type = self._session.compute.find_flavor(flavor_name).id
         except _openstack.exceptions.ResourceNotFound:
-            raise _csp.CSPConfigurationException(
+            raise _exc.CSPConfigurationException(
                 ("Failed to get flavor information for CSP '%s':\n"
                  "The flavor '%s' is not available in your CSP account. "
                  "Please contact you CSP to subscribe to this flavor.") %
@@ -142,17 +143,14 @@ class OpenStackClass(_csp.CSPGenericClass):
     def get_configuration_env(self, **kwargs):
         return self._config_env
 
-    def get_instance_status(self):
-        if self._instance_id is None:
-            raise _csp.CSPInstanceException("No instance found")
-
+    def _get_instance_status(self):
         # Try to find instance
         try:
             self._instance = self._session.get_server(self._instance_id)
 
         # Instance not found
         except _openstack.exceptions.SDKException as exception:
-            raise _csp.CSPInstanceException(
+            raise _exc.CSPInstanceException(
                 "Could not find an instance with ID '%s' (%s)", self._instance_id, exception)
 
         # Instance is alive
@@ -162,77 +160,49 @@ class OpenStackClass(_csp.CSPGenericClass):
             return self._instance.status
 
     def _get_instance_public_ip(self):
-        if self._instance is None:
-            raise _csp.CSPInstanceException("No instance found")
-
         for address in self._instance.addresses.values()[0]:
             if address['version'] == 4:
                 return address['addr']
-        raise _csp.CSPInstanceException("No instance address found")
+        raise _exc.CSPInstanceException("No instance address found")
 
-    def wait_instance_ready(self):
+    def _wait_instance_ready(self):
         # Waiting for the instance provisioning
         logger.info("Waiting for the instance provisioning on %s...", self._provider)
         try:
             self._instance = self._session.compute.wait_for_server(self._instance)
         except _openstack.exceptions.SDKException as exception:
-            raise _csp.CSPInstanceException("Instance exception: %s", exception)
+            raise _exc.CSPInstanceException("Instance exception: %s", exception)
 
         # Check instance status
         state = self._instance.status
         logger.debug("Instance status: %s", state)
         if state.lower() == "error":
             self.stop_instance()
-            raise _csp.CSPInstanceException("Instance has an invalid status: %s", state)
-
-        # Waiting for the instance to boot
-        self._wait_instance_boot()
+            raise _exc.CSPInstanceException("Instance has an invalid status: %s", state)
 
     def _start_new_instance(self):
-        logger.debug("Starting instance")
-
-        self._instance = self._session.compute.create_server(
+        instance = self._session.compute.create_server(
             name=self._accelerator, image_id=self._image_id, flavor_id=self._instance_type,
             key_name=self._ssh_key, security_groups=[{"name": self._security_group}])
 
-        self._instance_id = self._instance.id
-        logger.info("Created instance ID: %s", self._instance_id)
+        return instance, instance.id
 
-        self.wait_instance_ready()
-
-    def is_instance_id_valid(self):
-        try:
-            self.get_instance_status()
-        except _csp.CSPInstanceException:
-            logger.error("Could not find a instance with ID '%s' (%s)",
-                         self._instance_id)
-            return False
-        logger.info("Using instance ID: %s", self._instance_id)
-        return True
-
-    def _start_existing_instance(self):
-        state = self.get_instance_status()
+    def _start_existing_instance(self, state):
         logger.debug("Status of instance ID %s: %s", self._instance_id, state)
         if state.lower() == "active":
             logger.debug("Instance ID %s is already in '%s' state.", self._instance_id, state)
             return
 
         self._session.start_server(self._instance)
-        self.wait_instance_ready()
 
     def _log_instance_info(self):
         logger.info("Region: %s", self._region)
-        logger.info("Public IP: %s", self._get_instance_public_ip())
+        logger.info("Public IP: %s", self.instance_ip)
 
-    def stop_instance(self, terminate=True):
-        try:
-            self.get_instance_status()
-        except _csp.CSPInstanceException as exception:
-            logger.debug("No instance to stop (%s)", exception)
-            return
+    def _terminate_instance(self):
+        if not self._session.delete_server(self._instance, wait=True):
+            raise _exc.CSPInstanceException('Unable to delete instance.')
 
-        if terminate:
-            if not self._session.delete_server(self._instance, wait=True):
-                raise _csp.CSPInstanceException('Unable to delete instance.')
-            logger.info("Instance ID %s has been terminated", self._instance_id)
-        # TODO: terminate=False support, pause instance ?
+    def _pause_instance(self):
+        # TODO: Implement pause instance support
+        pass

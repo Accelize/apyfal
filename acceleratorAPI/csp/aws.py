@@ -9,7 +9,8 @@ import boto3 as _boto3
 import botocore.exceptions as _boto_exceptions
 
 from acceleratorAPI import logger
-from acceleratorAPI import _utilities as _utl
+import acceleratorAPI._utilities  as _utl
+import acceleratorAPI.exceptions as _exc
 import acceleratorAPI.csp as _csp
 
 
@@ -20,7 +21,7 @@ class AWSClass(_csp.CSPGenericClass):
 
         # Checks mandatory configuration values
         if self._role is None:
-            raise _csp.CSPConfigurationException(
+            raise _exc.CSPConfigurationException(
                 "No 'role' has been specified for %s" % self._provider)
 
         # Load session
@@ -36,7 +37,7 @@ class AWSClass(_csp.CSPGenericClass):
             response = ec2_client.describe_key_pairs()
         except ec2_client.exceptions.ClientError as exception:
             logger.debug(str(exception))
-            raise _csp.CSPAuthenticationException("Failed to authenticate with your CSP access key.")
+            raise _exc.CSPAuthenticationException("Failed to authenticate with your CSP access key.")
         logger.debug("Response of 'describe_key_pairs': %s", response)
 
     def _init_ssh_key(self):
@@ -101,7 +102,7 @@ class AWSClass(_csp.CSPGenericClass):
             if policy_item['PolicyName'] == policy:
                 return policy_item['Arn']
 
-        raise _csp.CSPConfigurationException(
+        raise _exc.CSPConfigurationException(
             "Failed to create policy. Unable to find policy 'Arn'.")
 
     def _init_role(self):
@@ -228,17 +229,13 @@ class AWSClass(_csp.CSPGenericClass):
             logger.info("Added in security group '%s': SSH and HTTP for IP %s.",
                         self._security_group, public_ip)
 
-    def get_instance_status(self):
-        if self._instance_id is None:
-            raise _csp.CSPInstanceException("No instance ID provided")
-
-        ec2_resource = self._session.resource('ec2')
-        self._instance = ec2_resource.Instance(self._instance_id)
+    def _get_instance_status(self):
+        self._instance = self._session.resource('ec2').Instance(self._instance_id)
 
         try:
             instance_state = self._instance.state
         except _boto_exceptions.ClientError as exception:
-            raise _csp.CSPInstanceException(
+            raise _exc.CSPInstanceException(
                 "Could not find an instance with ID %s ('%s')", self._instance_id, exception)
         else:
             logger.debug("Found an instance with ID %s in the following state: %s",
@@ -272,7 +269,7 @@ class AWSClass(_csp.CSPGenericClass):
                            _utl.pretty_dict(currenv))
         return currenv
 
-    def create_instance(self):
+    def _create_instance(self):
         self._init_ssh_key()
         policy_arn = self._init_policy('AccelizePolicy')
         self._init_role()
@@ -281,15 +278,12 @@ class AWSClass(_csp.CSPGenericClass):
         self.security_group()
 
     def _get_instance_public_ip(self):
-        if self._instance is None:
-            raise _csp.CSPInstanceException("No instance found")
-
         try:
             return self._instance.public_ip_address
         except _boto_exceptions.ClientError as exception:
-            raise _csp.CSPInstanceException("Could not return instance URL ('%s')" % exception)
+            raise _exc.CSPInstanceException("Could not return instance URL ('%s')" % exception)
 
-    def wait_instance_ready(self):
+    def _wait_instance_ready(self):
         # Waiting for the instance provisioning
         logger.info("Waiting for the instance provisioning on %s...", self._provider)
         while True:
@@ -300,13 +294,8 @@ class AWSClass(_csp.CSPGenericClass):
                 break
             time.sleep(5)
 
-        # Waiting for the instance to boot
-        self._wait_instance_boot()
-
     def _start_new_instance(self):
-        logger.debug("Starting instance")
-        ec2_resource = self._session.resource('ec2')
-        instance = ec2_resource.create_instances(
+        instance = self._session.resource('ec2').create_instances(
             ImageId=self._image_id,
             InstanceType=self._instance_type,
             KeyName=self._ssh_key,
@@ -321,54 +310,27 @@ class AWSClass(_csp.CSPGenericClass):
                     {'Key': 'Name',
                      'Value': "Accelize accelerator %s" % self._accelerator}
                 ]}],
-            MinCount=1, MaxCount=1)
+            MinCount=1, MaxCount=1)[0]
 
-        self._instance = instance[0]
-        self._instance_id = self._instance.id
+        return instance, instance.id
 
-        logger.info("Created instance ID: %s", self._instance_id)
-        self.wait_instance_ready()
-
-    def is_instance_id_valid(self):
-        try:
-            self.get_instance_status()
-        except _csp.CSPInstanceException as exception:
-            logger.error("Could not find a instance with ID '%s' (%s)",
-                         self._instance_id, exception)
-            return False
-        logger.info("Using instance ID: %s", self._instance_id)
-        return True
-
-    def _start_existing_instance(self):
-        state = self.get_instance_status()
+    def _start_existing_instance(self, state):
         if state == "stopped":
             response = self._instance.start()
             logger.debug("start response: %s", response)
 
         elif state != "running":
-            raise _csp.CSPInstanceException(
+            raise _exc.CSPInstanceException(
                 "Instance ID %s cannot be started because it is not in a valid state (%s).",
                 self._instance_id, state)
-
-        self.wait_instance_ready()
 
     def _log_instance_info(self):
         logger.info("Region: %s", self._session.region_name)
         logger.info("Private IP: %s", self._instance.private_ip_address)
-        logger.info("Public IP: %s", self._instance.public_ip_address)
+        logger.info("Public IP: %s", self.instance_ip)
 
-    def stop_instance(self, terminate=True):
-        try:
-            self.get_instance_status()
-        except _csp.CSPInstanceException as exception:
-            logger.debug("No instance to stop (%s)", exception)
-            return
+    def _terminate_instance(self):
+        return self._instance.terminate()
 
-        if terminate:
-            response = self._instance.terminate()
-            logger.info("Instance ID %s has been terminated", self._instance_id)
-        else:
-            response = self._instance.stop()
-            logger.info("Instance ID %s has been stopped", self._instance_id)
-
-        logger.debug("Stop response: %s", response)
+    def _pause_instance(self):
+        return self._instance.stop()

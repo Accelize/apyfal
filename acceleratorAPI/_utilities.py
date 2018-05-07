@@ -6,6 +6,7 @@ import json
 import logging
 import logging.handlers
 import os
+import re
 import socket
 import time
 import requests
@@ -54,6 +55,44 @@ def check_url(url, timeout=None, retry_count=0, retry_period=5, logger=None):
     # Set back to default value
     finally:
         socket.setdefaulttimeout(default_timeout)
+
+
+def format_url(url_or_ip):
+    """
+    Check format and format an IP address or URL to URL.
+    If not directly an URL, format it to URL.
+
+    Args:
+        url_or_ip (str): URL or IP address.
+            If None, skip check and return None.
+
+    Returns:
+        str: URL
+
+    Raises:
+        ValueError: Not a proper URL
+    """
+    # Skip if URL is None.
+    if url_or_ip is None:
+        return None
+
+    # From "django.core.validator.URLValidator"
+    url_validator = re.compile(
+        r'^(?:http|ftp)s?://'  # http:// or https://
+        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
+        r'localhost|'  # localhost...
+        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|'  # ...or ipv4
+        r'\[?[A-F0-9]*:[A-F0-9:]+\]?)'  # ...or ipv6
+        r'(?::\d+)?'  # optional port
+        r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+
+    if re.match(url_validator, url_or_ip) is None:
+        # Maybe only an IP, format it to URL and retry
+        url = "http://%s" % url_or_ip
+        if re.match(url_validator, url) is None:
+            raise ValueError("Invalid URL '%s'" % url_or_ip)
+        return url
+    return url_or_ip
 
 
 def https_session(max_retries=2):
@@ -203,7 +242,6 @@ class APILogger(logging.Logger):
         Args:
             level (int): Logger level
         """
-        level = logging.DEBUG
         self._level_request = level
         super(APILogger, self).setLevel(
             level if self.name != self.ref_name else logging.DEBUG)

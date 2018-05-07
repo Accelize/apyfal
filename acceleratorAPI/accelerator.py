@@ -1,6 +1,7 @@
 # coding=utf-8
 """Accelerators"""
 
+import os
 import shutil
 import ast
 import json
@@ -19,26 +20,12 @@ try:
 except ImportError:
     _USE_PYCURL = False
 
-from acceleratorAPI import logger, AcceleratorApiBaseException as _AcceleratorApiBaseException
-from acceleratorAPI import _utilities as _utl
+from acceleratorAPI import logger
+import acceleratorAPI._utilities  as _utl
+import acceleratorAPI.exceptions as _exc
 import acceleratorAPI.configuration as _cfg
 import acceleratorAPI.rest_api.swagger_client as _swc
 
-
-class AcceleratorException(_AcceleratorApiBaseException):
-    """Generic accelerator related exception."""
-
-
-class AcceleratorAuthenticationException(AcceleratorException):
-    """Error while trying to authenticate user."""
-
-
-class AcceleratorConfigurationException(AcceleratorException):
-    """Error with Accelerator configuration."""
-
-
-class AcceleratorRuntimeException(AcceleratorException):
-    """Error with Accelerator running."""
 
 
 class Accelerator(object):
@@ -79,9 +66,12 @@ class Accelerator(object):
 
         # Checks mandatory configuration values
         if self._client_id is None or self._secret_id is None:
-            raise AcceleratorConfigurationException(
+            raise _exc.AcceleratorConfigurationException(
                 "Accelize client ID and secret ID are mandatory. "
                 "Provide them in the configuration file or through function arguments.")
+
+        # Checks if Accelize credentials are valid
+        self._check_accelize_credential()
 
         # A regular API has fixed url. In our case we want to change it dynamically.
         self._api_configuration = _swc.Configuration()
@@ -97,7 +87,7 @@ class Accelerator(object):
     def __del__(self):
         self.stop_accelerator()
 
-    def check_accelize_credential(self):
+    def _check_accelize_credential(self):
         """
         Check user Accelerator credential
 
@@ -109,7 +99,7 @@ class Accelerator(object):
             data={"grant_type": "client_credentials"}, auth=(self.client_id, self.secret_id))
 
         if response.status_code != 200:
-            raise AcceleratorAuthenticationException(
+            raise _exc.AcceleratorAuthenticationException(
                 "Accelize authentication failed (%d): %s" % (response.status_code, response.text))
 
         logger.info("Accelize authentication for '%s' is successful", self._name)
@@ -160,17 +150,19 @@ class Accelerator(object):
 
     @url.setter
     def url(self, url):
-        self._api_configuration.host = url
+        self._api_configuration.host = _utl.format_url(url)
 
     def is_alive(self):
         """
-        Check if accelerator URL is alive.
+        Check if accelerator URL exists.
 
         Raises:
             AcceleratorRuntimeException: If URL not alive
         """
+        if self.url is None:
+            raise _exc.AcceleratorRuntimeException("No accelerator running")
         if not _utl.check_url(self.url, 10, logger=logger):
-            raise AcceleratorRuntimeException("Failed to reach accelerator url: %s" % self.url)
+            raise _exc.AcceleratorRuntimeException("Failed to reach accelerator url: %s" % self.url)
 
     def get_accelerator_requirements(self, provider):
         session = _utl.https_session()
@@ -195,12 +187,12 @@ class Accelerator(object):
 
             # Check configuration with CSP
             if provider not in configuration_accelerator:
-                raise AcceleratorConfigurationException(
+                raise _exc.AcceleratorConfigurationException(
                     "CSP '%s' is not supported. Available CSP are: %s" % (
                         provider, ', '.join(configuration_accelerator.keys())))
 
             if self._name not in configuration_accelerator[provider]:
-                raise AcceleratorConfigurationException(
+                raise _exc.AcceleratorConfigurationException(
                     "Accelerator '%s' is not supported on '%s'." % (self._name, provider))
 
             info = configuration_accelerator[provider][self._name]
@@ -210,7 +202,7 @@ class Accelerator(object):
     def get_accelerator_configuration_list(self):
         # Check URL
         if self.url is None:
-            raise AcceleratorConfigurationException(
+            raise _exc.AcceleratorConfigurationException(
                 "An accelerator url is required to get the list of configurations.")
 
         # Create an instance of the API class
@@ -286,16 +278,30 @@ class Accelerator(object):
 
         api_response_read = api_instance.configuration_read(api_response.id)
         if api_response_read.inerror:
-            raise AcceleratorRuntimeException("Cannot start the configuration %s" % api_response_read.url)
+            raise _exc.AcceleratorRuntimeException("Cannot start the configuration %s" % api_response_read.url)
 
         return config_result
 
     def process_file(self, file_in, file_out, accelerator_parameters=None):
 
+        # Check if configuration was done
         if self._accelerator_configuration_url is None:
-            raise AcceleratorConfigurationException(
+            raise _exc.AcceleratorConfigurationException(
                 "Accelerator has not been configured. Use 'start_accelerator' function.")
 
+        # Checks input file presence
+        if file_in and not os.path.isfile(file_in):
+            raise OSError("Could not find input file: %s", file_in)
+
+        # Checks output directory presence, and creates it if not exists.
+        if file_out:
+            try:
+                os.makedirs(os.path.dirname(file_out))
+            except OSError:
+                if not os.path.isdir(os.path.dirname(file_out)):
+                    raise
+
+        # Configure processing
         if accelerator_parameters is None:
             logger.debug("Using default processing parameters")
             accelerator_parameters = self._process_parameters
@@ -341,7 +347,7 @@ class Accelerator(object):
             logger.debug("pycurl process: %s", content)
             api_response = json.loads(content)
             if 'id' not in api_response:
-                raise AcceleratorRuntimeException(
+                raise _exc.AcceleratorRuntimeException(
                     "Processing failed with no message (host application did not run).")
 
             api_resp_id = api_response['id']
@@ -363,7 +369,7 @@ class Accelerator(object):
                 processed = api_response.processed
 
             if api_response.inerror:
-                raise AcceleratorRuntimeException(
+                raise _exc.AcceleratorRuntimeException(
                     "Failed to process data: %s" % _utl.pretty_dict(api_response.parametersresult))
 
             process_result = ast.literal_eval(api_response.parametersresult)
@@ -383,6 +389,14 @@ class Accelerator(object):
         return process_result
 
     def stop_accelerator(self):
+        try:
+            self.is_alive()
+        except _exc.AcceleratorRuntimeException:
+            # No Accelerator to stop
+            return None
+
+        logger.debug("Stopping accelerator '%s'", self.name)
+
         stop_result = self._rest_api_stop().stop_list()
         self._raise_for_status(stop_result, "Stopping accelerator failed: ")
         return stop_result
@@ -392,9 +406,9 @@ class Accelerator(object):
         try:
             status = api_result['app']['status']
         except KeyError:
-            raise AcceleratorRuntimeException(message + 'No result returned')
+            raise _exc.AcceleratorRuntimeException(message + 'No result returned')
         if status:
-            raise AcceleratorRuntimeException(message + api_result['app']['msg'])
+            raise _exc.AcceleratorRuntimeException(message + api_result['app']['msg'])
 
     def _init_rest_api_class(self, api):
         """

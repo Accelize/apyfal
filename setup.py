@@ -32,13 +32,16 @@ PACKAGE_INFOS = dict(
     },
     license='Apache',
     python_requires='==2.7',
-    install_requires=['setuptools', 'requests', 'pycurl'],
+    install_requires=['setuptools', 'requests'],
     extras_require={
+        # Optional speedup
+        'optional': ['pycurl'],
+
         # CSP specific requirements
         'AWS': ['boto3'],
         'OVH': ['openstack']},
     setup_requires=['pytest', 'sphinx', 'setuptools'],
-    packages=find_packages(exclude=['docs', 'tests', '*.test']),
+    packages=find_packages(exclude=['docs', '*.test']),
     include_package_data=True,
     zip_safe=True,
     command_options={},
@@ -64,7 +67,7 @@ with open(join(SETUP_DIR, 'acceleratorAPI', 'rest_api', 'setup.py')) as source_f
                 literal_eval(line.split('=', 1)[1].strip(" \n")))
             break
 
-# Generate wildcard "all" CSP extras_require
+# Generate wildcard "all" extras_require
 PACKAGE_INFOS['extras_require']['all'] = list(set(
     requirement for extra in PACKAGE_INFOS['extras_require']
     for requirement in PACKAGE_INFOS['extras_require'][extra]
