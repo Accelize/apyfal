@@ -5,7 +5,7 @@ import openstack as _openstack
 import keystoneauth1.exceptions.http as _keystoneauth_exceptions
 
 from acceleratorAPI import logger
-import acceleratorAPI.utilities as _utl
+from acceleratorAPI import _utilities as _utl
 import acceleratorAPI.csp as _csp
 
 
@@ -90,7 +90,7 @@ class OpenStackClass(_csp.CSPGenericClass):
         try:
             self._session.create_security_group_rule(
                 security_group.id, port_range_min=22, port_range_max=22, protocol="tcp", remote_ip_prefix=public_ip,
-                remote_group_id=None, project_id=self._project_id)
+                project_id=self._project_id)
 
         except _openstack.exceptions.SDKException:
             pass
@@ -99,7 +99,7 @@ class OpenStackClass(_csp.CSPGenericClass):
         try:
             self._session.create_security_group_rule(
                 security_group.id, port_range_min=80, port_range_max=80, protocol="tcp", remote_ip_prefix=public_ip,
-                remote_group_id=None, project_id=self._project_id)
+                project_id=self._project_id)
         except _openstack.exceptions.SDKException:
             pass
 
@@ -161,13 +161,13 @@ class OpenStackClass(_csp.CSPGenericClass):
                          self._instance.status)
             return self._instance.status
 
-    def get_instance_url(self):
+    def _get_instance_public_ip(self):
         if self._instance is None:
             raise _csp.CSPInstanceException("No instance found")
 
         for address in self._instance.addresses.values()[0]:
             if address['version'] == 4:
-                return "http://%s" % address['addr']
+                return address['addr']
         raise _csp.CSPInstanceException("No instance address found")
 
     def wait_instance_ready(self):
@@ -188,7 +188,7 @@ class OpenStackClass(_csp.CSPGenericClass):
         # Waiting for the instance to boot
         self._wait_instance_boot()
 
-    def start_new_instance(self):
+    def _start_new_instance(self):
         logger.debug("Starting instance")
 
         self._instance = self._session.compute.create_server(
@@ -210,8 +210,7 @@ class OpenStackClass(_csp.CSPGenericClass):
         logger.info("Using instance ID: %s", self._instance_id)
         return True
 
-    def start_existing_instance(self):
-
+    def _start_existing_instance(self):
         state = self.get_instance_status()
         logger.debug("Status of instance ID %s: %s", self._instance_id, state)
         if state.lower() == "active":
@@ -221,15 +220,9 @@ class OpenStackClass(_csp.CSPGenericClass):
         self._session.start_server(self._instance)
         self.wait_instance_ready()
 
-    def start_instance(self):
-        if self._instance_id is None:
-            self.start_new_instance()
-        else:
-            self.start_existing_instance()
-
+    def _log_instance_info(self):
         logger.info("Region: %s", self._region)
         logger.info("Public IP: %s", self._get_instance_public_ip())
-        logger.info("Your instance is now up and running")
 
     def stop_instance(self, terminate=True):
         try:
@@ -239,8 +232,7 @@ class OpenStackClass(_csp.CSPGenericClass):
             return
 
         if terminate:
-            self._session.delete_server(self._instance)
+            if not self._session.delete_server(self._instance, wait=True):
+                raise _csp.CSPInstanceException('Unable to delete instance.')
             logger.info("Instance ID %s has been terminated", self._instance_id)
-        else:
-            self._session.stop_server(self._instance)
-            logger.info("Instance ID %s has been stopped", self._instance_id)
+        # TODO: terminate=False support, pause instance ?

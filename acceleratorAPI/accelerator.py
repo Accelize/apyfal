@@ -19,14 +19,13 @@ try:
 except ImportError:
     _USE_PYCURL = False
 
-
-from acceleratorAPI import logger, AccceleratorApiBaseException as _AccceleratorApiBaseException
-import acceleratorAPI.utilities as _utl
+from acceleratorAPI import logger, AcceleratorApiBaseException as _AcceleratorApiBaseException
+from acceleratorAPI import _utilities as _utl
 import acceleratorAPI.configuration as _cfg
 import acceleratorAPI.rest_api.swagger_client as _swc
 
 
-class AcceleratorException(_AccceleratorApiBaseException):
+class AcceleratorException(_AcceleratorApiBaseException):
     """Generic accelerator related exception."""
 
 
@@ -320,7 +319,7 @@ class Accelerator(object):
                 storage = _StringIO()
                 curl = pycurl.Curl()
                 curl.setopt(curl.WRITEFUNCTION, storage.write)
-                curl.setopt(curl.URL, "%s/v1.0/process/" % self.url)
+                curl.setopt(curl.URL, str("%s/v1.0/process/" % self.url))
                 curl.setopt(curl.POST, 1)
                 curl.setopt(curl.HTTPPOST, post)
                 curl.setopt(curl.HTTPHEADER, ['Content-Type: multipart/form-data'])

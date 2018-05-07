@@ -26,26 +26,27 @@ def check_url(url, timeout=None, retry_count=0, retry_period=5, logger=None):
         bool: True if success, False elsewhere
     """
     if not url:
-        raise ValueError('No URL to check')
+        return False
     default_timeout = socket.getdefaulttimeout()
     miss_count = 0
     try:
         if timeout is not None:
             socket.setdefaulttimeout(timeout)  # timeout in seconds
         while miss_count <= retry_count:
+            if logger:
+                logger.debug("Check URL server: %s...", url)
             try:
-                if logger:
-                    logger.debug("Check URL server: %s...", url)
                 status_code = requests.get(url).status_code
+            except requests.RequestException as exception:
+                if logger:
+                    logger.debug("... miss: %s", exception)
+                miss_count += 1
+                time.sleep(retry_period)
+            else:
                 if status_code == 200:
                     if logger:
                         logger.debug("... hit!")
                     return True
-            except Exception:
-                if logger:
-                    logger.debug("... miss")
-                miss_count += 1
-                time.sleep(retry_period)
         if logger:
             logger.error("Cannot reach url '%s' after %d attempts", url, retry_count)
         return False
@@ -202,6 +203,7 @@ class APILogger(logging.Logger):
         Args:
             level (int): Logger level
         """
+        level = logging.DEBUG
         self._level_request = level
         super(APILogger, self).setLevel(
             level if self.name != self.ref_name else logging.DEBUG)

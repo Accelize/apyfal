@@ -9,7 +9,7 @@ import boto3 as _boto3
 import botocore.exceptions as _boto_exceptions
 
 from acceleratorAPI import logger
-import acceleratorAPI.utilities as _utl
+from acceleratorAPI import _utilities as _utl
 import acceleratorAPI.csp as _csp
 
 
@@ -280,12 +280,12 @@ class AWSClass(_csp.CSPGenericClass):
         self._attach_role_policy(policy_arn)
         self.security_group()
 
-    def get_instance_url(self):
+    def _get_instance_public_ip(self):
         if self._instance is None:
             raise _csp.CSPInstanceException("No instance found")
 
         try:
-            return "http://%s" % self._instance.public_ip_address
+            return self._instance.public_ip_address
         except _boto_exceptions.ClientError as exception:
             raise _csp.CSPInstanceException("Could not return instance URL ('%s')" % exception)
 
@@ -303,7 +303,7 @@ class AWSClass(_csp.CSPGenericClass):
         # Waiting for the instance to boot
         self._wait_instance_boot()
 
-    def start_new_instance(self):
+    def _start_new_instance(self):
         logger.debug("Starting instance")
         ec2_resource = self._session.resource('ec2')
         instance = ec2_resource.create_instances(
@@ -339,7 +339,7 @@ class AWSClass(_csp.CSPGenericClass):
         logger.info("Using instance ID: %s", self._instance_id)
         return True
 
-    def start_existing_instance(self):
+    def _start_existing_instance(self):
         state = self.get_instance_status()
         if state == "stopped":
             response = self._instance.start()
@@ -352,16 +352,10 @@ class AWSClass(_csp.CSPGenericClass):
 
         self.wait_instance_ready()
 
-    def start_instance(self):
-        if self._instance_id is None:
-            self.start_new_instance()
-        else:
-            self.start_existing_instance()
-
+    def _log_instance_info(self):
         logger.info("Region: %s", self._session.region_name)
         logger.info("Private IP: %s", self._instance.private_ip_address)
         logger.info("Public IP: %s", self._instance.public_ip_address)
-        logger.info("Your instance is now up and running")
 
     def stop_instance(self, terminate=True):
         try:

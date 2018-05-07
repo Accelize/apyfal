@@ -9,12 +9,12 @@ except ImportError:
     from abc import ABCMeta, abstractmethod
     ABC = ABCMeta('ABC', (object,), {})
 
-from acceleratorAPI import logger, AccceleratorApiBaseException as _AccceleratorApiBaseException
+from acceleratorAPI import logger, AcceleratorApiBaseException as _AcceleratorApiBaseException
 import acceleratorAPI.configuration as _cfg
-import acceleratorAPI.utilities as _utl
+import acceleratorAPI._utilities as _utl
 
 
-class CSPException(_AccceleratorApiBaseException):
+class CSPException(_AcceleratorApiBaseException):
     """Generic CSP related exception"""
 
 
@@ -161,7 +161,7 @@ class CSPGenericClass(ABC):
         """"""
 
     @abstractmethod
-    def get_instance_url(self):
+    def _get_instance_public_ip(self):
         """"""
 
     @abstractmethod
@@ -169,7 +169,7 @@ class CSPGenericClass(ABC):
         """"""
 
     @abstractmethod
-    def start_new_instance(self):
+    def _start_new_instance(self):
         """"""
 
     @abstractmethod
@@ -177,16 +177,27 @@ class CSPGenericClass(ABC):
         """"""
 
     @abstractmethod
-    def start_existing_instance(self):
+    def _start_existing_instance(self):
         """"""
-
     @abstractmethod
-    def start_instance(self):
+    def _log_instance_info(self):
         """"""
 
     @abstractmethod
     def stop_instance(self, terminate=True):
         """"""
+
+    def start_instance(self):
+        if self._instance_id is None:
+            self._start_new_instance()
+        else:
+            self._start_existing_instance()
+
+        self._log_instance_info()
+        logger.info("Your instance is now up and running")
+
+    def get_instance_url(self):
+        return "http://%s" % self._get_instance_public_ip()
 
     def _get_region_parameters(self, accel_parameters):
         # Check if region is valid

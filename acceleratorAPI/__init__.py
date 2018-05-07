@@ -6,18 +6,18 @@ __version__ = "2.0.3"
 import json
 import os
 import socket
-import acceleratorAPI.utilities as _utl
+from acceleratorAPI import _utilities as _utl
 
 # Initialize logger
 logger = _utl.init_logger("acceleratorAPI", __file__)
 
 
 # Create base exception class
-class AccceleratorApiBaseException(Exception):
+class AcceleratorApiBaseException(Exception):
     """Base exception for acceleratorAPI exceptions"""
 
 
-# Not imported on top since need AccceleratorApiBaseException
+# Not imported on top since need AcceleratorApiBaseException
 import acceleratorAPI.csp as _csp
 import acceleratorAPI.accelerator as _acc
 import acceleratorAPI.configuration as _cfg
@@ -63,7 +63,7 @@ class _SignalHandlerAccelerator(object):
             if hasattr(signal, signal_name):
                 signal.signal(getattr(signal, signal_name), self.signal_handler_accelerator)
 
-    def signal_handler_accelerator(self, _signo="", _stack_frame="", exit=True):
+    def signal_handler_accelerator(self, _signo="", _stack_frame="", exit_interpreter=True):
         """
         Try to stop all instances running or inform user.
 
@@ -87,7 +87,7 @@ class _SignalHandlerAccelerator(object):
                 self._csp.stop_instance(terminate)
         finally:
             logger.info("More detailed messages can be found in %s", logger.filename)
-            if exit:
+            if exit_interpreter:
                 socket.setdefaulttimeout(self._default_socket_timeout)
                 logger.info("Accelerator API Closed properly")
                 os._exit(0)
@@ -115,7 +115,7 @@ class AcceleratorClass(object):
             convenience and does not cover all exit case like process kill and
             may not work on every OS.
     """
-    def __init__(self, accelerator, config_file=None, provider=None,
+    def __init__(self, accelerator_name, config_file=None, provider=None,
                  region=None, xlz_client_id=None, xlz_secret_id=None, csp_client_id=None,
                  csp_secret_id=None, ssh_key=None, instance_id=None, instance_ip=None,
                  exit_instance_on_signal=True):
@@ -133,7 +133,7 @@ class AcceleratorClass(object):
             ssh_key=ssh_key, instance_id=instance_id, instance_url=instance_url)
 
         # Handle CSP instance stop
-        self._stop_mode = config.get_default("csp", "stop_mode", default=TERM)
+        self._stop_mode = int(config.get_default("csp", "stop_mode", default=TERM))
         if exit_instance_on_signal:
             self._sign_handler = _SignalHandlerAccelerator(self)
         else:
@@ -141,7 +141,7 @@ class AcceleratorClass(object):
 
         # Create Accelerator object
         self._accelerator = _acc.Accelerator(
-            accelerator, client_id=xlz_client_id, secret_id=xlz_secret_id, config=config)
+            accelerator_name, client_id=xlz_client_id, secret_id=xlz_secret_id, config=config)
 
         # Checking if credentials are valid otherwise no sense to continue
         self._accelerator.check_accelize_credential()
