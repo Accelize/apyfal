@@ -13,24 +13,10 @@ import acceleratorAPI.csp as _csp
 class OpenStackClass(_csp.CSPGenericClass):
 
     def __init__(self, **kwargs):
-        super(OpenStackClass, self).__init__(**kwargs)
+        _csp.CSPGenericClass.__init__(self, **kwargs)
 
         # Checks mandatory configuration values
-        if self._project_id is None:
-            raise _exc.CSPConfigurationException(
-                "No 'project_id' has been specified for %s" % self._provider)
-
-        if self._auth_url is None:
-            raise _exc.CSPConfigurationException(
-                "No 'auth_url' has been specified for %s" % self._provider)
-
-        if self._interface is None:
-            raise _exc.CSPConfigurationException(
-                "No 'interface' has been specified for %s" % self._provider)
-
-        # Initialize variables
-        self._instance_url = None
-        self._instance_type = None
+        self._check_arguments('project_id', 'auth_url', 'interface')
 
         # Load session
         self._session = _openstack.connection.Connection(
@@ -45,8 +31,6 @@ class OpenStackClass(_csp.CSPGenericClass):
             identity_interface=self._interface
         )
         logger.debug("Connection object created for CSP '%s'", self._provider)
-
-        self.check_credential()
 
     def check_credential(self):
         try:
@@ -71,7 +55,7 @@ class OpenStackClass(_csp.CSPGenericClass):
 
         _utl.create_ssh_key_file(self._ssh_key, key_pair.private_key)
 
-    def security_group(self):
+    def _init_security_group(self):
         logger.debug("Create or check if security group '%s' exists", self._security_group)
 
         # Create security group if not exists
@@ -108,29 +92,26 @@ class OpenStackClass(_csp.CSPGenericClass):
 
     def _create_instance(self):
         self._init_ssh_key()
-        self.security_group()
+        self._init_security_group()
 
-    def set_accelerator_requirements(self, accel_parameters):
-        # Get parameters for region
-        accel_parameters_in_region = self._get_region_parameters(accel_parameters)
-
+    def _read_accelerator_parameters(self, accel_parameters_in_region):
         # Get image
-        self._image_id = accel_parameters_in_region['image']
+        image_id = accel_parameters_in_region['image']
         try:
-            image = self._session.compute.find_image(self._image_id)
+            image = self._session.compute.find_image(image_id)
         except _openstack.exceptions.ResourceNotFound:
             raise _exc.CSPConfigurationException(
                 ("Failed to get image information for CSP '%s':\n"
                  "The image '%s' is not available on your CSP account. "
                  "Please contact Accelize.") %
-                (self._provider, self._image_id))
+                (self._provider, image_id))
         else:
-            logger.debug("Set image '%s' with ID %s", image.name, self._image_id)
+            logger.debug("Set image '%s' with ID %s", image.name, image_id)
 
         # Get flavor
         flavor_name = accel_parameters_in_region['instancetype']
         try:
-            self._instance_type = self._session.compute.find_flavor(flavor_name).id
+            instance_type = self._session.compute.find_flavor(flavor_name).id
         except _openstack.exceptions.ResourceNotFound:
             raise _exc.CSPConfigurationException(
                 ("Failed to get flavor information for CSP '%s':\n"
@@ -138,26 +119,22 @@ class OpenStackClass(_csp.CSPGenericClass):
                  "Please contact you CSP to subscribe to this flavor.") %
                 (self._provider, flavor_name))
         else:
-            logger.debug("Set flavor '%s' with ID %s", flavor_name, self._instance_type)
+            logger.debug("Set flavor '%s' with ID %s", flavor_name, instance_type)
 
-    def get_configuration_env(self, **kwargs):
-        return self._config_env
+        return image_id, instance_type, self._config_env
 
-    def _get_instance_status(self):
+    def _get_instance(self):
         # Try to find instance
         try:
-            self._instance = self._session.get_server(self._instance_id)
+            return self._session.get_server(self._instance_id)
 
         # Instance not found
         except _openstack.exceptions.SDKException as exception:
             raise _exc.CSPInstanceException(
                 "Could not find an instance with ID '%s' (%s)", self._instance_id, exception)
 
-        # Instance is alive
-        else:
-            logger.debug("Found an instance with ID %s in the following state: %s", self._instance_id,
-                         self._instance.status)
-            return self._instance.status
+    def _get_instance_status(self):
+        return self._instance.status
 
     def _get_instance_public_ip(self):
         for address in self._instance.addresses.values()[0]:

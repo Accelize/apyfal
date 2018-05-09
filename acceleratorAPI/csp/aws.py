@@ -17,12 +17,10 @@ import acceleratorAPI.csp as _csp
 class AWSClass(_csp.CSPGenericClass):
 
     def __init__(self, **kwargs):
-        super(AWSClass, self).__init__(**kwargs)
+        _csp.CSPGenericClass.__init__(self, **kwargs)
 
         # Checks mandatory configuration values
-        if self._role is None:
-            raise _exc.CSPConfigurationException(
-                "No 'role' has been specified for %s" % self._provider)
+        self._check_arguments('role')
 
         # Load session
         self._session = _boto3.session.Session(
@@ -180,7 +178,7 @@ class AWSClass(_csp.CSPGenericClass):
             logger.debug("Instance profile: %s", instance_profile)
             logger.info("Instance profile %s created", instance_profile_name)
 
-    def security_group(self):
+    def _init_security_group(self):
         logger.debug("Create or Check if security group '%s' exists.",
                      self._security_group)
 
@@ -229,9 +227,10 @@ class AWSClass(_csp.CSPGenericClass):
             logger.info("Added in security group '%s': SSH and HTTP for IP %s.",
                         self._security_group, public_ip)
 
-    def _get_instance_status(self):
-        self._instance = self._session.resource('ec2').Instance(self._instance_id)
+    def _get_instance(self):
+        return self._session.resource('ec2').Instance(self._instance_id)
 
+    def _get_instance_status(self):
         try:
             instance_state = self._instance.state
         except _boto_exceptions.ClientError as exception:
@@ -240,22 +239,17 @@ class AWSClass(_csp.CSPGenericClass):
         else:
             logger.debug("Found an instance with ID %s in the following state: %s",
                          self._instance_id, instance_state)
-
         return instance_state["Name"]
 
-    def set_accelerator_requirements(self, accel_parameters):
-        # Get parameters for region
-        accel_parameters_in_region = self._get_region_parameters(accel_parameters)
+    def _read_accelerator_parameters(self, accel_parameters_in_region):
+        config_env = {'AGFI': accel_parameters_in_region['fpgaimage']}
+        image_id = accel_parameters_in_region['image']
+        instance_type = accel_parameters_in_region['instancetype']
 
-        # Set parameters
-        self._config_env = {'AGFI': accel_parameters_in_region['fpgaimage']}
-        self._image_id = accel_parameters_in_region['image']
-        self._instance_type = accel_parameters_in_region['instancetype']
+        logger.debug("Set image ID: %s", image_id)
+        logger.debug("Set instance type: %s", instance_type)
 
-        logger.debug("Set image ID: %s", self._image_id)
-        logger.debug("Set instance type: %s", self._instance_type)
-
-        return True
+        return image_id, instance_type, config_env
 
     def get_configuration_env(self, **kwargs):
         currenv = copy.deepcopy(self._config_env)
@@ -275,7 +269,7 @@ class AWSClass(_csp.CSPGenericClass):
         self._init_role()
         self._init_instance_profile()
         self._attach_role_policy(policy_arn)
-        self.security_group()
+        self._init_security_group()
 
     def _get_instance_public_ip(self):
         try:
@@ -288,7 +282,7 @@ class AWSClass(_csp.CSPGenericClass):
         logger.info("Waiting for the instance provisioning on %s...", self._provider)
         while True:
             # Get instance status
-            status = self.get_instance_status()
+            status = self.instance_status()
             logger.debug("Instance status: %s", status)
             if status == "running":
                 break

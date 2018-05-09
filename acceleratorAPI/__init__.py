@@ -62,7 +62,7 @@ class AcceleratorClass(object):
 
         # Check CSP ID if provided
         if instance_id:
-            self._csp.get_instance_status()
+            self._csp.instance_status()
             self._accelerator.url = self._csp.instance_url
 
         # Set CSP URL if provided

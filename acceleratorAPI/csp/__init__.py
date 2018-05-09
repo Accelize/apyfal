@@ -41,11 +41,13 @@ class CSPGenericClass(ABC):
         auth_url:
         interface:
         role:
+        stop_mode (int): Define the "stop_instance" method behavior. See "stop_mode"
+            property for more information and possible values.
         exit_instance_on_signal (bool): If True, exit CSP instances
             on OS exit signals. This may help to not have instance still running
-            if accelerator is not exited properly. Note: this is provided for
+            if Python interpreter is not exited properly. Note: this is provided for
             convenience and does not cover all exit case like process kill and
-            may not work on every OS.
+            may not work on all OS.
     """
     STOP_MODES = {
         TERM: "TERM",
@@ -72,48 +74,57 @@ class CSPGenericClass(ABC):
 
         else:
             raise _exc.CSPConfigurationException(
-                "Cannot instantiate a CSP class with this '%s' provider" % provider)
+                "Cannot instantiate a CSP class for '%s' provider" % provider)
 
     def __init__(self, provider=None, config=None, client_id=None, secret_id=None, region=None,
                  instance_type=None, ssh_key=None, security_group=None, instance_id=None,
                  instance_url=None, project_id=None, auth_url=None, interface=None, role=None,
-                 exit_instance_on_signal=True, stop_mode=None):
+                 stop_mode=None, exit_instance_on_signal=True):
 
         # Read configuration from file
         self._config = _cfg.create_configuration(config)
         self._provider = self._provider_from_config(provider, config)
 
-        self._client_id = config.get_default('csp', 'client_id', overwrite=client_id)
-        self._secret_id = config.get_default('csp', 'secret_id', overwrite=secret_id)
-        self._region = config.get_default('csp', 'region', overwrite=region)
-        self._instance_type = config.get_default('csp', 'instance_type', overwrite=instance_type)
-        self._ssh_key = config.get_default('csp', 'ssh_key', overwrite=ssh_key, default="MySSHKey")
-        self._security_group = config.get_default('csp', 'security_group', overwrite=security_group,
-                                                  default="MySecurityGroup")
-        self._instance_id = config.get_default('csp', 'instance_id', overwrite=instance_id)
+        self._client_id = config.get_default(
+            'csp', 'client_id', overwrite=client_id)
+        self._secret_id = config.get_default(
+            'csp', 'secret_id', overwrite=secret_id)
+        self._region = config.get_default(
+            'csp', 'region', overwrite=region)
+        self._instance_type = config.get_default(
+            'csp', 'instance_type', overwrite=instance_type)
+        self._ssh_key = config.get_default(
+            'csp', 'ssh_key', overwrite=ssh_key, default="MySSHKey")
+        self._security_group = config.get_default(
+            'csp', 'security_group', overwrite=security_group, default="MySecurityGroup")
+        self._instance_id = config.get_default(
+            'csp', 'instance_id', overwrite=instance_id)
         self._instance_url = config.get_default(
             'csp', 'instance_url', overwrite=_utl.format_url(instance_url))
+        self._role = config.get_default(
+            'csp', 'role', overwrite=role)
+        self._project_id = config.get_default(
+            'csp', 'project_id', overwrite=project_id)
+        self._auth_url = config.get_default(
+            'csp', 'auth_url', overwrite=auth_url)
+        self._interface = config.get_default(
+            'csp', 'interface', overwrite=interface)
+        self.stop_mode = config.get_default(
+            "csp", "stop_mode", overwrite=stop_mode, default=TERM)
 
-        self._role = config.get_default('csp', 'role', overwrite=role)
+        # Checks mandatory configuration values
+        self._check_arguments('client_id', 'secret_id', 'region')
 
-        self._project_id = config.get_default('csp', 'project_id', overwrite=project_id)
-        self._auth_url = config.get_default('csp', 'auth_url', overwrite=auth_url)
-        self._interface = config.get_default('csp', 'interface', overwrite=interface)
-
-        self._stop_mode = int(config.get_default("csp", "stop_mode", overwrite=stop_mode, default=TERM))
-
-        # Default some subclass required attributes
+        # Default some required attributes
         self._session = None
         self._instance = None
         self._config_env = {}
         self._image_id = None
+        self._instance_type = None
         self._accelerator = None
 
-        self._ssh_dir_cache = None
-
         # Enable optional Signal handler
-        if exit_instance_on_signal:
-            self._set_signals()
+        self._set_signals(exit_instance_on_signal)
 
     def __str__(self):
         return ', '.join("%s:%s" % item for item in vars(self).items())
@@ -129,34 +140,88 @@ class CSPGenericClass(ABC):
 
     @property
     def provider(self):
+        """
+        Cloud Service Provider
+
+        Returns:
+            str: CSP name
+        """
         return self._provider
 
     @property
-    def instance_url(self):
-        return self._instance_url
-
-    @property
     def instance_ip(self):
+        """
+        Public IP of the current instance.
+
+        Returns:
+            str: IP address
+
+        Raises:
+            acceleratorAPI.exceptions.CSPInstanceException:
+                Notes instance from which get IP.
+        """
         if self._instance is None:
             raise _exc.CSPInstanceException("No instance found")
         return self._get_instance_public_ip()
 
+    @abstractmethod
+    def _get_instance_public_ip(self):
+        """
+        Read current instance public IP from CSP instance.
+
+        Returns:
+            str: IP address
+        """
+
+    @property
+    def instance_url(self):
+        """
+        Public URL of the current instance.
+
+        Returns:
+            str: URL
+        """
+        return self._instance_url
+
     @property
     def instance_id(self):
+        """
+        ID of the current instance.
+
+        Returns:
+            str: ID
+        """
         return self._instance_id
 
     @property
     def stop_mode(self):
         """
-        Stop mode
+        Define the "stop_instance" method behavior.
+
+        Possible values ares:
+            0: TERM, terminate and delete instance.
+            1: STOP, stop and pause instance.
+            2: KEEP, let instance running.
+
+        "stop_instance" can be called manually but is also called when:
+            - "with" exit if class is used as context manager.
+            - On CSP object deletion by garbage collector.
+            - On OS signals if "exit_instance_on_signal" was set to True
+              on class instantiation.
 
         Returns:
-            int: stop mode
+            int: stop mode.
         """
         return self._stop_mode
 
     @stop_mode.setter
     def stop_mode(self, stop_mode):
+        """
+        Set stop_mode.
+
+        Args:
+            stop_mode (int): stop mode value to set
+        """
         if stop_mode is None:
             return
 
@@ -176,38 +241,146 @@ class CSPGenericClass(ABC):
 
     @abstractmethod
     def check_credential(self):
-        """"""
+        """
+        Check CSP credentials.
 
-    @abstractmethod
-    def security_group(self):
-        """"""
+        Raises:
+            acceleratorAPI.exceptions.CSPAuthenticationException:
+                Authentication failed.
+        """
 
-    def get_instance_status(self):
-        """"""
+    def instance_status(self):
+        """
+        Returns current status of current instance.
+
+        Returns:
+            str: Status
+
+        Raises:
+            acceleratorAPI.exceptions.CSPInstanceException:
+                No instance from which get status.
+        """
         if self._instance_id is None:
             raise _exc.CSPInstanceException("No instance ID provided")
+
+        # Update instance
+        self._instance = self._get_instance()
+
+        # Read instance status
         return self._get_instance_status()
 
     @abstractmethod
-    def set_accelerator_requirements(self, accel_parameters):
-        """"""
+    def _get_instance_status(self):
+        """
+        Returns current status of current instance.
+
+        Returns:
+            str: Status
+        """
 
     @abstractmethod
-    def get_configuration_env(self, **kwargs):
-        """"""
+    def _get_instance(self):
+        """
+        Returns current instance.
 
-    def is_instance_id_valid(self):
-        try:
-            self.get_instance_status()
-        except _exc.CSPInstanceException:
-            logger.error("Could not find a instance with ID '%s' (%s)",
-                         self._instance_id)
-            return False
-        logger.info("Using instance ID: %s", self._instance_id)
-        return True
+        Returns:
+            object: Instance
+        """
+
+    def start_instance(self):
+        """
+        Start instance if not already started. Create instance if necessary.
+        """
+        # Starts instance only if not already started
+        if self.instance_url is None:
+
+            # Checks CSP credential
+            self.check_credential()
+
+            # Creates and starts instance if not exists
+            if self.instance_id is None:
+                self._create_instance()
+
+                logger.debug("Starting instance")
+                self._instance, self._instance_id = self._start_new_instance()
+                logger.info("Created instance ID: %s", self._instance_id)
+
+            # If exists, starts it directly
+            else:
+                state = self.instance_status()
+                self._start_existing_instance(state)
+
+            # Waiting for instance provisioning
+            self._wait_instance_ready()
+
+            # Update instance URL
+            self._instance_url = _utl.format_url(self.instance_ip)
+
+            # Waiting for the instance to boot
+            self._wait_instance_boot()
+
+        self._log_instance_info()
+        logger.info("Your instance is now up and running")
+
+    @abstractmethod
+    def _create_instance(self):
+        """
+        Initialize and create instance.
+        """
+
+    @abstractmethod
+    def _start_new_instance(self):
+        """
+        Start a new instance.
+
+        Returns:
+            object: Instance
+            str: Instance ID
+        """
+
+    @abstractmethod
+    def _start_existing_instance(self, state):
+        """
+        Start a existing instance.
+
+        Args:
+            state (str): Status of the instance.
+        """
+
+    @abstractmethod
+    def _wait_instance_ready(self):
+        """
+        Wait until instance is ready.
+        """
+
+    def _wait_instance_boot(self):
+        """Wait until instance has booted
+
+        Raises:
+            acceleratorAPI.exceptions.CSPInstanceException:
+                Timeout while booting."""
+        logger.info("Instance is now booting...")
+        # Check URL with 6 minutes timeout
+        if not _utl.check_url(self._instance_url, timeout=1,
+                              retry_count=72, logger=logger):
+            raise _exc.CSPInstanceException("Timed out while waiting CSP instance to boot.")
+
+        logger.info("Instance booted!")
+
+    @abstractmethod
+    def _log_instance_info(self):
+        """
+        Print some instance information in logger.
+        """
 
     def stop_instance(self, stop_mode=None):
-        """"""
+        """
+        Stop instance accordingly with the current stop_mode.
+        See "stop_mode" property for more information.
+
+        Args:
+            stop_mode (int): If not None, override current "stop_mode" value.
+        """
         if stop_mode is None:
             stop_mode = self._stop_mode
 
@@ -222,7 +395,7 @@ class CSPGenericClass(ABC):
 
         # Checks if instance to stop
         try:
-            self.get_instance_status()
+            self.instance_status()
         except _exc.CSPInstanceException as exception:
             logger.debug("No instance to stop (%s)", exception)
             return
@@ -242,78 +415,30 @@ class CSPGenericClass(ABC):
         if response is not None:
             logger.debug("Stop response: %s", response)
 
-    def start_instance(self):
-        # Starts instance only if not already started
-        if self.instance_url is None:
-
-            # Checks CSP credential
-            self.check_credential()
-
-            # Creates and starts instance if not exists
-            if self.instance_id is None:
-                self._create_instance()
-
-                logger.debug("Starting instance")
-                self._instance, self._instance_id = self._start_new_instance()
-                logger.info("Created instance ID: %s", self._instance_id)
-
-            # If exists, starts it directly
-            else:
-                state = self.get_instance_status()
-                self._start_existing_instance(state)
-
-            # Waiting for instance provisioning
-            self._wait_instance_ready()
-
-            # Waiting for the instance to boot
-            self._wait_instance_boot()
-
-        self._log_instance_info()
-        logger.info("Your instance is now up and running")
-
-    @abstractmethod
-    def _init_ssh_key(self):
-        """"""
-    @abstractmethod
-    def _create_instance(self):
-        """"""
-
-    @abstractmethod
-    def _get_instance_public_ip(self):
-        """"""
-
-    @abstractmethod
-    def _get_instance_status(self):
-        """"""
-
-    @abstractmethod
-    def _start_new_instance(self):
-        """"""
-
-    @abstractmethod
-    def _start_existing_instance(self):
-        """"""
-
-    @abstractmethod
-    def _log_instance_info(self):
-        """"""
-
     @abstractmethod
     def _terminate_instance(self):
-        """"""
+        """
+        Terminate and delete instance.
+        """
 
     @abstractmethod
     def _pause_instance(self):
-        """"""
+        """
+        Pause instance.
+        """
 
-    @abstractmethod
-    def _wait_instance_ready(self):
-        """"""
+    def set_accelerator_requirements(self, accel_parameters):
+        """
+        Configure instance with accelerator parameters.
 
-    def _update_instance_url(self):
-        self._instance_url = _utl.format_url(self.instance_ip)
+        Args:
+            accel_parameters (dict): Result from
+                acceleratorAPI.accelerator.Accelerator.get_accelerator_requirements.
 
-    def _get_region_parameters(self, accel_parameters):
+        Raises:
+            acceleratorAPI.exceptions.CSPConfigurationException:
+                Parameters are not valid..
+        """
         # Check if region is valid
         if self._region not in accel_parameters.keys():
             raise _exc.CSPConfigurationException(
@@ -323,32 +448,71 @@ class CSPGenericClass(ABC):
         # Get accelerator name
         self._accelerator = accel_parameters['accelerator']
 
-        # Get parameters for current region
-        return accel_parameters[self._region]
+        # Set parameters for current region
+        self._image_id, self._instance_type, self._config_env = self._read_accelerator_parameters(
+            accel_parameters[self._region])
 
-    def _wait_instance_boot(self):
-        logger.info("Instance is now booting...")
+    @abstractmethod
+    def _read_accelerator_parameters(self, accel_parameters_in_region):
+        """
+        Read accelerator parameters and get information required
+        to configure CSP instance accordingly.
 
-        # Check URL with 6 minutes timeout
-        self._update_instance_url()
-        if not _utl.check_url(self._instance_url, timeout=1,
-                              retry_count=72, logger=logger):
-            raise _exc.CSPInstanceException("Timed out while waiting CSP instance to boot.")
+        Args:
+            accel_parameters_in_region (dict): Accelerator parameters
+                for the current CSP region.
 
-        logger.info("Instance booted!")
+        Returns:
+            str: image_id
+            str: instance_type
+            dict: config_env
+        """
+
+    def get_configuration_env(self, **kwargs):
+        """
+        Return environment to pass to
+        "acceleratorAPI.accelerator.Accelerator.start_accelerator"
+        "csp_env" argument.
+
+        Args:
+            kwargs:
+
+        Returns:
+            dict: Configuration environment.
+        """
+        return self._config_env
 
     @staticmethod
     def _provider_from_config(provider, config):
+        """
+        Get CSP provider from configuration.
+
+        Args:
+            provider (str): Override result if not None.
+            config (acceleratorAPI.configuration.Configuration): Configuration.
+
+        Returns:
+            str: CSP provider.
+
+        Raises:
+            acceleratorAPI.exceptions.CSPConfigurationException: No provider found.
+        """
         provider = config.get_default("csp", "provider", overwrite=provider)
         if provider is None:
             raise _exc.CSPConfigurationException("No CSP provider defined.")
         return provider
 
-    def _set_signals(self):
+    def _set_signals(self, exit_instance_on_signal=True):
         """
         Set a list of interrupt signals to be handled asynchronously to emergency stop
         instance in case of unexpected exit.
+
+        Args:
+            exit_instance_on_signal (bool): If True, enable stop on signals.
         """
+        if not exit_instance_on_signal:
+            return
+
         # Lazy import since optional feature
         import signal
 
@@ -356,3 +520,19 @@ class CSPGenericClass(ABC):
             # Check signal exist on current OS before setting it
             if hasattr(signal, signal_name):
                 signal.signal(getattr(signal, signal_name), self.stop_instance)
+
+    def _check_arguments(self, *arg_name):
+        """
+        Check in attributes if arguments are set.
+
+        Args:
+            arg_name (str): Argument names to check.
+
+        Raises:
+            acceleratorAPI.exceptions.CSPConfigurationException:
+                A specified argument is None.
+        """
+        for name in arg_name:
+            if getattr(self, '_%s' % name) is None:
+                raise _exc.CSPConfigurationException(
+                    "Parameter '%s' is required %s" % (name, self._provider))
