@@ -4,6 +4,13 @@
 
 class AcceleratorApiBaseException(Exception):
     """Base exception for acceleratorAPI exceptions"""
+    DEFAULT_MESSAGE = ""
+
+    def __init__(self, *args, **kwargs):
+        # Set default message if nothing passed as argument.
+        if not args and self.DEFAULT_MESSAGE:
+            args = (self.DEFAULT_MESSAGE, )
+        Exception.__init__(self, *args, **kwargs)
 
 
 class AcceleratorException(AcceleratorApiBaseException):
@@ -11,7 +18,7 @@ class AcceleratorException(AcceleratorApiBaseException):
 
 
 class AcceleratorAuthenticationException(AcceleratorException):
-    """Error while trying to authenticate user."""
+    """Error while trying to authenticate user on Accelize server."""
 
 
 class AcceleratorConfigurationException(AcceleratorException):
@@ -31,7 +38,8 @@ class CSPInstanceException(CSPException):
 
 
 class CSPAuthenticationException(CSPException):
-    """Error while trying to authenticate user."""
+    """Error while trying to authenticate user on CSP."""
+    DEFAULT_MESSAGE = "Failed to authenticate with your CSP access key."
 
 
 class CSPConfigurationException(CSPException):

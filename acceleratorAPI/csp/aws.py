@@ -42,7 +42,7 @@ class AWSClass(_csp.CSPGenericClass):
             response = ec2_client.describe_key_pairs()
         except ec2_client.exceptions.ClientError as exception:
             logger.debug(str(exception))
-            raise _exc.CSPAuthenticationException("Failed to authenticate with your CSP access key.")
+            raise _exc.CSPAuthenticationException()
         logger.debug("Response of 'describe_key_pairs': %s", response)
 
     def _init_ssh_key(self):

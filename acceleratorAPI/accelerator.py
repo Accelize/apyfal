@@ -406,7 +406,7 @@ class Accelerator(object):
         try:
             status = api_result['app']['status']
         except KeyError:
-            raise _exc.AcceleratorRuntimeException(message + 'No result returned')
+            raise _exc.AcceleratorRuntimeException('%sNo result returned' % message)
         if status:
             raise _exc.AcceleratorRuntimeException(message + api_result['app']['msg'])
 

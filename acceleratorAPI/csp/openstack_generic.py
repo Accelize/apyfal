@@ -43,7 +43,7 @@ class OpenStackClass(_csp.CSPGenericClass):
         try:
             list(self._session.network.networks())
         except _keystoneauth_exceptions.Unauthorized:
-            raise _exc.CSPAuthenticationException("Failed to authenticate with your CSP access key.")
+            raise _exc.CSPAuthenticationException()
 
     def _init_ssh_key(self):
         """
@@ -201,7 +201,7 @@ class OpenStackClass(_csp.CSPGenericClass):
             raise _exc.CSPInstanceException("Instance exception: %s", exception)
 
         # Check instance status
-        state = self._instance.status
+        state = self._get_instance_status()
         logger.debug("Instance status: %s", state)
         if state.lower() == "error":
             self.stop_instance()
@@ -229,11 +229,10 @@ class OpenStackClass(_csp.CSPGenericClass):
             state (str): Status of the instance.
         """
         logger.debug("Status of instance ID %s: %s", self._instance_id, state)
-        if state.lower() == "active":
+        if state.lower() != "active":
+            self._session.start_server(self._instance)
+        else:
             logger.debug("Instance ID %s is already in '%s' state.", self._instance_id, state)
-            return
-
-        self._session.start_server(self._instance)
 
     def _log_instance_info(self):
         """
@@ -253,5 +252,5 @@ class OpenStackClass(_csp.CSPGenericClass):
         """
         Pause instance.
         """
-        # TODO: Implement pause instance support
-        pass
+        # TODO: Implement pause instance support, actually terminates.
+        self._terminate_instance()
