@@ -1,20 +1,22 @@
 # coding=utf-8
 """Amazon Web Services"""
 
-import json
-import time
-import copy
+from copy import deepcopy as _deepcopy
+from json import dumps as _json_dumps
+from time import sleep as _sleep
 
 import boto3 as _boto3
 import botocore.exceptions as _boto_exceptions
 
-from acceleratorAPI import logger
-import acceleratorAPI._utilities  as _utl
-import acceleratorAPI.exceptions as _exc
+import acceleratorAPI._utilities as _utl
 import acceleratorAPI.csp as _csp
+import acceleratorAPI.exceptions as _exc
+from acceleratorAPI import logger
 
 
 class AWSClass(_csp.CSPGenericClass):
+    """AWS CSP Class"""
+    CSP_HELP_URL = "https://aws.amazon.com"
 
     def __init__(self, **kwargs):
         _csp.CSPGenericClass.__init__(self, **kwargs)
@@ -82,7 +84,7 @@ class AWSClass(_csp.CSPGenericClass):
         logger.debug("Create or check if policy '%s' exists.", policy)
 
         # Create a policy
-        policy_document = json.dumps({
+        policy_document = _json_dumps({
             "Version": "2012-10-17",
             "Statement": [
                 {
@@ -125,7 +127,7 @@ class AWSClass(_csp.CSPGenericClass):
         """
         logger.debug("Create or check if role %s exists", self._role)
 
-        assume_role_policy_document = json.dumps({
+        assume_role_policy_document = _json_dumps({
             "Version": "2012-10-17",
             "Statement": {
                 "Effect": "Allow",
@@ -201,7 +203,7 @@ class AWSClass(_csp.CSPGenericClass):
                 instance_profile_name)
 
         else:
-            time.sleep(5)
+            _sleep(5)
             instance_profile.add_role(RoleName=self._role)
             logger.debug("Instance profile: %s", instance_profile)
             logger.info("Instance profile %s created", instance_profile_name)
@@ -331,7 +333,7 @@ class AWSClass(_csp.CSPGenericClass):
         Returns:
             dict: Configuration environment.
         """
-        currenv = copy.deepcopy(self._config_env)
+        currenv = _deepcopy(self._config_env)
 
         try:
             currenv['AGFI'] = kwargs['AGFI']
@@ -365,7 +367,7 @@ class AWSClass(_csp.CSPGenericClass):
             logger.debug("Instance status: %s", status)
             if status == "running":
                 break
-            time.sleep(5)
+            _sleep(5)
 
     def _start_new_instance(self):
         """

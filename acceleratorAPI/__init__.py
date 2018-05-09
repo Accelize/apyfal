@@ -1,10 +1,8 @@
 # coding=utf-8
 """Accelize AcceleratorAPI"""
 
-__version__ = "2.0.3"
+__version__ = "2.1.0"
 
-import json
-import os
 from acceleratorAPI import _utilities as _utl
 
 # Initialize logger
@@ -21,23 +19,36 @@ class AcceleratorClass(object):
     This class automatically handle Accelerator and CSP classes.
 
     Args:
-        accelerator_name:
-        config_file:
-        provider:
-        region:
-        xlz_client_id:
-        xlz_secret_id:
-        csp_client_id:
-        csp_secret_id:
-        ssh_key:
-        instance_id:
-        instance_url (str): CSP Instance URL or IP address
-        stop_mode (int): CSP Stop Mode.
+        accelerator_name (str): Name of the accelerator you want to initialize,
+            to know the authorized list please visit "https://accelstore.accelize.com".
+        config_file (str or acceleratorAPI.configuration.Configuration):
+            Configuration file path or instance. If not set, will search it in current working directory, in current
+            user "home" folder. If none found, will use default configuration values.
+        provider (str): Cloud service provider name.
+            If set will override value from configuration file.
+        region (str): CSP region. Check with your provider which region are using instances with FPGA.
+            If set will override value from configuration file.
+        xlz_client_id (str): Accelize Client ID.
+            Client Id is part of the access key you can generate on "https:/accelstore.accelize.com/user/applications".
+            If set will override value from configuration file.
+        xlz_secret_id (str): Accelize Secret ID.
+            Secret Id is part of the access key you can generate on "https:/accelstore.accelize.com/user/applications".
+            If set will override value from configuration file.
+        csp_client_id (str): CSP Client ID. See with your provider to generate this value.
+            If set will override value from configuration file.
+        csp_secret_id (str): CSP secret ID. See with your provider to generate this value.
+            If set will override value from configuration file.
+        ssh_key (str): SSH key to use with your CSP. If set will override value from configuration file.
+        instance_id (str): CSP Instance ID to reuse. If set will override value from configuration file.
+        instance_url (str): CSP Instance URL or IP address to reuse. If set will override value from configuration file.
+        stop_mode (int): CSP stop mode. See
+            "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
+            information and possible values.
         exit_instance_on_signal (bool): If True, exit CSP instances
             on OS exit signals. This may help to not have instance still running
-            if accelerator is not exited properly. Note: this is provided for
+            if Python interpreter is not exited properly. Note: this is provided for
             convenience and does not cover all exit case like process kill and
-            may not work on every OS.
+            may not work on all OS.
     """
     def __init__(self, accelerator_name, config_file=None, provider=None,
                  region=None, xlz_client_id=None, xlz_secret_id=None, csp_client_id=None,
@@ -99,6 +110,26 @@ class AcceleratorClass(object):
         return self._csp
 
     def start(self, stop_mode=None, datafile=None, accelerator_parameters=None, **kwargs):
+        """
+        Starts and configure an accelerator instance.
+
+        Args:
+            stop_mode (int): CSP stop mode. If not None, override current "stop_mode" value.
+                See "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
+                information and possible values.
+            datafile (str): Depending on the accelerator (like for HyperFiRe),
+                a configuration need to be loaded before a process can be run.
+                In such case please define the path of the configuration file
+                (for HyperFiRe the corpus file path).
+            accelerator_parameters (dict): If set will overwrite the value content in the configuration file
+                Parameters can be forwarded to the accelerator for the configuration step using these parameters.
+                Take a look accelerator documentation for more information.
+            kwargs:
+
+        Returns:
+            dict: Accelerator response. Contain output information from configuration operation.
+                Take a look accelerator documentation for more information.
+        """
         # Start a new instance or use a running instance
         self._start_instance(stop_mode)
 
@@ -108,6 +139,23 @@ class AcceleratorClass(object):
         logger.debug("Accelerator is already configured")
 
     def configure(self, datafile=None, accelerator_parameters=None, **kwargs):
+        """
+        Configure an accelerator instance.
+
+        Args:
+            datafile (str): Depending on the accelerator (like for HyperFiRe),
+                a configuration need to be loaded before a process can be run.
+                In such case please define the path of the configuration file
+                (for HyperFiRe the corpus file path).
+            accelerator_parameters (dict): If set will overwrite the value content in the configuration file
+                Parameters can be forwarded to the accelerator for the configuration step using these parameters.
+                Take a look accelerator documentation for more information.
+            kwargs:
+
+        Returns:
+            dict: Accelerator response. Contain output information from configuration operation.
+                Take a look accelerator documentation for more information.
+        """
         logger.debug("Configuring accelerator '%s' on instance ID %s", self._accelerator.name, self._csp.instance_id)
         self._accelerator.is_alive()
 
@@ -119,6 +167,20 @@ class AcceleratorClass(object):
         return config_result
 
     def process(self, file_out, file_in=None, process_parameter=None):
+        """
+        Process a file with accelerator.
+
+        Args:
+            file_out (str): Path to the file you want to process.
+            file_in (str): Path where you want the processed file will be stored.
+            process_parameter (dict): If set will overwrite the value content in the configuration file Parameters
+                an be forwarded to the accelerator for the process step using these parameters.
+                Take a look accelerator documentation for more information.
+
+        Returns:
+            dict: Accelerator response. Contain output information from process operation.
+                Take a look accelerator documentation for more information.
+        """
         logger.debug("Starting a processing job: in=%s, out=%s", file_in, file_out)
 
         # Process file with accelerator
@@ -129,6 +191,18 @@ class AcceleratorClass(object):
         return process_result
 
     def stop(self, stop_mode=None):
+        """
+        Stop your accelerator session and accelerator csp instance depending of the parameters
+
+        Args:
+            stop_mode (int): CSP stop mode. If not None, override current "stop_mode" value.
+                See "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
+                information and possible values.
+
+        Returns:
+            dict: Accelerator response. Contain output information from stop operation.
+                Take a look accelerator documentation for more information.
+        """
         # Stops accelerator
         stop_result = self._accelerator.stop_accelerator()
 
@@ -139,10 +213,12 @@ class AcceleratorClass(object):
 
     def _start_instance(self, stop_mode=None):
         """
-        Start a new instance or use a running instance
+        Start a new instance or use a running instance.
 
         Args:
-            stop_mode:
+            stop_mode (int): CSP stop mode. If not None, override current "stop_mode" value.
+                See "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
+                information and possible values.
         """
         logger.debug("Starting instance on '%s'", self._csp.provider)
 
@@ -179,6 +255,9 @@ class AcceleratorClass(object):
         except KeyError:
             logger.debug("No application information found in result JSON file")
             return None
+
+        # Lazy import since not always called
+        import json
 
         # Handle profiling info
         try:

@@ -1,7 +1,20 @@
 # coding=utf-8
-"""Manages Accelerator and CSP configuration"""
+"""Manages Accelerator and CSP configuration
 
-import os
+Notes:
+    The "accelerator.conf" file provided with this package can
+    be used as sample for creation of your own configuration files.
+
+    Use of this file is optional. All parameters can also be
+    passed to API class. Non specified ones will use default values.
+
+    API search automatically search for "accelerator.conf" in
+    current working directory, or in current user home directory.
+    A custom path to configuration file can also be passed
+    to classes.
+"""
+
+import os.path as _os_path
 from ast import literal_eval as _literal_eval
 try:
     # Python 3
@@ -40,12 +53,13 @@ class Configuration(_configparser.ConfigParser):
         # Finds configuration file
         if configuration_file is None:
             # Search configuration file in current working directory
-            if os.path.isfile(self.DEFAULT_CONFIG_FILE):
+            if _os_path.isfile(self.DEFAULT_CONFIG_FILE):
                 configuration_file = self.DEFAULT_CONFIG_FILE
 
             # Search configuration file in home directory
             else:
-                configuration_file = os.path.join(os.path.expanduser('~'), self.DEFAULT_CONFIG_FILE)
+                configuration_file = _os_path.join(
+                    _os_path.expanduser('~'), self.DEFAULT_CONFIG_FILE)
 
         # Read configuration file if exists
         # If not, return empty Configuration file, this will force

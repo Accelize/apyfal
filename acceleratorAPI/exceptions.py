@@ -9,7 +9,7 @@ class AcceleratorApiBaseException(Exception):
     def __init__(self, *args, **kwargs):
         # Set default message if nothing passed as argument.
         if not args and self.DEFAULT_MESSAGE:
-            args = (self.DEFAULT_MESSAGE, )
+            args = (self.DEFAULT_MESSAGE,)
         Exception.__init__(self, *args, **kwargs)
 
 

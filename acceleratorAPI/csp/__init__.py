@@ -3,24 +3,24 @@
 
 try:
     # Python 3
-    from abc import ABC, abstractmethod
+    from abc import ABC as _ABC, abstractmethod as _abstractmethod
 except ImportError:
     # Python 2
-    from abc import ABCMeta, abstractmethod
-    ABC = ABCMeta('ABC', (object,), {})
+    from abc import ABCMeta as _ABCMeta, abstractmethod as _abstractmethod
+
+    _ABC = _ABCMeta('ABC', (object,), {})
 
 from acceleratorAPI import logger
 import acceleratorAPI.configuration as _cfg
 import acceleratorAPI.exceptions as _exc
-import acceleratorAPI._utilities  as _utl
-
+import acceleratorAPI._utilities as _utl
 
 TERM = 0
 STOP = 1
 KEEP = 2
 
 
-class CSPGenericClass(ABC):
+class CSPGenericClass(_ABC):
     """This is base abstract class for all CSP classes.
 
     This is also a factory which instantiate CSP subclass related to
@@ -28,15 +28,21 @@ class CSPGenericClass(ABC):
 
     Args:
         provider (str): Cloud service provider name.
-        config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance
-        client_id:
-        secret_id:
-        region:
+            If set will override value from configuration file.
+        config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance.
+            If not set, will search it in current working directory, in current
+            user "home" folder. If none found, will use default configuration values.
+        client_id (str):CSP Client ID. See with your provider to generate this value.
+            If set will override value from configuration file.
+        secret_id (str):CSP secret ID. See with your provider to generate this value.
+            If set will override value from configuration file.
+        region (str): CSP region. Check with your provider which region are using instances with FPGA.
+             If set will override value from configuration file.
         instance_type:
-        ssh_key:
+        ssh_key (str): SSH key to use with your CSP. If set will override value from configuration file.
         security_group:
-        instance_id:
-        instance_url:
+        instance_id (str): CSP Instance ID to reuse. If set will override value from configuration file.
+        instance_url (str): CSP Instance URL or IP address to reuse. If set will override value from configuration file.
         project_id:
         auth_url:
         interface:
@@ -58,7 +64,7 @@ class CSPGenericClass(ABC):
     def __new__(cls, **kwargs):
         # If call from a subclass, instantiate this subclass directly
         if cls is not CSPGenericClass:
-            return ABC.__new__(cls)
+            return object.__new__(cls)
 
         # If call form this class instantiate subclasses depending on Provider
         config = _cfg.create_configuration(kwargs.get('config'))
@@ -67,11 +73,11 @@ class CSPGenericClass(ABC):
 
         if provider == 'AWS':
             from acceleratorAPI.csp.aws import AWSClass
-            return ABC.__new__(AWSClass)
+            return object.__new__(AWSClass)
 
         elif provider == 'OVH':
             from acceleratorAPI.csp.ovh import OVHClass
-            return ABC.__new__(OVHClass)
+            return object.__new__(OVHClass)
 
         else:
             raise _exc.CSPConfigurationException(
@@ -81,6 +87,15 @@ class CSPGenericClass(ABC):
                  instance_type=None, ssh_key=None, security_group=None, instance_id=None,
                  instance_url=None, project_id=None, auth_url=None, interface=None, role=None,
                  stop_mode=None, exit_instance_on_signal=True):
+
+        # Default some attributes
+        self._session = None
+        self._instance = None
+        self._config_env = {}
+        self._image_id = None
+        self._instance_type = None
+        self._accelerator = None
+        self._stop_mode = None
 
         # Read configuration from file
         self._config = _cfg.create_configuration(config)
@@ -100,8 +115,8 @@ class CSPGenericClass(ABC):
             'csp', 'security_group', overwrite=security_group, default="MySecurityGroup")
         self._instance_id = config.get_default(
             'csp', 'instance_id', overwrite=instance_id)
-        self._instance_url = config.get_default(
-            'csp', 'instance_url', overwrite=_utl.format_url(instance_url))
+        self._instance_url = _utl.format_url(config.get_default(
+            'csp', 'instance_url', overwrite=instance_url))
         self._role = config.get_default(
             'csp', 'role', overwrite=role)
         self._project_id = config.get_default(
@@ -115,14 +130,6 @@ class CSPGenericClass(ABC):
 
         # Checks mandatory configuration values
         self._check_arguments('client_id', 'secret_id', 'region')
-
-        # Default some required attributes
-        self._session = None
-        self._instance = None
-        self._config_env = {}
-        self._image_id = None
-        self._instance_type = None
-        self._accelerator = None
 
         # Enable optional Signal handler
         self._set_signals(exit_instance_on_signal)
@@ -165,7 +172,7 @@ class CSPGenericClass(ABC):
             raise _exc.CSPInstanceException("No instance found")
         return self._get_instance_public_ip()
 
-    @abstractmethod
+    @_abstractmethod
     def _get_instance_public_ip(self):
         """
         Read current instance public IP from CSP instance.
@@ -240,7 +247,7 @@ class CSPGenericClass(ABC):
         self._stop_mode = stop_mode
         logger.info("Auto-stop mode is: %s", self.STOP_MODES[self._stop_mode])
 
-    @abstractmethod
+    @_abstractmethod
     def check_credential(self):
         """
         Check CSP credentials.
@@ -270,7 +277,7 @@ class CSPGenericClass(ABC):
         # Read instance status
         return self._get_instance_status()
 
-    @abstractmethod
+    @_abstractmethod
     def _get_instance_status(self):
         """
         Returns current status of current instance.
@@ -279,7 +286,7 @@ class CSPGenericClass(ABC):
             str: Status
         """
 
-    @abstractmethod
+    @_abstractmethod
     def _get_instance(self):
         """
         Returns current instance.
@@ -333,13 +340,13 @@ class CSPGenericClass(ABC):
         self._log_instance_info()
         logger.info("Your instance is now up and running")
 
-    @abstractmethod
+    @_abstractmethod
     def _create_instance(self):
         """
         Initialize and create instance.
         """
 
-    @abstractmethod
+    @_abstractmethod
     def _start_new_instance(self):
         """
         Start a new instance.
@@ -349,7 +356,7 @@ class CSPGenericClass(ABC):
             str: Instance ID
         """
 
-    @abstractmethod
+    @_abstractmethod
     def _start_existing_instance(self, state):
         """
         Start a existing instance.
@@ -358,7 +365,7 @@ class CSPGenericClass(ABC):
             state (str): Status of the instance.
         """
 
-    @abstractmethod
+    @_abstractmethod
     def _wait_instance_ready(self):
         """
         Wait until instance is ready.
@@ -378,7 +385,7 @@ class CSPGenericClass(ABC):
 
         logger.info("Instance booted!")
 
-    @abstractmethod
+    @_abstractmethod
     def _log_instance_info(self):
         """
         Print some instance information in logger.
@@ -426,13 +433,13 @@ class CSPGenericClass(ABC):
         if response is not None:
             logger.debug("Stop response: %s", response)
 
-    @abstractmethod
+    @_abstractmethod
     def _terminate_instance(self):
         """
         Terminate and delete instance.
         """
 
-    @abstractmethod
+    @_abstractmethod
     def _pause_instance(self):
         """
         Pause instance.
@@ -463,7 +470,7 @@ class CSPGenericClass(ABC):
         self._image_id, self._instance_type, self._config_env = self._read_accelerator_parameters(
             accel_parameters[self._region])
 
-    @abstractmethod
+    @_abstractmethod
     def _read_accelerator_parameters(self, accel_parameters_in_region):
         """
         Read accelerator parameters and get information required

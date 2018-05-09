@@ -1,16 +1,17 @@
 # coding=utf-8
 """OpenStack based CSP"""
 
-import openstack as _openstack
 import keystoneauth1.exceptions.http as _keystoneauth_exceptions
+import openstack as _openstack
 
-from acceleratorAPI import logger
-import acceleratorAPI._utilities  as _utl
-import acceleratorAPI.exceptions as _exc
+import acceleratorAPI._utilities as _utl
 import acceleratorAPI.csp as _csp
+import acceleratorAPI.exceptions as _exc
+from acceleratorAPI import logger
 
 
 class OpenStackClass(_csp.CSPGenericClass):
+    """Generic class for OpenStack based CSP"""
 
     def __init__(self, **kwargs):
         _csp.CSPGenericClass.__init__(self, **kwargs)
