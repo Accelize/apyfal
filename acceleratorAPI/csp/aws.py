@@ -30,6 +30,13 @@ class AWSClass(_csp.CSPGenericClass):
         )
 
     def check_credential(self):
+        """
+        Check CSP credentials.
+
+        Raises:
+            acceleratorAPI.exceptions.CSPAuthenticationException:
+                Authentication failed.
+        """
         ec2_client = self._session.client('ec2')
         try:
             response = ec2_client.describe_key_pairs()
@@ -39,6 +46,9 @@ class AWSClass(_csp.CSPGenericClass):
         logger.debug("Response of 'describe_key_pairs': %s", response)
 
     def _init_ssh_key(self):
+        """
+        Initialize CSP SSH key.
+        """
         logger.debug("Create or check if KeyPair %s exists.", self._ssh_key)
         ec2_client = self._session.client('ec2')
 
@@ -63,6 +73,12 @@ class AWSClass(_csp.CSPGenericClass):
                         self._provider)
 
     def _init_policy(self, policy):
+        """
+        Initialize CSP policy.
+
+        Args:
+            policy:
+        """
         logger.debug("Create or check if policy '%s' exists.", policy)
 
         # Create a policy
@@ -104,6 +120,9 @@ class AWSClass(_csp.CSPGenericClass):
             "Failed to create policy. Unable to find policy 'Arn'.")
 
     def _init_role(self):
+        """
+        Initialize CSP role.
+        """
         logger.debug("Create or check if role %s exists", self._role)
 
         assume_role_policy_document = json.dumps({
@@ -135,28 +154,37 @@ class AWSClass(_csp.CSPGenericClass):
         logger.debug("Policy ARN:'%s' already exists.", arn)
         return arn
 
-    def _attach_role_policy(self, policy):
+    def _attach_role_policy(self, policy_arn):
+        """
+        Attach policy to role.
+
+        Args:
+            policy_arn (str): Policy ARN
+        """
         logger.debug(
             "Create or check if policy '%s' is attached to role '%s' exists.",
-            policy, self._role)
+            policy_arn, self._role)
 
         iam_client = self._session.client('iam')
         try:
             # Create a policy
             response = iam_client.attach_role_policy(
-                PolicyArn=policy, RoleName=self._role)
+                PolicyArn=policy_arn, RoleName=self._role)
 
         except iam_client.exceptions.EntityAlreadyExistsException as exception:
             logger.debug(str(exception))
             logger.info(
                 "Role on AWS named: '%s' and policy named: '%s' already attached, nothing to do.",
-                self._role, policy)
+                self._role, policy_arn)
 
         else:
             logger.debug("Policy: %s", response)
-            logger.info("Attached policy '%s' to role '%s' done.", policy, self._role)
+            logger.info("Attached policy '%s' to role '%s' done.", policy_arn, self._role)
 
     def _init_instance_profile(self):
+        """
+        Initialize instance profile.
+        """
         instance_profile_name = 'AccelizeLoadFPGA'
         logger.debug("Create or check if instance profile '%s' exists.",
                      instance_profile_name)
@@ -179,6 +207,9 @@ class AWSClass(_csp.CSPGenericClass):
             logger.info("Instance profile %s created", instance_profile_name)
 
     def _init_security_group(self):
+        """
+        Initialize CSP security group.
+        """
         logger.debug("Create or Check if security group '%s' exists.",
                      self._security_group)
 
@@ -228,9 +259,33 @@ class AWSClass(_csp.CSPGenericClass):
                         self._security_group, public_ip)
 
     def _get_instance(self):
+        """
+        Returns current instance.
+
+        Returns:
+            object: Instance
+        """
         return self._session.resource('ec2').Instance(self._instance_id)
 
+    def _get_instance_public_ip(self):
+        """
+        Read current instance public IP from CSP instance.
+
+        Returns:
+            str: IP address
+        """
+        try:
+            return self._instance.public_ip_address
+        except _boto_exceptions.ClientError as exception:
+            raise _exc.CSPInstanceException("Could not return instance URL ('%s')" % exception)
+
     def _get_instance_status(self):
+        """
+        Returns current status of current instance.
+
+        Returns:
+            str: Status
+        """
         try:
             instance_state = self._instance.state
         except _boto_exceptions.ClientError as exception:
@@ -242,6 +297,19 @@ class AWSClass(_csp.CSPGenericClass):
         return instance_state["Name"]
 
     def _read_accelerator_parameters(self, accel_parameters_in_region):
+        """
+        Read accelerator parameters and get information required
+        to configure CSP instance accordingly.
+
+        Args:
+            accel_parameters_in_region (dict): Accelerator parameters
+                for the current CSP region.
+
+        Returns:
+            str: image_id
+            str: instance_type
+            dict: config_env
+        """
         config_env = {'AGFI': accel_parameters_in_region['fpgaimage']}
         image_id = accel_parameters_in_region['image']
         instance_type = accel_parameters_in_region['instancetype']
@@ -252,6 +320,17 @@ class AWSClass(_csp.CSPGenericClass):
         return image_id, instance_type, config_env
 
     def get_configuration_env(self, **kwargs):
+        """
+        Return environment to pass to
+        "acceleratorAPI.accelerator.Accelerator.start_accelerator"
+        "csp_env" argument.
+
+        Args:
+            kwargs:
+
+        Returns:
+            dict: Configuration environment.
+        """
         currenv = copy.deepcopy(self._config_env)
 
         try:
@@ -264,6 +343,9 @@ class AWSClass(_csp.CSPGenericClass):
         return currenv
 
     def _create_instance(self):
+        """
+        Initialize and create instance.
+        """
         self._init_ssh_key()
         policy_arn = self._init_policy('AccelizePolicy')
         self._init_role()
@@ -271,13 +353,10 @@ class AWSClass(_csp.CSPGenericClass):
         self._attach_role_policy(policy_arn)
         self._init_security_group()
 
-    def _get_instance_public_ip(self):
-        try:
-            return self._instance.public_ip_address
-        except _boto_exceptions.ClientError as exception:
-            raise _exc.CSPInstanceException("Could not return instance URL ('%s')" % exception)
-
     def _wait_instance_ready(self):
+        """
+        Wait until instance is ready.
+        """
         # Waiting for the instance provisioning
         logger.info("Waiting for the instance provisioning on %s...", self._provider)
         while True:
@@ -289,6 +368,13 @@ class AWSClass(_csp.CSPGenericClass):
             time.sleep(5)
 
     def _start_new_instance(self):
+        """
+        Start a new instance.
+
+        Returns:
+            object: Instance
+            str: Instance ID
+        """
         instance = self._session.resource('ec2').create_instances(
             ImageId=self._image_id,
             InstanceType=self._instance_type,
@@ -309,6 +395,12 @@ class AWSClass(_csp.CSPGenericClass):
         return instance, instance.id
 
     def _start_existing_instance(self, state):
+        """
+        Start a existing instance.
+
+        Args:
+            state (str): Status of the instance.
+        """
         if state == "stopped":
             response = self._instance.start()
             logger.debug("start response: %s", response)
@@ -319,12 +411,21 @@ class AWSClass(_csp.CSPGenericClass):
                 self._instance_id, state)
 
     def _log_instance_info(self):
+        """
+        Print some instance information in logger.
+        """
         logger.info("Region: %s", self._session.region_name)
         logger.info("Private IP: %s", self._instance.private_ip_address)
         logger.info("Public IP: %s", self.instance_ip)
 
     def _terminate_instance(self):
+        """
+        Terminate and delete instance.
+        """
         return self._instance.terminate()
 
     def _pause_instance(self):
+        """
+        Pause instance.
+        """
         return self._instance.stop()

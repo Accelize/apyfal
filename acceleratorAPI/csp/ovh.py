@@ -6,8 +6,4 @@ from acceleratorAPI.csp.openstack_generic import OpenStackClass as _OpenStackCla
 
 class OVHClass(_OpenStackClass):
     """OVH CSP Class"""
-    # TODO: Help in exception but generic
-    #def start_instance(self):
-    #    if not super(OVHClass, self).start_instance():
-    #        raise Exception("Failed to create OVH instance, please refer to: https://horizon.cloud.ovh.net")
-    #    return True
+    CSP_HELP_URL = "https://horizon.cloud.ovh.net"

@@ -33,12 +33,22 @@ class OpenStackClass(_csp.CSPGenericClass):
         logger.debug("Connection object created for CSP '%s'", self._provider)
 
     def check_credential(self):
+        """
+        Check CSP credentials.
+
+        Raises:
+            acceleratorAPI.exceptions.CSPAuthenticationException:
+                Authentication failed.
+        """
         try:
             list(self._session.network.networks())
         except _keystoneauth_exceptions.Unauthorized:
             raise _exc.CSPAuthenticationException("Failed to authenticate with your CSP access key.")
 
     def _init_ssh_key(self):
+        """
+        Initialize CSP SSH key.
+        """
         logger.debug("Create or check if KeyPair %s exists", self._ssh_key)
 
         # Get key pair from CSP
@@ -56,6 +66,9 @@ class OpenStackClass(_csp.CSPGenericClass):
         _utl.create_ssh_key_file(self._ssh_key, key_pair.private_key)
 
     def _init_security_group(self):
+        """
+        Initialize CSP security group.
+        """
         logger.debug("Create or check if security group '%s' exists", self._security_group)
 
         # Create security group if not exists
@@ -90,11 +103,64 @@ class OpenStackClass(_csp.CSPGenericClass):
 
         logger.info("Added in security group '%s': SSH and HTTP for IP %s.", self._security_group, public_ip)
 
+    def _get_instance(self):
+        """
+        Returns current instance.
+
+        Returns:
+            object: Instance
+        """
+        # Try to find instance
+        try:
+            return self._session.get_server(self._instance_id)
+
+        # Instance not found
+        except _openstack.exceptions.SDKException as exception:
+            raise _exc.CSPInstanceException(
+                "Could not find an instance with ID '%s' (%s)", self._instance_id, exception)
+
+    def _get_instance_public_ip(self):
+        """
+        Read current instance public IP from CSP instance.
+
+        Returns:
+            str: IP address
+        """
+        for address in self._instance.addresses.values()[0]:
+            if address['version'] == 4:
+                return address['addr']
+        raise _exc.CSPInstanceException("No instance address found")
+
+    def _get_instance_status(self):
+        """
+        Returns current status of current instance.
+
+        Returns:
+            str: Status
+        """
+        return self._instance.status
+
     def _create_instance(self):
+        """
+        Initialize and create instance.
+        """
         self._init_ssh_key()
         self._init_security_group()
 
     def _read_accelerator_parameters(self, accel_parameters_in_region):
+        """
+        Read accelerator parameters and get information required
+        to configure CSP instance accordingly.
+
+        Args:
+            accel_parameters_in_region (dict): Accelerator parameters
+                for the current CSP region.
+
+        Returns:
+            str: image_id
+            str: instance_type
+            dict: config_env
+        """
         # Get image
         image_id = accel_parameters_in_region['image']
         try:
@@ -123,26 +189,10 @@ class OpenStackClass(_csp.CSPGenericClass):
 
         return image_id, instance_type, self._config_env
 
-    def _get_instance(self):
-        # Try to find instance
-        try:
-            return self._session.get_server(self._instance_id)
-
-        # Instance not found
-        except _openstack.exceptions.SDKException as exception:
-            raise _exc.CSPInstanceException(
-                "Could not find an instance with ID '%s' (%s)", self._instance_id, exception)
-
-    def _get_instance_status(self):
-        return self._instance.status
-
-    def _get_instance_public_ip(self):
-        for address in self._instance.addresses.values()[0]:
-            if address['version'] == 4:
-                return address['addr']
-        raise _exc.CSPInstanceException("No instance address found")
-
     def _wait_instance_ready(self):
+        """
+        Wait until instance is ready.
+        """
         # Waiting for the instance provisioning
         logger.info("Waiting for the instance provisioning on %s...", self._provider)
         try:
@@ -158,6 +208,13 @@ class OpenStackClass(_csp.CSPGenericClass):
             raise _exc.CSPInstanceException("Instance has an invalid status: %s", state)
 
     def _start_new_instance(self):
+        """
+        Start a new instance.
+
+        Returns:
+            object: Instance
+            str: Instance ID
+        """
         instance = self._session.compute.create_server(
             name=self._accelerator, image_id=self._image_id, flavor_id=self._instance_type,
             key_name=self._ssh_key, security_groups=[{"name": self._security_group}])
@@ -165,6 +222,12 @@ class OpenStackClass(_csp.CSPGenericClass):
         return instance, instance.id
 
     def _start_existing_instance(self, state):
+        """
+        Start a existing instance.
+
+        Args:
+            state (str): Status of the instance.
+        """
         logger.debug("Status of instance ID %s: %s", self._instance_id, state)
         if state.lower() == "active":
             logger.debug("Instance ID %s is already in '%s' state.", self._instance_id, state)
@@ -173,13 +236,22 @@ class OpenStackClass(_csp.CSPGenericClass):
         self._session.start_server(self._instance)
 
     def _log_instance_info(self):
+        """
+        Print some instance information in logger.
+        """
         logger.info("Region: %s", self._region)
         logger.info("Public IP: %s", self.instance_ip)
 
     def _terminate_instance(self):
+        """
+        Terminate and delete instance.
+        """
         if not self._session.delete_server(self._instance, wait=True):
             raise _exc.CSPInstanceException('Unable to delete instance.')
 
     def _pause_instance(self):
+        """
+        Pause instance.
+        """
         # TODO: Implement pause instance support
         pass

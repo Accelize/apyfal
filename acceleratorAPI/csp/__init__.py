@@ -53,6 +53,7 @@ class CSPGenericClass(ABC):
         TERM: "TERM",
         STOP: "STOP",
         KEEP: "KEEP"}
+    CSP_HELP_URL = ''
 
     def __new__(cls, **kwargs):
         # If call from a subclass, instantiate this subclass directly
@@ -299,10 +300,20 @@ class CSPGenericClass(ABC):
 
             # Creates and starts instance if not exists
             if self.instance_id is None:
-                self._create_instance()
-
+                try:
+                    self._create_instance()
+                except _exc.CSPException as exception:
+                    # Augment exception message
+                    self._add_csp_help_to_exception_message(exception)
+                    raise
                 logger.debug("Starting instance")
-                self._instance, self._instance_id = self._start_new_instance()
+
+                try:
+                    self._instance, self._instance_id = self._start_new_instance()
+                except _exc.CSPException as exception:
+                    # Augment exception message
+                    self._add_csp_help_to_exception_message(exception)
+                    raise
                 logger.info("Created instance ID: %s", self._instance_id)
 
             # If exists, starts it directly
@@ -536,3 +547,16 @@ class CSPGenericClass(ABC):
             if getattr(self, '_%s' % name) is None:
                 raise _exc.CSPConfigurationException(
                     "Parameter '%s' is required %s" % (name, self._provider))
+
+    @classmethod
+    def _add_csp_help_to_exception_message(cls, exception):
+        """
+        Improve exception message by adding CSP help indication.
+
+        Args:
+            exception (Exception): exception.
+        """
+        if cls.CSP_HELP_URL:
+            args = list(exception.args)
+            args[0] += ', please refer to: %s' % cls.CSP_HELP_URL
+            exception.args = tuple(args)
