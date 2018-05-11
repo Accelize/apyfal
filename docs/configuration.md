@@ -28,6 +28,7 @@ You can use the `accelerator.conf` file to provides parameters to run your accel
 
 <!-- NOTE: configuration_file.md is dynamically generated from "accelerator.conf".
      Update directly documentation in "accelerator.conf" if needed. -->
+
 * [Configuration file details](configuration_file.md)
 
 This file is automatically loaded by the API if found in the current working directory or current user home
