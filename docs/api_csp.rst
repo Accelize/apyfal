@@ -1,5 +1,5 @@
 acceleratorAPI.csp
-===================
+==================
 
 .. automodule:: acceleratorAPI.csp
    :members:

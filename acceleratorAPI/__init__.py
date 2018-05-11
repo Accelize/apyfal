@@ -12,6 +12,7 @@ logger = _utl.init_logger("acceleratorAPI", __file__)
 import acceleratorAPI.csp as _csp
 import acceleratorAPI.accelerator as _acc
 import acceleratorAPI.configuration as _cfg
+import acceleratorAPI.exceptions as _exc
 
 
 class AcceleratorClass(object):
@@ -108,6 +109,37 @@ class AcceleratorClass(object):
             acceleratorAPI.csp.CSPGenericClass subclass: Instance
         """
         return self._csp
+
+    @property
+    def instance_id(self):
+        """
+        ID of the current instance.
+
+        Returns:
+            str: ID
+
+        Raises:
+            acceleratorAPI.exceptions.CSPInstanceException:
+                No instance from which get IP.
+        """
+        if self._csp is None:
+            raise _exc.CSPInstanceException("No instance found")
+        return self._csp.instance_id
+
+    @property
+    def instance_ip(self):
+        """
+        Public IP of the current instance.
+
+        Returns:
+            str: IP address
+
+        Raises:
+            acceleratorAPI.exceptions.CSPInstanceException:
+                No instance from which get IP."""
+        if self._csp is None:
+            raise _exc.CSPInstanceException("No instance found")
+        return self._csp.instance_ip
 
     def start(self, stop_mode=None, datafile=None, accelerator_parameters=None, **kwargs):
         """

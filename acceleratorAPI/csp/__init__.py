@@ -166,7 +166,7 @@ class CSPGenericClass(_ABC):
 
         Raises:
             acceleratorAPI.exceptions.CSPInstanceException:
-                Notes instance from which get IP.
+                No instance from which get IP.
         """
         if self._instance is None:
             raise _exc.CSPInstanceException("No instance found")

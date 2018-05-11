@@ -281,6 +281,7 @@ class Accelerator(object):
             dict: Accelerator response. Contain output information from configuration operation.
                 Take a look accelerator documentation for more information.
         """
+        # TODO: Detail response dict in doctstring
         # Check parameters
         if accelerator_parameters is None:
             logger.debug("Using default configuration parameters")
@@ -333,6 +334,7 @@ class Accelerator(object):
             dict: Accelerator response. Contain output information from process operation.
                 Take a look accelerator documentation for more information.
         """
+        # TODO: Detail response dict in doctstring
         # Check if configuration was done
         if self._accelerator_configuration_url is None:
             raise _exc.AcceleratorConfigurationException(
@@ -445,6 +447,7 @@ class Accelerator(object):
             dict: Accelerator response. Contain output information from stop operation.
                 Take a look accelerator documentation for more information.
         """
+        # TODO: Detail response dict in doctstring
         try:
             self.is_alive()
         except _exc.AcceleratorRuntimeException:

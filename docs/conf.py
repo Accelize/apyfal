@@ -15,10 +15,68 @@
 from os.path import abspath, dirname
 import sys
 sys.path.insert(0, abspath(dirname(dirname(__file__))))
-import recommonmark
+
+# Import recommonmark extension for Markdown support
 from recommonmark.parser import CommonMarkParser
 from recommonmark.transform import AutoStructify
 
+
+# -- Dynamically generate documentation for "accelerator.conf" file ----------
+
+def md_from_conf(conf_path, md_path):
+    """
+    Generate a markdown file from a properly formatted ".conf" file.
+
+    ".conf" file needs to use ";" as comment symbol.
+    Comments can be written in markdown format.
+
+    Args:
+        conf_path: Path to ".conf" file.
+        md_path: Path to ".md" file
+    """
+    # Read ".conf"
+    with open(conf_path, 'rt') as conf_file:
+        content = conf_file.readlines()
+
+    # Convert to markdown
+    for index, line in enumerate(content):
+        line = line.rstrip()
+
+        # Skip blank lines
+        if not line:
+            pass
+
+        # Remove comments marks
+        elif line.startswith(';'):
+            line = line.lstrip(';')
+
+        # Remove [] from section
+        elif line.startswith('['):
+            line = line.strip('[]')
+
+        # Quote parameters lines
+        else:
+            try:
+                prev_line = content[index - 1]
+            except IndexError:
+                prev_line = ''
+
+            if '```' in prev_line:
+                # Multi line quote
+                content[index - 1] = prev_line.rstrip('\n`')
+                line = '%s\n```' % line
+            else:
+                # Single line quote
+                line = '```\n%s\n```' % line
+
+        content[index] = line
+
+    # Save ".md"
+    with open(md_path, 'wt') as md_file:
+        md_file.write('\n'.join(content))
+
+
+md_from_conf('../acceleratorAPI/accelerator.conf', 'configuration_file.md')
 
 # -- Project information -----------------------------------------------------
 
@@ -169,4 +227,8 @@ texinfo_documents = [
 
 # -- Extension configuration -------------------------------------------------
 def setup(app):
+    # recommonmark
+    app.add_config_value('recommonmark_config', {
+        'enable_math': False, 'enable_inline_math': False,
+        }, True)
     app.add_transform(AutoStructify)

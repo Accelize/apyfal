@@ -64,4 +64,8 @@ build/
 dist/
 .eggs/
 *.egg-info/
+
+# Sphinx generated files #
+##########################
 /docs/_build/
+/docs/configuration_file.md
