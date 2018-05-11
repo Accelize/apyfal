@@ -1,0 +1,5 @@
+acceleratorAPI
+===================
+
+.. automodule:: acceleratorAPI
+   :members:

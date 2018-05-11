@@ -64,3 +64,4 @@ build/
 dist/
 .eggs/
 *.egg-info/
+/docs/_build/
