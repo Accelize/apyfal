@@ -30,8 +30,8 @@ with acceleratorAPI.AcceleratorClass(accelerator='cast_gzip') as myaccel:
     myaccel.start()
 
     # Process files using FPGA
-    myaccel.process(file_in='/path/myfile.dat',  file_out='/path/result.dat')
-    myaccel.process(file_in='/path/myfile.dat',  file_out='/path/result.dat')
+    myaccel.process(file_in='/path/myfile1.dat',  file_out='/path/result1.dat')
+    myaccel.process(file_in='/path/myfile2.dat',  file_out='/path/result2.dat')
     # ... Process any number of file as needed
     
 # By default, CSP instance is automatically close on "with" exit.
@@ -49,8 +49,8 @@ Check the accelerator metering information on your [AccelStore account](https://
 
 ### Limitations
 
-+ Max data file is limited to 30 G ( in case of usage of pycurl) or 2G using urllib 
-+ Timeout will appear if request take more than 900s
++ Max data file is limited to 30GB (in case of usage of pycurl) or 2GB else
++ Timeout will appear if request takes more than 900s
 
 ## User Documentation
 

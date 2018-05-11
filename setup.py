@@ -5,7 +5,7 @@ from ast import literal_eval
 from os.path import dirname, abspath, join
 from setuptools import setup, find_packages
 
-# Set Package information
+# Sets Package information
 PACKAGE_INFOS = dict(
     name='acceleratorAPI',
     description='Accelize AcceleratorAPI is a powerful and flexible '
@@ -47,7 +47,7 @@ PACKAGE_INFOS = dict(
     command_options={},
     )
 
-# Get package __version__ from package
+# Gets package __version__ from package
 SETUP_DIR = abspath(dirname(__file__))
 with open(join(SETUP_DIR, 'acceleratorAPI', '__init__.py')) as source_file:
     for line in source_file:
@@ -55,11 +55,11 @@ with open(join(SETUP_DIR, 'acceleratorAPI', '__init__.py')) as source_file:
             PACKAGE_INFOS['version'] = line.split('=', 1)[1].strip(" \"\'\n")
             break
 
-# Get long description from readme
+# Gets long description from readme
 with open(join(SETUP_DIR, 'README.md')) as source_file:
     PACKAGE_INFOS['long_description'] = source_file.read()
 
-# Get requirements from Swagger generated REST API
+# Gets requirements from Swagger generated REST API
 with open(join(SETUP_DIR, 'acceleratorAPI', 'rest_api', 'setup.py')) as source_file:
     for line in source_file:
         if line.rstrip().startswith('REQUIRES = ['):
@@ -67,13 +67,13 @@ with open(join(SETUP_DIR, 'acceleratorAPI', 'rest_api', 'setup.py')) as source_f
                 literal_eval(line.split('=', 1)[1].strip(" \n")))
             break
 
-# Generate wildcard "all" extras_require
+# Generates wildcard "all" extras_require
 PACKAGE_INFOS['extras_require']['all'] = list(set(
     requirement for extra in PACKAGE_INFOS['extras_require']
     for requirement in PACKAGE_INFOS['extras_require'][extra]
     ))
 
-# Get Sphinx configuration
+# Gets Sphinx configuration
 PACKAGE_INFOS['command_options']['build_sphinx'] = {
     'project': ('setup.py', PACKAGE_INFOS['name'].capitalize()),
     'version': ('setup.py', PACKAGE_INFOS['version']),
@@ -82,7 +82,7 @@ PACKAGE_INFOS['command_options']['build_sphinx'] = {
         datetime.now().year, PACKAGE_INFOS['author'])),
     }
 
-# Run setup
+# Runs setup
 if __name__ == '__main__':
     from os import chdir
     chdir(SETUP_DIR)

@@ -12,18 +12,20 @@ Required Python Packages:
 + `openstack` (Optional): Required for OVH.
 + `pycurl` (Optional): Improve upload performance and file size limit.
 
-Credentials
+Credentials:
 
 + Accelize Access Key (create it within your [AccelStore account](https://accelstore.accelize.com/user/application))
 + Cloud Service Provider Access Key (See your CSP documentation for more information).
+
+* [See configuration for more information](configuration.md)
 
 ### Linux
 On Linux, some extra packages are required:
 
 + `python-pip` package is required.
 
-+ Depending on the Python version and wheel format availability, a C/C++ compiler may also be required for 
-install dependencies. In this case, `gcc` & `python-devel` are required.
++ Depending on the Python version, CSP targeted and wheel format availability, a C/C++ compiler may also be required 
+for install dependencies. In this case, `gcc` & `python-devel` are required.
 
 + `pycurl` need the `curl` package.
 
@@ -40,7 +42,7 @@ sudo apt-get install gcc python-pip python-dev curl
 
 ## Windows
 
-Depending on the Python version and wheel format availability, a C/C++ compiler may also be required for 
+Depending on the Python version, CSP targeted and wheel format availability, a C/C++ compiler may also be required for 
 install dependencies.
 
 + see [Windows Compilers on Python documentation](https://wiki.python.org/moin/WindowsCompilers)
@@ -52,15 +54,15 @@ Installation is done using PIP:
 pip install acceleratorAPI
 ```
 
-All mandatory dependencies are automatically installed. It is possible to install also optionnal dependecies passing 
-following extras:
+All mandatory dependencies are automatically installed. It is possible to install also optional dependencies passing 
+following setuptools extras:
 
 * `all`: Install all extras.
 * `AWS`: Requirements for AWS.
 * `OVH`: Requirements for OVH.
 * `optional`: other optional requirements (ex `pycurl`).
 
-Example for installing `all` extras:
+Example for installing the `all` extra:
 ```
 pip install acceleratorAPI[all]
 ```
