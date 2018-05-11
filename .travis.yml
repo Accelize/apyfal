@@ -1,0 +1,18 @@
+language: python
+
+python:
+    - "2.7"
+    - "3.4"
+    - "3.5"
+    - "3.6"
+
+install:
+    - "python -m pip install --upgrade setuptools pip wheel"
+    - "python -m pip install pytest coverage pytest-cov coveralls[yaml] requests pycurl boto3 openstack urllib3 six
+    certifi python-dateutil"
+
+script:
+    - "py.test -v --cov=acceleratorAPI --cov-report=term-missing"
+
+after_success:
+    - "coveralls"
