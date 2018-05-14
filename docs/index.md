@@ -61,12 +61,8 @@ Check the accelerator metering information on your [AccelStore account](https://
 
 ## AcceleratorAPI documentation:
 
-* [AcceleratorAPI GitHub page](https://github.com/Accelize/acceleratorAPI)
 * [acceleratorAPI](api.rst)
-* [acceleratorAPI.accelerator](api_accelerator.rst)
-* [acceleratorAPI.csp](api_csp.rst)
-* [acceleratorAPI.configuration](api_configuration.rst)
-* [acceleratorAPI.exceptions](api_exceptions.rst)
+
 <!-- TODO: add swagger low-level api-->
 
 ## Accelize links

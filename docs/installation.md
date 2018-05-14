@@ -17,7 +17,9 @@ Credentials:
 + Accelize Access Key (create it within your [AccelStore account](https://accelstore.accelize.com/user/application))
 + Cloud Service Provider Access Key (See your CSP documentation for more information).
 
-* [See configuration for more information](configuration.md)
+```eval_rst
+See :doc:`configuration` for more information.
+```
 
 ### Linux
 On Linux, some extra packages are required:
@@ -40,7 +42,7 @@ sudo yum install gcc python-pip python-devel curl
 sudo apt-get install gcc python-pip python-dev curl
 ```
 
-## Windows
+### Windows
 
 Depending on the Python version, CSP targeted and wheel format availability, a C/C++ compiler may also be required for 
 install dependencies.

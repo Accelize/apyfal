@@ -9,7 +9,9 @@ Two main configuration needs to be done before running an accelerator:
 The CSP configuration in order to configure the CSP environment without pain,
 and when needed start a preconfigured instance with FPGA:
 
-* [CSP guide](csp.md)
+```eval_rst
+See :doc:`csp` for more information.
+```
 
 ### Accelize account
 
@@ -39,6 +41,8 @@ directory. A custom path can also be passed as argument to the API.
 The use of the configuration file is not mandatory, all parameters can be passed directly to
 the API as arguments. Please read API documentation for more information.
 
-* [API documentation](api.md)
+```eval_rst
+See :doc:`api` for more information.
+```
 
 If both configuration file and arguments are used, arguments overrides configuration file values.

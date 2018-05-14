@@ -8,8 +8,9 @@ and give you a comprehensive understanding of how everything fits together.
 All of theses examples requires that you first install the API
 and create a configuration file in your current working directory or home folder:
 
-* [Installation](installation.md)
-* [Configuration File](configuration.md)
+```eval_rst
+See :doc:`installation` and :doc:`configuration` for more information.
+```
 
 ## Simple example
 

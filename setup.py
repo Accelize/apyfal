@@ -40,7 +40,7 @@ PACKAGE_INFOS = dict(
         # CSP specific requirements
         'AWS': ['boto3'],
         'OVH': ['openstack']},
-    setup_requires=['pytest', 'sphinx', 'setuptools', 'recommonmark'],
+    setup_requires=['pytest', 'sphinx', 'setuptools', 'recommonmark', 'sphinx_rtd_theme'],
     packages=find_packages(exclude=['docs', '*.test']),
     include_package_data=True,
     zip_safe=True,
