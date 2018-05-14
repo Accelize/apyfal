@@ -236,10 +236,12 @@ class AcceleratorClass(object):
                 Take a look accelerator documentation for more information.
         """
         # Stops accelerator
-        stop_result = self._accelerator.stop_accelerator()
+        try:
+            stop_result = self._accelerator.stop_accelerator()
 
         # Stops CSP instance
-        self._csp.stop_instance(stop_mode)
+        finally:
+            self._csp.stop_instance(stop_mode)
 
         return stop_result
 
