@@ -10,10 +10,10 @@ except ImportError:
 
     _ABC = _ABCMeta('ABC', (object,), {})
 
-from acceleratorAPI import logger
 import acceleratorAPI.configuration as _cfg
 import acceleratorAPI.exceptions as _exc
 import acceleratorAPI._utilities as _utl
+from acceleratorAPI._utilities import get_logger as _get_logger
 
 TERM = 0
 STOP = 1
@@ -69,7 +69,7 @@ class CSPGenericClass(_ABC):
         # If call form this class instantiate subclasses depending on Provider
         config = _cfg.create_configuration(kwargs.get('config'))
         provider = cls._provider_from_config(kwargs.get('provider'), config)
-        logger.info("Targeted CSP: %s.", provider)
+        _get_logger().info("Targeted CSP: %s.", provider)
 
         if provider == 'AWS':
             from acceleratorAPI.csp.aws import AWSClass
@@ -245,7 +245,7 @@ class CSPGenericClass(_ABC):
                                          for value, name in self.STOP_MODES.items())))
 
         self._stop_mode = stop_mode
-        logger.info("Auto-stop mode is: %s", self.STOP_MODES[self._stop_mode])
+        _get_logger().info("Auto-stop mode is: %s", self.STOP_MODES[self._stop_mode])
 
     @_abstractmethod
     def check_credential(self):
@@ -313,7 +313,7 @@ class CSPGenericClass(_ABC):
                     # Augment exception message
                     self._add_csp_help_to_exception_message(exception)
                     raise
-                logger.debug("Starting instance")
+                _get_logger().debug("Starting instance")
 
                 try:
                     self._instance, self._instance_id = self._start_new_instance()
@@ -321,7 +321,7 @@ class CSPGenericClass(_ABC):
                     # Augment exception message
                     self._add_csp_help_to_exception_message(exception)
                     raise
-                logger.info("Created instance ID: %s", self._instance_id)
+                _get_logger().info("Created instance ID: %s", self._instance_id)
 
             # If exists, starts it directly
             else:
@@ -338,7 +338,7 @@ class CSPGenericClass(_ABC):
             self._wait_instance_boot()
 
         self._log_instance_info()
-        logger.info("Your instance is now up and running")
+        _get_logger().info("Your instance is now up and running")
 
     @_abstractmethod
     def _create_instance(self):
@@ -377,13 +377,12 @@ class CSPGenericClass(_ABC):
         Raises:
             acceleratorAPI.exceptions.CSPInstanceException:
                 Timeout while booting."""
-        logger.info("Instance is now booting...")
+        _get_logger().info("Instance is now booting...")
         # Check URL with 6 minutes timeout
-        if not _utl.check_url(self._instance_url, timeout=1,
-                              retry_count=72, logger=logger):
+        if not _utl.check_url(self._instance_url, timeout=1, retry_count=72):
             raise _exc.CSPInstanceException("Timed out while waiting CSP instance to boot.")
 
-        logger.info("Instance booted!")
+        _get_logger().info("Instance booted!")
 
     @_abstractmethod
     def _log_instance_info(self):
@@ -404,34 +403,34 @@ class CSPGenericClass(_ABC):
 
         # Keep instance alive
         if self._stop_mode == KEEP:
-            logger.warning("###########################################################")
-            logger.warning("## Instance with URL %s (ID=%s) is still running!",
-                           self.instance_url, self.instance_id)
-            logger.warning("## Make sure you will stop manually the instance.")
-            logger.warning("###########################################################")
+            _get_logger().warning("###########################################################")
+            _get_logger().warning("## Instance with URL %s (ID=%s) is still running!",
+                                  self.instance_url, self.instance_id)
+            _get_logger().warning("## Make sure you will stop manually the instance.")
+            _get_logger().warning("###########################################################")
             return
 
         # Checks if instance to stop
         try:
             self.instance_status()
         except _exc.CSPInstanceException as exception:
-            logger.debug("No instance to stop (%s)", exception)
+            _get_logger().debug("No instance to stop (%s)", exception)
             return
 
-        logger.debug("Stopping instance (ID: %s) on '%s'", self.instance_id, self.provider)
+        _get_logger().debug("Stopping instance (ID: %s) on '%s'", self.instance_id, self.provider)
 
         # Terminates and delete instance completely
         if stop_mode == TERM:
             response = self._terminate_instance()
-            logger.info("Instance ID %s has been terminated", self._instance_id)
+            _get_logger().info("Instance ID %s has been terminated", self._instance_id)
 
         # Pauses instance and keep it alive
         else:
             response = self._pause_instance()
-            logger.info("Instance ID %s has been stopped", self._instance_id)
+            _get_logger().info("Instance ID %s has been stopped", self._instance_id)
 
         if response is not None:
-            logger.debug("Stop response: %s", response)
+            _get_logger().debug("Stop response: %s", response)
 
     @_abstractmethod
     def _terminate_instance(self):

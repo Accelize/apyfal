@@ -3,16 +3,12 @@
 
 __version__ = "2.1.0"
 
-from acceleratorAPI import _utilities as _utl
-
-# Initialize logger
-logger = _utl.init_logger("acceleratorAPI", __file__)
-
 # Not imported on top since need logger
 import acceleratorAPI.csp as _csp
 import acceleratorAPI.accelerator as _acc
 import acceleratorAPI.configuration as _cfg
 import acceleratorAPI.exceptions as _exc
+from acceleratorAPI._utilities import get_logger as _get_logger
 
 
 class AcceleratorClass(object):
@@ -55,12 +51,13 @@ class AcceleratorClass(object):
                  region=None, xlz_client_id=None, xlz_secret_id=None, csp_client_id=None,
                  csp_secret_id=None, ssh_key=None, instance_id=None, instance_url=None,
                  stop_mode=_csp.TERM, exit_instance_on_signal=True):
-        logger.debug("")
-        logger.debug("/" * 100)
+
+        _get_logger().debug("")
+        _get_logger().debug("/" * 100)
 
         # Initialize configuration
         config = _cfg.create_configuration(config_file)
-        logger.info("Using configuration file: %s", config.file_path)
+        _get_logger().info("Using configuration file: %s", config.file_path)
 
         # Create CSP object
         self._csp = _csp.CSPGenericClass(
@@ -168,7 +165,7 @@ class AcceleratorClass(object):
         # Configure accelerator if needed
         if kwargs or self._accelerator.configuration_url is None or datafile is not None:
             return self.configure(datafile, accelerator_parameters, **kwargs)
-        logger.debug("Accelerator is already configured")
+        _get_logger().debug("Accelerator is already configured")
 
     def configure(self, datafile=None, accelerator_parameters=None, **kwargs):
         """
@@ -188,14 +185,15 @@ class AcceleratorClass(object):
             dict: Accelerator response. Contain output information from configuration operation.
                 Take a look accelerator documentation for more information.
         """
-        logger.debug("Configuring accelerator '%s' on instance ID %s", self._accelerator.name, self._csp.instance_id)
+        _get_logger().debug("Configuring accelerator '%s' on instance ID %s",
+                            self._accelerator.name, self._csp.instance_id)
         self._accelerator.is_alive()
 
         csp_env = self._csp.get_configuration_env(**kwargs)
         config_result = self._accelerator.start_accelerator(
             datafile=datafile, accelerator_parameters=accelerator_parameters, csp_env=csp_env)
 
-        logger.info("Configuration of accelerator is complete")
+        _get_logger().info("Configuration of accelerator is complete")
         return config_result
 
     def process(self, file_out, file_in=None, process_parameter=None):
@@ -213,7 +211,7 @@ class AcceleratorClass(object):
             dict: Accelerator response. Contain output information from process operation.
                 Take a look accelerator documentation for more information.
         """
-        logger.debug("Starting a processing job: in=%s, out=%s", file_in, file_out)
+        _get_logger().debug("Starting a processing job: in=%s, out=%s", file_in, file_out)
 
         # Process file with accelerator
         process_result = self._accelerator.process_file(
@@ -254,7 +252,7 @@ class AcceleratorClass(object):
                 See "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
                 information and possible values.
         """
-        logger.debug("Starting instance on '%s'", self._csp.provider)
+        _get_logger().debug("Starting instance on '%s'", self._csp.provider)
 
         # Get configuration information from webservice
         accel_requirements = self._accelerator.get_accelerator_requirements(self._csp.provider)
@@ -268,7 +266,7 @@ class AcceleratorClass(object):
 
         # Set accelerator URL to CSP instance URL
         self._accelerator.url = self._csp.instance_url
-        logger.info("Accelerator URL: %s", self._accelerator.url)
+        _get_logger().info("Accelerator URL: %s", self._accelerator.url)
 
         # If possible use the last accelerator configuration (it can still be overwritten later)
         self._accelerator.use_last_configuration()
@@ -280,6 +278,8 @@ class AcceleratorClass(object):
         Args:
             process_result (dict): result from Accelerator.process_file
         """
+        logger = _get_logger()
+
         # Skips method if logger not at least on INFO Level
         if not logger.isEnabledFor(20):
             return None
