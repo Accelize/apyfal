@@ -3,6 +3,9 @@
 
 __version__ = "2.1.0"
 
+__copyright__ = "Copyright 2018 Accelize"
+__licence__ = """Apache 2.0"""
+
 # Not imported on top since need logger
 import acceleratorAPI.csp as _csp
 import acceleratorAPI.accelerator as _acc
