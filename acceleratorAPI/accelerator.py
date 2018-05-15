@@ -233,12 +233,9 @@ class Accelerator(object):
             raise _exc.AcceleratorConfigurationException(
                 "An accelerator url is required to get the list of configurations.")
 
-        # Create an instance of the API class
-        api_instance = self._rest_api_configuration()
-
         # Get configuration list
         _get_logger().debug("Get list of configurations...")
-        config_list = api_instance.configuration_list().results
+        config_list = self._rest_api_configuration().configuration_list().results
 
         return config_list
 

@@ -403,11 +403,9 @@ class CSPGenericClass(_ABC):
 
         # Keep instance alive
         if self._stop_mode == KEEP:
-            _get_logger().warning("###########################################################")
-            _get_logger().warning("## Instance with URL %s (ID=%s) is still running!",
-                                  self.instance_url, self.instance_id)
-            _get_logger().warning("## Make sure you will stop manually the instance.")
-            _get_logger().warning("###########################################################")
+            import warnings
+            warnings.warn("Instance with URL %s (ID=%s) is still running!" % (self.instance_url, self.instance_id),
+                          Warning)
             return
 
         # Checks if instance to stop
