@@ -293,8 +293,7 @@ class AWSClass(_csp.CSPGenericClass):
         except _boto_exceptions.ClientError as exception:
             raise _exc.CSPInstanceException(
                 "Could not find an instance with ID %s ('%s')", self._instance_id, exception)
-        else:
-            _get_logger().debug("Found an instance with ID %s in the following state: %s",
+        _get_logger().debug("Found an instance with ID %s in the following state: %s",
                                 self._instance_id, instance_state)
         return instance_state["Name"]
 

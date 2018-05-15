@@ -100,3 +100,23 @@ class Configuration(_configparser.ConfigParser):
         elif is_literal:
             return _literal_eval(new_val)
         return new_val
+
+    def has_accelize_credential(self):
+        """
+        Check if Accelize credentials are present in configuration file.
+
+        Returns:
+            bool: True if credentials founds in file.
+        """
+        return (self.get_default('accelize', 'client_id') and
+                self.get_default('accelize', 'secret_id'))
+
+    def has_csp_credential(self):
+        """
+        Check if CSP credentials are present in configuration file.
+
+        Returns:
+            bool: True if credentials founds in file.
+        """
+        return (self.get_default('csp', 'client_id') and
+                self.get_default('csp', 'secret_id'))

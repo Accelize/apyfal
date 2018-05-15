@@ -86,7 +86,7 @@ class CSPGenericClass(_ABC):
     def __init__(self, provider=None, config=None, client_id=None, secret_id=None, region=None,
                  instance_type=None, ssh_key=None, security_group=None, instance_id=None,
                  instance_url=None, project_id=None, auth_url=None, interface=None, role=None,
-                 stop_mode=None, exit_instance_on_signal=True):
+                 stop_mode=None, exit_instance_on_signal=False):
 
         # Default some attributes
         self._session = None
@@ -129,7 +129,7 @@ class CSPGenericClass(_ABC):
             "csp", "stop_mode", overwrite=stop_mode, default=TERM)
 
         # Checks mandatory configuration values
-        self._check_arguments('client_id', 'secret_id', 'region')
+        self._check_arguments('region')
 
         # Enable optional Signal handler
         self._set_signals(exit_instance_on_signal)

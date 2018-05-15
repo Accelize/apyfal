@@ -52,7 +52,7 @@ class AcceleratorClass(object):
     def __init__(self, accelerator_name, config_file=None, provider=None,
                  region=None, xlz_client_id=None, xlz_secret_id=None, csp_client_id=None,
                  csp_secret_id=None, ssh_key=None, instance_id=None, instance_url=None,
-                 stop_mode=_csp.TERM, exit_instance_on_signal=True):
+                 stop_mode=_csp.TERM, exit_instance_on_signal=False):
 
         _get_logger().debug("")
         _get_logger().debug("/" * 100)
@@ -269,9 +269,6 @@ class AcceleratorClass(object):
         # Set accelerator URL to CSP instance URL
         self._accelerator.url = self._csp.instance_url
         _get_logger().info("Accelerator URL: %s", self._accelerator.url)
-
-        # If possible use the last accelerator configuration (it can still be overwritten later)
-        self._accelerator.use_last_configuration()
 
     def _log_profiling_info(self, process_result):
         """

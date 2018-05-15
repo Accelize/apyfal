@@ -78,11 +78,16 @@ class Accelerator(object):
                 "Provide them in the configuration file or through function arguments.")
 
         # Checks if Accelize credentials are valid
+        self._access_token = None
         self._check_accelize_credential()
 
-        # A regular API has fixed url. In our case we want to change it dynamically.
         self._api_configuration = _swc.Configuration()
-        self.url = url
+        self._url = url
+
+        if url:
+            # Force URL update if any
+            self.url = url
+
         self._accelerator_configuration_url = None
 
     def __enter__(self):
@@ -98,18 +103,30 @@ class Accelerator(object):
         """
         Check user Accelerator credential
 
+        Returns:
+            str: Access token.
+
         Raises:
             AcceleratorAuthenticationException: User credential are not valid.
         """
-        response = _utl.https_session().post(
-            'https://master.metering.accelize.com/o/token/',
-            data={"grant_type": "client_credentials"}, auth=(self.client_id, self.secret_id))
+        if self._access_token is None:
+            # Check access and get token from server
+            response = _utl.http_session().post(
+                'https://master.metering.accelize.com/o/token/',
+                data={"grant_type": "client_credentials"}, auth=(self.client_id, self.secret_id))
 
-        if response.status_code != 200:
-            raise _exc.AcceleratorAuthenticationException(
-                "Accelize authentication failed (%d): %s" % (response.status_code, response.text))
+            if response.status_code != 200:
+                raise _exc.AcceleratorAuthenticationException(
+                    "Accelize authentication failed (%d): %s" % (response.status_code, response.text))
 
-        _get_logger().info("Accelize authentication for '%s' is successful", self._name)
+            response.raise_for_status()
+
+            _get_logger().info("Accelize authentication for '%s' is successful", self._name)
+            _get_logger().debug("Accelize token answer: %s", response.text)
+
+            self._access_token = _json.loads(response.text)['access_token']
+
+        return self._access_token
 
     @property
     def name(self):
@@ -159,11 +176,28 @@ class Accelerator(object):
         Returns:
             str: URL
         """
-        return self._api_configuration.host
+        return self._url
 
     @url.setter
     def url(self, url):
-        self._api_configuration.host = _utl.format_url(url)
+
+        # Check URL
+        if not url:
+            raise _exc.AcceleratorConfigurationException(
+                "An accelerator url is required .")
+
+        self._url = _utl.format_url(url)
+
+        # Patch Swagger to have possibility to use
+        # multiple REST API URL
+        self._api_configuration.host = self._url
+        try:
+            self._api_configuration.api_client.host = self._url
+        except AttributeError:
+            pass
+
+        # If possible use the last accelerator configuration (it can still be overwritten later)
+        self._use_last_configuration()
 
     def is_alive(self):
         """
@@ -187,64 +221,41 @@ class Accelerator(object):
         Returns:
             dict: Accelerator requirements for CSP.
         """
-        session = _utl.https_session()
-        response = session.post('https://master.metering.accelize.com/o/token/',
-                                data={"grant_type": "client_credentials"},
-                                auth=(self.client_id, self.secret_id))
-        _get_logger().debug("Accelize token answer: %s", response.text)
+        access_token = self._check_accelize_credential()
+
+        # call WS
+        headers = {"Authorization": "Bearer %s" % access_token,
+                   "Content-Type": "application/json", "Accept": "application/vnd.accelize.v1+json"}
+
+        response = _utl.http_session().get(
+            'https://master.metering.accelize.com/auth/getlastcspconfiguration/', headers=headers)
+        _get_logger().debug("Accelize config answer: %s, status: %s", response.text, response.status_code)
         response.raise_for_status()
 
-        if response.status_code == 200:
-            # call WS
-            answer_token = _json.loads(response.text)
-            headers = {"Authorization": "Bearer %s" % answer_token['access_token'],
-                       "Content-Type": "application/json", "Accept": "application/vnd.accelize.v1+json"}
-            response = session.get(
-                'https://master.metering.accelize.com/auth/getlastcspconfiguration/', headers=headers)
-            _get_logger().debug("Accelize config answer: %s, status: %s", response.text, str(response.status_code))
-            response.raise_for_status()
+        configuration_accelerator = _json.loads(response.text)
+        _get_logger().debug("Accelerator requirements:\n%s", _utl.pretty_dict(configuration_accelerator))
 
-            configuration_accelerator = _json.loads(response.text)
-            _get_logger().debug("Accelerator requirements:\n%s", _utl.pretty_dict(configuration_accelerator))
-
-            # Check configuration with CSP
-            if provider not in configuration_accelerator:
-                raise _exc.AcceleratorConfigurationException(
-                    "CSP '%s' is not supported. Available CSP are: %s" % (
-                        provider, ', '.join(configuration_accelerator.keys())))
-
-            if self._name not in configuration_accelerator[provider]:
-                raise _exc.AcceleratorConfigurationException(
-                    "Accelerator '%s' is not supported on '%s'." % (self._name, provider))
-
-            info = configuration_accelerator[provider][self._name]
-            info['accelerator'] = self._name
-            return info
-
-    def _get_accelerator_configuration_list(self):
-        """
-        Get configuration list from accelerator.
-
-        Returns:
-            list: configuration
-        """
-        # Check URL
-        if self.url is None:
+        # Check configuration with CSP
+        if provider not in configuration_accelerator:
             raise _exc.AcceleratorConfigurationException(
-                "An accelerator url is required to get the list of configurations.")
+                "CSP '%s' is not supported. Available CSP are: %s" % (
+                    provider, ', '.join(configuration_accelerator.keys())))
 
-        # Get configuration list
-        _get_logger().debug("Get list of configurations...")
-        config_list = self._rest_api_configuration().configuration_list().results
+        if self._name not in configuration_accelerator[provider]:
+            raise _exc.AcceleratorConfigurationException(
+                "Accelerator '%s' is not supported on '%s'." % (self._name, provider))
 
-        return config_list
+        info = configuration_accelerator[provider][self._name]
+        info['accelerator'] = self._name
+        return info
 
-    def use_last_configuration(self):
+    def _use_last_configuration(self):
         """
         Reload last accelerator configuration.
         """
         # Get last configuration, if any
-        config_list = self._get_accelerator_configuration_list()
+        _get_logger().debug("Get list of configurations...")
+        config_list = self._rest_api_configuration().configuration_list().results
         if not config_list:
             _get_logger().info("Accelerator has not been configured yet.")
             return
@@ -278,16 +289,20 @@ class Accelerator(object):
             dict: Accelerator response. Contain output information from configuration operation.
                 Take a look accelerator documentation for more information.
         """
-        # TODO: Detail response dict in doctstring
+        # TODO: Detail response dict in docstring
         # Check parameters
         if accelerator_parameters is None:
             _get_logger().debug("Using default configuration parameters")
             accelerator_parameters = self._configuration_parameters
 
-        envserver = {"client_id": self.client_id, "client_secret": self.secret_id}
-        envserver.update(csp_env)
-        parameters = {"env": envserver}
+        parameters = {
+            "env": {
+                "client_id": self.client_id,
+                "client_secret": self.secret_id}}
+        if csp_env:
+            parameters['env'].update(csp_env)
         parameters.update(accelerator_parameters)
+
         _get_logger().debug("parameters = \n%s", _json.dumps(parameters, indent=4))
 
         _get_logger().debug("datafile = %s", datafile)
@@ -331,7 +346,7 @@ class Accelerator(object):
             dict: Accelerator response. Contain output information from process operation.
                 Take a look accelerator documentation for more information.
         """
-        # TODO: Detail response dict in doctstring
+        # TODO: Detail response dict in docstring
         # Check if configuration was done
         if self._accelerator_configuration_url is None:
             raise _exc.AcceleratorConfigurationException(
@@ -427,7 +442,7 @@ class Accelerator(object):
             _get_logger().debug("Process status: %s", process_result['app']['status'])
             _get_logger().debug("Process msg:\n%s", process_result['app']['msg'])
 
-            response = _utl.https_session().get(api_response.datafileresult, stream=True)
+            response = _utl.http_session().get(api_response.datafileresult, stream=True)
             with open(file_out, 'wb') as out_file:
                 _shutil.copyfileobj(response.raw, out_file)
 
@@ -445,7 +460,7 @@ class Accelerator(object):
             dict: Accelerator response. Contain output information from stop operation.
                 Take a look accelerator documentation for more information.
         """
-        # TODO: Detail response dict in doctstring
+        # TODO: Detail response dict in docstring
         try:
             self.is_alive()
         except _exc.AcceleratorRuntimeException:

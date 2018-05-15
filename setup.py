@@ -21,7 +21,7 @@ PACKAGE_INFOS = dict(
         'Programming Language :: Python :: 2.7',
         'Operating System :: OS Independent'
         ],
-    keywords='fpga cloud',
+    keywords='fpga cloud accelerator accelize',
     author='Accelize',
     author_email='https://www.accelize.com/contact-us/',
     url='https://github.com/Accelize/acceleratorAPI',

@@ -88,18 +88,18 @@ def format_url(url_or_ip):
     return url_or_ip
 
 
-def https_session(max_retries=2):
+def http_session(max_retries=2):
     """
-    Instantiate HTTPS session
+    Instantiate HTTP session
 
     Args:
         max_retries (int): The maximum number of retries each connection should attempt
 
     Returns:
-        requests.Session: Https session
+        requests.Session: Http session
     """
     session = requests.Session()
-    session.mount('https://', requests.adapters.HTTPAdapter(max_retries=max_retries))
+    session.mount('http://', requests.adapters.HTTPAdapter(max_retries=max_retries))
     return session
 
 
@@ -118,7 +118,7 @@ def get_host_public_ip():
                          ('http://freegeoip.net/xml', 'IP')):
 
         # Try to get response
-        session = https_session(max_retries=1)
+        session = http_session(max_retries=1)
         response = session.get(url)
         try:
             response.raise_for_status()
