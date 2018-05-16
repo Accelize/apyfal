@@ -1,6 +1,8 @@
 # coding=utf-8
 """Cloud Service Providers"""
 
+from importlib import import_module as _import_module
+
 try:
     # Python 3
     from abc import ABC as _ABC, abstractmethod as _abstractmethod
@@ -55,31 +57,47 @@ class CSPGenericClass(_ABC):
             convenience and does not cover all exit case like process kill and
             may not work on all OS.
     """
+    CSP_NAME = None
+    CSP_HELP_URL = ''
+
     STOP_MODES = {
         TERM: "TERM",
         STOP: "STOP",
         KEEP: "KEEP"}
-    CSP_HELP_URL = ''
 
     def __new__(cls, **kwargs):
         # If call from a subclass, instantiate this subclass directly
         if cls is not CSPGenericClass:
             return object.__new__(cls)
 
-        # If call form this class instantiate subclasses depending on Provider
+        # Get provider from configuration or argument
         config = _cfg.create_configuration(kwargs.get('config'))
         provider = cls._provider_from_config(kwargs.get('provider'), config)
-        _get_logger().info("Targeted CSP: %s.", provider)
 
-        if provider == 'AWS':
-            from acceleratorAPI.csp.aws import AWSClass
-            return object.__new__(AWSClass)
+        # Finds module containing CSP class
+        module_name = '%s.%s' % (cls.__module__, provider.lower())
+        try:
+            csp_module = _import_module(module_name)
+        except ImportError:
+            raise _exc.CSPConfigurationException(
+                "No module '%s' for '%s' provider" % (module_name, provider))
 
-        elif provider == 'OVH':
-            from acceleratorAPI.csp.ovh import OVHClass
-            return object.__new__(OVHClass)
-
+        # Finds CSP class
+        for name in dir(csp_module):
+            member = getattr(csp_module, name)
+            try:
+                if getattr(member, 'CSP_NAME') == provider:
+                    break
+            except AttributeError:
+                continue
         else:
+            raise _exc.CSPConfigurationException(
+                "No class found in '%s' for '%s' provider" % (module_name, provider))
+
+        # Instantiates CSP class
+        try:
+            return object.__new__(member)
+        except TypeError:
             raise _exc.CSPConfigurationException(
                 "Cannot instantiate a CSP class for '%s' provider" % provider)
 
@@ -99,7 +117,11 @@ class CSPGenericClass(_ABC):
 
         # Read configuration from file
         self._config = _cfg.create_configuration(config)
+
         self._provider = self._provider_from_config(provider, config)
+        if not self._provider:
+            # Use default value if any
+            self._provider = self.CSP_NAME
 
         self._client_id = config.get_default(
             'csp', 'client_id', overwrite=client_id)
@@ -274,6 +296,9 @@ class CSPGenericClass(_ABC):
         # Update instance
         self._instance = self._get_instance()
 
+        if self._instance is None:
+            raise _exc.CSPInstanceException("No instance available")
+
         # Read instance status
         return self._get_instance_status()
 
@@ -310,6 +335,9 @@ class CSPGenericClass(_ABC):
                 try:
                     self._create_instance()
                 except _exc.CSPException as exception:
+                    # Force stop instance
+                    self._stop_silently()
+
                     # Augment exception message
                     self._add_csp_help_to_exception_message(exception)
                     raise
@@ -318,6 +346,9 @@ class CSPGenericClass(_ABC):
                 try:
                     self._instance, self._instance_id = self._start_new_instance()
                 except _exc.CSPException as exception:
+                    # Force stop instance
+                    self._stop_silently()
+
                     # Augment exception message
                     self._add_csp_help_to_exception_message(exception)
                     raise
@@ -433,14 +464,23 @@ class CSPGenericClass(_ABC):
     @_abstractmethod
     def _terminate_instance(self):
         """
-        Terminate and delete instance.
+        Terminates and deletes instance.
         """
 
     @_abstractmethod
     def _pause_instance(self):
         """
-        Pause instance.
+        Pauses instance.
         """
+
+    def _stop_silently(self):
+        """
+        Terminates and deletes instance ignoring errors.
+        """
+        try:
+            self._terminate_instance()
+        except _exc.CSPException:
+            pass
 
     def set_accelerator_requirements(self, accel_parameters):
         """

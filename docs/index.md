@@ -37,10 +37,6 @@ with acceleratorAPI.AcceleratorClass(accelerator='cast_gzip') as myaccel:
 # By default, CSP instance is automatically close on "with" exit.
 ```
 
-### Metering
-
-Check the accelerator metering information on your [AccelStore account](https://accelstore.accelize.com/user/metering). 
-
 ## Feature
 
 + Configuration of CSP environment for AWS, OVH 

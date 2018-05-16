@@ -188,5 +188,3 @@ def test_start_accelerator():
     excepted_response.update(base_parametersresult)
 
     assert excepted_response == accelerator.start_accelerator()
-
-

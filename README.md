@@ -28,8 +28,8 @@ with acceleratorAPI.AcceleratorClass(accelerator='cast_gzip') as myaccel:
     myaccel.start()
 
     # Process files using FPGA
-    myaccel.process(file_in='/path/myfile.dat',  file_out='/path/result.dat')
-    myaccel.process(file_in='/path/myfile.dat',  file_out='/path/result.dat')
+    myaccel.process(file_in='/path/myfile1.dat',  file_out='/path/result1.dat')
+    myaccel.process(file_in='/path/myfile2.dat',  file_out='/path/result2.dat')
     # ... Process any number of file as needed
     
 # By default, CSP instance is automatically close on "with" exit.
@@ -38,6 +38,16 @@ with acceleratorAPI.AcceleratorClass(accelerator='cast_gzip') as myaccel:
 # Documentation
 
 For more information acceleratorAPI, please read the [documentation](https://).
+
+# Installation
+
+Installation is made with PIP. Some installation options are available depending the CSP you want to use (See 
+documentation for more information).
+
+You can install the full package with all options using:
+```
+pip install acceleratorAPI[all]
+```
 
 # Support and enhancement requests
 [Contact us](https://www.accelize.com/contact) if you have any support or enhancement request.
