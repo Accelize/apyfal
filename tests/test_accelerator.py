@@ -1,7 +1,10 @@
 # coding=utf-8
 """acceleratorAPI.accelerator tests"""
 import collections
+import gc
 import json
+import sys
+import tempfile
 
 import pytest
 
@@ -50,7 +53,7 @@ def test_accelerator_check_accelize_credential_no_cred():
                     secret_id='bad_secret_id', config=config)
 
 
-def test_is_alive():
+def test_accelerator_is_alive():
     """Tests Accelerator._raise_for_status"""
     from acceleratorAPI.accelerator import Accelerator
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
@@ -80,7 +83,7 @@ def test_is_alive():
         accelerator.is_alive()
 
 
-def test__raise_for_status():
+def test_accelerator_raise_for_status():
     """Tests Accelerator._raise_for_status"""
     from acceleratorAPI.accelerator import Accelerator
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
@@ -97,7 +100,7 @@ def test__raise_for_status():
         Accelerator._raise_for_status({'app': {'status': 1, 'msg': 'error'}})
 
 
-def test_get_accelerator_requirements():
+def test_accelerator_get_accelerator_requirements():
     """Tests Accelerator.get_accelerator_requirements"""
     from acceleratorAPI.configuration import Configuration
     from acceleratorAPI.accelerator import Accelerator
@@ -127,8 +130,8 @@ def test_get_accelerator_requirements():
     assert response['accelerator'] == name
 
 
-def test_start_accelerator():
-    """Tests Accelerator.start_accelerator"""
+def test_accelerator_start():
+    """Tests Accelerator.start"""
     from acceleratorAPI.accelerator import Accelerator
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
 
@@ -211,7 +214,7 @@ def test_start_accelerator():
     excepted_response = base_response.copy()
     excepted_response.update(base_parametersresult)
 
-    assert excepted_response == accelerator.start_accelerator(
+    assert excepted_response == accelerator.start(
         datafile=excepted_datafile,
         accelerator_parameters=accelerator_parameters)
 
@@ -222,15 +225,15 @@ def test_start_accelerator():
     excepted_response = base_response.copy()
     excepted_response.update(base_parametersresult)
 
-    assert excepted_response == accelerator.start_accelerator()
+    assert excepted_response == accelerator.start()
 
     # Check error from host
     configuration_read_in_error = 1
     with pytest.raises(AcceleratorRuntimeException):
-        assert excepted_response == accelerator.start_accelerator()
+        assert excepted_response == accelerator.start()
 
 
-def test__use_last_configuration():
+def test_accelerator_use_last_configuration():
     """Tests Accelerator._use_last_configuration"""
     from acceleratorAPI.accelerator import Accelerator
 
@@ -275,3 +278,175 @@ def test__use_last_configuration():
     config_list.insert(0, Config(url='dummy_config_url_2', used=1))
     accelerator = DummyAccelerator('Dummy', url='https://www.accelize.com')
     assert accelerator.configuration_url == 'dummy_config_url_2'
+
+
+def test_accelerator_stop():
+    """Tests Accelerator.stop"""
+    from acceleratorAPI.accelerator import Accelerator
+    from acceleratorAPI.exceptions import AcceleratorRuntimeException
+
+    # Mock Swagger REST API StopApi
+    is_alive = True
+    stop_list = {'app': {'status': 0, 'msg': ''}}
+
+    class StopApi:
+        """Fake swagger_client.StopApi"""
+        is_running = True
+
+        def stop_list(self):
+            """Simulates accelerator stop and returns fake response"""
+            # Stop Accelerator
+            self.is_running = False
+
+            # Return result
+            return stop_list
+
+    stop_api = StopApi()
+
+    class DummyAccelerator(Accelerator):
+        """Dummy Accelerator"""
+
+        def __init__(self):
+            """Do not initialize"""
+            self._name = 'dummy'
+
+        @staticmethod
+        def is_alive():
+            """Raise on demand"""
+            if not is_alive:
+                raise AcceleratorRuntimeException()
+
+        @staticmethod
+        def _rest_api_stop():
+            """Return Mocked REST API"""
+            return stop_api
+
+    # Accelerator to stop
+    assert DummyAccelerator().stop() == stop_list
+    assert not stop_api.is_running
+
+    # Auto-stops with context manager
+    stop_api.is_running = True
+    with DummyAccelerator() as accelerator:
+        # Checks __enter__ returned object
+        assert isinstance(accelerator, Accelerator)
+    assert not stop_api.is_running
+
+    # Auto-stops on garbage collection
+    stop_api.is_running = True
+    DummyAccelerator()
+    gc.collect()
+    assert not stop_api.is_running
+
+    # No accelerator to stop
+    is_alive = False
+    assert DummyAccelerator().stop() is None
+
+
+def test_accelerator_process_curl():
+    """Tests Accelerator._process_curl with PycURL"""
+    # Skip if PycURL not available
+    try:
+        import pycurl
+    except ImportError:
+        pytest.skip('Pycurl module required')
+
+    # Check PycURL is enabled in accelerator API
+    import acceleratorAPI.accelerator
+    assert acceleratorAPI.accelerator._USE_PYCURL
+
+    # Start testing
+    from acceleratorAPI.accelerator import Accelerator
+    # TODO: WIP
+
+
+def test_accelerator_process_swagger():
+    """Tests Accelerator._process_swagger with Swagger"""
+    # Clean imported modules
+    # to force to reimport without PycURL if present
+    pycurl_module = sys.modules.get('pycurl')
+    if pycurl_module is not None:
+        sys.modules['pycurl'] = None
+        try:
+            del sys.modules['acceleratorAPI.accelerator']
+        except KeyError:
+            pass
+        gc.collect()
+
+    # Check PycURL is disabled in accelerator API
+    import acceleratorAPI.accelerator
+    assert not acceleratorAPI.accelerator._USE_PYCURL
+
+    # Starts testing
+    try:
+        from acceleratorAPI.accelerator import Accelerator
+        # TODO: WIP
+
+    # Restores before test state
+    finally:
+        if pycurl_module is not None:
+            sys.modules['pycurl'] = pycurl_module
+            try:
+                del sys.modules['acceleratorAPI.accelerator']
+            except KeyError:
+                pass
+            gc.collect()
+
+
+def test_accelerator_process():
+    """Tests Accelerator._process"""
+    from acceleratorAPI.accelerator import Accelerator
+
+    # Mock Swagger REST API ProcessApi
+
+    class ProcessApi:
+        """Fake swagger_client.ProcessApi"""
+
+        @staticmethod
+        def process_read(id_value):
+            """Checks input arguments and returns fake response"""
+            Response = collections.namedtuple(
+                'Response',
+                ['processed', 'inerror', 'parametersresult', 'datafileresult'])
+
+            # Check parameters
+            assert id_value == 'dummy_id'
+
+            return Response()
+
+        @staticmethod
+        def process_delete(id_value):
+            """Checks input arguments"""
+            # Check parameters
+            assert id_value == 'dummy_id'
+
+    def process_function(accelerator_parameters, datafile):
+        """Mock process function (tested separately)"""
+
+    class DummyAccelerator(Accelerator):
+        """Dummy Accelerator"""
+
+        _process_curl = process_function
+        _process_swagger = process_function
+
+        def __init__(self):
+            """Do not initialize"""
+            self._process_parameters = self.DEFAULT_PROCESS_PARAMETERS
+            self._configuration_url = None
+
+        def __del__(self):
+            """Do nothing"""
+
+        @staticmethod
+        def _rest_api_process():
+            """Return Mocked REST API"""
+            return ProcessApi()
+
+    # TODO: WIP
+    tmp_dir = tempfile.mkdtemp()
+    try:
+        pass
+
+    finally:
+        # TODO: clean tmp_dir
+        pass

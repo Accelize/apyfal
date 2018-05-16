@@ -206,7 +206,7 @@ class AcceleratorClass(object):
         self._accelerator.is_alive()
 
         csp_env = self._csp.get_configuration_env(**kwargs)
-        config_result = self._accelerator.start_accelerator(
+        config_result = self._accelerator.start(
             datafile=datafile, accelerator_parameters=accelerator_parameters, csp_env=csp_env)
 
         _get_logger().info("Configuration of accelerator is complete")
@@ -230,7 +230,7 @@ class AcceleratorClass(object):
         _get_logger().debug("Starting a processing job: in=%s, out=%s", file_in, file_out)
 
         # Process file with accelerator
-        process_result = self._accelerator.process_file(
+        process_result = self._accelerator.process(
             file_in=file_in, file_out=file_out, accelerator_parameters=process_parameter)
 
         self._log_profiling_info(process_result)
@@ -251,7 +251,7 @@ class AcceleratorClass(object):
         """
         # Stops accelerator
         try:
-            stop_result = self._accelerator.stop_accelerator()
+            stop_result = self._accelerator.stop()
 
         # Stops CSP instance
         finally:
@@ -289,7 +289,7 @@ class AcceleratorClass(object):
         Shows profiling and specific information in logger.
 
         Args:
-            process_result (dict): result from Accelerator.process_file
+            process_result (dict): result from Accelerator.process
         """
         logger = _get_logger()
 

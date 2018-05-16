@@ -59,7 +59,7 @@ class Accelerator(object):
     def __init__(self, accelerator, client_id=None, secret_id=None, url=None, config=None):
         self._name = accelerator
         self._access_token = None
-        self._accelerator_configuration_url = None
+        self._configuration_url = None
         self._url = None
 
         # Read configuration
@@ -94,10 +94,10 @@ class Accelerator(object):
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.stop_accelerator()
+        self.stop()
 
     def __del__(self):
-        self.stop_accelerator()
+        self.stop()
 
     def _check_accelize_credential(self):
         """
@@ -121,7 +121,7 @@ class Accelerator(object):
 
             response.raise_for_status()
 
-            _get_logger().info("Accelize authentication for '%s' is successful", self._name)
+            _get_logger().info("Accelize authentication for '%s' is successful", self.name)
             _get_logger().debug("Accelize token answer: %s", response.text)
 
             self._access_token = _json.loads(response.text)['access_token']
@@ -166,7 +166,7 @@ class Accelerator(object):
         Returns:
             str: URL
         """
-        return self._accelerator_configuration_url
+        return self._configuration_url
 
     @property
     def url(self):
@@ -241,12 +241,12 @@ class Accelerator(object):
                 "CSP '%s' is not supported. Available CSP are: %s" % (
                     provider, ', '.join(configuration_accelerator.keys())))
 
-        if self._name not in configuration_accelerator[provider]:
+        if self.name not in configuration_accelerator[provider]:
             raise _exc.AcceleratorConfigurationException(
-                "Accelerator '%s' is not supported on '%s'." % (self._name, provider))
+                "Accelerator '%s' is not supported on '%s'." % (self.name, provider))
 
-        info = configuration_accelerator[provider][self._name]
-        info['accelerator'] = self._name
+        info = configuration_accelerator[provider][self.name]
+        info['accelerator'] = self.name
         return info
 
     def _use_last_configuration(self):
@@ -269,9 +269,9 @@ class Accelerator(object):
         _get_logger().info("Accelerator is loaded with configuration: %s", last_config.url)
 
         # The last configuration URL should be keep in order to not request it to user.
-        self._accelerator_configuration_url = last_config.url
+        self._configuration_url = last_config.url
 
-    def start_accelerator(self, datafile=None, accelerator_parameters=None, csp_env=None):
+    def start(self, datafile=None, accelerator_parameters=None, csp_env=None):
         """
         Create an Accelerator configuration.
 
@@ -319,7 +319,7 @@ class Accelerator(object):
         config_result = _literal_eval(api_response.parametersresult)
         self._raise_for_status(config_result, "Configuration of accelerator failed: ")
 
-        config_result['url_config'] = self._accelerator_configuration_url = api_response.url
+        config_result['url_config'] = self._configuration_url = api_response.url
         config_result['url_instance'] = self.url
 
         _get_logger().debug("status: %s", config_result['app']['status'])
@@ -344,7 +344,7 @@ class Accelerator(object):
             bool: True if processed
         """
         api_response = self._rest_api_process().process_create(
-            self._accelerator_configuration_url, parameters=accelerator_parameters, datafile=datafile)
+            self.configuration_url, parameters=accelerator_parameters, datafile=datafile)
         return api_response.id, api_response.processed
 
     def _process_curl(self, accelerator_parameters, datafile):
@@ -363,7 +363,7 @@ class Accelerator(object):
         curl = _pycurl.Curl()
 
         post = [("parameters", accelerator_parameters),
-                ("configuration", self._accelerator_configuration_url)]
+                ("configuration", self.configuration_url)]
         if datafile is not None:
             post.append(("datafile", (_pycurl.FORM_FILE, datafile)))
 
@@ -406,7 +406,7 @@ class Accelerator(object):
 
         return api_response['id'], api_response['processed']
 
-    def process_file(self, file_in, file_out, accelerator_parameters=None):
+    def process(self, file_in, file_out, accelerator_parameters=None):
         """
         Process a file with accelerator.
 
@@ -423,9 +423,9 @@ class Accelerator(object):
         """
         # TODO: Detail response dict in docstring
         # Check if configuration was done
-        if self._accelerator_configuration_url is None:
+        if self.configuration_url is None:
             raise _exc.AcceleratorConfigurationException(
-                "Accelerator has not been configured. Use 'start_accelerator' function.")
+                "Accelerator has not been configured. Use 'start' function.")
 
         # Checks input file presence
         if file_in and not _os.path.isfile(file_in):
@@ -443,7 +443,7 @@ class Accelerator(object):
         if accelerator_parameters is None:
             _get_logger().debug("Using default processing parameters")
             accelerator_parameters = self._process_parameters
-        _get_logger().debug("Using configuration: %s", self._accelerator_configuration_url)
+        _get_logger().debug("Using configuration: %s", self.configuration_url)
 
         # Use cURL to improve performance and avoid issue with big file (https://bugs.python.org/issue8450)
         # If not available, use REST API (with limitations)
@@ -477,7 +477,7 @@ class Accelerator(object):
 
         return process_result
 
-    def stop_accelerator(self):
+    def stop(self):
         """
         Stop your accelerator session.
 

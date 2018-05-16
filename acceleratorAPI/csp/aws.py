@@ -351,7 +351,7 @@ class AWSClass(_csp.CSPGenericClass):
     def get_configuration_env(self, **kwargs):
         """
         Return environment to pass to
-        "acceleratorAPI.accelerator.Accelerator.start_accelerator"
+        "acceleratorAPI.accelerator.Accelerator.start"
         "csp_env" argument.
 
         Args:
