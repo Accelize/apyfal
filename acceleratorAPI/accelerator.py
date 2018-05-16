@@ -58,6 +58,9 @@ class Accelerator(object):
 
     def __init__(self, accelerator, client_id=None, secret_id=None, url=None, config=None):
         self._name = accelerator
+        self._access_token = None
+        self._accelerator_configuration_url = None
+        self._url = None
 
         # Read configuration
         config = _cfg.create_configuration(config)
@@ -78,16 +81,14 @@ class Accelerator(object):
                 "Provide them in the configuration file or through function arguments.")
 
         # Checks if Accelize credentials are valid
-        self._access_token = None
         self._check_accelize_credential()
 
+        # Initialize Swagger configuration
         self._api_configuration = _swc.Configuration()
 
-        self._url = None
+        # Set URL and configure
         if url:
             self.url = url
-
-        self._accelerator_configuration_url = None
 
     def __enter__(self):
         return self
@@ -330,6 +331,81 @@ class Accelerator(object):
 
         return config_result
 
+    def _process_swagger(self, accelerator_parameters, datafile):
+        """
+        Process using Swagger REST API.
+
+        Args:
+            accelerator_parameters (str): Accelerator parameter as JSON
+            datafile (str): Path to input datafile
+
+        Returns:
+            dict: Response from API
+            bool: True if processed
+        """
+        api_response = self._rest_api_process().process_create(
+            self._accelerator_configuration_url, parameters=accelerator_parameters, datafile=datafile)
+        return api_response.id, api_response.processed
+
+    def _process_curl(self, accelerator_parameters, datafile):
+        """
+        Process using cURL (PycURL)
+
+        Args:
+            accelerator_parameters (str): Accelerator parameter as JSON
+            datafile (str): Path to input datafile
+
+        Returns:
+            dict: Response from API
+            bool: True if processed
+        """
+        # Configure cURL
+        curl = _pycurl.Curl()
+
+        post = [("parameters", accelerator_parameters),
+                ("configuration", self._accelerator_configuration_url)]
+        if datafile is not None:
+            post.append(("datafile", (_pycurl.FORM_FILE, datafile)))
+
+        for curl_opt in (
+                (_pycurl.URL, str("%s/v1.0/process/" % self.url)),
+                (_pycurl.POST, 1),
+                (_pycurl.TIMEOUT, 1200),
+                (_pycurl.HTTPPOST, post),
+                (_pycurl.HTTPHEADER, ['Content-Type: multipart/form-data'])):
+            curl.setopt(*curl_opt)
+
+        # Process with cURL
+        retries_max = 3
+        retries_done = 1
+        while True:
+            write_buffer = _StringIO()
+            curl.setopt(_pycurl.WRITEFUNCTION, write_buffer.write)
+
+            try:
+                curl.perform()
+                break
+
+            except _pycurl.error as exception:
+                if retries_done > retries_max:
+                    raise _exc.AcceleratorRuntimeException(
+                        'Failed to post process request: %s' % exception)
+                retries_done += 1
+
+        curl.close()
+
+        # Get result
+        content = write_buffer.getvalue()
+        _get_logger().debug("pycurl process: %s", content)
+
+        api_response = _json.loads(content)
+
+        if 'id' not in api_response:
+            raise _exc.AcceleratorRuntimeException(
+                "Processing failed with no message (host application did not run).")
+
+        return api_response['id'], api_response['processed']
+
     def process_file(self, file_in, file_out, accelerator_parameters=None):
         """
         Process a file with accelerator.
@@ -368,64 +444,14 @@ class Accelerator(object):
             _get_logger().debug("Using default processing parameters")
             accelerator_parameters = self._process_parameters
         _get_logger().debug("Using configuration: %s", self._accelerator_configuration_url)
-        datafile = file_in  # file | If needed, file to be processed by the accelerator. (optional)
 
-        api_instance = self._rest_api_process()
-
-        # Bypass REST API because upload issue with big file using python https://bugs.python.org/issue8450
-        if _USE_PYCURL:
-            _get_logger().debug("pycurl process=%s datafile=%s", self._accelerator_configuration_url, datafile)
-            retries_max = 3
-            retries_done = 1
-
-            post = [("parameters", _json.dumps(accelerator_parameters)),
-                    ("configuration", self._accelerator_configuration_url)]
-            if file_in is not None:
-                post.append(("datafile", (_pycurl.FORM_FILE, file_in)))
-
-            while True:
-                storage = _StringIO()
-                curl = _pycurl.Curl()
-                curl.setopt(curl.WRITEFUNCTION, storage.write)
-                curl.setopt(curl.URL, str("%s/v1.0/process/" % self.url))
-                curl.setopt(curl.POST, 1)
-                curl.setopt(curl.HTTPPOST, post)
-                curl.setopt(curl.HTTPHEADER, ['Content-Type: multipart/form-data'])
-                try:
-                    curl.perform()
-                    break
-
-                except _pycurl.error as exception:
-                    _get_logger().error(
-                        "Failed to post process request after %d/%d attempts because of: %s", retries_done,
-                        retries_max, exception)
-                    if retries_done > retries_max:
-                        raise exception
-                    retries_done += 1
-
-                finally:
-                    curl.close()
-
-            content = storage.getvalue()
-            _get_logger().debug("pycurl process: %s", content)
-            api_response = _json.loads(content)
-            if 'id' not in api_response:
-                raise _exc.AcceleratorRuntimeException(
-                    "Processing failed with no message (host application did not run).")
-
-            api_resp_id = api_response['id']
-            processed = api_response['processed']
-
-        # Use REST API (with limitations) if pycurl is not available
-        else:
-            _get_logger().debug("process_create process=%s datafile=%s", self._accelerator_configuration_url, datafile)
-            api_response = api_instance.process_create(self._accelerator_configuration_url,
-                                                       parameters=_json.dumps(accelerator_parameters),
-                                                       datafile=datafile)
-            api_resp_id = api_response.id
-            processed = api_response.processed
+        # Use cURL to improve performance and avoid issue with big file (https://bugs.python.org/issue8450)
+        # If not available, use REST API (with limitations)
+        process_function = self._process_curl if _USE_PYCURL else self._process_swagger
+        api_resp_id, processed = process_function(_json.dumps(accelerator_parameters), file_in)
 
         # Get result
+        api_instance = self._rest_api_process()
         try:
             while processed is not True:
                 api_response = api_instance.process_read(api_resp_id)

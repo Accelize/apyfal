@@ -62,6 +62,9 @@ def test_is_alive():
             """Do not initialize"""
             self._url = url
 
+        def __del__(self):
+            """Do nothing"""
+
     # No instance
     accelerator = DummyAccelerator()
     with pytest.raises(AcceleratorRuntimeException):
@@ -135,16 +138,14 @@ def test_start_accelerator():
     configuration_read_in_error = 0
 
     base_parametersresult = {
-                'app': {
-                    'status': 0,
-                    'msg': 'dummy_msg'}}
+        'app': {'status': 0, 'msg': 'dummy_msg'}}
 
     class ConfigurationApi:
         """Fake swagger_client.ConfigurationApi"""
 
         @staticmethod
         def configuration_create(parameters, datafile):
-            """Check input arguments and return fake response"""
+            """Checks input arguments and returns fake response"""
 
             # Check parameters
             if excepted_parameters is not None:
@@ -162,7 +163,7 @@ def test_start_accelerator():
 
         @staticmethod
         def configuration_read(id_value):
-            """Check input arguments and return fake response"""
+            """Checks input arguments and returns fake response"""
             Response = collections.namedtuple('Response', ['inerror', 'id', 'url'])
 
             # Check parameters
@@ -180,8 +181,11 @@ def test_start_accelerator():
             self._secret_id = 'dummmy_secret_id'
             self._configuration_parameters = self.DEFAULT_CONFIGURATION_PARAMETERS
 
+        def __del__(self):
+            """Do nothing"""
+
         def _rest_api_configuration(self):
-            """Return Mocked REST API"""
+            """Returns Mocked REST API"""
             return ConfigurationApi()
 
         @property
@@ -230,5 +234,44 @@ def test__use_last_configuration():
     """Tests Accelerator._use_last_configuration"""
     from acceleratorAPI.accelerator import Accelerator
 
-    # Called Through Accelerator.__init__ through Accelerator.url
-    accelerator = Accelerator(url='https://www.dummy_accelerator.accelize.com')
+    # Mock Swagger REST API ConfigurationApi
+    Config = collections.namedtuple('Config', ['url', 'used'])
+    config_list = []
+
+    class ConfigurationApi:
+        """Fake swagger_client.ConfigurationApi"""
+
+        @staticmethod
+        def configuration_list():
+            """Returns fake response"""
+            Response = collections.namedtuple('Response', ['results'])
+            return Response(results=config_list)
+
+    class DummyAccelerator(Accelerator):
+        """Dummy Accelerator"""
+
+        def __del__(self):
+            """Do nothing"""
+
+        def _rest_api_configuration(self):
+            """Return Mocked REST API"""
+            return ConfigurationApi()
+
+        def _check_accelize_credential(self):
+            """Don't check credential"""
+
+    # Check method, Called through Accelerator.url, through Accelerator.__init__
+
+    # No previous configuration
+    accelerator = DummyAccelerator('Dummy', url='https://www.accelize.com')
+    assert accelerator.configuration_url is None
+
+    # Unused previous configuration
+    config_list.append(Config(url='dummy_config_url', used=0))
+    accelerator = DummyAccelerator('Dummy', url='https://www.accelize.com')
+    assert accelerator.configuration_url is None
+
+    # Used previous configuration
+    config_list.insert(0, Config(url='dummy_config_url_2', used=1))
+    accelerator = DummyAccelerator('Dummy', url='https://www.accelize.com')
+    assert accelerator.configuration_url == 'dummy_config_url_2'

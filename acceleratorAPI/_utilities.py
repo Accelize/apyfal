@@ -5,7 +5,6 @@ import ast
 import json
 import os
 import re
-import socket
 import time
 
 import requests
