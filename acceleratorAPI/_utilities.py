@@ -29,25 +29,21 @@ def check_url(url, timeout=None, retry_count=0, retry_period=5):
     """
     if not url:
         return False
-    default_timeout = socket.getdefaulttimeout()
-    miss_count = 0
-    try:
-        if timeout is not None:
-            socket.setdefaulttimeout(timeout)  # timeout in seconds
-        while miss_count <= retry_count:
-            try:
-                status_code = requests.get(url).status_code
-            except requests.RequestException:
-                miss_count += 1
-                time.sleep(retry_period)
-            else:
-                if status_code == 200:
-                    return True
-        return False
 
-    # Set back to default value
-    finally:
-        socket.setdefaulttimeout(default_timeout)
+    miss_count = 0
+    while miss_count <= retry_count:
+        if miss_count and retry_period and retry_count:
+            time.sleep(retry_period)
+        try:
+            status_code = requests.get(url, timeout=timeout).status_code
+        except requests.RequestException:
+            pass
+        else:
+            if status_code == 200:
+                return True
+        miss_count += 1
+
+    return False
 
 
 def format_url(url_or_ip):

@@ -7,7 +7,9 @@ import pytest
 
 
 def test_accelerator_check_accelize_credential():
-    """Tests Accelerator._check_accelize_credential"""
+    """Tests Accelerator._check_accelize_credential
+
+    Test parts that needs credentials"""
     from acceleratorAPI.configuration import Configuration
     from acceleratorAPI.accelerator import Accelerator
     from acceleratorAPI.exceptions import AcceleratorAuthenticationException
@@ -19,15 +21,33 @@ def test_accelerator_check_accelize_credential():
         pytest.skip('Accelize Credentials required')
 
     # Assuming Accelize credentials in configuration file are valid, should pass
+    # Called Through Accelerator.__init__
     Accelerator('dummy', config=config)
 
-    # Bad client_id
+    # Keep same client_id but use bad secret_id
     with pytest.raises(AcceleratorAuthenticationException):
-        Accelerator('dummy', config=config, client_id='bad_client_id')
+        Accelerator('dummy', config=config, secret_id='bad_secret_id')
 
-    # Bad secret_id
-    with pytest.raises(AcceleratorAuthenticationException):
-        Accelerator('dummy', config=config, client_id='bad_secret_id')
+
+def test_accelerator_check_accelize_credential_no_cred():
+    """Tests Accelerator._check_accelize_credential
+
+    Test parts that don't needs credentials"""
+    from acceleratorAPI.configuration import Configuration
+    from acceleratorAPI.accelerator import Accelerator
+    import acceleratorAPI.exceptions as exc
+
+    config = Configuration()
+    config.remove_section('accelize')
+
+    # No credential provided
+    with pytest.raises(exc.AcceleratorConfigurationException):
+        Accelerator('dummy', config=config)
+
+    # Bad client_id
+    with pytest.raises(exc.AcceleratorAuthenticationException):
+        Accelerator('dummy', client_id='bad_client_id',
+                    secret_id='bad_secret_id', config=config)
 
 
 def test_is_alive():
@@ -35,20 +55,26 @@ def test_is_alive():
     from acceleratorAPI.accelerator import Accelerator
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
 
-    accelerator = Accelerator('dummy')
+    class DummyAccelerator(Accelerator):
+        """Dummy Accelerator"""
+
+        def __init__(self, url=None):
+            """Do not initialize"""
+            self._url = url
 
     # No instance
-    with pytest.raises(AcceleratorRuntimeException):
-        accelerator.is_alive()
-
-    # URL not exist
-    accelerator.url = 'http://127.0.0.1/url_that_not_exists'
+    accelerator = DummyAccelerator()
     with pytest.raises(AcceleratorRuntimeException):
         accelerator.is_alive()
 
     # URL exists
-    accelerator.url = 'https://www.accelize.com/'
+    accelerator = DummyAccelerator(url='https://www.accelize.com')
     accelerator.is_alive()
+
+    # URL not exist
+    accelerator = DummyAccelerator(url='https://www.url_that_not_exists.accelize.com')
+    with pytest.raises(AcceleratorRuntimeException):
+        accelerator.is_alive()
 
 
 def test__raise_for_status():
@@ -101,6 +127,7 @@ def test_get_accelerator_requirements():
 def test_start_accelerator():
     """Tests Accelerator.start_accelerator"""
     from acceleratorAPI.accelerator import Accelerator
+    from acceleratorAPI.exceptions import AcceleratorRuntimeException
 
     # Mock Swagger REST API ConfigurationApi
     excepted_parameters = None
@@ -115,7 +142,8 @@ def test_start_accelerator():
     class ConfigurationApi:
         """Fake swagger_client.ConfigurationApi"""
 
-        def configuration_create(self, parameters, datafile):
+        @staticmethod
+        def configuration_create(parameters, datafile):
             """Check input arguments and return fake response"""
 
             # Check parameters
@@ -132,16 +160,21 @@ def test_start_accelerator():
                 url='dummy_url', id='dummy_id',
                 parametersresult=json.dumps(base_parametersresult))
 
-        def configuration_read(self, id_value):
+        @staticmethod
+        def configuration_read(id_value):
             """Check input arguments and return fake response"""
             Response = collections.namedtuple('Response', ['inerror', 'id', 'url'])
 
-            # TODO: Check input
+            # Check parameters
+            assert id_value == 'dummy_id'
 
+            # Return response
             return Response(url='dummy_url', id=id_value, inerror=configuration_read_in_error)
 
     class DummyAccelerator(Accelerator):
-        def __init__(self, *args, **kwargs):
+        """Dummy Accelerator"""
+
+        def __init__(self):
             """Do not initialize"""
             self._client_id = 'dummmy_client_id'
             self._secret_id = 'dummmy_secret_id'
@@ -154,9 +187,9 @@ def test_start_accelerator():
         @property
         def url(self):
             """Fake URL"""
-            return 'dummmy_accelerator_url'
+            return 'dummy_accelerator_url'
 
-    accelerator = DummyAccelerator('dummy')
+    accelerator = DummyAccelerator()
 
     base_parameters = {
         "env": {
@@ -166,13 +199,13 @@ def test_start_accelerator():
     base_response = {'url_config': 'dummy_url',
                      'url_instance': accelerator.url}
 
-    # Check normal use
-    # TODO: WIP
+    # Check with arguments
     accelerator_parameters = {'dummy_param': None}
     excepted_parameters = base_parameters.copy()
     excepted_parameters.update(accelerator_parameters)
     excepted_datafile = 'dummy_datafile'
     excepted_response = base_response.copy()
+    excepted_response.update(base_parametersresult)
 
     assert excepted_response == accelerator.start_accelerator(
         datafile=excepted_datafile,
@@ -180,11 +213,22 @@ def test_start_accelerator():
 
     # Check default values
     excepted_datafile = ''
-
     excepted_parameters = base_parameters.copy()
     excepted_parameters.update(accelerator.DEFAULT_CONFIGURATION_PARAMETERS)
-
     excepted_response = base_response.copy()
     excepted_response.update(base_parametersresult)
 
     assert excepted_response == accelerator.start_accelerator()
+
+    # Check error from host
+    configuration_read_in_error = 1
+    with pytest.raises(AcceleratorRuntimeException):
+        assert excepted_response == accelerator.start_accelerator()
+
+
+def test__use_last_configuration():
+    """Tests Accelerator._use_last_configuration"""
+    from acceleratorAPI.accelerator import Accelerator
+
+    # Called Through Accelerator.__init__ through Accelerator.url
+    accelerator = Accelerator(url='https://www.dummy_accelerator.accelize.com')

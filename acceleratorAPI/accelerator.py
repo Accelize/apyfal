@@ -82,10 +82,9 @@ class Accelerator(object):
         self._check_accelize_credential()
 
         self._api_configuration = _swc.Configuration()
-        self._url = url
 
+        self._url = None
         if url:
-            # Force URL update if any
             self.url = url
 
         self._accelerator_configuration_url = None
@@ -208,7 +207,7 @@ class Accelerator(object):
         """
         if self.url is None:
             raise _exc.AcceleratorRuntimeException("No accelerator running")
-        if not _utl.check_url(self.url, 10):
+        if not _utl.check_url(self.url, timeout=1):
             raise _exc.AcceleratorRuntimeException("Failed to reach accelerator url: %s" % self.url)
 
     def get_accelerator_requirements(self, provider):
