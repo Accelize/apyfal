@@ -57,6 +57,7 @@ Thumbs.db
 #########################
 .cache/
 .coverage
+.pytest_cache/
 
 # Build generated files #
 #########################
