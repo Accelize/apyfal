@@ -100,8 +100,8 @@ def test_accelerator_raise_for_status():
         Accelerator._raise_for_status({'app': {'status': 1, 'msg': 'error'}})
 
 
-def test_accelerator_get_accelerator_requirements():
-    """Tests Accelerator.get_accelerator_requirements"""
+def test_accelerator_get_requirements():
+    """Tests Accelerator.get_requirements"""
     from acceleratorAPI.configuration import Configuration
     from acceleratorAPI.accelerator import Accelerator
     from acceleratorAPI.exceptions import AcceleratorConfigurationException
@@ -115,17 +115,17 @@ def test_accelerator_get_accelerator_requirements():
     # Invalid Accelerator name
     accelerator = Accelerator('accelerator_not_exists', config=config)
     with pytest.raises(AcceleratorConfigurationException):
-        accelerator.get_accelerator_requirements('OVH')
+        accelerator.get_requirements('OVH')
 
     # Provider not exists
     accelerator = Accelerator('axonerve_hyperfire', config=config)
     with pytest.raises(AcceleratorConfigurationException):
-        accelerator.get_accelerator_requirements('no_exist_CSP')
+        accelerator.get_requirements('no_exist_CSP')
 
     # Everything OK
     name = 'axonerve_hyperfire'
     accelerator = Accelerator(name, config=config)
-    response = accelerator.get_accelerator_requirements('OVH')
+    response = accelerator.get_requirements('OVH')
 
     assert response['accelerator'] == name
 

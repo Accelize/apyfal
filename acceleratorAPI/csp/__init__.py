@@ -488,7 +488,7 @@ class CSPGenericClass(_ABC):
 
         Args:
             accel_parameters (dict): Result from
-                acceleratorAPI.accelerator.Accelerator.get_accelerator_requirements.
+                acceleratorAPI.accelerator.Accelerator.get_requirements.
 
         Raises:
             acceleratorAPI.exceptions.CSPConfigurationException:

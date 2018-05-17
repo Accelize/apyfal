@@ -211,7 +211,7 @@ class Accelerator(object):
         if not _utl.check_url(self.url, timeout=1):
             raise _exc.AcceleratorRuntimeException("Failed to reach accelerator url: %s" % self.url)
 
-    def get_accelerator_requirements(self, provider):
+    def get_requirements(self, provider):
         """
         Gets accelerators requirements to use with CSP.
 

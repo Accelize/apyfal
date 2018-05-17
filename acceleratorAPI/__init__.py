@@ -271,7 +271,7 @@ class AcceleratorClass(object):
         _get_logger().debug("Starting instance on '%s'", self._csp.provider)
 
         # Get configuration information from webservice
-        accel_requirements = self._accelerator.get_accelerator_requirements(self._csp.provider)
+        accel_requirements = self._accelerator.get_requirements(self._csp.provider)
         self._csp.set_accelerator_requirements(accel_requirements)
 
         # Start CSP instance if needed
