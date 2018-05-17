@@ -3,18 +3,25 @@
 
 
 class AcceleratorApiBaseException(Exception):
-    """Base exception for acceleratorAPI exceptions"""
+    """Base exception for acceleratorAPI exceptions
+
+    Args:
+        msg (str): Exception message
+        exc: Exception or other details to add to description"""
     DEFAULT_MESSAGE = ""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, msg=None,  exc=None, *args, **kwargs):
         # Set default message if nothing passed as argument.
-        if not args and self.DEFAULT_MESSAGE:
-            args = (self.DEFAULT_MESSAGE,)
-        Exception.__init__(self, *args, **kwargs)
+        if not msg and self.DEFAULT_MESSAGE:
+            msg = self.DEFAULT_MESSAGE
+
+        if exc is not None:
+            msg += ', more details: %r' % exc
+        Exception.__init__(self, msg, *args, **kwargs)
 
 
 class AcceleratorException(AcceleratorApiBaseException):
-    """Generic accelerator related exception."""
+    """Generic AcceleratorClient related exception."""
 
 
 class AcceleratorAuthenticationException(AcceleratorException):
@@ -22,11 +29,11 @@ class AcceleratorAuthenticationException(AcceleratorException):
 
 
 class AcceleratorConfigurationException(AcceleratorException):
-    """Error with Accelerator configuration."""
+    """Error with AcceleratorClient configuration."""
 
 
 class AcceleratorRuntimeException(AcceleratorException):
-    """Error with Accelerator running."""
+    """Error with AcceleratorClient running."""
 
 
 class CSPException(AcceleratorApiBaseException):

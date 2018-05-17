@@ -28,7 +28,7 @@ import acceleratorAPI.configuration as _cfg
 import acceleratorAPI.rest_api.swagger_client as _swc
 
 
-class Accelerator(object):
+class AcceleratorClient(object):
     """
     End user API based on the openAPI Accelize accelerator
 
@@ -41,7 +41,7 @@ class Accelerator(object):
         secret_id (str): Accelize Secret ID.
             Secret Id is part of the access key you can generate on https:/accelstore.accelize.com/user/applications.
             If set will override value from configuration file.
-        url (str): Accelerator URL
+        url (str): AcceleratorClient URL
         config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
@@ -101,7 +101,7 @@ class Accelerator(object):
 
     def _check_accelize_credential(self):
         """
-        Check user Accelerator credential
+        Check user AcceleratorClient credential
 
         Returns:
             str: Access token.
@@ -117,12 +117,9 @@ class Accelerator(object):
 
             if response.status_code != 200:
                 raise _exc.AcceleratorAuthenticationException(
-                    "Accelize authentication failed (%d): %s" % (response.status_code, response.text))
+                    "Accelize authentication failed", exc=response.text)
 
             response.raise_for_status()
-
-            _get_logger().info("Accelize authentication for '%s' is successful", self.name)
-            _get_logger().debug("Accelize token answer: %s", response.text)
 
             self._access_token = _json.loads(response.text)['access_token']
 
@@ -131,7 +128,7 @@ class Accelerator(object):
     @property
     def name(self):
         """
-        Accelerator name
+        AcceleratorClient name
 
         Returns:
             str: name
@@ -161,7 +158,7 @@ class Accelerator(object):
     @property
     def configuration_url(self):
         """
-        Accelerator configuration URL
+        AcceleratorClient configuration URL
 
         Returns:
             str: URL
@@ -171,7 +168,7 @@ class Accelerator(object):
     @property
     def url(self):
         """
-        Accelerator URL
+        AcceleratorClient URL
 
         Returns:
             str: URL
@@ -219,7 +216,7 @@ class Accelerator(object):
             provider (str): CSP provider name.
 
         Returns:
-            dict: Accelerator requirements for CSP.
+            dict: AcceleratorClient requirements for CSP.
         """
         access_token = self._check_accelize_credential()
 
@@ -229,11 +226,9 @@ class Accelerator(object):
 
         response = _utl.http_session().get(
             'https://master.metering.accelize.com/auth/getlastcspconfiguration/', headers=headers)
-        _get_logger().debug("Accelize config answer: %s, status: %s", response.text, response.status_code)
         response.raise_for_status()
 
         configuration_accelerator = _json.loads(response.text)
-        _get_logger().debug("Accelerator requirements:\n%s", _utl.pretty_dict(configuration_accelerator))
 
         # Check configuration with CSP
         if provider not in configuration_accelerator:
@@ -243,7 +238,7 @@ class Accelerator(object):
 
         if self.name not in configuration_accelerator[provider]:
             raise _exc.AcceleratorConfigurationException(
-                "Accelerator '%s' is not supported on '%s'." % (self.name, provider))
+                "AcceleratorClient '%s' is not supported on '%s'." % (self.name, provider))
 
         info = configuration_accelerator[provider][self.name]
         info['accelerator'] = self.name
@@ -254,26 +249,20 @@ class Accelerator(object):
         Reload last accelerator configuration.
         """
         # Get last configuration, if any
-        _get_logger().debug("Get list of configurations...")
         config_list = self._rest_api_configuration().configuration_list().results
         if not config_list:
-            _get_logger().info("Accelerator has not been configured yet.")
             return
 
         last_config = config_list[0]
-        _get_logger().debug("Last recorded configuration: Url:%s, Used:%d", last_config.url, last_config.used)
         if last_config.used == 0:
-            _get_logger().info("Accelerator has no active configuration. It needs to be configured before being used.")
             return
-
-        _get_logger().info("Accelerator is loaded with configuration: %s", last_config.url)
 
         # The last configuration URL should be keep in order to not request it to user.
         self._configuration_url = last_config.url
 
     def start(self, datafile=None, accelerator_parameters=None, csp_env=None):
         """
-        Create an Accelerator configuration.
+        Create an AcceleratorClient configuration.
 
         Args:
             datafile (str): Depending on the accelerator (like for HyperFiRe),
@@ -286,13 +275,12 @@ class Accelerator(object):
             csp_env:
 
         Returns:
-            dict: Accelerator response. Contain output information from configuration operation.
+            dict: AcceleratorClient response. Contain output information from configuration operation.
                 Take a look accelerator documentation for more information.
         """
         # TODO: Detail response dict in docstring
         # Check parameters
         if accelerator_parameters is None:
-            _get_logger().debug("Using default configuration parameters")
             accelerator_parameters = self._configuration_parameters
 
         parameters = {
@@ -303,15 +291,10 @@ class Accelerator(object):
             parameters['env'].update(csp_env)
         parameters.update(accelerator_parameters)
 
-        _get_logger().debug("parameters = \n%s", _json.dumps(parameters, indent=4))
-
-        _get_logger().debug("datafile = %s", datafile)
         if datafile is None:
             datafile = ""
 
         # Configure  accelerator
-        _get_logger().info("Configuring accelerator...")
-
         api_instance = self._rest_api_configuration()
         api_response = api_instance.configuration_create(parameters=_json.dumps(parameters), datafile=datafile)
         _get_logger().debug("configuration_create api_response:\n%s", api_response)
@@ -321,9 +304,6 @@ class Accelerator(object):
 
         config_result['url_config'] = self._configuration_url = api_response.url
         config_result['url_instance'] = self.url
-
-        _get_logger().debug("status: %s", config_result['app']['status'])
-        _get_logger().debug("msg:\n%s", config_result['app']['msg'])
 
         api_response_read = api_instance.configuration_read(api_response.id)
         if api_response_read.inerror:
@@ -336,7 +316,7 @@ class Accelerator(object):
         Process using Swagger REST API.
 
         Args:
-            accelerator_parameters (str): Accelerator parameter as JSON
+            accelerator_parameters (str): AcceleratorClient parameter as JSON
             datafile (str): Path to input datafile
 
         Returns:
@@ -352,7 +332,7 @@ class Accelerator(object):
         Process using cURL (PycURL)
 
         Args:
-            accelerator_parameters (str): Accelerator parameter as JSON
+            accelerator_parameters (str): AcceleratorClient parameter as JSON
             datafile (str): Path to input datafile
 
         Returns:
@@ -389,20 +369,23 @@ class Accelerator(object):
             except _pycurl.error as exception:
                 if retries_done > retries_max:
                     raise _exc.AcceleratorRuntimeException(
-                        'Failed to post process request: %s' % exception)
+                        'Failed to post process request', exc=exception)
                 retries_done += 1
 
         curl.close()
 
         # Get result
         content = write_buffer.getvalue()
-        _get_logger().debug("pycurl process: %s", content)
 
-        api_response = _json.loads(content)
+        try:
+            api_response = _json.loads(content)
+        except TypeError:
+            raise _exc.AcceleratorRuntimeException(
+                "Response not valid", exc=content)
 
         if 'id' not in api_response:
             raise _exc.AcceleratorRuntimeException(
-                "Processing failed with no message (host application did not run).")
+                "Processing failed with no message (host application did not run): %s" % content)
 
         return api_response['id'], api_response['processed']
 
@@ -418,14 +401,14 @@ class Accelerator(object):
                 Take a look accelerator documentation for more information.
 
         Returns:
-            dict: Accelerator response. Contain output information from process operation.
+            dict: AcceleratorClient response. Contain output information from process operation.
                 Take a look accelerator documentation for more information.
         """
         # TODO: Detail response dict in docstring
         # Check if configuration was done
         if self.configuration_url is None:
             raise _exc.AcceleratorConfigurationException(
-                "Accelerator has not been configured. Use 'start' function.")
+                "AcceleratorClient has not been configured. Use 'start' function.")
 
         # Checks input file presence
         if file_in and not _os.path.isfile(file_in):
@@ -441,9 +424,7 @@ class Accelerator(object):
 
         # Configure processing
         if accelerator_parameters is None:
-            _get_logger().debug("Using default processing parameters")
             accelerator_parameters = self._process_parameters
-        _get_logger().debug("Using configuration: %s", self.configuration_url)
 
         # Use cURL to improve performance and avoid issue with big file (https://bugs.python.org/issue8450)
         # If not available, use REST API (with limitations)
@@ -464,15 +445,12 @@ class Accelerator(object):
             process_result = _literal_eval(api_response.parametersresult)
             self._raise_for_status(process_result, "Processing failed: ")
 
-            _get_logger().debug("Process status: %s", process_result['app']['status'])
-            _get_logger().debug("Process msg:\n%s", process_result['app']['msg'])
-
             response = _utl.http_session().get(api_response.datafileresult, stream=True)
             with open(file_out, 'wb') as out_file:
                 _shutil.copyfileobj(response.raw, out_file)
 
         finally:
-            _get_logger().debug("process_delete api_response: %s", api_resp_id)
+            # Process_delete api_response
             api_instance.process_delete(api_resp_id)
 
         return process_result
@@ -482,17 +460,15 @@ class Accelerator(object):
         Stop your accelerator session.
 
         Returns:
-            dict: Accelerator response. Contain output information from stop operation.
+            dict: AcceleratorClient response. Contain output information from stop operation.
                 Take a look accelerator documentation for more information.
         """
         # TODO: Detail response dict in docstring
         try:
             self.is_alive()
         except _exc.AcceleratorRuntimeException:
-            # No Accelerator to stop
+            # No AcceleratorClient to stop
             return None
-
-        _get_logger().debug("Stopping accelerator '%s'", self.name)
 
         stop_result = self._rest_api_stop().stop_list()
         self._raise_for_status(stop_result, "Stopping accelerator failed: ")

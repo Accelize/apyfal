@@ -10,11 +10,11 @@ import pytest
 
 
 def test_accelerator_check_accelize_credential():
-    """Tests Accelerator._check_accelize_credential
+    """Tests AcceleratorClient._check_accelize_credential
 
     Test parts that needs credentials"""
     from acceleratorAPI.configuration import Configuration
-    from acceleratorAPI.accelerator import Accelerator
+    from acceleratorAPI.accelerator import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorAuthenticationException
 
     config = Configuration()
@@ -24,20 +24,20 @@ def test_accelerator_check_accelize_credential():
         pytest.skip('Accelize Credentials required')
 
     # Assuming Accelize credentials in configuration file are valid, should pass
-    # Called Through Accelerator.__init__
-    Accelerator('dummy', config=config)
+    # Called Through AcceleratorClient.__init__
+    AcceleratorClient('dummy', config=config)
 
     # Keep same client_id but use bad secret_id
     with pytest.raises(AcceleratorAuthenticationException):
-        Accelerator('dummy', config=config, secret_id='bad_secret_id')
+        AcceleratorClient('dummy', config=config, secret_id='bad_secret_id')
 
 
 def test_accelerator_check_accelize_credential_no_cred():
-    """Tests Accelerator._check_accelize_credential
+    """Tests AcceleratorClient._check_accelize_credential
 
     Test parts that don't needs credentials"""
     from acceleratorAPI.configuration import Configuration
-    from acceleratorAPI.accelerator import Accelerator
+    from acceleratorAPI.accelerator import AcceleratorClient
     import acceleratorAPI.exceptions as exc
 
     config = Configuration()
@@ -45,21 +45,21 @@ def test_accelerator_check_accelize_credential_no_cred():
 
     # No credential provided
     with pytest.raises(exc.AcceleratorConfigurationException):
-        Accelerator('dummy', config=config)
+        AcceleratorClient('dummy', config=config)
 
     # Bad client_id
     with pytest.raises(exc.AcceleratorAuthenticationException):
-        Accelerator('dummy', client_id='bad_client_id',
-                    secret_id='bad_secret_id', config=config)
+        AcceleratorClient('dummy', client_id='bad_client_id',
+                          secret_id='bad_secret_id', config=config)
 
 
 def test_accelerator_is_alive():
-    """Tests Accelerator._raise_for_status"""
-    from acceleratorAPI.accelerator import Accelerator
+    """Tests AcceleratorClient._raise_for_status"""
+    from acceleratorAPI.accelerator import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
 
-    class DummyAccelerator(Accelerator):
-        """Dummy Accelerator"""
+    class DummyAccelerator(AcceleratorClient):
+        """Dummy AcceleratorClient"""
 
         def __init__(self, url=None):
             """Do not initialize"""
@@ -84,26 +84,26 @@ def test_accelerator_is_alive():
 
 
 def test_accelerator_raise_for_status():
-    """Tests Accelerator._raise_for_status"""
-    from acceleratorAPI.accelerator import Accelerator
+    """Tests AcceleratorClient._raise_for_status"""
+    from acceleratorAPI.accelerator import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
 
     # Result without error
-    Accelerator._raise_for_status({'app': {'status': 0, 'msg': ''}})
+    AcceleratorClient._raise_for_status({'app': {'status': 0, 'msg': ''}})
 
     # Empty result
     with pytest.raises(AcceleratorRuntimeException):
-        Accelerator._raise_for_status({})
+        AcceleratorClient._raise_for_status({})
 
     # Result with error
     with pytest.raises(AcceleratorRuntimeException):
-        Accelerator._raise_for_status({'app': {'status': 1, 'msg': 'error'}})
+        AcceleratorClient._raise_for_status({'app': {'status': 1, 'msg': 'error'}})
 
 
 def test_accelerator_get_requirements():
-    """Tests Accelerator.get_requirements"""
+    """Tests AcceleratorClient.get_requirements"""
     from acceleratorAPI.configuration import Configuration
-    from acceleratorAPI.accelerator import Accelerator
+    from acceleratorAPI.accelerator import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorConfigurationException
 
     config = Configuration()
@@ -112,27 +112,27 @@ def test_accelerator_get_requirements():
     if not config.has_accelize_credential():
         pytest.skip('Accelize Credentials required')
 
-    # Invalid Accelerator name
-    accelerator = Accelerator('accelerator_not_exists', config=config)
+    # Invalid AcceleratorClient name
+    accelerator = AcceleratorClient('accelerator_not_exists', config=config)
     with pytest.raises(AcceleratorConfigurationException):
         accelerator.get_requirements('OVH')
 
     # Provider not exists
-    accelerator = Accelerator('axonerve_hyperfire', config=config)
+    accelerator = AcceleratorClient('axonerve_hyperfire', config=config)
     with pytest.raises(AcceleratorConfigurationException):
         accelerator.get_requirements('no_exist_CSP')
 
     # Everything OK
     name = 'axonerve_hyperfire'
-    accelerator = Accelerator(name, config=config)
+    accelerator = AcceleratorClient(name, config=config)
     response = accelerator.get_requirements('OVH')
 
     assert response['accelerator'] == name
 
 
 def test_accelerator_start():
-    """Tests Accelerator.start"""
-    from acceleratorAPI.accelerator import Accelerator
+    """Tests AcceleratorClient.start"""
+    from acceleratorAPI.accelerator import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
 
     # Mock Swagger REST API ConfigurationApi
@@ -175,8 +175,8 @@ def test_accelerator_start():
             # Return response
             return Response(url='dummy_url', id=id_value, inerror=configuration_read_in_error)
 
-    class DummyAccelerator(Accelerator):
-        """Dummy Accelerator"""
+    class DummyAccelerator(AcceleratorClient):
+        """Dummy AcceleratorClient"""
 
         def __init__(self):
             """Do not initialize"""
@@ -234,8 +234,8 @@ def test_accelerator_start():
 
 
 def test_accelerator_use_last_configuration():
-    """Tests Accelerator._use_last_configuration"""
-    from acceleratorAPI.accelerator import Accelerator
+    """Tests AcceleratorClient._use_last_configuration"""
+    from acceleratorAPI.accelerator import AcceleratorClient
 
     # Mock Swagger REST API ConfigurationApi
     Config = collections.namedtuple('Config', ['url', 'used'])
@@ -250,8 +250,8 @@ def test_accelerator_use_last_configuration():
             Response = collections.namedtuple('Response', ['results'])
             return Response(results=config_list)
 
-    class DummyAccelerator(Accelerator):
-        """Dummy Accelerator"""
+    class DummyAccelerator(AcceleratorClient):
+        """Dummy AcceleratorClient"""
 
         def __del__(self):
             """Do nothing"""
@@ -263,7 +263,7 @@ def test_accelerator_use_last_configuration():
         def _check_accelize_credential(self):
             """Don't check credential"""
 
-    # Check method, Called through Accelerator.url, through Accelerator.__init__
+    # Check method, Called through AcceleratorClient.url, through AcceleratorClient.__init__
 
     # No previous configuration
     accelerator = DummyAccelerator('Dummy', url='https://www.accelize.com')
@@ -281,8 +281,8 @@ def test_accelerator_use_last_configuration():
 
 
 def test_accelerator_stop():
-    """Tests Accelerator.stop"""
-    from acceleratorAPI.accelerator import Accelerator
+    """Tests AcceleratorClient.stop"""
+    from acceleratorAPI.accelerator import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
 
     # Mock Swagger REST API StopApi
@@ -295,7 +295,7 @@ def test_accelerator_stop():
 
         def stop_list(self):
             """Simulates accelerator stop and returns fake response"""
-            # Stop Accelerator
+            # Stop AcceleratorClient
             self.is_running = False
 
             # Return result
@@ -303,8 +303,8 @@ def test_accelerator_stop():
 
     stop_api = StopApi()
 
-    class DummyAccelerator(Accelerator):
-        """Dummy Accelerator"""
+    class DummyAccelerator(AcceleratorClient):
+        """Dummy AcceleratorClient"""
 
         def __init__(self):
             """Do not initialize"""
@@ -321,7 +321,7 @@ def test_accelerator_stop():
             """Return Mocked REST API"""
             return stop_api
 
-    # Accelerator to stop
+    # AcceleratorClient to stop
     assert DummyAccelerator().stop() == stop_list
     assert not stop_api.is_running
 
@@ -329,7 +329,7 @@ def test_accelerator_stop():
     stop_api.is_running = True
     with DummyAccelerator() as accelerator:
         # Checks __enter__ returned object
-        assert isinstance(accelerator, Accelerator)
+        assert isinstance(accelerator, AcceleratorClient)
     assert not stop_api.is_running
 
     # Auto-stops on garbage collection
@@ -344,7 +344,7 @@ def test_accelerator_stop():
 
 
 def test_accelerator_process_curl():
-    """Tests Accelerator._process_curl with PycURL"""
+    """Tests AcceleratorClient._process_curl with PycURL"""
     # Skip if PycURL not available
     try:
         import pycurl
@@ -356,12 +356,12 @@ def test_accelerator_process_curl():
     assert acceleratorAPI.accelerator._USE_PYCURL
 
     # Start testing
-    from acceleratorAPI.accelerator import Accelerator
+    from acceleratorAPI.accelerator import AcceleratorClient
     # TODO: WIP
 
 
 def test_accelerator_process_swagger():
-    """Tests Accelerator._process_swagger with Swagger"""
+    """Tests AcceleratorClient._process_swagger with Swagger"""
     # Clean imported modules
     # to force to reimport without PycURL if present
     pycurl_module = sys.modules.get('pycurl')
@@ -379,7 +379,7 @@ def test_accelerator_process_swagger():
 
     # Starts testing
     try:
-        from acceleratorAPI.accelerator import Accelerator
+        from acceleratorAPI.accelerator import AcceleratorClient
         # TODO: WIP
 
     # Restores before test state
@@ -394,8 +394,8 @@ def test_accelerator_process_swagger():
 
 
 def test_accelerator_process():
-    """Tests Accelerator._process"""
-    from acceleratorAPI.accelerator import Accelerator
+    """Tests AcceleratorClient._process"""
+    from acceleratorAPI.accelerator import AcceleratorClient
 
     # Mock Swagger REST API ProcessApi
 
@@ -423,8 +423,8 @@ def test_accelerator_process():
     def process_function(accelerator_parameters, datafile):
         """Mock process function (tested separately)"""
 
-    class DummyAccelerator(Accelerator):
-        """Dummy Accelerator"""
+    class DummyAccelerator(AcceleratorClient):
+        """Dummy AcceleratorClient"""
 
         _process_curl = process_function
         _process_swagger = process_function

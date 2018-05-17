@@ -29,7 +29,7 @@ from acceleratorAPI._utilities import get_logger as _get_logger
 
 class AcceleratorClass(object):
     """
-    This class automatically handle Accelerator and CSP classes.
+    This class automatically handle AcceleratorClient and CSP classes.
 
     Args:
         accelerator_name (str): Name of the accelerator you want to initialize,
@@ -68,12 +68,8 @@ class AcceleratorClass(object):
                  csp_secret_id=None, ssh_key=None, instance_id=None, instance_url=None,
                  stop_mode=_csp.TERM, exit_instance_on_signal=False):
 
-        _get_logger().debug("")
-        _get_logger().debug("/" * 100)
-
         # Initialize configuration
         config = _cfg.create_configuration(config_file)
-        _get_logger().info("Using configuration file: %s", config.file_path)
 
         # Create CSP object
         self._csp = _csp.CSPGenericClass(
@@ -81,8 +77,8 @@ class AcceleratorClass(object):
             ssh_key=ssh_key, instance_id=instance_id, instance_url=instance_url,
             stop_mode=stop_mode, exit_instance_on_signal=exit_instance_on_signal)
 
-        # Create Accelerator object
-        self._accelerator = _acc.Accelerator(
+        # Create AcceleratorClient object
+        self._accelerator = _acc.AcceleratorClient(
             accelerator_name, client_id=xlz_client_id, secret_id=xlz_secret_id, config=config)
 
         # Check CSP ID if provided
@@ -109,7 +105,7 @@ class AcceleratorClass(object):
         Accelerator instance.
 
         Returns:
-            acceleratorAPI.accelerator.Accelerator: Accelerator
+            acceleratorAPI.accelerator.AcceleratorClient: Accelerator
         """
         return self._accelerator
 
@@ -172,7 +168,7 @@ class AcceleratorClass(object):
             kwargs:
 
         Returns:
-            dict: Accelerator response. Contain output information from configuration operation.
+            dict: AcceleratorClient response. Contain output information from configuration operation.
                 Take a look accelerator documentation for more information.
         """
         # Start a new instance or use a running instance
@@ -181,7 +177,6 @@ class AcceleratorClass(object):
         # Configure accelerator if needed
         if kwargs or self._accelerator.configuration_url is None or datafile is not None:
             return self.configure(datafile, accelerator_parameters, **kwargs)
-        _get_logger().debug("Accelerator is already configured")
 
     def configure(self, datafile=None, accelerator_parameters=None, **kwargs):
         """
@@ -198,18 +193,15 @@ class AcceleratorClass(object):
             kwargs:
 
         Returns:
-            dict: Accelerator response. Contain output information from configuration operation.
+            dict: AcceleratorClient response. Contain output information from configuration operation.
                 Take a look accelerator documentation for more information.
         """
-        _get_logger().debug("Configuring accelerator '%s' on instance ID %s",
-                            self._accelerator.name, self._csp.instance_id)
         self._accelerator.is_alive()
 
         csp_env = self._csp.get_configuration_env(**kwargs)
         config_result = self._accelerator.start(
             datafile=datafile, accelerator_parameters=accelerator_parameters, csp_env=csp_env)
 
-        _get_logger().info("Configuration of accelerator is complete")
         return config_result
 
     def process(self, file_out, file_in=None, process_parameter=None):
@@ -224,11 +216,9 @@ class AcceleratorClass(object):
                 Take a look accelerator documentation for more information.
 
         Returns:
-            dict: Accelerator response. Contain output information from process operation.
+            dict: AcceleratorClient response. Contain output information from process operation.
                 Take a look accelerator documentation for more information.
         """
-        _get_logger().debug("Starting a processing job: in=%s, out=%s", file_in, file_out)
-
         # Process file with accelerator
         process_result = self._accelerator.process(
             file_in=file_in, file_out=file_out, accelerator_parameters=process_parameter)
@@ -246,7 +236,7 @@ class AcceleratorClass(object):
                 information and possible values.
 
         Returns:
-            dict: Accelerator response. Contain output information from stop operation.
+            dict: AcceleratorClient response. Contain output information from stop operation.
                 Take a look accelerator documentation for more information.
         """
         # Stops accelerator
@@ -268,8 +258,6 @@ class AcceleratorClass(object):
                 See "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
                 information and possible values.
         """
-        _get_logger().debug("Starting instance on '%s'", self._csp.provider)
-
         # Get configuration information from webservice
         accel_requirements = self._accelerator.get_requirements(self._csp.provider)
         self._csp.set_accelerator_requirements(accel_requirements)
@@ -282,14 +270,13 @@ class AcceleratorClass(object):
 
         # Set accelerator URL to CSP instance URL
         self._accelerator.url = self._csp.instance_url
-        _get_logger().info("Accelerator URL: %s", self._accelerator.url)
 
     def _log_profiling_info(self, process_result):
         """
         Shows profiling and specific information in logger.
 
         Args:
-            process_result (dict): result from Accelerator.process
+            process_result (dict): result from AcceleratorClient.process
         """
         logger = _get_logger()
 
@@ -300,7 +287,6 @@ class AcceleratorClass(object):
         try:
             app = process_result['app']
         except KeyError:
-            logger.debug("No application information found in result JSON file")
             return None
 
         # Lazy import since not always called
@@ -310,44 +296,43 @@ class AcceleratorClass(object):
         try:
             profiling = app['profiling']
         except KeyError:
-            logger.debug("No profiling information found in result JSON file")
+            pass
         else:
             logger.info("Profiling information from result:\n%s",
                         json.dumps(profiling, indent=4).replace('\\n', '\n').replace('\\t', '\t'))
 
             # Compute and show information only on DEBUG level
-            if logger.isEnabledFor(10):
-                values = dict()
+            values = dict()
 
-                for key in ('wall-clock-time', 'fpga-elapsed-time', 'total-bytes-written', 'total-bytes-read'):
-                    try:
-                        values[key] = float(profiling[key])
-                    except KeyError:
-                        logger.debug("No '%s' found in output JSON file." % key)
+            for key in ('wall-clock-time', 'fpga-elapsed-time', 'total-bytes-written', 'total-bytes-read'):
+                try:
+                    values[key] = float(profiling[key])
+                except KeyError:
+                    pass
 
-                total_bytes = values.get('total-bytes-written', 0.0) + values.get('total-bytes-read', 0.0)
-                global_time = values.get('wall-clock-time', 0.0)
-                fpga_time = values.get('fpga-elapsed-time', 0.0)
+            total_bytes = values.get('total-bytes-written', 0.0) + values.get('total-bytes-read', 0.0)
+            global_time = values.get('wall-clock-time', 0.0)
+            fpga_time = values.get('fpga-elapsed-time', 0.0)
 
-                if total_bytes > 0.0 and global_time > 0.0:
-                    bw = total_bytes / global_time / 1024.0 / 1024.0
-                    fps = 1.0 / global_time
-                    logger.debug(
-                        "Server processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
-                        self._csp.provider, bw, fps)
+            if total_bytes > 0.0 and global_time > 0.0:
+                bw = total_bytes / global_time / 1024.0 / 1024.0
+                fps = 1.0 / global_time
+                logger.info(
+                    "Server processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
+                    self._csp.provider, bw, fps)
 
-                if total_bytes > 0.0 and fpga_time > 0.0:
-                    bw = total_bytes / fpga_time / 1024.0 / 1024.0
-                    fps = 1.0 / fpga_time
-                    logger.debug(
-                        "FPGA processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
-                        self._csp.provider, bw, fps)
+            if total_bytes > 0.0 and fpga_time > 0.0:
+                bw = total_bytes / fpga_time / 1024.0 / 1024.0
+                fps = 1.0 / fpga_time
+                logger.info(
+                    "FPGA processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
+                    self._csp.provider, bw, fps)
 
         # Handle Specific result
         try:
             specific = app['specific']
         except KeyError:
-            logger.debug("No specific information found in result JSON file")
+            pass
         else:
             if specific:
                 logger.info("Specific information from result:\n%s",

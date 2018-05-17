@@ -3,7 +3,7 @@
 
 from copy import deepcopy as _deepcopy
 from json import dumps as _json_dumps
-from time import sleep as _sleep
+import time as _time
 
 import boto3 as _boto3
 import botocore.exceptions as _boto_exceptions
@@ -71,36 +71,32 @@ class AWSClass(_csp.CSPGenericClass):
         try:
             response = ec2_client.describe_key_pairs()
         except ec2_client.exceptions.ClientError as exception:
-            _get_logger().debug(str(exception))
-            raise _exc.CSPAuthenticationException()
-        _get_logger().debug("Response of 'describe_key_pairs': %s", response)
+            raise _exc.CSPAuthenticationException(exc=exception)
 
     def _init_ssh_key(self):
         """
-        Initialize CSP SSH key.
+        Initialize SSH key.
+
+        Returns:
+            bool: True if reuse existing key
         """
-        _get_logger().debug("Create or check if KeyPair %s exists.", self._ssh_key)
         ec2_client = self._session.client('ec2')
 
         # Checks if Key pairs exists
         try:
-            key_pair = ec2_client.describe_key_pairs(KeyNames=[self._ssh_key])
+            ec2_client.describe_key_pairs(KeyNames=[self._ssh_key])
+            return True
 
         # Key does not exist on the CSP, create it
-        except ec2_client.exceptions.ClientError as exception:
-
-            _get_logger().debug(str(exception))
-            _get_logger().info("Create KeyPair %s", str(self._ssh_key))
+        except ec2_client.exceptions.ClientError:
+            # TODO: to catch properly
 
             ec2_resource = self._session.resource('ec2')
             key_pair = ec2_resource.create_key_pair(KeyName=self._ssh_key)
 
             _utl.create_ssh_key_file(self._ssh_key, key_pair.key_material)
 
-        # Key does exist on the CSP
-        else:
-            _get_logger().info("KeyPair '%s' is already existing on %s.", key_pair['KeyPairs'][0]['KeyName'],
-                               self._provider)
+            return False
 
     def _init_policy(self, policy):
         """
@@ -109,8 +105,6 @@ class AWSClass(_csp.CSPGenericClass):
         Args:
             policy:
         """
-        _get_logger().debug("Create or check if policy '%s' exists.", policy)
-
         # Create a policy
         policy_document = _json_dumps({
             "Version": "2012-10-17",
@@ -133,11 +127,12 @@ class AWSClass(_csp.CSPGenericClass):
             response = iam_client.create_policy(
                 PolicyName=policy, PolicyDocument=policy_document)
 
-        except iam_client.exceptions.EntityAlreadyExistsException as exception:
-            _get_logger().debug(str(exception))
-            _get_logger().info("Policy on AWS named: %s already exists, nothing to do.", policy)
+        except iam_client.exceptions.EntityAlreadyExistsException:
+            # TODO: check if cached properly
+            pass
         else:
-            _get_logger().debug("Policy: %s", response)
+            _get_logger().info(
+                "Create policy on AWS named %s to allow FPGA loading ", policy)
 
         iam_client = self._session.client('iam')
         response = iam_client.list_policies(
@@ -153,8 +148,6 @@ class AWSClass(_csp.CSPGenericClass):
         """
         Initialize CSP role.
         """
-        _get_logger().debug("Create or check if role %s exists", self._role)
-
         assume_role_policy_document = _json_dumps({
             "Version": "2012-10-17",
             "Statement": {
@@ -171,17 +164,17 @@ class AWSClass(_csp.CSPGenericClass):
                 AssumeRolePolicyDocument=assume_role_policy_document,
                 Description='Created automatically'
             )
-            _get_logger().debug("role: %s", str(role))
 
-        except _boto_exceptions.ClientError as exception:
-            _get_logger().debug(str(exception))
-            _get_logger().info("Role on AWS named: %s already exists, nothing to do.",
-                               self._role)
+        except _boto_exceptions.ClientError:
+            # TODO: to catch properly
+            pass
+        else:
+            _get_logger().info(
+                "Create role on AWS named %s to allow FPGA loading ", role)
 
         iam_client = self._session.client('iam')
         arn = iam_client.get_role(RoleName=self._role)['Role']['Arn']
 
-        _get_logger().debug("Policy ARN:'%s' already exists.", arn)
         return arn
 
     def _attach_role_policy(self, policy_arn):
@@ -191,24 +184,17 @@ class AWSClass(_csp.CSPGenericClass):
         Args:
             policy_arn (str): Policy ARN
         """
-        _get_logger().debug(
-            "Create or check if policy '%s' is attached to role '%s' exists.",
-            policy_arn, self._role)
-
         iam_client = self._session.client('iam')
         try:
             # Create a policy
-            response = iam_client.attach_role_policy(
+            iam_client.attach_role_policy(
                 PolicyArn=policy_arn, RoleName=self._role)
 
-        except iam_client.exceptions.EntityAlreadyExistsException as exception:
-            _get_logger().debug(str(exception))
-            _get_logger().info(
-                "Role on AWS named: '%s' and policy named: '%s' already attached, nothing to do.",
-                self._role, policy_arn)
+        except iam_client.exceptions.EntityAlreadyExistsException:
+            # TODO: check if cached properly
+            pass
 
         else:
-            _get_logger().debug("Policy: %s", response)
             _get_logger().info("Attached policy '%s' to role '%s' done.", policy_arn, self._role)
 
     def _init_instance_profile(self):
@@ -216,38 +202,35 @@ class AWSClass(_csp.CSPGenericClass):
         Initialize instance profile.
         """
         instance_profile_name = 'AccelizeLoadFPGA'
-        _get_logger().debug("Create or check if instance profile '%s' exists.",
-                            instance_profile_name)
 
         iam_client = self._session.client('iam')
         try:
             instance_profile = iam_client.create_instance_profile(
                 InstanceProfileName=instance_profile_name)
 
-        except iam_client.exceptions.EntityAlreadyExistsException as exception:
-            _get_logger().debug(str(exception))
-            _get_logger().info(
-                "Instance profile on AWS named: '%s' already exists, nothing to do.",
-                instance_profile_name)
+        except iam_client.exceptions.EntityAlreadyExistsException:
+            # TODO: check if cached properly
+
+            # TODO: Get already existing instance_profile and then attach role in both cases
+            pass
 
         else:
-            _sleep(5)
+            _time.sleep(5)
+
+            # Attach role to instance profile
             instance_profile.add_role(RoleName=self._role)
-            _get_logger().debug("Instance profile: %s", instance_profile)
-            _get_logger().info("Instance profile %s created", instance_profile_name)
+            _get_logger().info(
+                "Attach role '%s' to instance profile '%s' to allow FPGA loading ",
+                self._role, instance_profile_name)
 
     def _init_security_group(self):
         """
         Initialize CSP security group.
         """
-        _get_logger().debug("Create or Check if security group '%s' exists.",
-                            self._security_group)
-
         ec2_client = self._session.client('ec2')
 
         # Get VPC
         vpc_id = ec2_client.describe_vpcs().get('Vpcs', [{}])[0].get('VpcId', '')
-        _get_logger().info("Default VPC: %s", vpc_id)
 
         # Try to create security group if not exist
         try:
@@ -255,10 +238,10 @@ class AWSClass(_csp.CSPGenericClass):
                 GroupName=self._security_group,
                 Description="Generated by accelize API", VpcId=vpc_id)
             security_group_id = response_create_security_group['GroupId']
-        except ec2_client.exceptions.ClientError as exception:
-            _get_logger().debug(str(exception))
-            _get_logger().info("A security group '%s' is already existing on %s.",
-                               self._security_group, self._provider)
+        except ec2_client.exceptions.ClientError:
+            # TODO: to catch properly
+            # TODO: except if error with VPC
+            pass
         else:
             _get_logger().info("Created security group with ID %s in vpc %s", security_group_id, vpc_id)
 
@@ -266,7 +249,7 @@ class AWSClass(_csp.CSPGenericClass):
         public_ip = _utl.get_host_public_ip()
         my_sg = ec2_client.describe_security_groups(GroupNames=[self._security_group, ], )
         try:
-            data = ec2_client.authorize_security_group_ingress(
+            rules = ec2_client.authorize_security_group_ingress(
                 GroupId=my_sg['SecurityGroups'][0]['GroupId'],
                 IpPermissions=[
                     {'IpProtocol': 'tcp',
@@ -280,11 +263,10 @@ class AWSClass(_csp.CSPGenericClass):
                      'IpRanges': [{'CidrIp': public_ip}]
                      }
                 ])
-        except ec2_client.exceptions.ClientError as exception:
-            _get_logger().debug(str(exception))
-            _get_logger().info("Right for IP '%s' on AWS already exists, nothing to do.", public_ip)
+        except ec2_client.exceptions.ClientError:
+            # TODO: to catch properly
+            pass
         else:
-            _get_logger().debug("Successfully Set '%s'", data)
             _get_logger().info("Added in security group '%s': SSH and HTTP for IP %s.",
                                self._security_group, public_ip)
 
@@ -307,7 +289,19 @@ class AWSClass(_csp.CSPGenericClass):
         try:
             return self._instance.public_ip_address
         except _boto_exceptions.ClientError as exception:
-            raise _exc.CSPInstanceException("Could not return instance URL ('%s')" % exception)
+            raise _exc.CSPInstanceException("Could not return instance URL", exc=exception)
+
+    def _get_instance_private_ip(self):
+        """
+        Read current instance private IP from CSP instance.
+
+        Returns:
+            str: IP address
+        """
+        try:
+            return self._instance.private_ip_address
+        except _boto_exceptions.ClientError as exception:
+            raise _exc.CSPInstanceException("Could not return instance URL", exc=exception)
 
     def _get_instance_status(self):
         """
@@ -320,9 +314,7 @@ class AWSClass(_csp.CSPGenericClass):
             instance_state = self._instance.state
         except _boto_exceptions.ClientError as exception:
             raise _exc.CSPInstanceException(
-                "Could not find an instance with ID %s ('%s')", self._instance_id, exception)
-        _get_logger().debug("Found an instance with ID %s in the following state: %s",
-                                self._instance_id, instance_state)
+                "Could not find an instance with ID %s", self._instance_id, exc=exception)
         return instance_state["Name"]
 
     def _read_accelerator_parameters(self, accel_parameters_in_region):
@@ -331,7 +323,7 @@ class AWSClass(_csp.CSPGenericClass):
         to configure CSP instance accordingly.
 
         Args:
-            accel_parameters_in_region (dict): Accelerator parameters
+            accel_parameters_in_region (dict): AcceleratorClient parameters
                 for the current CSP region.
 
         Returns:
@@ -343,15 +335,12 @@ class AWSClass(_csp.CSPGenericClass):
         image_id = accel_parameters_in_region['image']
         instance_type = accel_parameters_in_region['instancetype']
 
-        _get_logger().debug("Set image ID: %s", image_id)
-        _get_logger().debug("Set instance type: %s", instance_type)
-
         return image_id, instance_type, config_env
 
     def get_configuration_env(self, **kwargs):
         """
         Return environment to pass to
-        "acceleratorAPI.accelerator.Accelerator.start"
+        "acceleratorAPI.accelerator.AcceleratorClient.start"
         "csp_env" argument.
 
         Args:
@@ -365,17 +354,18 @@ class AWSClass(_csp.CSPGenericClass):
         try:
             currenv['AGFI'] = kwargs['AGFI']
         except KeyError:
-            _get_logger().debug("Using factory configuration: %s", _utl.pretty_dict(currenv))
+            pass
         else:
-            _get_logger().warning("Overwrite factory requirements with custom configuration:\n%s",
-                                  _utl.pretty_dict(currenv))
+            import warnings
+            warnings.warn(
+                "Overwrite AGFI factory requirements with custom configuration:\n%s",
+                _utl.pretty_dict(kwargs['AGFI']))
         return currenv
 
     def _create_instance(self):
         """
         Initialize and create instance.
         """
-        self._init_ssh_key()
         policy_arn = self._init_policy('AccelizePolicy')
         self._init_role()
         self._init_instance_profile()
@@ -387,14 +377,17 @@ class AWSClass(_csp.CSPGenericClass):
         Wait until instance is ready.
         """
         # Waiting for the instance provisioning
-        _get_logger().info("Waiting for the instance provisioning on %s...", self._provider)
-        while True:
+        time_0 = _time.time()
+        while _time.time() - time_0 < 360.0:
             # Get instance status
             status = self.instance_status()
-            _get_logger().debug("Instance status: %s", status)
             if status == "running":
-                break
-            _sleep(5)
+                return
+            _time.sleep(1)
+
+        raise _exc.CSPInstanceException(
+            "Timed out while waiting CSP instance provisioning (last status: %s)." %
+            status)
 
     def _start_new_instance(self):
         """
@@ -431,21 +424,12 @@ class AWSClass(_csp.CSPGenericClass):
             state (str): Status of the instance.
         """
         if state == "stopped":
-            response = self._instance.start()
-            _get_logger().debug("start response: %s", response)
+            self._instance.start()
 
         elif state != "running":
             raise _exc.CSPInstanceException(
                 "Instance ID %s cannot be started because it is not in a valid state (%s).",
                 self._instance_id, state)
-
-    def _log_instance_info(self):
-        """
-        Print some instance information in logger.
-        """
-        _get_logger().info("Region: %s", self._session.region_name)
-        _get_logger().info("Private IP: %s", self._instance.private_ip_address)
-        _get_logger().info("Public IP: %s", self.instance_ip)
 
     def _terminate_instance(self):
         """
