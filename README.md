@@ -45,7 +45,7 @@ Installation is made with PIP. Some installation options are available depending
 documentation for more information).
 
 You can install the full package with all options using:
-```
+```bash
 pip install acceleratorAPI[all]
 ```
 

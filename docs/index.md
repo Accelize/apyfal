@@ -57,9 +57,16 @@ with acceleratorAPI.AcceleratorClass(accelerator='cast_gzip') as myaccel:
 
 ## AcceleratorAPI documentation:
 
+AcceleratorAPI is a Python library for using accelerators and configuring CSP instances.
+
 * [acceleratorAPI](api.rst)
 
-<!-- TODO: add swagger low-level api-->
+## Accelerator REST API documentation:
+
+It is also possible to use accelerators using the REST API, but In this case, CSP instance configuration
+is not supported.
+
+* [accelerator REST API](rest.rst)
 
 ## Accelize links
 

@@ -52,7 +52,7 @@ install dependencies.
 ## Setup
 
 Installation is done using PIP:
-```
+```bash
 pip install acceleratorAPI
 ```
 
@@ -65,6 +65,6 @@ following setuptools extras:
 * `optional`: other optional requirements (ex `pycurl`).
 
 Example for installing the `all` extra:
-```
+```bash
 pip install acceleratorAPI[all]
 ```
