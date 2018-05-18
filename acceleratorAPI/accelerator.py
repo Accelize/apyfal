@@ -83,10 +83,11 @@ class AcceleratorClient(object):
         # Checks if Accelize credentials are valid
         self._check_accelize_credential()
 
-        # Initialize Swagger configuration
+        # Initializes Swagger REST API Client
         self._api_configuration = _api.Configuration()
+        self._api_client = _api.ApiClient(self._api_configuration)
 
-        # Set URL and configure
+        # Sets URL and configures
         if url:
             self.url = url
 
@@ -185,13 +186,8 @@ class AcceleratorClient(object):
 
         self._url = _utl.format_url(url)
 
-        # Patch Swagger to have possibility to use
-        # multiple REST API URL
+        # Configure REST API host
         self._api_configuration.host = self._url
-        try:
-            self._api_configuration.api_client.host = self._url
-        except AttributeError:
-            pass
 
         # If possible use the last accelerator configuration (it can still be overwritten later)
         self._use_last_configuration()
@@ -249,7 +245,10 @@ class AcceleratorClient(object):
         Reload last accelerator configuration.
         """
         # Get last configuration, if any
-        config_list = self._rest_api_configuration().configuration_list().results
+        try:
+            config_list = self._rest_api_configuration().configuration_list().results
+        except ValueError:
+            return
         if not config_list:
             return
 
@@ -469,10 +468,7 @@ class AcceleratorClient(object):
         except _exc.AcceleratorRuntimeException:
             # No AcceleratorClient to stop
             return None
-
-        stop_result = self._rest_api_stop().stop_list()
-        self._raise_for_status(stop_result, "Stopping accelerator failed: ")
-        return stop_result
+        return self._rest_api_stop().stop_list()
 
     @staticmethod
     def _raise_for_status(api_result, message=""):
@@ -503,7 +499,7 @@ class AcceleratorClient(object):
         Returns:
             Configured instance of api class.
         """
-        api_instance = api(api_client=self._api_configuration.api_client)
+        api_instance = api(api_client=self._api_client)
         api_instance.api_client.rest_client.pool_manager.connection_pool_kw['retries'] = 3
         return api_instance
 

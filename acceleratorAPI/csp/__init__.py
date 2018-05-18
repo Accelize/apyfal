@@ -355,7 +355,7 @@ class CSPGenericClass(_ABC):
         Initialize SSH key.
 
         Returns:
-            bool: True if reuse existing key
+            bool: True if reuses existing key
         """
 
     def start_instance(self):
@@ -373,8 +373,8 @@ class CSPGenericClass(_ABC):
 
                 reuse_key = self._init_ssh_key()
                 _get_logger().info(
-                    "Reuse KeyPair %s" if reuse_key
-                    else "Create KeyPair %s", self._ssh_key)
+                    "Reused KeyPair %s" if reuse_key
+                    else "Created KeyPair %s", self._ssh_key)
 
                 try:
                     self._create_instance()
@@ -410,10 +410,10 @@ class CSPGenericClass(_ABC):
             self._instance_url = _utl.format_url(self.instance_ip)
 
             # Waiting for the instance to boot
-            _get_logger().info("Instance is now booting...")
+            _get_logger().info("Waiting for the instance booting...")
             self._wait_instance_boot()
 
-        _get_logger().info("Your instance is now up and running")
+        _get_logger().info("The instance is now up and running")
 
     @_abstractmethod
     def _create_instance(self):

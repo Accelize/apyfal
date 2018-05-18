@@ -132,7 +132,7 @@ class AWSClass(_csp.CSPGenericClass):
             pass
         else:
             _get_logger().info(
-                "Create policy on AWS named %s to allow FPGA loading ", policy)
+                "Created policy on AWS named %s to allow FPGA loading ", policy)
 
         iam_client = self._session.client('iam')
         response = iam_client.list_policies(
@@ -170,7 +170,7 @@ class AWSClass(_csp.CSPGenericClass):
             pass
         else:
             _get_logger().info(
-                "Create role on AWS named %s to allow FPGA loading ", role)
+                "Created role on AWS named %s to allow FPGA loading ", role)
 
         iam_client = self._session.client('iam')
         arn = iam_client.get_role(RoleName=self._role)['Role']['Arn']
@@ -195,7 +195,7 @@ class AWSClass(_csp.CSPGenericClass):
             pass
 
         else:
-            _get_logger().info("Attached policy '%s' to role '%s' done.", policy_arn, self._role)
+            _get_logger().info("Attached policy '%s' to role '%s'.", policy_arn, self._role)
 
     def _init_instance_profile(self):
         """
@@ -220,7 +220,7 @@ class AWSClass(_csp.CSPGenericClass):
             # Attach role to instance profile
             instance_profile.add_role(RoleName=self._role)
             _get_logger().info(
-                "Attach role '%s' to instance profile '%s' to allow FPGA loading ",
+                "Attachd role '%s' to instance profile '%s' to allow FPGA loading ",
                 self._role, instance_profile_name)
 
     def _init_security_group(self):
