@@ -166,6 +166,23 @@ class SwaggerCommand(Command):
                 "-l", "python"])
         Popen(command, shell=True).communicate()
 
+        # Fix Swagger bug:
+        # https://github.com/swagger-api/swagger-codegen/pull/7684
+        # TODO: Remove once fixed in released Swagger-Codegen version
+        from os import walk
+        for root, _, files in walk(join(REST_API_GENERATED_DIR, 'swagger_client')):
+            for file_name in files:
+                file_path = join(root, file_name)
+                with open(file_path, 'rt') as file_handle:
+                    content = file_handle.read()
+                for value in ('1', '2', '3', '4', ''):
+                    content = content.replace(
+                        'swagger_client.models.inline_response200%s' % value,
+                        'swagger_client.models.inline_response_200%s' %
+                        (('_%s' % value) if value else ''))
+                with open(file_path, 'wt') as file_handle:
+                    file_handle.write(content)
+
         # Move Result to acceleratorAPI/rest_api
         rest_api_dir = join(SETUP_DIR, 'acceleratorAPI', 'swagger_client')
         rmtree(rest_api_dir, ignore_errors=True)
