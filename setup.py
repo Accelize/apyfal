@@ -2,8 +2,22 @@
 """Accelerator API setup script"""
 from datetime import datetime
 from ast import literal_eval
-from os.path import dirname, abspath, join
-from setuptools import setup, find_packages
+from os import makedirs, chdir
+from os.path import dirname, abspath, join, isfile, isdir
+from shutil import copytree, rmtree
+from subprocess import Popen
+from sys import argv
+try:
+    # Python 3
+    from urllib.request import urlopen, urlretrieve
+except ImportError:
+    # Python 2
+    from urllib import urlopen, urlretrieve
+from xml.etree import ElementTree
+
+from setuptools import setup, find_packages, Command
+
+
 
 # Sets Package information
 PACKAGE_INFOS = dict(
@@ -23,7 +37,7 @@ PACKAGE_INFOS = dict(
         ],
     keywords='fpga cloud accelerator accelize',
     author='Accelize',
-    author_email='https://www.accelize.com/contact-us/',
+    author_email='info@accelize.com',
     url='https://github.com/Accelize/acceleratorAPI',
     project_urls={
         'AccelStore': 'https://accelstore.accelize.com/',
@@ -41,10 +55,11 @@ PACKAGE_INFOS = dict(
         'AWS': ['boto3'],
         'OVH': ['openstack']},
     setup_requires=['pytest', 'sphinx', 'setuptools', 'recommonmark', 'sphinx_rtd_theme'],
-    packages=find_packages(exclude=['docs', 'tests', '*.test']),
+    packages=find_packages(exclude=['docs', 'tests', 'rest_api']),
     include_package_data=True,
     zip_safe=True,
     command_options={},
+    cmdclass={}
     )
 
 # Gets package __version__ from package
@@ -59,13 +74,85 @@ with open(join(SETUP_DIR, 'acceleratorAPI', '__init__.py')) as source_file:
 with open(join(SETUP_DIR, 'README.md')) as source_file:
     PACKAGE_INFOS['long_description'] = source_file.read()
 
+
+# Add command to generate REST API with Swagger-Codegen
+REST_API_BUILD_DIR = join(SETUP_DIR, 'build', 'rest_api')
+REST_API_GENERATED_DIR = join(REST_API_BUILD_DIR, 'output')
+REST_API_SETUP = join(REST_API_GENERATED_DIR, 'setup.py')
+
+
+class SwaggerCommand(Command):
+    """
+    Generate Python REST API Client using Swagger-Codegen
+    """
+    user_options = [
+        ('swagger-version=', None, 'Force use of a specific Swagger-Codegen version'),
+    ]
+
+    def initialize_options(self):
+        """Options default values"""
+        self.swagger_version = ''
+
+    def finalize_options(self):
+        """Validate options values"""
+
+    def run(self):
+        """Run Swagger command"""
+        repository = ('https://oss.sonatype.org/content/repositories/'
+                      'releases/io/swagger/swagger-codegen-cli')
+        src_dir = join(SETUP_DIR, 'rest_api')
+
+        # Create output directory, if needed
+        try:
+            makedirs(REST_API_GENERATED_DIR)
+        except OSError:
+            if not isdir(REST_API_GENERATED_DIR):
+                raise
+
+        # Get last Swagger version if not specified
+        if not self.swagger_version:
+            response = urlopen('%s/maven-metadata.xml' % repository)
+            xml = ElementTree.fromstring(response.read())
+            self.swagger_version = xml.findall('versioning/release')[0].text
+
+        jar_name = 'swagger-codegen-cli-%s.jar' % self.swagger_version
+        jar_path = join(REST_API_BUILD_DIR, jar_name)
+
+        # Download Swagger-codegen Jar if needed
+        if not isfile(jar_path):
+            urlretrieve('/'.join((repository, self.swagger_version, jar_name)), jar_path)
+
+        # Run Swagger-codegen
+        rmtree(REST_API_GENERATED_DIR, ignore_errors=True)
+        command = ' '.join([
+                "java", "-jar", jar_path, "generate",
+                "-c", join(src_dir, 'config.json'),
+                "-i", join(src_dir, 'input_spec.json'),
+                "-o", REST_API_GENERATED_DIR,
+                "-l", "python"])
+        Popen(command, shell=True).communicate()
+
+        # Move Result to acceleratorAPI/rest_api
+        rest_api_dir = join(SETUP_DIR, 'acceleratorAPI', 'rest_api')
+        rmtree(rest_api_dir, ignore_errors=True)
+        copytree(join(REST_API_GENERATED_DIR, 'swagger_client'), rest_api_dir)
+
+
+PACKAGE_INFOS['cmdclass']['swagger_codegen'] = SwaggerCommand
+
 # Gets requirements from Swagger generated REST API
-with open(join(SETUP_DIR, 'acceleratorAPI', 'rest_api', 'setup.py')) as source_file:
-    for line in source_file:
-        if line.rstrip().startswith('REQUIRES = ['):
-            PACKAGE_INFOS['install_requires'].extend(
-                literal_eval(line.split('=', 1)[1].strip(" \n")))
-            break
+if 'swagger_codegen' not in argv:
+    if not isfile(REST_API_SETUP):
+        raise RuntimeError(
+            "REST API not generated, "
+            "please run 'setup.py swagger_codegen' first")
+
+    with open(REST_API_SETUP) as source_file:
+        for line in source_file:
+            if line.rstrip().startswith('REQUIRES = ['):
+                PACKAGE_INFOS['install_requires'].extend(
+                    literal_eval(line.split('=', 1)[1].strip(" \n")))
+                break
 
 # Generates wildcard "all" extras_require
 PACKAGE_INFOS['extras_require']['all'] = list(set(

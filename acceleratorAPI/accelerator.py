@@ -25,7 +25,7 @@ import acceleratorAPI._utilities as _utl
 from acceleratorAPI._utilities import get_logger as _get_logger
 import acceleratorAPI.exceptions as _exc
 import acceleratorAPI.configuration as _cfg
-import acceleratorAPI.rest_api.swagger_client as _swc
+import acceleratorAPI.rest_api as _api
 
 
 class AcceleratorClient(object):
@@ -84,7 +84,7 @@ class AcceleratorClient(object):
         self._check_accelize_credential()
 
         # Initialize Swagger configuration
-        self._api_configuration = _swc.Configuration()
+        self._api_configuration = _api.Configuration()
 
         # Set URL and configure
         if url:
@@ -514,7 +514,7 @@ class AcceleratorClient(object):
         Returns:
             acceleratorAPI.rest_api.swagger_client.ProcessApi: class instance
         """
-        return self._init_rest_api_class(_swc.ProcessApi)
+        return self._init_rest_api_class(_api.ProcessApi)
 
     def _rest_api_configuration(self):
         """
@@ -524,7 +524,7 @@ class AcceleratorClient(object):
             acceleratorAPI.rest_api.swagger_client.ConfigurationApi: class instance
         """
         # /v1.0/configuration/
-        return self._init_rest_api_class(_swc.ConfigurationApi)
+        return self._init_rest_api_class(_api.ConfigurationApi)
 
     def _rest_api_stop(self):
         """
@@ -534,4 +534,4 @@ class AcceleratorClient(object):
             acceleratorAPI.rest_api.swagger_client.StopApi: class instance
         """
         # /v1.0/stop
-        return self._init_rest_api_class(_swc.StopApi)
+        return self._init_rest_api_class(_api.StopApi)
