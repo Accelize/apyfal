@@ -1,26 +1,18 @@
-# coding=utf-8
-"""Accelerator API setup script"""
+#! /usr/bin/env python
+#  coding=utf-8
+"""Accelerator API setup script
+
+run "./setup.py --help-commands" for help.
+"""
 from datetime import datetime
-from ast import literal_eval
 from os import makedirs, chdir
 from os.path import dirname, abspath, join, isfile, isdir
-from shutil import copytree, rmtree
-from subprocess import Popen
 from sys import argv
-try:
-    # Python 3
-    from urllib.request import urlopen, urlretrieve
-except ImportError:
-    # Python 2
-    from urllib import urlopen, urlretrieve
-from xml.etree import ElementTree
 
 from setuptools import setup, find_packages, Command
 
-
-
 # Sets Package information
-PACKAGE_INFOS = dict(
+PACKAGE_INFO = dict(
     name='acceleratorAPI',
     description='Accelize AcceleratorAPI is a powerful and flexible '
                 'toolkit for testing and operate FPGA accelerated function.',
@@ -32,7 +24,12 @@ PACKAGE_INFOS = dict(
         'License :: OSI Approved :: Apache Software License',
         'Topic :: Other/Nonlisted Topic',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Operating System :: OS Independent'
         ],
     keywords='fpga cloud accelerator accelize',
@@ -45,7 +42,7 @@ PACKAGE_INFOS = dict(
         'Contact': 'https://www.accelize.com/contact-us/'
     },
     license='Apache',
-    python_requires='==2.7',
+    python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',
     install_requires=['setuptools', 'requests'],
     extras_require={
         # Optional speedup
@@ -54,7 +51,8 @@ PACKAGE_INFOS = dict(
         # CSP specific requirements
         'AWS': ['boto3'],
         'OVH': ['openstack']},
-    setup_requires=['pytest', 'sphinx', 'setuptools', 'recommonmark', 'sphinx_rtd_theme'],
+    setup_requires=['setuptools'],
+    tests_require=['pytest'],
     packages=find_packages(exclude=['docs', 'tests', 'rest_api']),
     include_package_data=True,
     zip_safe=True,
@@ -67,13 +65,12 @@ SETUP_DIR = abspath(dirname(__file__))
 with open(join(SETUP_DIR, 'acceleratorAPI', '__init__.py')) as source_file:
     for line in source_file:
         if line.rstrip().startswith('__version__'):
-            PACKAGE_INFOS['version'] = line.split('=', 1)[1].strip(" \"\'\n")
+            PACKAGE_INFO['version'] = line.split('=', 1)[1].strip(" \"\'\n")
             break
 
 # Gets long description from readme
 with open(join(SETUP_DIR, 'README.md')) as source_file:
-    PACKAGE_INFOS['long_description'] = source_file.read()
-
+    PACKAGE_INFO['long_description'] = source_file.read()
 
 # Add command to generate REST API with Swagger-Codegen
 REST_API_BUILD_DIR = join(SETUP_DIR, 'build', 'rest_api')
@@ -83,8 +80,9 @@ REST_API_SETUP = join(REST_API_GENERATED_DIR, 'setup.py')
 
 class SwaggerCommand(Command):
     """
-    Generate Python REST API Client using Swagger-Codegen
+    Generate Python REST API client using Swagger-Codegen
     """
+    description = "Generate REST API client (acceleratorAPI/rest_api)"
     user_options = [
         ('swagger-version=', None, 'Force use of a specific Swagger-Codegen version'),
     ]
@@ -98,9 +96,23 @@ class SwaggerCommand(Command):
 
     def run(self):
         """Run Swagger command"""
+        # Lazzy import since required only here
+        import json
+        from shutil import copytree, rmtree
+        from subprocess import Popen
+        try:
+            # Python 3
+            from urllib.request import urlopen, urlretrieve
+        except ImportError:
+            # Python 2
+            from urllib import urlopen, urlretrieve
+        from xml.etree import ElementTree
+
+        # Define paths
         repository = ('https://oss.sonatype.org/content/repositories/'
                       'releases/io/swagger/swagger-codegen-cli')
         src_dir = join(SETUP_DIR, 'rest_api')
+        input_spec_path = join(src_dir, 'input_spec.json')
 
         # Create output directory, if needed
         try:
@@ -111,9 +123,30 @@ class SwaggerCommand(Command):
 
         # Get last Swagger version if not specified
         if not self.swagger_version:
-            response = urlopen('%s/maven-metadata.xml' % repository)
-            xml = ElementTree.fromstring(response.read())
-            self.swagger_version = xml.findall('versioning/release')[0].text
+            # Get project OpenAPI version
+            with open(input_spec_path, 'rt') as input_spec_file:
+                input_spec = json.load(input_spec_file)
+            openapi_version = int(input_spec['swagger'][0])
+
+            # Get Maven metadata from repository
+            maven_metadata = ElementTree.fromstring(
+                urlopen('%s/maven-metadata.xml' % repository).read())
+
+            # Get the last release version
+            version = maven_metadata.findall('versioning/release')[0].text
+
+            # If not the same OpenAPI version in last release and project
+            # find the last compatible version
+            if int(version[0]) > openapi_version:
+                versions = reversed([
+                    version.text for version in
+                    maven_metadata.findall('versioning/versions/version')])
+
+                for version in versions:
+                    if int(version[0]) == openapi_version:
+                        break
+
+            self.swagger_version = version
 
         jar_name = 'swagger-codegen-cli-%s.jar' % self.swagger_version
         jar_path = join(REST_API_BUILD_DIR, jar_name)
@@ -122,23 +155,24 @@ class SwaggerCommand(Command):
         if not isfile(jar_path):
             urlretrieve('/'.join((repository, self.swagger_version, jar_name)), jar_path)
 
-        # Run Swagger-codegen
+        # Clear output directory
         rmtree(REST_API_GENERATED_DIR, ignore_errors=True)
+
+        # Run Swagger-codegen
         command = ' '.join([
                 "java", "-jar", jar_path, "generate",
-                "-c", join(src_dir, 'config.json'),
-                "-i", join(src_dir, 'input_spec.json'),
+                "-i", input_spec_path,
                 "-o", REST_API_GENERATED_DIR,
                 "-l", "python"])
         Popen(command, shell=True).communicate()
 
         # Move Result to acceleratorAPI/rest_api
-        rest_api_dir = join(SETUP_DIR, 'acceleratorAPI', 'rest_api')
+        rest_api_dir = join(SETUP_DIR, 'acceleratorAPI', 'swagger_client')
         rmtree(rest_api_dir, ignore_errors=True)
         copytree(join(REST_API_GENERATED_DIR, 'swagger_client'), rest_api_dir)
 
 
-PACKAGE_INFOS['cmdclass']['swagger_codegen'] = SwaggerCommand
+PACKAGE_INFO['cmdclass']['swagger_codegen'] = SwaggerCommand
 
 # Gets requirements from Swagger generated REST API
 if 'swagger_codegen' not in argv:
@@ -147,30 +181,39 @@ if 'swagger_codegen' not in argv:
             "REST API not generated, "
             "please run 'setup.py swagger_codegen' first")
 
+    from ast import literal_eval
     with open(REST_API_SETUP) as source_file:
         for line in source_file:
             if line.rstrip().startswith('REQUIRES = ['):
-                PACKAGE_INFOS['install_requires'].extend(
+                PACKAGE_INFO['install_requires'].extend(
                     literal_eval(line.split('=', 1)[1].strip(" \n")))
                 break
 
+# Add pytest_runner requirement if needed
+if {'pytest', 'test', 'ptr'}.intersection(argv):
+    PACKAGE_INFO['setup_requires'].append('pytest-runner')
+
+# Add Sphinx requirements if needed
+elif 'build_sphinx' in argv:
+    PACKAGE_INFO['setup_requires'] += [
+        'sphinx', 'recommonmark', 'sphinx_rtd_theme']
+
 # Generates wildcard "all" extras_require
-PACKAGE_INFOS['extras_require']['all'] = list(set(
-    requirement for extra in PACKAGE_INFOS['extras_require']
-    for requirement in PACKAGE_INFOS['extras_require'][extra]
+PACKAGE_INFO['extras_require']['all'] = list(set(
+    requirement for extra in PACKAGE_INFO['extras_require']
+    for requirement in PACKAGE_INFO['extras_require'][extra]
     ))
 
 # Gets Sphinx configuration
-PACKAGE_INFOS['command_options']['build_sphinx'] = {
-    'project': ('setup.py', PACKAGE_INFOS['name'].capitalize()),
-    'version': ('setup.py', PACKAGE_INFOS['version']),
-    'release': ('setup.py', PACKAGE_INFOS['version']),
+PACKAGE_INFO['command_options']['build_sphinx'] = {
+    'project': ('setup.py', PACKAGE_INFO['name'].capitalize()),
+    'version': ('setup.py', PACKAGE_INFO['version']),
+    'release': ('setup.py', PACKAGE_INFO['version']),
     'copyright': ('setup.py', '2017-%s, %s' % (
-        datetime.now().year, PACKAGE_INFOS['author'])),
+        datetime.now().year, PACKAGE_INFO['author'])),
     }
 
 # Runs setup
 if __name__ == '__main__':
-    from os import chdir
     chdir(SETUP_DIR)
-    setup(**PACKAGE_INFOS)
+    setup(**PACKAGE_INFO)

@@ -61,7 +61,7 @@ Thumbs.db
 
 # Build generated files #
 #########################
-acceleratorAPI/rest_api/
+acceleratorAPI/swagger_client/
 build/
 dist/
 .eggs/

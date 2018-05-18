@@ -25,7 +25,7 @@ import acceleratorAPI._utilities as _utl
 from acceleratorAPI._utilities import get_logger as _get_logger
 import acceleratorAPI.exceptions as _exc
 import acceleratorAPI.configuration as _cfg
-import acceleratorAPI.rest_api as _api
+import acceleratorAPI.swagger_client as _api
 
 
 class AcceleratorClient(object):

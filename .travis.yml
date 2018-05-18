@@ -10,6 +10,7 @@ install:
     - "python -m pip install --upgrade setuptools pip wheel"
     - "python -m pip install pytest coverage pytest-cov coveralls[yaml] requests pycurl boto3 openstack urllib3 six
     certifi python-dateutil"
+    - "python ./setup.py swagger_codegen"
 
 script:
     - "py.test -v --cov=acceleratorAPI --cov-report=term-missing"

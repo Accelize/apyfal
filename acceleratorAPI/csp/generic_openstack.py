@@ -228,12 +228,12 @@ class OpenStackClass(_csp.CSPGenericClass):
         try:
             self._instance = self._session.compute.wait_for_server(self._instance)
         except _openstack.exceptions.SDKException as exception:
-            self._get_instance()
+            self._instance = self._get_instance()
             try:
-                msg = self.instance.fault.message
+                msg = self._instance.fault.message
             except AttributeError:
                 msg = exception
-            raise _exc.CSPInstanceException("Instance exception", exc=msg)
+            raise _exc.CSPInstanceException("CSP exception", exc=msg)
 
         # Check instance status
         state = self._get_instance_status()

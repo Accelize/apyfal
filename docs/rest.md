@@ -18,7 +18,7 @@ with the path to the Swagger-Codegen Jar (`swagger-codegen-cli-X.X.X.jar`), and 
 language to generate (Please refer to Swagger-Codegen documentation for the list of possible languages)
 
 ```bash
-java -jar $SWAGGER_CODEGEN_CLI generate -c rest_api/config.json  -i rest_api/input_spec.json -o rest_api/output -l $LANGUAGE
+java -jar $SWAGGER_CODEGEN_CLI generate -i rest_api/input_spec.json -o rest_api/output -l $LANGUAGE
 ```
 
 - The generated API in the target language can be found in `rest_api/output` sub-directory inside the repository folder.

@@ -3,4 +3,4 @@
 [run]
 # Ignore generated Swagger REST API code since we don't use it completely and don't change it
 omit=
-    */rest_api/*
+    */swagger_client/*
