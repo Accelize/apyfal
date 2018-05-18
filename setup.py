@@ -148,14 +148,18 @@ class SwaggerCommand(Command):
 
             self.swagger_version = version
 
+        print('Using Swagger-Codegen %s' % self.swagger_version)
+
         jar_name = 'swagger-codegen-cli-%s.jar' % self.swagger_version
         jar_path = join(REST_API_BUILD_DIR, jar_name)
 
         # Download Swagger-codegen Jar if needed
         if not isfile(jar_path):
+            print('Downloading %s' % jar_name)
             urlretrieve('/'.join((repository, self.swagger_version, jar_name)), jar_path)
 
         # Clear output directory
+        print('Clearing %s' % REST_API_GENERATED_DIR)
         rmtree(REST_API_GENERATED_DIR, ignore_errors=True)
 
         # Run Swagger-codegen
@@ -164,6 +168,7 @@ class SwaggerCommand(Command):
                 "-i", input_spec_path,
                 "-o", REST_API_GENERATED_DIR,
                 "-l", "python"])
+        print('Running command "%s"' % command)
         Popen(command, shell=True).communicate()
 
         # Fix Swagger bug:
@@ -184,9 +189,13 @@ class SwaggerCommand(Command):
                     file_handle.write(content)
 
         # Move Result to acceleratorAPI/rest_api
-        rest_api_dir = join(SETUP_DIR, 'acceleratorAPI', 'swagger_client')
-        rmtree(rest_api_dir, ignore_errors=True)
-        copytree(join(REST_API_GENERATED_DIR, 'swagger_client'), rest_api_dir)
+        rest_api_dst = join(SETUP_DIR, 'acceleratorAPI', 'swagger_client')
+        print('Clearing %s' % rest_api_dst)
+        rmtree(rest_api_dst, ignore_errors=True)
+
+        rest_api_src = join(REST_API_GENERATED_DIR, 'swagger_client')
+        print('Copying REST API from %s to %s' % (rest_api_src, rest_api_dst))
+        copytree(rest_api_src, rest_api_dst)
 
 
 PACKAGE_INFO['cmdclass']['swagger_codegen'] = SwaggerCommand
