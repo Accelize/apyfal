@@ -84,8 +84,7 @@ class AcceleratorClient(object):
         self._check_accelize_credential()
 
         # Initializes Swagger REST API Client
-        self._api_configuration = _api.Configuration()
-        self._api_client = _api.ApiClient(self._api_configuration)
+        self._api_client = _api.ApiClient()
 
         # Sets URL and configures
         if url:
@@ -187,7 +186,7 @@ class AcceleratorClient(object):
         self._url = _utl.format_url(url)
 
         # Configure REST API host
-        self._api_configuration.host = self._url
+        self._api_client.configuration.host = self._url
 
         # If possible use the last accelerator configuration (it can still be overwritten later)
         self._use_last_configuration()
