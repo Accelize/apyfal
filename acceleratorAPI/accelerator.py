@@ -377,7 +377,7 @@ class AcceleratorClient(object):
 
         try:
             api_response = _json.loads(content)
-        except TypeError:
+        except ValueError:
             raise _exc.AcceleratorRuntimeException(
                 "Response not valid", exc=content)
 
