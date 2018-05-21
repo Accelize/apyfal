@@ -25,7 +25,16 @@ import acceleratorAPI._utilities as _utl
 from acceleratorAPI._utilities import get_logger as _get_logger
 import acceleratorAPI.exceptions as _exc
 import acceleratorAPI.configuration as _cfg
-import acceleratorAPI.swagger_client as _api
+
+try:
+    import acceleratorAPI.swagger_client as _api
+except ImportError:
+    # swagger_client is dynamically generated with Swagger-codegen and
+    # not provided in repository, so it is possible
+    # to try to import with without have generated it first.
+    raise ImportError(
+        'Swagger client not found, please generate it '
+        'with "setup.py swagger_codegen"')
 
 
 class AcceleratorClient(object):
