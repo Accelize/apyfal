@@ -1,5 +1,5 @@
 # coding=utf-8
-"""acceleratorAPI.accelerator tests"""
+"""acceleratorAPI.client tests"""
 import collections
 import io
 import gc
@@ -9,12 +9,12 @@ import sys
 import pytest
 
 
-def test_accelerator_check_accelize_credential():
+def test_acceleratorclient_check_accelize_credential():
     """Tests AcceleratorClient._check_accelize_credential
 
     Test parts that needs credentials"""
     from acceleratorAPI.configuration import Configuration
-    from acceleratorAPI.accelerator import AcceleratorClient
+    from acceleratorAPI.client import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorAuthenticationException
 
     # Load user configuration
@@ -34,12 +34,12 @@ def test_accelerator_check_accelize_credential():
         AcceleratorClient('dummy', config=config, secret_id='bad_secret_id')
 
 
-def test_accelerator_check_accelize_credential_no_cred():
+def test_acceleratorclient_check_accelize_credential_no_cred():
     """Tests AcceleratorClient._check_accelize_credential
 
     Test parts that don't needs credentials"""
     from acceleratorAPI.configuration import Configuration
-    from acceleratorAPI.accelerator import AcceleratorClient
+    from acceleratorAPI.client import AcceleratorClient
     import acceleratorAPI.exceptions as exc
 
     # Load user configuration but remove any accelize credential
@@ -57,9 +57,9 @@ def test_accelerator_check_accelize_credential_no_cred():
                           secret_id='bad_secret_id', config=config)
 
 
-def test_accelerator_is_alive():
+def test_acceleratorclient_is_alive():
     """Tests AcceleratorClient._raise_for_status"""
-    from acceleratorAPI.accelerator import AcceleratorClient
+    from acceleratorAPI.client import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
 
     # Mock some accelerators parts
@@ -88,9 +88,9 @@ def test_accelerator_is_alive():
         accelerator.is_alive()
 
 
-def test_accelerator_raise_for_status():
+def test_acceleratorclient_raise_for_status():
     """Tests AcceleratorClient._raise_for_status"""
-    from acceleratorAPI.accelerator import AcceleratorClient
+    from acceleratorAPI.client import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
 
     # Test: Result without error
@@ -105,10 +105,10 @@ def test_accelerator_raise_for_status():
         AcceleratorClient._raise_for_status({'app': {'status': 1, 'msg': 'error'}})
 
 
-def test_accelerator_get_requirements():
+def test_acceleratorclient_get_requirements():
     """Tests AcceleratorClient.get_requirements"""
     from acceleratorAPI.configuration import Configuration
-    from acceleratorAPI.accelerator import AcceleratorClient
+    from acceleratorAPI.client import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorConfigurationException
 
     config = Configuration()
@@ -135,9 +135,9 @@ def test_accelerator_get_requirements():
     assert response['accelerator'] == name
 
 
-def test_url():
+def test_acceleratorclient_url():
     """Tests AcceleratorClient.url"""
-    from acceleratorAPI.accelerator import AcceleratorClient
+    from acceleratorAPI.client import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorConfigurationException
 
     # Mock some accelerators parts
@@ -171,16 +171,21 @@ def test_url():
         accelerator.url = 'http://url_not_valid'
 
     # Test: Valid URL
-    url = 'http://127.0.0.1'
+    ip_address = '127.0.0.1'
+    url = 'http://%s' % ip_address
     accelerator.url = url
     assert accelerator._url == url
     assert accelerator._api_client.configuration.host == url
     assert accelerator.use_last_configuration_called
 
+    # Test: URL set with IP
+    accelerator.url = ip_address
+    assert accelerator._url == url
 
-def test_accelerator_start():
+
+def test_acceleratorclient_start():
     """Tests AcceleratorClient.start"""
-    from acceleratorAPI.accelerator import AcceleratorClient
+    from acceleratorAPI.client import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
     import acceleratorAPI.swagger_client as swagger_client
 
@@ -291,9 +296,9 @@ def test_accelerator_start():
         swagger_client.ConfigurationApi = swagger_client_configure_api
 
 
-def test_accelerator_use_last_configuration():
+def test_acceleratorclient_use_last_configuration():
     """Tests AcceleratorClient._use_last_configuration"""
-    from acceleratorAPI.accelerator import AcceleratorClient
+    from acceleratorAPI.client import AcceleratorClient
     import acceleratorAPI.swagger_client as swagger_client
 
     # Mock Swagger REST API ConfigurationApi
@@ -350,9 +355,9 @@ def test_accelerator_use_last_configuration():
         swagger_client.ConfigurationApi = swagger_client_configure_api
 
 
-def test_accelerator_stop():
+def test_acceleratorclient_stop():
     """Tests AcceleratorClient.stop"""
-    from acceleratorAPI.accelerator import AcceleratorClient
+    from acceleratorAPI.client import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
     import acceleratorAPI.swagger_client as swagger_client
 
@@ -421,7 +426,7 @@ def test_accelerator_stop():
         swagger_client.StopApi = swagger_client_stop_api
 
 
-def test_accelerator_process_curl():
+def test_acceleratorclient_process_curl():
     """Tests AcceleratorClient._process_curl with PycURL"""
     # Skip if PycURL not available
     try:
@@ -431,11 +436,11 @@ def test_accelerator_process_curl():
         return
 
     # Check PycURL is enabled in accelerator API
-    import acceleratorAPI.accelerator
-    assert acceleratorAPI.accelerator._USE_PYCURL
+    import acceleratorAPI.client
+    assert acceleratorAPI.client._USE_PYCURL
 
     # Start testing
-    from acceleratorAPI.accelerator import AcceleratorClient
+    from acceleratorAPI.client import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
 
     # Mock some accelerators parts
@@ -521,7 +526,7 @@ def test_accelerator_process_curl():
         pycurl.Curl = pycurl_curl
 
 
-def test_accelerator_process_swagger():
+def test_acceleratorclient_process_swagger():
     """Tests AcceleratorClient._process_swagger with Swagger"""
     # Clean imported modules
     # to force to reimport without PycURL if present
@@ -529,18 +534,18 @@ def test_accelerator_process_swagger():
     if pycurl_module is not None:
         sys.modules['pycurl'] = None
         try:
-            del sys.modules['acceleratorAPI.accelerator']
+            del sys.modules['acceleratorAPI.client']
         except KeyError:
             pass
         gc.collect()
 
     # Check PycURL is disabled in accelerator API
-    import acceleratorAPI.accelerator
-    assert not acceleratorAPI.accelerator._USE_PYCURL
+    import acceleratorAPI.client
+    assert not acceleratorAPI.client._USE_PYCURL
 
     # Starts testing with PycURL disabled
     try:
-        from acceleratorAPI.accelerator import AcceleratorClient
+        from acceleratorAPI.client import AcceleratorClient
         import acceleratorAPI.swagger_client as swagger_client
 
         # Mock some variables
@@ -609,9 +614,9 @@ def test_accelerator_process_swagger():
             gc.collect()
 
 
-def test_accelerator_process(tmpdir):
+def test_acceleratorclient_process(tmpdir):
     """Tests AcceleratorClient._process"""
-    from acceleratorAPI.accelerator import AcceleratorClient
+    from acceleratorAPI.client import AcceleratorClient
     import acceleratorAPI.exceptions as exc
     import acceleratorAPI._utilities as utl
     import acceleratorAPI.swagger_client as swagger_client

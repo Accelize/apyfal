@@ -192,20 +192,30 @@ def create_ssh_key_file(ssh_key, key_content):
     os.chmod(key_filename, 0o400)
 
 
-def get_logger():
+def get_logger(stdout=False):
     """
     Initialize logger
+
+    Args:
+        stdout (bool): If True, configure logger to print on
+            stdout, else use NullHandler
 
     Returns:
        logging.Logger: logger instance
     """
     # Return Cached logger
     try:
-        return _CACHE['logger']
+        logger = _CACHE['logger']
 
     # Initialize logger on first call
     except KeyError:
         import logging
         logger = logging.getLogger("acceleratorAPI")
+        logger.setLevel(logging.INFO)
         logger.addHandler(logging.NullHandler())
-        return logger
+
+    if stdout:
+        import logging
+        logger.addHandler(logging.StreamHandler())
+
+    return logger

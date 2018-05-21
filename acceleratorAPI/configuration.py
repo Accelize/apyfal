@@ -64,15 +64,7 @@ class Configuration(_configparser.ConfigParser):
         # Read configuration file if exists
         # If not, return empty Configuration file, this will force
         # CSP and accelerator classes to uses defaults values
-        self._file_path = configuration_file if self.read(configuration_file) else None
-
-    @property
-    def file_path(self):
-        """Configuration file path
-
-        Returns:
-            path (str)"""
-        return self._file_path
+        self.read(configuration_file)
 
     def get_default(self, section, option, overwrite=None, default=None, is_literal=False):
         """Returns values from configuration or default value.

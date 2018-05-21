@@ -21,10 +21,14 @@ __copyright__ = "Copyright 2018 Accelize"
 __licence__ = "Apache 2.0"
 
 import acceleratorAPI.csp as _csp
-import acceleratorAPI.accelerator as _acc
+import acceleratorAPI.client as _acc
 import acceleratorAPI.configuration as _cfg
 import acceleratorAPI.exceptions as _exc
 from acceleratorAPI._utilities import get_logger as _get_logger
+
+
+# Makes get_logger available here for easy access
+get_logger = _get_logger
 
 
 class AcceleratorClass(object):
@@ -32,7 +36,7 @@ class AcceleratorClass(object):
     This class automatically handle AcceleratorClient and CSP classes.
 
     Args:
-        accelerator_name (str): Name of the accelerator you want to initialize,
+        accelerator (str): Name of the accelerator you want to initialize,
             to know the authorized list please visit "https://accelstore.accelize.com".
         config_file (str or acceleratorAPI.configuration.Configuration):
             Configuration file path or instance. If not set, will search it in current working directory, in current
@@ -53,6 +57,7 @@ class AcceleratorClass(object):
             If set will override value from configuration file.
         ssh_key (str): SSH key to use with your CSP. If set will override value from configuration file.
         instance_id (str): CSP Instance ID to reuse. If set will override value from configuration file.
+        instance_ip (str): CSP Instance IP or URL address to reuse. If set will override value from configuration file.
         instance_url (str): CSP Instance URL or IP address to reuse. If set will override value from configuration file.
         stop_mode (int): CSP stop mode. See
             "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
@@ -63,9 +68,9 @@ class AcceleratorClass(object):
             convenience and does not cover all exit case like process kill and
             may not work on all OS.
     """
-    def __init__(self, accelerator_name, config_file=None, provider=None,
+    def __init__(self, accelerator, config_file=None, provider=None,
                  region=None, xlz_client_id=None, xlz_secret_id=None, csp_client_id=None,
-                 csp_secret_id=None, ssh_key=None, instance_id=None, instance_url=None,
+                 csp_secret_id=None, ssh_key=None, instance_id=None, instance_url=None, instance_ip=None,
                  stop_mode=_csp.TERM, exit_instance_on_signal=False):
 
         # Initialize configuration
@@ -79,7 +84,7 @@ class AcceleratorClass(object):
 
         # Create AcceleratorClient object
         self._accelerator = _acc.AcceleratorClient(
-            accelerator_name, client_id=xlz_client_id, secret_id=xlz_secret_id, config=config)
+            accelerator, client_id=xlz_client_id, secret_id=xlz_secret_id, config=config)
 
         # Check CSP ID if provided
         if instance_id:
@@ -87,8 +92,8 @@ class AcceleratorClass(object):
             self._accelerator.url = self._csp.instance_url
 
         # Set CSP URL if provided
-        elif instance_url:
-            self._accelerator.url = instance_url
+        elif instance_url or instance_ip:
+            self._accelerator.url = instance_url if instance_url else instance_ip
 
     def __enter__(self):
         return self
@@ -105,7 +110,7 @@ class AcceleratorClass(object):
         Accelerator instance.
 
         Returns:
-            acceleratorAPI.accelerator.AcceleratorClient: Accelerator
+            acceleratorAPI.client.AcceleratorClient: Accelerator
         """
         return self._accelerator
 
