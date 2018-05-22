@@ -83,12 +83,6 @@ class AcceleratorClient(object):
             'process', 'parameters', is_literal=True,
             default=self.DEFAULT_PROCESS_PARAMETERS)
 
-        # Checks mandatory configuration values
-        if self._client_id is None or self._secret_id is None:
-            raise _exc.AcceleratorConfigurationException(
-                "Accelize client ID and secret ID are mandatory. "
-                "Provide them in the configuration file or through function arguments.")
-
         # Checks if Accelize credentials are valid
         self._check_accelize_credential()
 
@@ -119,6 +113,12 @@ class AcceleratorClient(object):
             AcceleratorAuthenticationException: User credential are not valid.
         """
         if self._access_token is None:
+            # Checks Client ID and secret ID presence
+            if self._client_id is None or self._secret_id is None:
+                raise _exc.AcceleratorConfigurationException(
+                    "Accelize client ID and secret ID are mandatory. "
+                    "Provide them in the configuration file or through function arguments.")
+
             # Check access and get token from server
             response = _utl.http_session().post(
                 'https://master.metering.accelize.com/o/token/',

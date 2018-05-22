@@ -284,7 +284,7 @@ class CSPGenericClass(_ABC):
 
         try:
             stop_mode = int(stop_mode)
-        except TypeError:
+        except (TypeError, ValueError):
             pass
 
         if stop_mode not in self.STOP_MODES:
@@ -376,22 +376,15 @@ class CSPGenericClass(_ABC):
                 try:
                     self._create_instance()
                 except _exc.CSPException as exception:
-                    # Force stop instance
-                    self._stop_silently()
-
-                    # Augment exception message
-                    self._add_csp_help_to_exception_message(exception)
+                    self._stop_silently(exception)
                     raise
 
                 try:
                     self._instance, self._instance_id = self._start_new_instance()
                 except _exc.CSPException as exception:
-                    # Force stop instance
-                    self._stop_silently()
-
-                    # Augment exception message
-                    self._add_csp_help_to_exception_message(exception)
+                    self._stop_silently(exception)
                     raise
+
                 _get_logger().info("Created instance ID: %s", self._instance_id)
 
             # If exists, starts it directly
@@ -401,7 +394,11 @@ class CSPGenericClass(_ABC):
 
             # Waiting for instance provisioning
             _get_logger().info("Waiting for the instance provisioning...")
-            self._wait_instance_ready()
+            try:
+                self._wait_instance_ready()
+            except _exc.CSPException as exception:
+                self._stop_silently(exception)
+                raise
 
             # Update instance URL
             self._instance_url = _utl.format_url(self.instance_ip)
@@ -409,6 +406,10 @@ class CSPGenericClass(_ABC):
             # Waiting for the instance to boot
             _get_logger().info("Waiting for the instance booting...")
             self._wait_instance_boot()
+
+        # If started from URl, checks this URL is reachable
+        elif not _utl.check_url(self._instance_url):
+            raise _exc.CSPInstanceException("Unable to reach instance URL.")
 
         _get_logger().info("The instance is now up and running")
 
@@ -467,7 +468,7 @@ class CSPGenericClass(_ABC):
             try:
                 value = getattr(self, name)
             except (AttributeError, _exc.CSPException):
-                value = None
+                continue
             info[name.strip('_')] = value
         return info
 
@@ -483,7 +484,7 @@ class CSPGenericClass(_ABC):
             stop_mode = self._stop_mode
 
         # Keep instance alive
-        if self._stop_mode == KEEP:
+        if stop_mode == KEEP:
             import warnings
             warnings.warn("Instance with URL %s (ID=%s) is still running!" % (self.instance_url, self.instance_id),
                           Warning)
@@ -517,10 +518,19 @@ class CSPGenericClass(_ABC):
         Pauses instance.
         """
 
-    def _stop_silently(self):
+    def _stop_silently(self, exception):
         """
         Terminates and deletes instance ignoring errors.
+
+        Args:
+            exception(Exception): If provided, augment message
+                of this exception with CSP help.
         """
+        # Augment exception message
+        if exception is not None:
+            self._add_csp_help_to_exception_message(exception)
+
+        # Force stop instance, hide exception if any
         try:
             self._terminate_instance()
         except _exc.CSPException:
@@ -649,5 +659,8 @@ class CSPGenericClass(_ABC):
         """
         if cls.CSP_HELP_URL:
             args = list(exception.args)
-            args[0] += ', please refer to: %s' % cls.CSP_HELP_URL
+            try:
+                args[0] += ', please refer to: %s' % cls.CSP_HELP_URL
+            except TypeError:
+                args[0] = 'CSP error, please refer to: %s' % cls.CSP_HELP_URL
             exception.args = tuple(args)
