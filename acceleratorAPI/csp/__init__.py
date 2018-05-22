@@ -124,12 +124,9 @@ class CSPGenericClass(_ABC):
         self._stop_mode = None
 
         # Read configuration from file
-        self._config = _cfg.create_configuration(config)
+        config = _cfg.create_configuration(config)
 
         self._provider = self._provider_from_config(provider, config)
-        if not self._provider:
-            # Use default value if any
-            self._provider = self.CSP_NAME
 
         self._client_id = config.get_default(
             'csp', 'client_id', overwrite=client_id)
@@ -584,8 +581,8 @@ class CSPGenericClass(_ABC):
         """
         return self._config_env
 
-    @staticmethod
-    def _provider_from_config(provider, config):
+    @classmethod
+    def _provider_from_config(cls, provider, config):
         """
         Get CSP provider from configuration.
 
@@ -600,7 +597,10 @@ class CSPGenericClass(_ABC):
             acceleratorAPI.exceptions.CSPConfigurationException: No provider found.
         """
         provider = config.get_default("csp", "provider", overwrite=provider)
-        if provider is None:
+        if not provider:
+            # Use default value if any
+            provider = cls.CSP_NAME
+        if not provider:
             raise _exc.CSPConfigurationException("No CSP provider defined.")
         return provider
 

@@ -9,20 +9,32 @@ import sys
 import pytest
 
 
+def accelize_credentials_available():
+    """
+    Checks in Accelize credentials are available.
+    Skips test if not, else, returns configuration.
+
+    Returns:
+        acceleratorAPI.configuration.Configuration
+    """
+    from acceleratorAPI.configuration import Configuration
+    config = Configuration()
+    if not config.has_accelize_credential():
+        pytest.skip('Accelize Credentials required')
+    return config
+
+
+@pytest.mark.need_accelize_credential
 def test_acceleratorclient_check_accelize_credential():
     """Tests AcceleratorClient._check_accelize_credential
 
     Test parts that needs credentials"""
-    from acceleratorAPI.configuration import Configuration
+    # Skip test if Accelize credentials not available
+    config = accelize_credentials_available()
+
+    # Import modules
     from acceleratorAPI.client import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorAuthenticationException
-
-    # Load user configuration
-    config = Configuration()
-
-    # Skip test if Accelize credentials not available
-    if not config.has_accelize_credential():
-        pytest.skip('Accelize Credentials required')
 
     # Test: Valid credentials
     # Assuming Accelize credentials in configuration file are valid, should pass
@@ -105,17 +117,15 @@ def test_acceleratorclient_raise_for_status():
         AcceleratorClient._raise_for_status({'app': {'status': 1, 'msg': 'error'}})
 
 
+@pytest.mark.need_accelize_credential
 def test_acceleratorclient_get_requirements():
     """Tests AcceleratorClient.get_requirements"""
-    from acceleratorAPI.configuration import Configuration
+    # Skip test if Accelize credentials not available
+    config = accelize_credentials_available()
+
+    # Import modules
     from acceleratorAPI.client import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorConfigurationException
-
-    config = Configuration()
-
-    # Skip test if Accelize credentials not available
-    if not config.has_accelize_credential():
-        pytest.skip('Accelize Credentials required')
 
     # Test: Invalid AcceleratorClient name
     accelerator = AcceleratorClient('accelerator_not_exists', config=config)
