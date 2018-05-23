@@ -555,14 +555,14 @@ class CSPGenericClass(_ABC):
         self._accelerator = accel_parameters['accelerator']
 
         # Set parameters for current region
-        self._image_id, self._instance_type, self._config_env = self._read_accelerator_parameters(
-            accel_parameters[self._region])
+        region_parameters = accel_parameters[self._region]
+        self._image_id = self._get_image_id_from_region(region_parameters)
+        self._instance_type = self._get_instance_type_from_region(region_parameters)
+        self._config_env = self._get_config_env_from_region(region_parameters)
 
-    @_abstractmethod
-    def _read_accelerator_parameters(self, accel_parameters_in_region):
+    def _get_image_id_from_region(self, accel_parameters_in_region):
         """
-        Read accelerator parameters and get information required
-        to configure CSP instance accordingly.
+        Read accelerator parameters and get image id.
 
         Args:
             accel_parameters_in_region (dict): AcceleratorClient parameters
@@ -570,9 +570,34 @@ class CSPGenericClass(_ABC):
 
         Returns:
             str: image_id
-            str: instance_type
-            dict: config_env
         """
+        return accel_parameters_in_region['image']
+
+    def _get_instance_type_from_region(self, accel_parameters_in_region):
+        """
+        Read accelerator parameters and instance type.
+
+        Args:
+            accel_parameters_in_region (dict): AcceleratorClient parameters
+                for the current CSP region.
+
+        Returns:
+            str: instance_type
+        """
+        return accel_parameters_in_region['instancetype']
+
+    def _get_config_env_from_region(self, accel_parameters_in_region):
+        """
+        Read accelerator parameters and get configuration environment.
+
+        Args:
+            accel_parameters_in_region (dict): AcceleratorClient parameters
+                for the current CSP region.
+
+        Returns:
+            dict: configuration environment
+        """
+        return self._config_env
 
     def get_configuration_env(self, **kwargs):
         """

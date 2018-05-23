@@ -99,9 +99,6 @@ def get_dummy_csp_class():
         def _pause_instance(self):
             """Dummy method"""
 
-        def _read_accelerator_parameters(self, **kwargs):
-            """Dummy method"""
-
     return BaseDummyClass
 
 
@@ -537,13 +534,31 @@ def test_cspgenericclass_set_accelerator_requirements():
         """Dummy CSP"""
 
         @staticmethod
-        def _read_accelerator_parameters(parameters):
+        def _get_image_id_from_region(parameters):
             """Checks arguments and returns fake result"""
             # Checks arguments
             assert parameters == region_parameters
 
             # Returns result
-            return image_id, instance_type, config_env
+            return image_id
+
+        @staticmethod
+        def _get_instance_type_from_region(parameters):
+            """Checks arguments and returns fake result"""
+            # Checks arguments
+            assert parameters == region_parameters
+
+            # Returns result
+            return instance_type
+
+        @staticmethod
+        def _get_config_env_from_region(parameters):
+            """Checks arguments and returns fake result"""
+            # Checks arguments
+            assert parameters == region_parameters
+
+            # Returns result
+            return config_env
 
     csp = DummyCSP(region=region)
 

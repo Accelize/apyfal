@@ -4,13 +4,13 @@
 import keystoneauth1.exceptions.http as _keystoneauth_exceptions
 import openstack as _openstack
 
-import acceleratorAPI.csp as _csp
+from acceleratorAPI.csp import CSPGenericClass as _CSPGenericClass
 import acceleratorAPI.exceptions as _exc
 import acceleratorAPI._utilities as _utl
 from acceleratorAPI._utilities import get_logger as _get_logger
 
 
-class OpenStackClass(_csp.CSPGenericClass):
+class OpenStackClass(_CSPGenericClass):
     """Generic class for OpenStack based CSP
 
     Args:
@@ -42,7 +42,7 @@ class OpenStackClass(_csp.CSPGenericClass):
             may not work on all OS."""
 
     def __init__(self, **kwargs):
-        _csp.CSPGenericClass.__init__(self, **kwargs)
+        _CSPGenericClass.__init__(self, **kwargs)
 
         # Checks mandatory configuration values
         self._check_arguments('project_id', 'auth_url', 'interface')
@@ -180,10 +180,9 @@ class OpenStackClass(_csp.CSPGenericClass):
         """
         self._init_security_group()
 
-    def _read_accelerator_parameters(self, accel_parameters_in_region):
+    def _get_image_id_from_region(self, accel_parameters_in_region):
         """
-        Read accelerator parameters and get information required
-        to configure CSP instance accordingly.
+        Read accelerator parameters and get image id.
 
         Args:
             accel_parameters_in_region (dict): AcceleratorClient parameters
@@ -191,11 +190,12 @@ class OpenStackClass(_csp.CSPGenericClass):
 
         Returns:
             str: image_id
-            str: instance_type
-            dict: config_env
         """
-        # Get image
-        image_id = accel_parameters_in_region['image']
+        # Gets image
+        image_id = _CSPGenericClass._get_image_id_from_region(
+            self, accel_parameters_in_region)
+
+        # Checks if image exists and get its name
         try:
             image = self._session.compute.find_image(image_id)
         except _openstack.exceptions.ResourceNotFound:
@@ -207,8 +207,22 @@ class OpenStackClass(_csp.CSPGenericClass):
         else:
             self._image_name = image.name
 
+        return image_id
+
+    def _get_instance_type_from_region(self, accel_parameters_in_region):
+        """
+        Read accelerator parameters and instance type.
+
+        Args:
+            accel_parameters_in_region (dict): AcceleratorClient parameters
+                for the current CSP region.
+
+        Returns:
+            str: instance_type
+        """
         # Get instance type (flavor)
-        self._instance_type_name = accel_parameters_in_region['instancetype']
+        self._instance_type_name = _CSPGenericClass._get_instance_type_from_region(
+            self, accel_parameters_in_region)
         try:
             instance_type = self._session.compute.find_flavor(self._instance_type_name).id
         except _openstack.exceptions.ResourceNotFound:
@@ -218,7 +232,7 @@ class OpenStackClass(_csp.CSPGenericClass):
                  "Please contact you CSP to subscribe to this flavor.") %
                 (self._provider, self._instance_type_name))
 
-        return image_id, instance_type, self._config_env
+        return instance_type
 
     def _wait_instance_ready(self):
         """

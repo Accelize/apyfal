@@ -8,13 +8,13 @@ import time as _time
 import boto3 as _boto3
 import botocore.exceptions as _boto_exceptions
 
-import acceleratorAPI.csp as _csp
+from acceleratorAPI.csp import CSPGenericClass as _CSPGenericClass
 import acceleratorAPI.exceptions as _exc
 import acceleratorAPI._utilities as _utl
 from acceleratorAPI._utilities import get_logger as _get_logger
 
 
-class AWSClass(_csp.CSPGenericClass):
+class AWSClass(_CSPGenericClass):
     """AWS CSP Class
 
     Args:
@@ -47,7 +47,7 @@ class AWSClass(_csp.CSPGenericClass):
     CSP_HELP_URL = "https://aws.amazon.com"
 
     def __init__(self, **kwargs):
-        _csp.CSPGenericClass.__init__(self, **kwargs)
+        _CSPGenericClass.__init__(self, **kwargs)
 
         # Checks mandatory configuration values
         self._check_arguments('role')
@@ -317,25 +317,18 @@ class AWSClass(_csp.CSPGenericClass):
                 "Could not find an instance with ID %s", self._instance_id, exc=exception)
         return instance_state["Name"]
 
-    def _read_accelerator_parameters(self, accel_parameters_in_region):
+    def _get_config_env_from_region(self, accel_parameters_in_region):
         """
-        Read accelerator parameters and get information required
-        to configure CSP instance accordingly.
+        Read accelerator parameters and get configuration environment.
 
         Args:
             accel_parameters_in_region (dict): AcceleratorClient parameters
                 for the current CSP region.
 
         Returns:
-            str: image_id
-            str: instance_type
-            dict: config_env
+            dict: configuration environment
         """
-        config_env = {'AGFI': accel_parameters_in_region['fpgaimage']}
-        image_id = accel_parameters_in_region['image']
-        instance_type = accel_parameters_in_region['instancetype']
-
-        return image_id, instance_type, config_env
+        return {'AGFI': accel_parameters_in_region['fpgaimage']}
 
     def get_configuration_env(self, **kwargs):
         """

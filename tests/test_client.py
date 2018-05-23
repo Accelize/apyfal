@@ -761,7 +761,7 @@ def test_acceleratorclient_process_swagger():
         if pycurl_module is not None:
             sys.modules['pycurl'] = pycurl_module
             try:
-                del sys.modules['acceleratorAPI.accelerator']
+                del sys.modules['acceleratorAPI.client']
             except KeyError:
                 pass
             gc.collect()
