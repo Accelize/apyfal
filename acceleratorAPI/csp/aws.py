@@ -69,7 +69,7 @@ class AWSClass(_CSPGenericClass):
         """
         ec2_client = self._session.client('ec2')
         try:
-            response = ec2_client.describe_key_pairs()
+            ec2_client.describe_key_pairs()
         except ec2_client.exceptions.ClientError as exception:
             raise _exc.CSPAuthenticationException(exc=exception)
 
@@ -124,7 +124,7 @@ class AWSClass(_CSPGenericClass):
 
         iam_client = self._session.client('iam')
         try:
-            response = iam_client.create_policy(
+            iam_client.create_policy(
                 PolicyName=policy, PolicyDocument=policy_document)
 
         except iam_client.exceptions.EntityAlreadyExistsException:
