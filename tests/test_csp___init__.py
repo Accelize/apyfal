@@ -1,6 +1,7 @@
 # coding=utf-8
 """acceleratorAPI.csp tests"""
 import gc
+import warnings
 
 import pytest
 
@@ -143,9 +144,6 @@ def test_cspgenericclass_properties():
     assert csp.instance_url == instance_url
     assert csp.instance_id == instance_id
     assert csp.stop_mode == stop_mode
-
-    # Test: get_configuration_env returns default value
-    assert csp.get_configuration_env() == csp._config_env
 
     # Test: Information property
     # 'not_exists' tests case where a value is not defined on class
@@ -478,16 +476,28 @@ def test_cspgenericclass_stop_instance():
             return instance
 
     # Test: Stop mode passed on instantiation
-    for stop_mode in (KEEP, TERM, STOP):
+    for stop_mode in (TERM, STOP):
         csp = DummyCSP(stop_mode=stop_mode)
         csp.stop_instance()
         assert csp.stopped_mode == stop_mode
 
     # Test: Stop mode passed on stop_instance
-    for stop_mode in (KEEP, TERM, STOP):
+    for stop_mode in (TERM, STOP):
         csp = DummyCSP()
         csp.stop_instance(stop_mode)
         assert csp.stopped_mode == stop_mode
+
+    # Test: Keep stop mode, don't stop but warn user
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+
+        csp = DummyCSP(stop_mode=KEEP)
+        with pytest.warns(Warning):
+            csp.stop_instance()
+
+        csp = DummyCSP()
+        with pytest.warns(Warning):
+            csp.stop_instance(stop_mode=KEEP)
 
     # Test: Stop with no instance started
     instance = None
@@ -508,6 +518,50 @@ def test_cspgenericclass_stop_instance():
     DummyCSP(stop_mode=TERM)
     gc.collect()
     assert DummyCSP.class_stopped_mode == TERM
+
+
+def test_cspgenericclass_set_accelerator_requirements():
+    """Tests CSPGenericClass.set_accelerator_requirements"""
+    from acceleratorAPI.exceptions import CSPConfigurationException
+
+    # Mock variables
+    region = "dummy_region"
+    region_parameters = "dummy_parameters"
+    accelerator = "dummy_accelerator"
+    image_id = "dummy_image_id"
+    instance_type = "dummy_instance_type"
+    config_env = "dummy_config_env"
+
+    # Mock CSP class
+    class DummyCSP(get_dummy_csp_class()):
+        """Dummy CSP"""
+
+        @staticmethod
+        def _read_accelerator_parameters(parameters):
+            """Checks arguments and returns fake result"""
+            # Checks arguments
+            assert parameters == region_parameters
+
+            # Returns result
+            return image_id, instance_type, config_env
+
+    csp = DummyCSP(region=region)
+
+    # Test: get_configuration_env returns default empty value
+    assert csp.get_configuration_env() == csp._config_env == {}
+
+    # Test: Everything is OK
+    accel_parameters = {region: region_parameters, 'accelerator': accelerator}
+    csp.set_accelerator_requirements(accel_parameters)
+    assert csp._image_id == image_id
+    assert csp._instance_type == instance_type
+    assert csp.get_configuration_env() == config_env
+    assert csp._accelerator == accelerator
+
+    # Test: Region not found
+    accel_parameters = {'another_region': region_parameters, 'accelerator': accelerator}
+    with pytest.raises(CSPConfigurationException):
+        csp.set_accelerator_requirements(accel_parameters)
 
 
 def run_full_real_test_sequence(provider):

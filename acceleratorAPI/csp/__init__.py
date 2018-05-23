@@ -101,11 +101,7 @@ class CSPGenericClass(_ABC):
                 "No class found in '%s' for '%s' provider" % (module_name, provider))
 
         # Instantiates CSP class
-        try:
-            return object.__new__(member)
-        except TypeError:
-            raise _exc.CSPConfigurationException(
-                "Cannot instantiate a CSP class for '%s' provider" % provider)
+        return object.__new__(member)
 
     def __init__(self, provider=None, config=None, client_id=None, secret_id=None, region=None,
                  instance_type=None, ssh_key=None, security_group=None, instance_id=None,
@@ -486,7 +482,8 @@ class CSPGenericClass(_ABC):
         # Keep instance alive
         if stop_mode == KEEP:
             import warnings
-            warnings.warn("Instance with URL %s (ID=%s) is still running!" % (self.instance_url, self.instance_id),
+            warnings.warn("Instance with URL %s (ID=%s) is still running!" %
+                          (self.instance_url, self.instance_id),
                           Warning)
             return
 

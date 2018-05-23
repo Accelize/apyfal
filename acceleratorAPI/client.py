@@ -121,7 +121,7 @@ class AcceleratorClient(object):
 
             # Check access and get token from server
             response = _utl.http_session().post(
-                'https://master.metering.accelize.com/o/token/',
+                _utl.METERING_SERVER + '/o/token/',
                 data={"grant_type": "client_credentials"}, auth=(self.client_id, self.secret_id))
 
             if response.status_code != 200:
@@ -229,24 +229,27 @@ class AcceleratorClient(object):
                    "Content-Type": "application/json", "Accept": "application/vnd.accelize.v1+json"}
 
         response = _utl.http_session().get(
-            'https://master.metering.accelize.com/auth/getlastcspconfiguration/', headers=headers)
+            _utl.METERING_SERVER + 'auth/getlastcspconfiguration/', headers=headers)
         response.raise_for_status()
+        response_config = _json.loads(response.text)
 
-        configuration_accelerator = _json.loads(response.text)
-
-        # Check configuration with CSP
-        if provider not in configuration_accelerator:
+        # Get provider configuration
+        try:
+            provider_config = response_config[provider]
+        except KeyError:
             raise _exc.AcceleratorConfigurationException(
                 "CSP '%s' is not supported. Available CSP are: %s" % (
-                    provider, ', '.join(configuration_accelerator.keys())))
+                    provider, ', '.join(response_config.keys())))
 
-        if self.name not in configuration_accelerator[provider]:
+        # Get accelerator configuration
+        try:
+            accelerator_config = provider_config[self.name]
+        except KeyError:
             raise _exc.AcceleratorConfigurationException(
                 "AcceleratorClient '%s' is not supported on '%s'." % (self.name, provider))
 
-        info = configuration_accelerator[provider][self.name]
-        info['accelerator'] = self.name
-        return info
+        accelerator_config['accelerator'] = self.name
+        return accelerator_config
 
     def _use_last_configuration(self):
         """
@@ -256,6 +259,7 @@ class AcceleratorClient(object):
         try:
             config_list = self._rest_api_configuration().configuration_list().results
         except ValueError:
+            # ValueError from generated code with Swagger Codegen >= 2.3.0
             return
         if not config_list:
             return

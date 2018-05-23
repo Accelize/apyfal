@@ -7,6 +7,7 @@ import json
 import sys
 
 import pytest
+import requests
 
 
 def accelize_credentials_available():
@@ -24,10 +25,83 @@ def accelize_credentials_available():
     return config
 
 
-@pytest.mark.need_accelize_credential
+@pytest.mark.need_accelize
 def test_acceleratorclient_check_accelize_credential():
     """Tests AcceleratorClient._check_accelize_credential
 
+    without Accelize server"""
+    from acceleratorAPI.client import AcceleratorClient
+    from acceleratorAPI._utilities import METERING_SERVER
+    from acceleratorAPI.configuration import Configuration
+    import acceleratorAPI.exceptions as exc
+
+    # Load user configuration but remove any accelize credential
+    # information from it
+    config = Configuration()
+    config.remove_section('accelize')
+
+    # Mocks some variables
+    access_token = 'dummy_token'
+    client_id = 'dummy_client_id',
+    secret_id = 'dummy_secret_id'
+
+    # Mocks requests in utilities
+
+    class Response:
+        """Fake requests.Response"""
+        status_code = 200
+        text = json.dumps({'access_token': access_token})
+
+        @staticmethod
+        def raise_for_status():
+            """Do nothing"""
+
+    class DummySession(requests.Session):
+        """Fake requests.Session"""
+
+        @staticmethod
+        def post(url, data, auth):
+            """Checks input arguments and returns fake response"""
+            # Checks input arguments
+            assert METERING_SERVER in url
+            assert client_id in auth
+            assert secret_id in auth
+
+            # Returns fake response
+            return Response()
+
+    # Monkey patch requests in utilities
+    requests_session = requests.Session
+    requests.Session = DummySession
+
+    # Tests
+    try:
+        # Test: No credential provided
+        with pytest.raises(exc.AcceleratorConfigurationException):
+            AcceleratorClient('dummy', config=config)
+
+        # Test: Everything OK
+        accelerator = AcceleratorClient(
+            'dummy', client_id=client_id, secret_id=secret_id)
+        assert accelerator._access_token == access_token
+        assert accelerator._client_id == client_id
+        assert accelerator._secret_id == secret_id
+
+        # Test: Authentication failed
+        Response.status_code = 400
+        with pytest.raises(exc.AcceleratorAuthenticationException):
+            AcceleratorClient('dummy', client_id=client_id, secret_id=secret_id)
+
+    # Restore requests
+    finally:
+        requests.Session = requests_session
+
+
+@pytest.mark.need_accelize
+def test_acceleratorclient_check_accelize_credential_real():
+    """Tests AcceleratorClient._check_accelize_credential
+
+    with Accelize server
     Test parts that needs credentials"""
     # Skip test if Accelize credentials not available
     config = accelize_credentials_available()
@@ -46,27 +120,19 @@ def test_acceleratorclient_check_accelize_credential():
         AcceleratorClient('dummy', config=config, secret_id='bad_secret_id')
 
 
-def test_acceleratorclient_check_accelize_credential_no_cred():
+@pytest.mark.need_accelize
+def test_acceleratorclient_check_accelize_credential_real_no_cred():
     """Tests AcceleratorClient._check_accelize_credential
 
+    with Accelize server
     Test parts that don't needs credentials"""
-    from acceleratorAPI.configuration import Configuration
     from acceleratorAPI.client import AcceleratorClient
-    import acceleratorAPI.exceptions as exc
-
-    # Load user configuration but remove any accelize credential
-    # information from it
-    config = Configuration()
-    config.remove_section('accelize')
-
-    # Test: No credential provided
-    with pytest.raises(exc.AcceleratorConfigurationException):
-        AcceleratorClient('dummy', config=config)
+    from acceleratorAPI.exceptions import AcceleratorAuthenticationException
 
     # Test: Bad client_id
-    with pytest.raises(exc.AcceleratorAuthenticationException):
+    with pytest.raises(AcceleratorAuthenticationException):
         AcceleratorClient('dummy', client_id='bad_client_id',
-                          secret_id='bad_secret_id', config=config)
+                          secret_id='bad_secret_id')
 
 
 def test_acceleratorclient_is_alive():
@@ -117,9 +183,87 @@ def test_acceleratorclient_raise_for_status():
         AcceleratorClient._raise_for_status({'app': {'status': 1, 'msg': 'error'}})
 
 
-@pytest.mark.need_accelize_credential
 def test_acceleratorclient_get_requirements():
-    """Tests AcceleratorClient.get_requirements"""
+    """Tests AcceleratorClient.get_requirements
+
+    without Accelize server"""
+    from acceleratorAPI.client import AcceleratorClient
+    from acceleratorAPI._utilities import METERING_SERVER
+    from acceleratorAPI.exceptions import AcceleratorConfigurationException
+
+    # Mocks some variables
+    access_token = 'dummy_token'
+    provider = 'dummy_provider'
+    accelerator_name = 'dummy_accelerator'
+    config = {'dummy_config': None}
+
+    # Mock some accelerators parts
+    class DummyAccelerator(AcceleratorClient):
+        """Dummy AcceleratorClient"""
+        use_last_configuration_called = False
+
+        def __del__(self):
+            """Do nothing"""
+
+        def _check_accelize_credential(self):
+            """Don't check credential"""
+            return access_token
+
+    # Mocks requests in utilities
+    class Response:
+        """Fake requests.Response"""
+        text = json.dumps({provider: {accelerator_name: config}})
+
+        @staticmethod
+        def raise_for_status():
+            """Do nothing"""
+
+    class DummySession(requests.Session):
+        """Fake requests.Session"""
+
+        @staticmethod
+        def get(url, headers):
+            """Checks input arguments and returns fake response"""
+            # Checks input arguments
+            assert METERING_SERVER in url
+            assert access_token in headers['Authorization']
+
+            # Returns fake response
+            return Response()
+
+    # Monkey patch requests in utilities
+    requests_session = requests.Session
+    requests.Session = DummySession
+
+    # Tests
+    try:
+        # Test: Invalid AcceleratorClient name
+        accelerator = DummyAccelerator('accelerator_not_exists')
+        with pytest.raises(AcceleratorConfigurationException):
+            accelerator.get_requirements(provider)
+
+        # Test: Provider not exists
+        accelerator = DummyAccelerator(accelerator_name)
+        with pytest.raises(AcceleratorConfigurationException):
+            accelerator.get_requirements('no_exist_CSP')
+
+        # Test: Everything OK
+        accelerator = DummyAccelerator(accelerator_name)
+        assert accelerator.name == accelerator_name
+        response = accelerator.get_requirements(provider)
+        config['accelerator'] = accelerator_name
+        assert response == config
+
+    # Restore requests
+    finally:
+        requests.Session = requests_session
+
+
+@pytest.mark.need_accelize
+def test_acceleratorclient_get_requirements_real():
+    """Tests AcceleratorClient.get_requirements
+
+    with Accelize server"""
     # Skip test if Accelize credentials not available
     config = accelize_credentials_available()
 
@@ -141,7 +285,6 @@ def test_acceleratorclient_get_requirements():
     name = 'axonerve_hyperfire'
     accelerator = AcceleratorClient(name, config=config)
     response = accelerator.get_requirements('OVH')
-
     assert response['accelerator'] == name
 
 
@@ -628,7 +771,6 @@ def test_acceleratorclient_process(tmpdir):
     """Tests AcceleratorClient._process"""
     from acceleratorAPI.client import AcceleratorClient
     import acceleratorAPI.exceptions as exc
-    import acceleratorAPI._utilities as utl
     import acceleratorAPI.swagger_client as swagger_client
 
     # Creates temporary output dir and file in
@@ -700,7 +842,7 @@ def test_acceleratorclient_process(tmpdir):
             """Does nothing"""
 
     # Mocks requests in utilities
-    class DummySession:
+    class DummySession(requests.Session):
         """Fake requests.Session"""
 
         @staticmethod
@@ -719,8 +861,8 @@ def test_acceleratorclient_process(tmpdir):
     swagger_client.ProcessApi = ProcessApi
 
     # Monkey patch requests in utilities
-    utl_http_session = utl.http_session
-    utl.http_session = DummySession
+    requests_session = requests.Session
+    requests.Session = DummySession
 
     # Tests
     try:
@@ -756,5 +898,5 @@ def test_acceleratorclient_process(tmpdir):
 
     # Restore requests and swagger API
     finally:
-        utl.http_session = utl_http_session
+        requests.Session = requests_session
         swagger_client.ProcessApi = swagger_client_process_api

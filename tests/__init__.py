@@ -21,5 +21,5 @@ Available marks:
     need_csp: Require a CSP to run.
     need_csp_aws: Require AWS csp to run.
     need_csp_ovh: Require OVH csp to run.
-    need_accelize_credential: Require Accelize credentials
+    need_accelize: Require Accelize server
 """

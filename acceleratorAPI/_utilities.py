@@ -12,6 +12,9 @@ import requests
 
 _CACHE = dict()  # Store some cached values
 
+# Constants
+METERING_SERVER = 'https://master.metering.accelize.com'
+
 
 def check_url(url, timeout=None, retry_count=0, retry_period=5):
     """
