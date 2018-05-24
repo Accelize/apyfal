@@ -579,11 +579,12 @@ def test_cspgenericclass_set_accelerator_requirements():
         csp.set_accelerator_requirements(accel_parameters)
 
 
-def run_full_real_test_sequence(provider):
+def run_full_real_test_sequence(provider, environment):
     """Run common real tests for all CSP.
 
     Args:
         provider (str): CSP provider.
+        environment (dict): Environment to use
     """
     from acceleratorAPI.configuration import Configuration
 
@@ -594,13 +595,18 @@ def run_full_real_test_sequence(provider):
 
     from acceleratorAPI.csp import CSPGenericClass, TERM, STOP, KEEP
 
+    # Add accelerator to environment
+    environment['accelerator'] = 'None'
+
     # Test: Start and terminate
     with CSPGenericClass(config=config, stop_mode=TERM) as csp:
+        csp.set_accelerator_requirements(environment)
         csp.start_instance()
 
     # Test: Start and stop, then terminate
     # Also check getting instance handle with ID
     with CSPGenericClass(config=config, stop_mode=STOP) as csp:
+        csp.set_accelerator_requirements(environment)
         csp.start_instance()
         instance_id = csp.instance_id
 
@@ -610,6 +616,7 @@ def run_full_real_test_sequence(provider):
     # Test: Start and keep, then
     # Also check getting instance handle with URL
     with CSPGenericClass(config=config, stop_mode=KEEP) as csp:
+        csp.set_accelerator_requirements(environment)
         csp.start_instance()
         instance_url = csp.instance_url
 

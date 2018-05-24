@@ -10,4 +10,6 @@ from tests.test_csp___init__ import run_full_real_test_sequence
 def test_ovhclass_real():
     """OVHClass in real case"""
     # Test: Full generic sequence
-    run_full_real_test_sequence('OVH')
+    run_full_real_test_sequence('OVH', {
+
+    })

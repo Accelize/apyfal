@@ -209,7 +209,7 @@ class AcceleratorClient(object):
         """
         if self.url is None:
             raise _exc.AcceleratorRuntimeException("No accelerator running")
-        if not _utl.check_url(self.url, timeout=1):
+        if not _utl.check_url(self.url, max_retries=2):
             raise _exc.AcceleratorRuntimeException("Failed to reach accelerator url: %s" % self.url)
 
     def get_requirements(self, provider):
@@ -229,7 +229,7 @@ class AcceleratorClient(object):
                    "Content-Type": "application/json", "Accept": "application/vnd.accelize.v1+json"}
 
         response = _utl.http_session().get(
-            _utl.METERING_SERVER + 'auth/getlastcspconfiguration/', headers=headers)
+            _utl.METERING_SERVER + '/auth/getlastcspconfiguration/', headers=headers)
         response.raise_for_status()
         response_config = _json.loads(response.text)
 

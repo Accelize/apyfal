@@ -16,7 +16,7 @@ class AcceleratorApiBaseException(Exception):
             msg = self.DEFAULT_MESSAGE
 
         if exc is not None:
-            msg += ', more details: %r' % exc
+            msg = '%s, more details: %r' % (msg.rstrip('.'), exc)
         Exception.__init__(self, msg, *args, **kwargs)
 
 

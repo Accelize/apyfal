@@ -16,15 +16,70 @@ _CACHE = dict()  # Store some cached values
 METERING_SERVER = 'https://master.metering.accelize.com'
 
 
-def check_url(url, timeout=None, retry_count=0, retry_period=5):
+class Timeout:
+    """Context manager to handle timeout in loop.
+
+    Use "reached" method to check if timeout is reached.
+
+    Args:
+        timeout (float): Timeout value in seconds.
+        sleep (float): Wait duration in seconds when check
+            for reached method if timeout not reached.
+    """
+
+    def __init__(self, timeout, sleep=1.0):
+        self._timeout = timeout
+        self._start_time = time.time()
+        self._sleep = sleep
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        pass
+
+    def reached(self):
+        """
+        Check if timeout reached.
+
+        Returns:
+            bool: True if timeout reached.
+        """
+        if time.time() - self._start_time > self._timeout:
+            return True
+        time.sleep(self._sleep)
+        return False
+
+
+def http_session(max_retries=2):
+    """
+    Instantiate HTTP session
+
+    Args:
+        max_retries (int): The maximum number of retries each connection should attempt
+
+    Returns:
+        requests.Session: Http session
+    """
+    session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
+
+
+def check_url(url, timeout=0.0, max_retries=0, sleep=0.5):
     """
     Checking if an HTTP is up and running.
+
+    Will attempt to connect during "timeout", every "sleep" time
+    with "max_retries" retries per attempt.
 
     Args:
         url (str): URL
         timeout (float): Timeout value in seconds.
-        retry_count (int): Number of tries
-        retry_period (float): Period between retries in seconds.
+        max_retries (int): Number of tries per connexion attempt.
+        sleep (float): Period between connexion attempt in seconds.
 
     Returns:
         bool: True if success, False elsewhere
@@ -32,20 +87,16 @@ def check_url(url, timeout=None, retry_count=0, retry_period=5):
     if not url:
         return False
 
-    miss_count = 0
-    while miss_count <= retry_count:
-        if miss_count and retry_period and retry_count:
-            time.sleep(retry_period)
-        try:
-            status_code = requests.get(url, timeout=timeout).status_code
-        except requests.RequestException:
-            pass
-        else:
-            if status_code == 200:
-                return True
-        miss_count += 1
-
-    return False
+    session = http_session(max_retries=max_retries)
+    with Timeout(timeout, sleep=sleep) as timeout:
+        while True:
+            try:
+                if session.get(url).status_code == 200:
+                    return True
+            except requests.ConnectionError:
+                pass
+            if timeout.reached():
+                return False
 
 
 def format_url(url_or_ip):
@@ -86,21 +137,6 @@ def format_url(url_or_ip):
     return url_or_ip
 
 
-def http_session(max_retries=2):
-    """
-    Instantiate HTTP session
-
-    Args:
-        max_retries (int): The maximum number of retries each connection should attempt
-
-    Returns:
-        requests.Session: Http session
-    """
-    session = requests.Session()
-    session.mount('http://', requests.adapters.HTTPAdapter(max_retries=max_retries))
-    return session
-
-
 def get_host_public_ip():
     """
     Find current host IP address.
@@ -138,9 +174,10 @@ def get_host_public_ip():
         else:
             ip_address = str(response.text)
 
-        return "/32%s" % ip_address.strip()
+        return "%s/32" % ip_address.strip()
 
-    raise OSError("Failed to find your external IP address. Your internet connection might be broken.")
+    raise OSError("Failed to find your external IP address. "
+                  "Your internet connection might be broken.")
 
 
 def pretty_dict(obj):

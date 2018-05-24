@@ -17,6 +17,7 @@ import acceleratorAPI.exceptions as _exc
 import acceleratorAPI._utilities as _utl
 from acceleratorAPI._utilities import get_logger as _get_logger
 
+# Stop mode values
 TERM = 0
 STOP = 1
 KEEP = 2
@@ -57,14 +58,22 @@ class CSPGenericClass(_ABC):
             convenience and does not cover all exit case like process kill and
             may not work on all OS.
     """
+    # CSP provider name, must be the same as waited "provider" argument value
     CSP_NAME = None
+
+    # Link to CSP documentation or website
     CSP_HELP_URL = ''
 
+    # Timeout for instance status change
+    CSP_TIMEOUT = 360.0
+
+    # Possible stop_mode values with description
     STOP_MODES = {
         TERM: "TERM",
         STOP: "STOP",
         KEEP: "KEEP"}
 
+    # Attributes returned as dict by "instance_info" property
     _INFO_NAMES = {
         '_provider', 'instance_ip', 'instance_private_ip',
         '_region', '_instance_type', '_ssh_key', '_security_group', '_instance_id',
@@ -84,9 +93,14 @@ class CSPGenericClass(_ABC):
         module_name = '%s.%s' % (cls.__module__, provider.lower())
         try:
             csp_module = _import_module(module_name)
-        except ImportError:
-            raise _exc.CSPConfigurationException(
-                "No module '%s' for '%s' provider" % (module_name, provider))
+        except ImportError as exception:
+            if provider.lower() in str(exception):
+                # If ImportError for current module name, may be
+                # a configuration error.
+                raise _exc.CSPConfigurationException(
+                    "No module '%s' for '%s' provider" % (module_name, provider))
+            # ImportError of another module, raised as it
+            raise
 
         # Finds CSP class
         for name in dir(csp_module):
@@ -446,8 +460,7 @@ class CSPGenericClass(_ABC):
         Raises:
             acceleratorAPI.exceptions.CSPInstanceException:
                 Timeout while booting."""
-        # Check URL with 6 minutes timeout
-        if not _utl.check_url(self._instance_url, timeout=1, retry_count=72):
+        if not _utl.check_url(self._instance_url, timeout=self.CSP_TIMEOUT):
             raise _exc.CSPInstanceException("Timed out while waiting CSP instance to boot.")
 
     @property
@@ -682,7 +695,7 @@ class CSPGenericClass(_ABC):
         if cls.CSP_HELP_URL:
             args = list(exception.args)
             try:
-                args[0] += ', please refer to: %s' % cls.CSP_HELP_URL
-            except TypeError:
+                args[0] = '%s, please refer to: %s' % (args[0].rstrip('.'), cls.CSP_HELP_URL)
+            except (TypeError, AttributeError):
                 args[0] = 'CSP error, please refer to: %s' % cls.CSP_HELP_URL
             exception.args = tuple(args)

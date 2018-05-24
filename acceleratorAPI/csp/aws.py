@@ -249,7 +249,7 @@ class AWSClass(_CSPGenericClass):
         public_ip = _utl.get_host_public_ip()
         my_sg = ec2_client.describe_security_groups(GroupNames=[self._security_group, ], )
         try:
-            rules = ec2_client.authorize_security_group_ingress(
+            ec2_client.authorize_security_group_ingress(
                 GroupId=my_sg['SecurityGroups'][0]['GroupId'],
                 IpPermissions=[
                     {'IpProtocol': 'tcp',
@@ -370,17 +370,16 @@ class AWSClass(_CSPGenericClass):
         Wait until instance is ready.
         """
         # Waiting for the instance provisioning
-        time_0 = _time.time()
-        while _time.time() - time_0 < 360.0:
-            # Get instance status
-            status = self.instance_status()
-            if status == "running":
-                return
-            _time.sleep(1)
-
-        raise _exc.CSPInstanceException(
-            "Timed out while waiting CSP instance provisioning (last status: %s)." %
-            status)
+        with _utl.Timeout(self.CSP_TIMEOUT) as timeout:
+            while True:
+                # Get instance status
+                status = self.instance_status()
+                if status == "running":
+                    return
+                elif timeout.reached():
+                    raise _exc.CSPInstanceException(
+                        "Timed out while waiting CSP instance provisioning (last status: %s)." %
+                        status)
 
     def _start_new_instance(self):
         """
