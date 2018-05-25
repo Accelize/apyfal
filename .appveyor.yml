@@ -11,7 +11,7 @@ build: off
 
 install:
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
-    - "python -m pip install --upgrade setuptools pip wheel"
+    - "python -m pip install --upgrade setuptools pip wheel pytest coverage pytest-cov coveralls[yaml]"
     - "python ./setup.py swagger_codegen"
     - "python -m pip install -e .[all]"
 
