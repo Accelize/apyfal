@@ -6,17 +6,14 @@ environment:
         - PYTHON: "C:\\Python27-x64"
 platform:
     - x64
-matrix:
-    fast_finish: true
 
 build: off
 
 install:
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     - "python -m pip install --upgrade setuptools pip wheel"
-    - "python -m pip install pytest coverage pytest-cov coveralls[yaml] requests pycurl boto3 openstacksdk urllib3 six
-    certifi python-dateutil"
     - "python ./setup.py swagger_codegen"
+    - "python -m pip install -e .[all]"
 
 test_script:
     - "py.test -v --cov=acceleratorAPI --cov-report=term-missing"
