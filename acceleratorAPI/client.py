@@ -8,7 +8,6 @@ from ast import literal_eval as _literal_eval
 
 try:
     import pycurl as _pycurl
-
     _USE_PYCURL = True
 
     try:
@@ -32,9 +31,12 @@ except ImportError:
     # swagger_client is dynamically generated with Swagger-codegen and
     # not provided in repository, so it is possible
     # to try to import with without have generated it first.
-    raise ImportError(
-        'Swagger client not found, please generate it '
-        'with "setup.py swagger_codegen"')
+    if not _os.path.isfile(_os.path.join(
+            _os.path.dirname(__file__), 'swagger_client/__init__.py')):
+        raise ImportError(
+            'Swagger client not found, please generate it '
+            'with "setup.py swagger_codegen"')
+    raise
 
 
 class AcceleratorClient(object):

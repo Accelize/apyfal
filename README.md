@@ -1,3 +1,7 @@
+[![Linux Build Status](https://travis-ci.org/Accelize/acceleratorAPI.svg?branch=master)](https://travis-ci.org/Accelize/acceleratorAPI)
+[![Windows Build status](https://ci.appveyor.com/api/projects/status/qo4tfua8spb2jt42/branch/master?svg=true)](https://ci.appveyor.com/project/xlz-jgoutin/acceleratorapi/branch/master)
+[![Coverage Status](https://coveralls.io/repos/github/Accelize/acceleratorAPI/badge.svg?branch=master)](https://coveralls.io/github/Accelize/acceleratorAPI?branch=master)
+
 # Overview
 
 Accelize AcceleratorAPI is a powerful and flexible toolkit for testing and operate FPGA accelerated function .
