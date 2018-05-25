@@ -171,20 +171,29 @@ class SwaggerCommand(Command):
         print('Running command "%s"' % command)
         Popen(command, shell=True).communicate()
 
-        # Fix Swagger bug:
-        # https://github.com/swagger-api/swagger-codegen/pull/7684
-        # TODO: Remove once fixed in released Swagger-Codegen version
+        # Fix generated source code
         from os import walk
         for root, _, files in walk(join(REST_API_GENERATED_DIR, 'swagger_client')):
             for file_name in files:
                 file_path = join(root, file_name)
                 with open(file_path, 'rt') as file_handle:
                     content = file_handle.read()
+
+                # Fix imports
+                content = content.replace(
+                    'from swagger_client', 'from acceleratorAPI.swagger_client')
+                content = content.replace(
+                    'import swagger_client', 'import acceleratorAPI.swagger_client')
+
+                # Fix Swagger bug:
+                # https://github.com/swagger-api/swagger-codegen/pull/7684
+                # TODO: Remove once fixed in released Swagger-Codegen version
                 for value in ('1', '2', '3', '4', ''):
                     content = content.replace(
                         'swagger_client.models.inline_response200%s' % value,
                         'swagger_client.models.inline_response_200%s' %
                         (('_%s' % value) if value else ''))
+
                 with open(file_path, 'wt') as file_handle:
                     file_handle.write(content)
 
