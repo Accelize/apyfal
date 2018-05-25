@@ -1,34 +1,20 @@
 environment:
     matrix:
         - PYTHON: "C:\\Python36-x64"
-        - PYTHON: "C:\\Python36"
         - PYTHON: "C:\\Python35-x64"
-        - PYTHON: "C:\\Python35"
         - PYTHON: "C:\\Python34-x64"
-        - PYTHON: "C:\\Python34"
         - PYTHON: "C:\\Python27-x64"
-        - PYTHON: "C:\\Python27"
 platform:
     - x64
-    - x86
 matrix:
     fast_finish: true
-    exclude:
-        - PYTHON: "C:\\Python36-x64"
-          platform: x86
-        - PYTHON: "C:\\Python35-x64"
-          platform: x86
-        - PYTHON: "C:\\Python34-x64"
-          platform: x86
-        - PYTHON: "C:\\Python27-x64"
-          platform: x86
 
 build: off
 
 install:
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     - "python -m pip install --upgrade setuptools pip wheel"
-    - "python -m pip install pytest coverage pytest-cov coveralls[yaml] requests pycurl boto3 openstack urllib3 six
+    - "python -m pip install pytest coverage pytest-cov coveralls[yaml] requests pycurl boto3 openstacksdk urllib3 six
     certifi python-dateutil"
     - "python ./setup.py swagger_codegen"
 

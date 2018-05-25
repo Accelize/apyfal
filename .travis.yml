@@ -8,7 +8,7 @@ python:
 
 install:
     - "python -m pip install --upgrade setuptools pip wheel"
-    - "python -m pip install pytest coverage pytest-cov coveralls[yaml] requests pycurl boto3 openstack urllib3 six
+    - "python -m pip install pytest coverage pytest-cov coveralls[yaml] requests pycurl boto3 openstacksdk urllib3 six
     certifi python-dateutil"
     - "python ./setup.py swagger_codegen"
 
