@@ -55,8 +55,8 @@ with acceleratorAPI.AcceleratorClass(accelerator='cast_gzip') as myaccel:
     myaccel.process(file_in='/path/myfile.dat', file_out='/path/result.dat')
     
     # We can get and store instance IP and ID for later use
-    myaccel_instance_id = myaccel.instance_id
-    myaccel_instance_ip = myaccel.instance_ip
+    myaccel_instance_id = myaccel.host.instance_id
+    myaccel_instance_ip = myaccel.host.instance_ip
 
 # This time instance is not deleted and will stay running when accelerator is close.
 ```

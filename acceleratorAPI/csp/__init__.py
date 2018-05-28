@@ -1,16 +1,8 @@
 # coding=utf-8
 """Cloud Service Providers"""
 
+from abc import abstractmethod as _abstractmethod
 from importlib import import_module as _import_module
-
-try:
-    # Python 3
-    from abc import ABC as _ABC, abstractmethod as _abstractmethod
-except ImportError:
-    # Python 2
-    from abc import ABCMeta as _ABCMeta, abstractmethod as _abstractmethod
-
-    _ABC = _ABCMeta('ABC', (object,), {})
 
 import acceleratorAPI.configuration as _cfg
 import acceleratorAPI.exceptions as _exc
@@ -23,7 +15,7 @@ STOP = 1
 KEEP = 2
 
 
-class CSPGenericClass(_ABC):
+class CSPGenericClass(_utl.ABC):
     """This is base abstract class for all CSP classes.
 
     This is also a factory which instantiate CSP subclass related to
@@ -58,20 +50,26 @@ class CSPGenericClass(_ABC):
             convenience and does not cover all exit case like process kill and
             may not work on all OS.
     """
-    # CSP provider name, must be the same as waited "provider" argument value
+    #: CSP provider name, must be the same as waited "provider" argument value
     CSP_NAME = None
 
-    # Link to CSP documentation or website
+    #: Link to CSP documentation or website
     CSP_HELP_URL = ''
 
-    # Timeout for instance status change
+    #: Timeout for instance status change in seconds
     CSP_TIMEOUT = 360.0
 
-    # Possible stop_mode values with description
+    #: Possible stop_mode values with description
     STOP_MODES = {
         TERM: "TERM",
         STOP: "STOP",
         KEEP: "KEEP"}
+
+    #: Instance status when running
+    STATUS_RUNNING = 'running'
+
+    #: Instance status when stopped
+    STATUS_STOPPED = 'stopped'
 
     # Attributes returned as dict by "instance_info" property
     _INFO_NAMES = {
@@ -448,11 +446,21 @@ class CSPGenericClass(_ABC):
             state (str): Status of the instance.
         """
 
-    @_abstractmethod
     def _wait_instance_ready(self):
         """
         Wait until instance is ready.
         """
+        # Waiting for the instance provisioning
+        with _utl.Timeout(self.CSP_TIMEOUT) as timeout:
+            while True:
+                # Get instance status
+                status = self.instance_status()
+                if status.lower() == self.STATUS_RUNNING:
+                    return
+                elif timeout.reached():
+                    raise _exc.CSPInstanceException(
+                        "Timed out while waiting CSP instance provisioning"
+                        " (last status: %s)." % status)
 
     def _wait_instance_boot(self):
         """Wait until instance has booted and webservice is OK
@@ -462,6 +470,13 @@ class CSPGenericClass(_ABC):
                 Timeout while booting."""
         if not _utl.check_url(self._instance_url, timeout=self.CSP_TIMEOUT):
             raise _exc.CSPInstanceException("Timed out while waiting CSP instance to boot.")
+
+    def _get_instance_name(self):
+        """Returns name to use for instance name
+
+        Returns:
+            str: name"""
+        return "Accelize accelerator %s" % self._accelerator
 
     @property
     def instance_info(self):
@@ -540,7 +555,7 @@ class CSPGenericClass(_ABC):
         if exception is not None:
             self._add_csp_help_to_exception_message(exception)
 
-        # Force stop instance, hide exception if any
+        # Force stop instance, ignore exception if any
         try:
             self._terminate_instance()
         except _exc.CSPException:

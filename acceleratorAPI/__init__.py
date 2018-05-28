@@ -16,14 +16,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from __future__ import absolute_import
+
 __version__ = "2.1.0"
 __copyright__ = "Copyright 2018 Accelize"
 __licence__ = "Apache 2.0"
 
-import acceleratorAPI.csp as _csp
-import acceleratorAPI.client as _acc
+import acceleratorAPI.csp as csp
+import acceleratorAPI.client as _clt
 import acceleratorAPI.configuration as _cfg
-import acceleratorAPI.exceptions as _exc
 from acceleratorAPI._utilities import get_logger as _get_logger
 
 
@@ -71,29 +72,29 @@ class AcceleratorClass(object):
     def __init__(self, accelerator, config_file=None, provider=None,
                  region=None, xlz_client_id=None, xlz_secret_id=None, csp_client_id=None,
                  csp_secret_id=None, ssh_key=None, instance_id=None, instance_url=None, instance_ip=None,
-                 stop_mode=_csp.TERM, exit_instance_on_signal=False):
+                 stop_mode=csp.TERM, exit_instance_on_signal=False):
 
         # Initialize configuration
         config = _cfg.create_configuration(config_file)
 
         # Create CSP object
-        self._csp = _csp.CSPGenericClass(
+        self._host = csp.CSPGenericClass(
             provider=provider, config=config, client_id=csp_client_id, secret_id=csp_secret_id, region=region,
             ssh_key=ssh_key, instance_id=instance_id, instance_url=instance_url,
             stop_mode=stop_mode, exit_instance_on_signal=exit_instance_on_signal)
 
         # Create AcceleratorClient object
-        self._accelerator = _acc.AcceleratorClient(
+        self._client = _clt.AcceleratorClient(
             accelerator, client_id=xlz_client_id, secret_id=xlz_secret_id, config=config)
 
         # Check CSP ID if provided
         if instance_id:
-            self._csp.instance_status()
-            self._accelerator.url = self._csp.instance_url
+            self._host.instance_status()
+            self._client.url = self._host.instance_url
 
         # Set CSP URL if provided
         elif instance_url or instance_ip:
-            self._accelerator.url = instance_url if instance_url else instance_ip
+            self._client.url = instance_url if instance_url else instance_ip
 
     def __enter__(self):
         return self
@@ -105,55 +106,24 @@ class AcceleratorClass(object):
         self.stop()
 
     @property
-    def accelerator(self):
+    def client(self):
         """
-        Accelerator instance.
+        Accelerator client.
 
         Returns:
-            acceleratorAPI.client.AcceleratorClient: Accelerator
+            acceleratorAPI.client.AcceleratorClient: Accelerator client
         """
-        return self._accelerator
+        return self._client
 
     @property
-    def csp(self):
+    def host(self):
         """
-        Cloud Service Provider instance.
+        Accelerator host.
 
         Returns:
-            acceleratorAPI.csp.CSPGenericClass subclass: Instance
+            acceleratorAPI.csp.CSPGenericClass subclass: CSP Instance
         """
-        return self._csp
-
-    @property
-    def instance_id(self):
-        """
-        ID of the current instance.
-
-        Returns:
-            str: ID
-
-        Raises:
-            acceleratorAPI.exceptions.CSPInstanceException:
-                No instance from which get IP.
-        """
-        if self._csp is None:
-            raise _exc.CSPInstanceException("No instance found")
-        return self._csp.instance_id
-
-    @property
-    def instance_ip(self):
-        """
-        Public IP of the current instance.
-
-        Returns:
-            str: IP address
-
-        Raises:
-            acceleratorAPI.exceptions.CSPInstanceException:
-                No instance from which get IP."""
-        if self._csp is None:
-            raise _exc.CSPInstanceException("No instance found")
-        return self._csp.instance_ip
+        return self._host
 
     def start(self, stop_mode=None, datafile=None, accelerator_parameters=None, **kwargs):
         """
@@ -180,7 +150,7 @@ class AcceleratorClass(object):
         self._start_instance(stop_mode)
 
         # Configure accelerator if needed
-        if kwargs or self._accelerator.configuration_url is None or datafile is not None:
+        if kwargs or self._client.configuration_url is None or datafile is not None:
             return self.configure(datafile, accelerator_parameters, **kwargs)
 
     def configure(self, datafile=None, accelerator_parameters=None, **kwargs):
@@ -201,10 +171,10 @@ class AcceleratorClass(object):
             dict: AcceleratorClient response. Contain output information from configuration operation.
                 Take a look accelerator documentation for more information.
         """
-        self._accelerator.is_alive()
+        self._client.is_alive()
 
-        csp_env = self._csp.get_configuration_env(**kwargs)
-        config_result = self._accelerator.start(
+        csp_env = self._host.get_configuration_env(**kwargs)
+        config_result = self._client.start(
             datafile=datafile, accelerator_parameters=accelerator_parameters, csp_env=csp_env)
 
         return config_result
@@ -225,7 +195,7 @@ class AcceleratorClass(object):
                 Take a look accelerator documentation for more information.
         """
         # Process file with accelerator
-        process_result = self._accelerator.process(
+        process_result = self._client.process(
             file_in=file_in, file_out=file_out, accelerator_parameters=process_parameter)
 
         self._log_profiling_info(process_result)
@@ -246,11 +216,11 @@ class AcceleratorClass(object):
         """
         # Stops accelerator
         try:
-            stop_result = self._accelerator.stop()
+            stop_result = self._client.stop()
 
         # Stops CSP instance
         finally:
-            self._csp.stop_instance(stop_mode)
+            self._host.stop_instance(stop_mode)
 
         return stop_result
 
@@ -264,17 +234,17 @@ class AcceleratorClass(object):
                 information and possible values.
         """
         # Get configuration information from webservice
-        accel_requirements = self._accelerator.get_requirements(self._csp.provider)
-        self._csp.set_accelerator_requirements(accel_requirements)
+        accel_requirements = self._client.get_requirements(self._host.provider)
+        self._host.set_accelerator_requirements(accel_requirements)
 
         # Start CSP instance if needed
-        self._csp.start_instance()
+        self._host.start_instance()
 
         # Updates CSP Instance stop mode
-        self._csp.stop_mode = stop_mode
+        self._host.stop_mode = stop_mode
 
         # Set accelerator URL to CSP instance URL
-        self._accelerator.url = self._csp.instance_url
+        self._client.url = self._host.instance_url
 
     def _log_profiling_info(self, process_result):
         """
@@ -324,14 +294,14 @@ class AcceleratorClass(object):
                 fps = 1.0 / global_time
                 logger.info(
                     "Server processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
-                    self._csp.provider, bw, fps)
+                    self._host.provider, bw, fps)
 
             if total_bytes > 0.0 and fpga_time > 0.0:
                 bw = total_bytes / fpga_time / 1024.0 / 1024.0
                 fps = 1.0 / fpga_time
                 logger.info(
                     "FPGA processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
-                    self._csp.provider, bw, fps)
+                    self._host.provider, bw, fps)
 
         # Handle Specific result
         try:

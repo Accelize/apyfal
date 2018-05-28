@@ -90,9 +90,6 @@ def get_dummy_csp_class():
         def _start_existing_instance(self, **kwargs):
             """Dummy method"""
 
-        def _wait_instance_ready(self):
-            """Dummy method"""
-
         def _terminate_instance(self):
             """Dummy method"""
 
@@ -239,7 +236,6 @@ def test_cspgenericclass_start_instance():
     instance_id = 'dummy_id'
     raises_on_create_instance = False
     raises_on_start_instance = False
-    raises_on_instance_provisioning = False
     raises_on_stop_instance = False
     raises_on_boot = False
 
@@ -247,12 +243,13 @@ def test_cspgenericclass_start_instance():
     class DummyClass(get_dummy_csp_class()):
         """Dummy CSP"""
         CSP_HELP_URL = 'dummy_csp_help'
+        STATUS_RUNNING = status
+        CSP_TIMEOUT = 0.0
         mark_credential_checked = False
         mark_ssh_key_created = False
         mark_instance_created = False
         mark_instance_terminated = False
         mark_instance_started = False
-        mark_instance_ready = False
 
         def check_credential(self):
             """Marks as executed"""
@@ -300,13 +297,6 @@ def test_cspgenericclass_start_instance():
             assert state == status
             self.mark_instance_started = True
 
-        def _wait_instance_ready(self):
-            """Marks as executed, simulate exception"""
-            if raises_on_instance_provisioning:
-                # Exception with message
-                raise CSPException('Error on start')
-            self.mark_instance_ready = True
-
         @staticmethod
         def _get_instance_public_ip():
             """Marks as executed"""
@@ -333,7 +323,6 @@ def test_cspgenericclass_start_instance():
         assert csp.mark_ssh_key_created
         assert csp.mark_instance_created
         assert csp.mark_instance_started
-        assert csp.mark_instance_ready
         assert not csp.mark_instance_terminated
 
         # Test: Fail on create instance
@@ -378,7 +367,8 @@ def test_cspgenericclass_start_instance():
         raises_on_start_instance = False
 
         # Test: Fail on instance provisioning
-        raises_on_instance_provisioning = True
+        csp = DummyClass(region='dummy_region')
+        csp.STATUS_RUNNING = 'bad_status'
         with pytest.raises(CSPException) as exc_info:
             csp.start_instance()
             assert csp.CSP_HELP_URL in exc_info
@@ -386,9 +376,7 @@ def test_cspgenericclass_start_instance():
         assert csp.mark_ssh_key_created
         assert csp.mark_instance_created
         assert csp.mark_instance_started
-        assert not csp.mark_instance_ready
         assert csp.mark_instance_terminated
-        raises_on_instance_provisioning = False
 
         # Test: Fail on boot instance
         raises_on_boot = True
@@ -413,7 +401,6 @@ def test_cspgenericclass_start_instance():
         assert not csp.mark_ssh_key_created
         assert not csp.mark_instance_created
         assert csp.mark_instance_started
-        assert csp.mark_instance_ready
         assert not csp.mark_instance_terminated
 
         # Test: Start from an instance URL
@@ -523,47 +510,17 @@ def test_cspgenericclass_set_accelerator_requirements():
 
     # Mock variables
     region = "dummy_region"
-    region_parameters = "dummy_parameters"
-    accelerator = "dummy_accelerator"
     image_id = "dummy_image_id"
     instance_type = "dummy_instance_type"
     config_env = "dummy_config_env"
+    region_parameters = {'image': image_id, 'instancetype': instance_type}
+    accelerator = "dummy_accelerator"
 
-    # Mock CSP class
-    class DummyCSP(get_dummy_csp_class()):
-        """Dummy CSP"""
-
-        @staticmethod
-        def _get_image_id_from_region(parameters):
-            """Checks arguments and returns fake result"""
-            # Checks arguments
-            assert parameters == region_parameters
-
-            # Returns result
-            return image_id
-
-        @staticmethod
-        def _get_instance_type_from_region(parameters):
-            """Checks arguments and returns fake result"""
-            # Checks arguments
-            assert parameters == region_parameters
-
-            # Returns result
-            return instance_type
-
-        @staticmethod
-        def _get_config_env_from_region(parameters):
-            """Checks arguments and returns fake result"""
-            # Checks arguments
-            assert parameters == region_parameters
-
-            # Returns result
-            return config_env
-
-    csp = DummyCSP(region=region)
+    csp = get_dummy_csp_class()(region=region)
 
     # Test: get_configuration_env returns default empty value
     assert csp.get_configuration_env() == csp._config_env == {}
+    csp._config_env = config_env
 
     # Test: Everything is OK
     accel_parameters = {region: region_parameters, 'accelerator': accelerator}
@@ -590,13 +547,16 @@ def run_full_real_test_sequence(provider, environment):
 
     # Skip if no configuration with this provider
     config = Configuration()
+    if not config.has_csp_credential():
+        pytest.skip('No CSP credentials')
+
     if config.get_default('csp', 'provider') != provider:
         pytest.skip('No configuration for %s.' % provider)
 
     from acceleratorAPI.csp import CSPGenericClass, TERM, STOP, KEEP
 
     # Add accelerator to environment
-    environment['accelerator'] = 'None'
+    environment['accelerator'] = 'pytest_testing'
 
     # Test: Start and terminate
     with CSPGenericClass(config=config, stop_mode=TERM) as csp:

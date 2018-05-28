@@ -43,7 +43,7 @@ PACKAGE_INFO = dict(
     },
     license='Apache',
     python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',
-    install_requires=['setuptools', 'requests'],
+    install_requires=['setuptools', 'requests', 'ipgetter'],
     extras_require={
         # Optional speedup
         'optional': ['pycurl'],
@@ -82,7 +82,7 @@ class SwaggerCommand(Command):
     """
     Generate Python REST API client using Swagger-Codegen
     """
-    description = "Generate REST API client (acceleratorAPI/rest_api)"
+    description = "Generate REST API client (acceleratorAPI/_swagger_client)"
     user_options = [
         ('swagger-version=', None, 'Force use of a specific Swagger-Codegen version'),
     ]
@@ -180,25 +180,30 @@ class SwaggerCommand(Command):
                     content = file_handle.read()
 
                 # Fix imports
-                content = content.replace(
-                    'from swagger_client', 'from acceleratorAPI.swagger_client')
-                content = content.replace(
-                    'import swagger_client', 'import acceleratorAPI.swagger_client')
+                replacements = [
+                    ('from swagger_client', 'from acceleratorAPI._swagger_client'),
+                    ('import swagger_client', 'import acceleratorAPI._swagger_client'),
+                    ('getattr(swagger_client.', 'getattr(acceleratorAPI._swagger_client.'),
+                ]
 
                 # Fix Swagger bug:
                 # https://github.com/swagger-api/swagger-codegen/pull/7684
                 # TODO: Remove once fixed in released Swagger-Codegen version
                 for value in ('1', '2', '3', '4', ''):
-                    content = content.replace(
+                    replacements.append((
                         'swagger_client.models.inline_response200%s' % value,
                         'swagger_client.models.inline_response_200%s' %
-                        (('_%s' % value) if value else ''))
+                        (('_%s' % value) if value else '')))
+
+                # Replace in file
+                for before, after in replacements:
+                    content = content.replace(before, after)
 
                 with open(file_path, 'wt') as file_handle:
                     file_handle.write(content)
 
         # Move Result to acceleratorAPI/rest_api
-        rest_api_dst = join(SETUP_DIR, 'acceleratorAPI', 'swagger_client')
+        rest_api_dst = join(SETUP_DIR, 'acceleratorAPI', '_swagger_client')
         print('Clearing %s' % rest_api_dst)
         rmtree(rest_api_dst, ignore_errors=True)
 

@@ -1,10 +1,12 @@
 # coding=utf-8
 """Generic utilities used in acceleratorAPI code"""
 
+import abc
 import ast
 import json
 import os
 import re
+import sys
 import time
 
 import requests
@@ -12,8 +14,43 @@ import requests
 
 _CACHE = dict()  # Store some cached values
 
-# Constants
-METERING_SERVER = 'https://master.metering.accelize.com'
+
+# Python 2 compatibility
+if sys.version_info[0] >= 3:
+    # Python 3: redirect name to existing objects
+    makedirs = os.makedirs
+    ABC = abc.ABC
+
+else:
+    # Python 2: defines backports
+
+    # Backport of "os.makedirs" with exists_ok
+    def makedirs(name, mode=0o777, exist_ok=False):
+        """
+        Super-mkdir; create a leaf directory and all intermediate ones. Works like
+        mkdir, except that any intermediate path segment (not just the rightmost)
+        will be created if it does not exist. If the target directory already
+        exists,
+
+        Args:
+            name (str): Path
+            mode (int): The mode parameter is passed to mkdir();
+                see the os.mkdir() description for how it is interpreted.
+            exist_ok (bool): Don't raises error if target directory already exists.
+
+        Raises:
+            OSError: if exist_ok is False and if the target directory already exists.
+        """
+        try:
+            os.makedirs(name, mode)
+        except OSError:
+            # Cannot rely on checking for EEXIST, since the operating system
+            # could give priority to other errors like EACCES or EROFS
+            if not exist_ok or not os.path.isdir(name):
+                raise
+
+    # Backport of "abc.ABC" base abstract class
+    ABC = abc.ABCMeta('ABC', (object,), {})
 
 
 class Timeout:
@@ -84,9 +121,6 @@ def check_url(url, timeout=0.0, max_retries=0, sleep=0.5):
     Returns:
         bool: True if success, False elsewhere
     """
-    if not url:
-        return False
-
     session = http_session(max_retries=max_retries)
     with Timeout(timeout, sleep=sleep) as timeout:
         while True:
@@ -142,42 +176,10 @@ def get_host_public_ip():
     Find current host IP address.
 
     Returns:
-        str: IP address
-
-    Raises:
-        OSError: Fail to get IP address
+        str: IP address in "XXX.XXX.XXX.XXX/32" format.
     """
-    for url, section in (('http://ipinfo.io/ip', ''),
-                         ('http://ip-api.com/xml', 'query'),
-                         ('http://freegeoip.net/xml', 'IP')):
-
-        # Try to get response
-        session = http_session(max_retries=1)
-        response = session.get(url)
-        try:
-            response.raise_for_status()
-        except requests.exceptions.RequestException:
-            continue
-
-        # Parse IP from response
-        if section:
-            # XML parser lazy import since not always used
-            try:
-                # Use lxml if available
-                import lxml.etree as ET
-            except ImportError:
-                # Else use standard library
-                import xml.etree.ElementTree as ET
-
-            root = ET.fromstring(response.text.encode('utf-8'))
-            ip_address = str(root.findall(section)[0].text)
-        else:
-            ip_address = str(response.text)
-
-        return "%s/32" % ip_address.strip()
-
-    raise OSError("Failed to find your external IP address. "
-                  "Your internet connection might be broken.")
+    import ipgetter
+    return "%s/32" % ipgetter.myip()
 
 
 def pretty_dict(obj):
@@ -203,12 +205,9 @@ def create_ssh_key_file(ssh_key, key_content):
     """
     # Path to SSH keys dir
     ssh_dir = os.path.expanduser('~/.ssh')
-    try:
-        # Create if not exists
-        os.mkdir(ssh_dir, 0o700)
-    except OSError:
-        if not os.path.isdir(os.path.dirname(ssh_dir)):
-            raise
+
+    # Create if not exists
+    makedirs(ssh_dir, 0o700, exist_ok=True)
 
     # Find SSH key file path
     ssh_key_file = "%s.pem" % ssh_key

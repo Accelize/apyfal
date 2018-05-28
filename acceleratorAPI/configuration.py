@@ -23,6 +23,9 @@ except ImportError:
     # Python 2
     import ConfigParser as _configparser
 
+# Constants
+METERING_SERVER = 'https://master.metering.accelize.com'
+
 
 def create_configuration(configuration_file, **kwargs):
     """Create a configuration instance
@@ -52,19 +55,22 @@ class Configuration(_configparser.ConfigParser):
 
         # Finds configuration file
         if configuration_file is None:
-            # Search configuration file in current working directory
-            if _os_path.isfile(self.DEFAULT_CONFIG_FILE):
-                configuration_file = self.DEFAULT_CONFIG_FILE
-
-            # Search configuration file in home directory
-            else:
-                configuration_file = _os_path.join(
-                    _os_path.expanduser('~'), self.DEFAULT_CONFIG_FILE)
+            paths = (
+                # Search configuration file in current working directory
+                self.DEFAULT_CONFIG_FILE,
+                # Search configuration file in home directory
+                _os_path.join(_os_path.expanduser('~'), self.DEFAULT_CONFIG_FILE)
+            )
+            for path in paths:
+                if _os_path.isfile(path):
+                    configuration_file = path
+                    break
 
         # Read configuration file if exists
         # If not, return empty Configuration file, this will force
         # CSP and accelerator classes to uses defaults values
-        self.read(configuration_file)
+        if configuration_file:
+            self.read(configuration_file)
 
     def get_default(self, section, option, overwrite=None, default=None, is_literal=False):
         """Returns values from configuration or default value.

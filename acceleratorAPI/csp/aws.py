@@ -45,6 +45,8 @@ class AWSClass(_CSPGenericClass):
     """
     CSP_NAME = 'AWS'
     CSP_HELP_URL = "https://aws.amazon.com"
+    STATUS_RUNNING = "running"
+    STATUS_STOPPED = 'stopped'
 
     def __init__(self, **kwargs):
         _CSPGenericClass.__init__(self, **kwargs)
@@ -365,22 +367,6 @@ class AWSClass(_CSPGenericClass):
         self._attach_role_policy(policy_arn)
         self._init_security_group()
 
-    def _wait_instance_ready(self):
-        """
-        Wait until instance is ready.
-        """
-        # Waiting for the instance provisioning
-        with _utl.Timeout(self.CSP_TIMEOUT) as timeout:
-            while True:
-                # Get instance status
-                status = self.instance_status()
-                if status == "running":
-                    return
-                elif timeout.reached():
-                    raise _exc.CSPInstanceException(
-                        "Timed out while waiting CSP instance provisioning (last status: %s)." %
-                        status)
-
     def _start_new_instance(self):
         """
         Start a new instance.
@@ -402,7 +388,7 @@ class AWSClass(_CSPGenericClass):
                     {'Key': 'Generated',
                      'Value': 'Accelize script'},
                     {'Key': 'Name',
-                     'Value': "Accelize accelerator %s" % self._accelerator}
+                     'Value': self._get_instance_name()}
                 ]}],
             MinCount=1, MaxCount=1)[0]
 
@@ -415,10 +401,10 @@ class AWSClass(_CSPGenericClass):
         Args:
             state (str): Status of the instance.
         """
-        if state == "stopped":
+        if state == self.STATUS_STOPPED:
             self._instance.start()
 
-        elif state != "running":
+        elif state != self.STATUS_RUNNING:
             raise _exc.CSPInstanceException(
                 "Instance ID %s cannot be started because it is not in a valid state (%s).",
                 self._instance_id, state)

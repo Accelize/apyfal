@@ -26,13 +26,13 @@ import acceleratorAPI.exceptions as _exc
 import acceleratorAPI.configuration as _cfg
 
 try:
-    import acceleratorAPI.swagger_client as _api
+    import acceleratorAPI._swagger_client as _api
 except ImportError:
     # swagger_client is dynamically generated with Swagger-codegen and
     # not provided in repository, so it is possible
     # to try to import with without have generated it first.
     if not _os.path.isfile(_os.path.join(
-            _os.path.dirname(__file__), 'swagger_client/__init__.py')):
+            _os.path.dirname(__file__), '_swagger_client/__init__.py')):
         raise ImportError(
             'Swagger client not found, please generate it '
             'with "setup.py swagger_codegen"')
@@ -123,7 +123,7 @@ class AcceleratorClient(object):
 
             # Check access and get token from server
             response = _utl.http_session().post(
-                _utl.METERING_SERVER + '/o/token/',
+                _cfg.METERING_SERVER + '/o/token/',
                 data={"grant_type": "client_credentials"}, auth=(self.client_id, self.secret_id))
 
             if response.status_code != 200:
@@ -231,7 +231,7 @@ class AcceleratorClient(object):
                    "Content-Type": "application/json", "Accept": "application/vnd.accelize.v1+json"}
 
         response = _utl.http_session().get(
-            _utl.METERING_SERVER + '/auth/getlastcspconfiguration/', headers=headers)
+            _cfg.METERING_SERVER + '/auth/getlastcspconfiguration/', headers=headers)
         response.raise_for_status()
         response_config = _json.loads(response.text)
 
@@ -429,11 +429,7 @@ class AcceleratorClient(object):
 
         # Checks output directory presence, and creates it if not exists.
         if file_out:
-            try:
-                _os.makedirs(_os.path.dirname(file_out))
-            except OSError:
-                if not _os.path.isdir(_os.path.dirname(file_out)):
-                    raise
+            _utl.makedirs(_os.path.dirname(file_out), exist_ok=True)
 
         # Configure processing
         if accelerator_parameters is None:
@@ -482,7 +478,10 @@ class AcceleratorClient(object):
         except _exc.AcceleratorRuntimeException:
             # No AcceleratorClient to stop
             return None
-        return self._rest_api_stop().stop_list()
+        try:
+            return self._rest_api_stop().stop_list()
+        except _api.rest.ApiException:
+            pass
 
     @staticmethod
     def _raise_for_status(api_result, message=""):

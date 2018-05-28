@@ -31,8 +31,7 @@ def test_acceleratorclient_check_accelize_credential():
 
     without Accelize server"""
     from acceleratorAPI.client import AcceleratorClient
-    from acceleratorAPI._utilities import METERING_SERVER
-    from acceleratorAPI.configuration import Configuration
+    from acceleratorAPI.configuration import Configuration, METERING_SERVER
     import acceleratorAPI.exceptions as exc
 
     # Load user configuration but remove any accelize credential
@@ -188,7 +187,7 @@ def test_acceleratorclient_get_requirements():
 
     without Accelize server"""
     from acceleratorAPI.client import AcceleratorClient
-    from acceleratorAPI._utilities import METERING_SERVER
+    from acceleratorAPI.configuration import METERING_SERVER
     from acceleratorAPI.exceptions import AcceleratorConfigurationException
 
     # Mocks some variables
@@ -340,7 +339,7 @@ def test_acceleratorclient_start():
     """Tests AcceleratorClient.start"""
     from acceleratorAPI.client import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
-    import acceleratorAPI.swagger_client as swagger_client
+    import acceleratorAPI._swagger_client as swagger_client
 
     # Mock Swagger REST API ConfigurationApi
     excepted_parameters = None
@@ -452,7 +451,7 @@ def test_acceleratorclient_start():
 def test_acceleratorclient_use_last_configuration():
     """Tests AcceleratorClient._use_last_configuration"""
     from acceleratorAPI.client import AcceleratorClient
-    import acceleratorAPI.swagger_client as swagger_client
+    import acceleratorAPI._swagger_client as swagger_client
 
     # Mock Swagger REST API ConfigurationApi
     Config = collections.namedtuple('Config', ['url', 'used'])
@@ -512,7 +511,7 @@ def test_acceleratorclient_stop():
     """Tests AcceleratorClient.stop"""
     from acceleratorAPI.client import AcceleratorClient
     from acceleratorAPI.exceptions import AcceleratorRuntimeException
-    import acceleratorAPI.swagger_client as swagger_client
+    import acceleratorAPI._swagger_client as swagger_client
 
     # Mock Swagger REST API StopApi
     is_alive = True
@@ -699,7 +698,7 @@ def test_acceleratorclient_process_swagger():
     # Starts testing with PycURL disabled
     try:
         from acceleratorAPI.client import AcceleratorClient
-        import acceleratorAPI.swagger_client as swagger_client
+        import acceleratorAPI._swagger_client as swagger_client
 
         # Mock some variables
         dummy_id = 'dummy_id'
@@ -771,7 +770,7 @@ def test_acceleratorclient_process(tmpdir):
     """Tests AcceleratorClient._process"""
     from acceleratorAPI.client import AcceleratorClient
     import acceleratorAPI.exceptions as exc
-    import acceleratorAPI.swagger_client as swagger_client
+    import acceleratorAPI._swagger_client as swagger_client
 
     # Creates temporary output dir and file in
     tmp_dir = tmpdir.dirpath()

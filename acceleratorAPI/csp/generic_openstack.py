@@ -264,7 +264,8 @@ class OpenStackClass(_CSPGenericClass):
             str: Instance ID
         """
         instance = self._session.compute.create_server(
-            name=self._accelerator, image_id=self._image_id, flavor_id=self._instance_type,
+            name=self._get_instance_name(),
+            image_id=self._image_id, flavor_id=self._instance_type,
             key_name=self._ssh_key, security_groups=[{"name": self._security_group}])
 
         return instance, instance.id
