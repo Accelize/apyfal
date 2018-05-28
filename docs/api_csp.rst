@@ -3,6 +3,7 @@ acceleratorAPI.csp
 
 .. automodule:: acceleratorAPI.csp
    :members:
+   :inherited-members:
 
 .. toctree::
    :maxdepth: 2

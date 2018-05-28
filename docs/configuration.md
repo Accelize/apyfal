@@ -1,5 +1,8 @@
 # Configuration
 
+*Warning: do not use your credentials on untrusted environments. You are responsible to 
+secure your credentials and accelerator access.*
+
 ## What is needed to configure an accelerator ?
 
 Two main configuration needs to be done before running an accelerator:
@@ -10,25 +13,15 @@ The second part is the Accelize credential, in order to unlock the accelerator:
 
 * [Accelize credential](https://accelstore.accelize.com/user/applications)
 
-*Warning: do not use your Accelize credential with acceleratorAPI on a untrusted environment.*
-
 Your user account provides also to you metering information on your accelerator use
 [AccelStore account](https://accelstore.accelize.com/user/metering). 
 
-### CSP access key or configured instance
+### CSP configuration
 
-There is two possible case:
-
-* The acceleratorAPI can start and configure for you your CSP instance: you need to provide your CSP access key to 
-the API in this case.
-* The acceleratorAPI can use an already configured instance (Started previously by accelerator API, or configured by 
-yourself or your IT service): You need only to provides instance ID or IP to the API in this case.
-
-*Warning: do not use your CSP access key with acceleratorAPI on a untrusted environment. You are responsible to 
-secure your access keys and instance access.*
+Accelerator needs an FPGA host to run. This host can be a cloud instance that need to be configured.
 
 ```eval_rst
-See :doc:`csp` for more information.
+See :doc:`getting_started` to see examples of possible host cases.
 ```
 
 ## Accelerator configuration
