@@ -10,13 +10,23 @@ platform:
 build: off
 
 install:
+    # Python environment
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     - "python -m pip install --upgrade setuptools pip wheel pytest coverage pytest-cov coveralls[yaml]"
+
+    # Builds Swagger client
     - "python ./setup.py swagger_codegen"
+
+    # No wheel with last Pycurl version on Python 3.4, use older version.
+    - 'IF %PYTHON% == "C:\\Python34-x64" (python -m pip install pycurl==7.43.0)'
+
+    # Installs all package dependencies
     - "python -m pip install -e .[all]"
 
 test_script:
+    # Runs tests
     - "py.test -v --cov=acceleratorAPI --cov-report=term-missing"
 
 after_test:
+    # Sends coverage to coveralls.io
     - "coveralls"

@@ -7,12 +7,19 @@ python:
     - "3.6"
 
 install:
+    # Python environment
     - "python -m pip install --upgrade setuptools pip wheel pytest coverage pytest-cov coveralls[yaml]"
+
+    # Builds Swagger client
     - "python ./setup.py swagger_codegen"
+
+    # Installs all package dependencies
     - "python -m pip install -e .[all]"
 
 script:
+    # Runs tests
     - "py.test -v --cov=acceleratorAPI --cov-report=term-missing"
 
 after_success:
+    # Sends coverage to coveralls.io
     - "coveralls"
