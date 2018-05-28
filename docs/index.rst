@@ -28,19 +28,15 @@ process files:
 
    import acceleratorAPI
 
-   # Choose an accelerator
-   with acceleratorAPI.AcceleratorClass(accelerator='cast_gzip') as myaccel:
+   # Choose and initialize an accelerator
+   with acceleratorAPI.AcceleratorClass(accelerator='my_accelerator') as myaccel:
 
-       # Start and configure accelerator CSP instance
+       # Start and configure accelerator
        myaccel.start()
 
-       # Process files using FPGA
+       # Process files using FPGA accelerated function
        myaccel.process(file_in='/path/myfile1.dat',  file_out='/path/result1.dat')
        myaccel.process(file_in='/path/myfile2.dat',  file_out='/path/result2.dat')
-       # ... Process any number of file as needed
-
-   # By default, CSP instance is automatically close on "with" exit.
-
 
 Feature
 -------
