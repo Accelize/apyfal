@@ -1,5 +1,6 @@
 # coding=utf-8
 """acceleratorAPI.client tests"""
+import time
 
 
 def test_timeout():
@@ -15,5 +16,6 @@ def test_timeout():
     # Should timeout
     with Timeout(timeout=0.0) as timeout:
         while True:
+            time.sleep(0.1)
             assert timeout.reached()
             break

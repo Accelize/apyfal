@@ -101,7 +101,6 @@ def get_dummy_csp_class():
 
 def test_cspgenericclass_properties():
     """Tests CSPGenericClass properties"""
-    from acceleratorAPI.csp import KEEP, TERM
     from acceleratorAPI.exceptions import CSPInstanceException
 
     # Mock variables
@@ -110,7 +109,7 @@ def test_cspgenericclass_properties():
     instance_private_ip = 'dummy_private_ip'
     instance_url = 'http://127.0.0.1'
     instance_id = 'dummy_instance_id'
-    stop_mode = KEEP
+    stop_mode = 'keep'
     region = 'dummy_region'
 
     # Mock CSP class
@@ -167,15 +166,22 @@ def test_cspgenericclass_properties():
 
     # Test: Stop mode setter, set value as int
     csp.stop_mode = 0
-    assert csp.stop_mode == TERM
+    assert csp.stop_mode == 'term'
+
+    # Test: Stop mode setter, set value as str int
+    csp.stop_mode = '0'
+    assert csp.stop_mode == 'term'
 
     # Test: Stop mode setter, set value as str
-    csp.stop_mode = '0'
-    assert csp.stop_mode == TERM
+    csp.stop_mode = 'term'
+    assert csp.stop_mode == 'term'
+
+    csp.stop_mode = 'TERM'
+    assert csp.stop_mode == 'term'
 
     # Test: Stop mode setter, bad values
     with pytest.raises(ValueError):
-        csp.stop_mode = 'KEEP'
+        csp.stop_mode = 'terminate'
 
     with pytest.raises(ValueError):
         csp.stop_mode = -1
@@ -250,6 +256,10 @@ def test_cspgenericclass_start_instance():
         mark_instance_created = False
         mark_instance_terminated = False
         mark_instance_started = False
+
+        @staticmethod
+        def _set_accelerator_requirements(*_, **__):
+            """Tested separately"""
 
         def check_credential(self):
             """Marks as executed"""
@@ -423,7 +433,7 @@ def test_cspgenericclass_start_instance():
 
 def test_cspgenericclass_stop_instance():
     """Tests CSPGenericClass.stop_instance"""
-    from acceleratorAPI.csp import KEEP, TERM, STOP, CSPGenericClass
+    from acceleratorAPI.csp import CSPGenericClass
 
     # Mock variables
     instance = "dummy_instance"
@@ -433,8 +443,8 @@ def test_cspgenericclass_stop_instance():
 
     class DummyCSP(dummy_csp_class):
         """Dummy CSP"""
-        stopped_mode = KEEP
-        class_stopped_mode = KEEP
+        stopped_mode = 'keep'
+        class_stopped_mode = 'keep'
 
         def __init__(self, **kwargs):
             """Simulate already started instance"""
@@ -447,26 +457,26 @@ def test_cspgenericclass_stop_instance():
 
         def _terminate_instance(self):
             """Marks as executed"""
-            self.stopped_mode = TERM
-            DummyCSP.class_stopped_mode = TERM
+            self.stopped_mode = 'term'
+            DummyCSP.class_stopped_mode = 'term'
 
         def _pause_instance(self):
             """Marks as executed"""
-            self.stopped_mode = STOP
-            DummyCSP.class_stopped_mode = STOP
+            self.stopped_mode = 'stop'
+            DummyCSP.class_stopped_mode = 'stop'
 
         def _get_instance(self):
             """Returns Fake result"""
             return instance
 
     # Test: Stop mode passed on instantiation
-    for stop_mode in (TERM, STOP):
+    for stop_mode in ('term', 'stop'):
         csp = DummyCSP(stop_mode=stop_mode)
         csp.stop_instance()
         assert csp.stopped_mode == stop_mode
 
     # Test: Stop mode passed on stop_instance
-    for stop_mode in (TERM, STOP):
+    for stop_mode in ('term', 'stop'):
         csp = DummyCSP()
         csp.stop_instance(stop_mode)
         assert csp.stopped_mode == stop_mode
@@ -475,37 +485,37 @@ def test_cspgenericclass_stop_instance():
     with warnings.catch_warnings():
         warnings.simplefilter("always")
 
-        csp = DummyCSP(stop_mode=KEEP)
+        csp = DummyCSP(stop_mode='keep')
         with pytest.warns(Warning):
             csp.stop_instance()
 
         csp = DummyCSP()
         with pytest.warns(Warning):
-            csp.stop_instance(stop_mode=KEEP)
+            csp.stop_instance(stop_mode='keep')
 
     # Test: Stop with no instance started
     instance = None
-    csp = DummyCSP(stop_mode=TERM)
+    csp = DummyCSP(stop_mode='term')
     csp.stop_instance()
-    assert csp.stopped_mode == KEEP
+    assert csp.stopped_mode == 'keep'
     instance = 'dummy_instance'
 
     # Test: Auto-stops with context manager
-    DummyCSP.class_stopped_mode = KEEP
-    with DummyCSP(stop_mode=TERM) as csp:
+    DummyCSP.class_stopped_mode = 'keep'
+    with DummyCSP(stop_mode='term') as csp:
         # Checks __enter__ returned object
         assert isinstance(csp, CSPGenericClass)
-    assert DummyCSP.class_stopped_mode == TERM
+    assert DummyCSP.class_stopped_mode == 'term'
 
     # Test: Auto-stops on garbage collection
-    DummyCSP.class_stopped_mode = KEEP
-    DummyCSP(stop_mode=TERM)
+    DummyCSP.class_stopped_mode = 'keep'
+    DummyCSP(stop_mode='term')
     gc.collect()
-    assert DummyCSP.class_stopped_mode == TERM
+    assert DummyCSP.class_stopped_mode == 'term'
 
 
 def test_cspgenericclass_set_accelerator_requirements():
-    """Tests CSPGenericClass.set_accelerator_requirements"""
+    """Tests CSPGenericClass._set_accelerator_requirements"""
     from acceleratorAPI.exceptions import CSPConfigurationException
 
     # Mock variables
@@ -515,25 +525,46 @@ def test_cspgenericclass_set_accelerator_requirements():
     config_env = "dummy_config_env"
     region_parameters = {'image': image_id, 'instancetype': instance_type}
     accelerator = "dummy_accelerator"
+    accel_parameters = {region: region_parameters, 'accelerator': accelerator}
 
-    csp = get_dummy_csp_class()(region=region)
+    # Mock Accelerator client
 
-    # Test: get_configuration_env returns default empty value
-    assert csp.get_configuration_env() == csp._config_env == {}
-    csp._config_env = config_env
+    class DummyClient:
+        """Dummy accelerator client"""
+
+        @staticmethod
+        def get_requirements(provider):
+            """Checks argument and returns fake result"""
+            # Checks arguments
+            assert provider == get_dummy_csp_class().CSP_NAME
+
+            # Returns fake value
+            return accel_parameters
 
     # Test: Everything is OK
-    accel_parameters = {region: region_parameters, 'accelerator': accelerator}
-    csp.set_accelerator_requirements(accel_parameters)
+    csp = get_dummy_csp_class()(region=region)
+    csp._config_env = config_env
+    csp._set_accelerator_requirements(accel_parameters=accel_parameters)
     assert csp._image_id == image_id
     assert csp._instance_type == instance_type
     assert csp.get_configuration_env() == config_env
     assert csp._accelerator == accelerator
+    assert accelerator in csp._get_instance_name()
+
+    # Test: Pass client
+    csp = get_dummy_csp_class()(region=region)
+    csp._config_env = config_env
+    csp._set_accelerator_requirements(accel_client=DummyClient())
+    assert csp._image_id == image_id
+    assert csp._instance_type == instance_type
+    assert csp.get_configuration_env() == config_env
+    assert csp._accelerator == accelerator
+    assert accelerator in csp._get_instance_name()
 
     # Test: Region not found
     accel_parameters = {'another_region': region_parameters, 'accelerator': accelerator}
     with pytest.raises(CSPConfigurationException):
-        csp.set_accelerator_requirements(accel_parameters)
+        csp._set_accelerator_requirements(accel_parameters=accel_parameters)
 
 
 def run_full_real_test_sequence(provider, environment):
@@ -553,32 +584,29 @@ def run_full_real_test_sequence(provider, environment):
     if config.get_default('csp', 'provider') != provider:
         pytest.skip('No configuration for %s.' % provider)
 
-    from acceleratorAPI.csp import CSPGenericClass, TERM, STOP, KEEP
+    from acceleratorAPI.csp import CSPGenericClass
 
     # Add accelerator to environment
     environment['accelerator'] = 'pytest_testing'
 
     # Test: Start and terminate
-    with CSPGenericClass(config=config, stop_mode=TERM) as csp:
-        csp.set_accelerator_requirements(environment)
-        csp.start_instance()
+    with CSPGenericClass(config=config, stop_mode='term') as csp:
+        csp.start_instance(accel_parameters=environment)
 
     # Test: Start and stop, then terminate
     # Also check getting instance handle with ID
-    with CSPGenericClass(config=config, stop_mode=STOP) as csp:
-        csp.set_accelerator_requirements(environment)
-        csp.start_instance()
+    with CSPGenericClass(config=config, stop_mode='stop') as csp:
+        csp.start_instance(accel_parameters=environment)
         instance_id = csp.instance_id
 
-    with CSPGenericClass(config=config, instance_id=instance_id, stop_mode=TERM) as csp:
+    with CSPGenericClass(config=config, instance_id=instance_id, stop_mode='term') as csp:
         csp.start_instance()
 
     # Test: Start and keep, then
     # Also check getting instance handle with URL
-    with CSPGenericClass(config=config, stop_mode=KEEP) as csp:
-        csp.set_accelerator_requirements(environment)
-        csp.start_instance()
+    with CSPGenericClass(config=config, stop_mode='keep') as csp:
+        csp.start_instance(accel_parameters=environment)
         instance_url = csp.instance_url
 
-    with CSPGenericClass(config=config, instance_url=instance_url, stop_mode=TERM) as csp:
+    with CSPGenericClass(config=config, instance_url=instance_url, stop_mode='term') as csp:
         csp.start_instance()

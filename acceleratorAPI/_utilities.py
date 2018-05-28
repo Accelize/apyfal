@@ -250,11 +250,11 @@ def get_logger(stdout=False):
     except KeyError:
         import logging
         logger = logging.getLogger("acceleratorAPI")
-        logger.setLevel(logging.INFO)
         logger.addHandler(logging.NullHandler())
 
     if stdout:
         import logging
         logger.addHandler(logging.StreamHandler())
+        logger.setLevel(logging.INFO)
 
     return logger

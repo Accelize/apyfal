@@ -9,11 +9,6 @@ import acceleratorAPI.exceptions as _exc
 import acceleratorAPI._utilities as _utl
 from acceleratorAPI._utilities import get_logger as _get_logger
 
-# Stop mode values
-TERM = 0
-STOP = 1
-KEEP = 2
-
 
 class CSPGenericClass(_utl.ABC):
     """This is base abstract class for all CSP classes.
@@ -42,7 +37,7 @@ class CSPGenericClass(_utl.ABC):
         auth_url:
         interface:
         role:
-        stop_mode (int): Define the "stop_instance" method behavior. See "stop_mode"
+        stop_mode (str or int): Define the "stop_instance" method behavior. See "stop_mode"
             property for more information and possible values.
         exit_instance_on_signal (bool): If True, exit CSP instances
             on OS exit signals. This may help to not have instance still running
@@ -59,11 +54,11 @@ class CSPGenericClass(_utl.ABC):
     #: Timeout for instance status change in seconds
     CSP_TIMEOUT = 360.0
 
-    #: Possible stop_mode values with description
+    #: Possible stop_mode int values
     STOP_MODES = {
-        TERM: "TERM",
-        STOP: "STOP",
-        KEEP: "KEEP"}
+        0: "term",
+        1: "stop",
+        2: "keep"}
 
     #: Instance status when running
     STATUS_RUNNING = 'running'
@@ -161,7 +156,7 @@ class CSPGenericClass(_utl.ABC):
         self._interface = config.get_default(
             'csp', 'interface', overwrite=interface)
         self.stop_mode = config.get_default(
-            "csp", "stop_mode", overwrite=stop_mode, default=TERM)
+            "csp", "stop_mode", overwrite=stop_mode, default='term')
 
         # Checks mandatory configuration values
         self._check_arguments('region')
@@ -275,7 +270,7 @@ class CSPGenericClass(_utl.ABC):
               on class instantiation.
 
         Returns:
-            int: stop mode.
+            str: stop mode.
         """
         return self._stop_mode
 
@@ -285,21 +280,27 @@ class CSPGenericClass(_utl.ABC):
         Set stop_mode.
 
         Args:
-            stop_mode (int): stop mode value to set
+            stop_mode (str or int): stop mode value to set
         """
         if stop_mode is None:
             return
 
+        # Converts from int values
         try:
             stop_mode = int(stop_mode)
         except (TypeError, ValueError):
             pass
 
-        if stop_mode not in self.STOP_MODES:
+        if isinstance(stop_mode, int):
+            stop_mode = self.STOP_MODES.get(stop_mode, '')
+
+        # Checks value
+        stop_mode = stop_mode.lower()
+        if stop_mode not in self.STOP_MODES.values():
             raise ValueError(
                 "Invalid value %s, Possible values are %s" % (
-                    stop_mode, ', '.join("%s: %d" % (name, value)
-                                         for value, name in self.STOP_MODES.items())))
+                    stop_mode, ', '.join(
+                        value for value in self.STOP_MODES.values())))
 
         self._stop_mode = stop_mode
 
@@ -363,10 +364,20 @@ class CSPGenericClass(_utl.ABC):
             bool: True if reuses existing key
         """
 
-    def start_instance(self):
+    def start_instance(self, accel_client=None, accel_parameters=None, stop_mode=None):
         """
         Start instance if not already started. Create instance if necessary.
+
+        Needs "accel_client" or "accel_parameters".
+
+        Args:
+            accel_client (acceleratorAPI.client.AcceleratorClient): Accelerator client.
+            accel_parameters (dict): Can override parameters from accelerator client.
+            stop_mode (str or int): See "stop_mode" property for more information.
         """
+        # Updates stop mode
+        self.stop_mode = stop_mode
+
         # Starts instance only if not already started
         if self.instance_url is None:
 
@@ -376,6 +387,11 @@ class CSPGenericClass(_utl.ABC):
             # Creates and starts instance if not exists
             if self.instance_id is None:
 
+                # Get parameters from accelerator
+                self._set_accelerator_requirements(
+                    accel_client, accel_parameters)
+
+                # Configure and create instance
                 reuse_key = self._init_ssh_key()
                 _get_logger().info(
                     "Reused KeyPair %s" if reuse_key
@@ -502,13 +518,13 @@ class CSPGenericClass(_utl.ABC):
         See "stop_mode" property for more information.
 
         Args:
-            stop_mode (int): If not None, override current "stop_mode" value.
+            stop_mode (str or int): If not None, override current "stop_mode" value.
         """
         if stop_mode is None:
             stop_mode = self._stop_mode
 
         # Keep instance alive
-        if stop_mode == KEEP:
+        if stop_mode == 'keep':
             import warnings
             warnings.warn("Instance with URL %s (ID=%s) is still running!" %
                           (self.instance_url, self.instance_id),
@@ -522,7 +538,7 @@ class CSPGenericClass(_utl.ABC):
             return
 
         # Terminates and delete instance completely
-        if stop_mode == TERM:
+        if stop_mode == 'term':
             self._terminate_instance()
             _get_logger().info("Instance ID %s has been terminated", self._instance_id)
 
@@ -561,29 +577,39 @@ class CSPGenericClass(_utl.ABC):
         except _exc.CSPException:
             pass
 
-    def set_accelerator_requirements(self, accel_parameters):
+    def _set_accelerator_requirements(self, accel_client=None, accel_parameters=None):
         """
-        Configure instance with accelerator parameters.
+        Configures instance with accelerator client parameters.
+
+        Needs "accel_client" or "accel_parameters".
 
         Args:
-            accel_parameters (dict): Result from
-                acceleratorAPI.accelerator.AcceleratorClient.get_requirements.
+            accel_client (acceleratorAPI.client.AcceleratorClient): Accelerator client.
+            accel_parameters (dict): Can override parameters from accelerator client.
 
         Raises:
             acceleratorAPI.exceptions.CSPConfigurationException:
                 Parameters are not valid..
         """
+        # Get parameters
+        parameters = dict()
+        if accel_client is not None:
+            parameters.update(accel_client.get_requirements(self._provider))
+
+        if accel_parameters is not None:
+            parameters.update(accel_parameters)
+
         # Check if region is valid
-        if self._region not in accel_parameters.keys():
+        if self._region not in parameters.keys():
             raise _exc.CSPConfigurationException(
                 "Region '%s' is not supported. Available regions are: %s", self._region,
-                ', '.join(accel_parameters))
+                ', '.join(parameters))
 
         # Get accelerator name
-        self._accelerator = accel_parameters['accelerator']
+        self._accelerator = parameters['accelerator']
 
         # Set parameters for current region
-        region_parameters = accel_parameters[self._region]
+        region_parameters = parameters[self._region]
         self._image_id = self._get_image_id_from_region(region_parameters)
         self._instance_type = self._get_instance_type_from_region(region_parameters)
         self._config_env = self._get_config_env_from_region(region_parameters)
@@ -630,7 +656,7 @@ class CSPGenericClass(_utl.ABC):
     def get_configuration_env(self, **kwargs):
         """
         Return environment to pass to
-        "acceleratorAPI.accelerator.AcceleratorClient.start"
+        "acceleratorAPI.client.AcceleratorClient.start"
         "csp_env" argument.
 
         Args:

@@ -60,7 +60,7 @@ class AcceleratorClass(object):
         instance_id (str): CSP Instance ID to reuse. If set will override value from configuration file.
         instance_ip (str): CSP Instance IP or URL address to reuse. If set will override value from configuration file.
         instance_url (str): CSP Instance URL or IP address to reuse. If set will override value from configuration file.
-        stop_mode (int): CSP stop mode. See
+        stop_mode (str or int): CSP stop mode. See
             "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
             information and possible values.
         exit_instance_on_signal (bool): If True, exit CSP instances
@@ -72,7 +72,7 @@ class AcceleratorClass(object):
     def __init__(self, accelerator, config_file=None, provider=None,
                  region=None, xlz_client_id=None, xlz_secret_id=None, csp_client_id=None,
                  csp_secret_id=None, ssh_key=None, instance_id=None, instance_url=None, instance_ip=None,
-                 stop_mode=csp.TERM, exit_instance_on_signal=False):
+                 stop_mode='term', exit_instance_on_signal=False):
 
         # Initialize configuration
         config = _cfg.create_configuration(config_file)
@@ -127,10 +127,10 @@ class AcceleratorClass(object):
 
     def start(self, stop_mode=None, datafile=None, accelerator_parameters=None, **kwargs):
         """
-        Starts and configure an accelerator instance.
+        Starts and/or configure an accelerator instance.
 
         Args:
-            stop_mode (int): CSP stop mode. If not None, override current "stop_mode" value.
+            stop_mode (str or int): CSP stop mode. If not None, override current "stop_mode" value.
                 See "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
                 information and possible values.
             datafile (str): Depending on the accelerator (like for HyperFiRe),
@@ -146,38 +146,17 @@ class AcceleratorClass(object):
             dict: AcceleratorClient response. Contain output information from configuration operation.
                 Take a look accelerator documentation for more information.
         """
-        # Start a new instance or use a running instance
-        self._start_instance(stop_mode)
+        # Start CSP instance if needed (Do nothing if already started)
+        self._host.start_instance(accel_client=self._client, stop_mode=stop_mode)
+
+        # Set accelerator URL to CSP instance URL
+        self._client.url = self._host.instance_url
 
         # Configure accelerator if needed
         if kwargs or self._client.configuration_url is None or datafile is not None:
-            return self.configure(datafile, accelerator_parameters, **kwargs)
-
-    def configure(self, datafile=None, accelerator_parameters=None, **kwargs):
-        """
-        Configure an accelerator instance.
-
-        Args:
-            datafile (str): Depending on the accelerator (like for HyperFiRe),
-                a configuration need to be loaded before a process can be run.
-                In such case please define the path of the configuration file
-                (for HyperFiRe the corpus file path).
-            accelerator_parameters (dict): If set will overwrite the value content in the configuration file
-                Parameters can be forwarded to the accelerator for the configuration step using these parameters.
-                Take a look accelerator documentation for more information.
-            kwargs:
-
-        Returns:
-            dict: AcceleratorClient response. Contain output information from configuration operation.
-                Take a look accelerator documentation for more information.
-        """
-        self._client.is_alive()
-
-        csp_env = self._host.get_configuration_env(**kwargs)
-        config_result = self._client.start(
-            datafile=datafile, accelerator_parameters=accelerator_parameters, csp_env=csp_env)
-
-        return config_result
+            return self._client.start(
+                datafile=datafile, accelerator_parameters=accelerator_parameters,
+                csp_env=self._host.get_configuration_env(**kwargs))
 
     def process(self, file_out, file_in=None, process_parameter=None):
         """
@@ -206,7 +185,7 @@ class AcceleratorClass(object):
         Stop your accelerator session and accelerator csp instance depending of the parameters
 
         Args:
-            stop_mode (int): CSP stop mode. If not None, override current "stop_mode" value.
+            stop_mode (str or int): CSP stop mode. If not None, override current "stop_mode" value.
                 See "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
                 information and possible values.
 
@@ -223,28 +202,6 @@ class AcceleratorClass(object):
             self._host.stop_instance(stop_mode)
 
         return stop_result
-
-    def _start_instance(self, stop_mode=None):
-        """
-        Start a new instance or use a running instance.
-
-        Args:
-            stop_mode (int): CSP stop mode. If not None, override current "stop_mode" value.
-                See "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
-                information and possible values.
-        """
-        # Get configuration information from webservice
-        accel_requirements = self._client.get_requirements(self._host.provider)
-        self._host.set_accelerator_requirements(accel_requirements)
-
-        # Start CSP instance if needed
-        self._host.start_instance()
-
-        # Updates CSP Instance stop mode
-        self._host.stop_mode = stop_mode
-
-        # Set accelerator URL to CSP instance URL
-        self._client.url = self._host.instance_url
 
     def _log_profiling_info(self, process_result):
         """

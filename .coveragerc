@@ -4,3 +4,10 @@
 # Ignore generated Swagger REST API code since we don't use it completely and don't change it
 omit=
     */_swagger_client/*
+
+[report]
+# Exclude logging functions
+exclude_lines =
+    _get_logger()
+    def _log_profiling_info
+    def get_logger
