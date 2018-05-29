@@ -153,16 +153,16 @@ def test_acceleratorclient_is_alive():
     # Test: No instance
     accelerator = DummyAccelerator()
     with pytest.raises(AcceleratorRuntimeException):
-        accelerator.is_alive()
+        accelerator._is_alive()
 
     # Test: URL exists
     accelerator = DummyAccelerator(url='https://www.accelize.com')
-    accelerator.is_alive()
+    accelerator._is_alive()
 
     # Test: URL not exist
     accelerator = DummyAccelerator(url='https://www.url_that_not_exists.accelize.com')
     with pytest.raises(AcceleratorRuntimeException):
-        accelerator.is_alive()
+        accelerator._is_alive()
 
 
 def test_acceleratorclient_raise_for_status():
@@ -554,7 +554,7 @@ def test_acceleratorclient_stop():
         def _check_accelize_credential(self):
             """Don't check credential"""
 
-        def is_alive(self):
+        def _is_alive(self):
             """Raise on demand"""
             if not is_alive:
                 raise AcceleratorRuntimeException()

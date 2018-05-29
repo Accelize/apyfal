@@ -154,13 +154,13 @@ class AcceleratorClass(object):
                 datafile=datafile, accelerator_parameters=accelerator_parameters,
                 csp_env=self._host.get_configuration_env(**kwargs))
 
-    def process(self, file_out, file_in=None, process_parameter=None):
+    def process(self, file_in=None, file_out=None, process_parameter=None):
         """
         Process a file with accelerator.
 
         Args:
-            file_out (str): Path to the file you want to process.
             file_in (str): Path where you want the processed file will be stored.
+            file_out (str): Path to the file you want to process.
             process_parameter (dict): If set will overwrite the value content in the configuration file Parameters
                 an be forwarded to the accelerator for the process step using these parameters.
                 Take a look accelerator documentation for more information.

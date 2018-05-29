@@ -31,7 +31,8 @@ def create_configuration(configuration_file, **kwargs):
     """Create a configuration instance
 
     Args:
-        configuration_file (str or Configuration): Configuration file path or instance.
+        configuration_file (str or Configuration or None):
+            Configuration file path or instance.
         kwargs: "configparser.ConfigParser" keyword arguments.
                 Ignored if configuration_file is already a Configuration instance"""
     if isinstance(configuration_file, Configuration):

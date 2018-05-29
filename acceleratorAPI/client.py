@@ -200,7 +200,7 @@ class AcceleratorClient(object):
         # If possible use the last accelerator configuration (it can still be overwritten later)
         self._use_last_configuration()
 
-    def is_alive(self):
+    def _is_alive(self):
         """
         Check if accelerator URL exists.
 
@@ -399,13 +399,13 @@ class AcceleratorClient(object):
 
         return api_response['id'], api_response['processed']
 
-    def process(self, file_in, file_out, accelerator_parameters=None):
+    def process(self, file_in=None, file_out=None, accelerator_parameters=None):
         """
         Process a file with accelerator.
 
         Args:
-            file_out (str): Path to the file you want to process.
-            file_in (str): Path where you want the processed file will be stored.
+            file_in (str): Path to the file you want to process.
+            file_out (str): Path where you want the processed file will be stored.
             accelerator_parameters (dict): If set will overwrite the value content in the configuration file Parameters
                 an be forwarded to the accelerator for the process step using these parameters.
                 Take a look accelerator documentation for more information.
@@ -451,9 +451,12 @@ class AcceleratorClient(object):
             process_result = _literal_eval(api_response.parametersresult)
             self._raise_for_status(process_result, "Processing failed: ")
 
-            response = _utl.http_session().get(api_response.datafileresult, stream=True)
-            with open(file_out, 'wb') as out_file:
-                _shutil.copyfileobj(response.raw, out_file)
+            # Write result file
+            if file_out:
+                response = _utl.http_session().get(
+                    api_response.datafileresult, stream=True)
+                with open(file_out, 'wb') as out_file:
+                    _shutil.copyfileobj(response.raw, out_file)
 
         finally:
             # Process_delete api_response
@@ -471,7 +474,7 @@ class AcceleratorClient(object):
         """
         # TODO: Detail response dict in docstring
         try:
-            self.is_alive()
+            self._is_alive()
         except _exc.AcceleratorRuntimeException:
             # No AcceleratorClient to stop
             return None
