@@ -59,7 +59,7 @@ def test_acceleratorclient_check_accelize_credential():
         """Fake requests.Session"""
 
         @staticmethod
-        def post(url, data, auth):
+        def post(url, data, auth, **_):
             """Checks input arguments and returns fake response"""
             # Checks input arguments
             assert METERING_SERVER in url
@@ -221,7 +221,7 @@ def test_acceleratorclient_get_requirements():
         """Fake requests.Session"""
 
         @staticmethod
-        def get(url, headers):
+        def get(url, headers, **_):
             """Checks input arguments and returns fake response"""
             # Checks input arguments
             assert METERING_SERVER in url

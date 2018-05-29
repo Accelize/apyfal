@@ -228,6 +228,12 @@ texinfo_documents = [
 
 # -- Extension configuration -------------------------------------------------
 def setup(app):
+    """
+    Setup recommonmark
+
+    Args:
+        app: sphinx generated
+    """
     # recommonmark
     app.add_config_value('recommonmark_config', {
         'enable_math': False, 'enable_inline_math': False,
