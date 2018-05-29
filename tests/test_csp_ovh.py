@@ -9,7 +9,8 @@ def test_ovhclass_import():
     """OVHClass import"""
     # Test: Import by factory without errors
     from acceleratorAPI.csp import CSPGenericClass
-    CSPGenericClass(provider='OVH', region='dummy_region')
+    CSPGenericClass(provider='OVH', region='dummy_region',
+                    project_id='dummy_project')
 
 
 @pytest.mark.need_csp

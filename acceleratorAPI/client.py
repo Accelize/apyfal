@@ -45,17 +45,15 @@ class AcceleratorClient(object):
 
     Args:
         accelerator (str): Name of the accelerator you want to initialize,
-            to know the authorized list please visit https://accelstore.accelize.com
+            to know the accelerator list please visit "https://accelstore.accelize.com".
         client_id (str): Accelize Client ID.
-            Client Id is part of the access key you can generate on https:/accelstore.accelize.com/user/applications.
-            If set will override value from configuration file.
-        secret_id (str): Accelize Secret ID.
-            Secret Id is part of the access key you can generate on https:/accelstore.accelize.com/user/applications.
-            If set will override value from configuration file.
-        url (str): AcceleratorClient URL
+            Client ID is part of the access key you can generate on
+            "https:/accelstore.accelize.com/user/applications".
+        secret_id (str): Accelize Secret ID. Secret ID come with client_id.
+        url (str): IP address of the CSP instance that host the accelerator.
         config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
-            user "home" folder. If none found, will use default configuration values.
+            user "home" folder. If none found, will use default configuration values
     """
     DEFAULT_CONFIGURATION_PARAMETERS = {"app": {
         "reset": 0,
@@ -179,7 +177,7 @@ class AcceleratorClient(object):
     @property
     def url(self):
         """
-        AcceleratorClient URL
+        URL of the CSP instance that host the accelerator.
 
         Returns:
             str: URL

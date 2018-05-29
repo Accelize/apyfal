@@ -18,34 +18,28 @@ class CSPGenericClass(_utl.ABC):
 
     Args:
         provider (str): Cloud service provider name.
-            If set will override value from configuration file.
         config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
-        client_id (str):CSP Client ID. See with your provider to generate this value.
-            If set will override value from configuration file.
-        secret_id (str):CSP secret ID. See with your provider to generate this value.
-            If set will override value from configuration file.
-        region (str): CSP region. Check with your provider which region are using instances with FPGA.
-             If set will override value from configuration file.
-        instance_type:
-        ssh_key (str): SSH key to use with your CSP. If set will override value from configuration file.
-        security_group:
-        instance_id (str): CSP Instance ID to reuse. If set will override value from configuration file.
-        instance_url (str): CSP Instance URL or IP address to reuse. If set will override value from configuration file.
-        project_id:
-        auth_url:
-        interface:
-        role:
-        stop_mode (str or int): Define the "stop_instance" method behavior. See "stop_mode"
-            property for more information and possible values.
-        exit_instance_on_signal (bool): If True, exit CSP instances
+        client_id (str): CSP Access Key ID.
+        secret_id (str): CSP Secret Access Key.
+        region (str): CSP region. Needs a region supporting instances with FPGA devices.
+        instance_type (str): CSP instance type. Default defined by accelerator.
+        ssh_key (str): CSP Key pair. Default to 'MySSHKey'.
+        security_group: CSP Security group. Default to 'MySecurityGroup'.
+        instance_id (str): Instance ID of an already existing CSP instance to use.
+            If not specified, create a new instance.
+        instance_url (str): IP address of an already existing CSP instance to use.
+            If not specified, create a new instance.
+        stop_mode (str or int): Define the "stop_instance" method behavior. Default to 'term'.
+            See "stop_mode" property for more information and possible values.
+        exit_instance_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
             if Python interpreter is not exited properly. Note: this is provided for
             convenience and does not cover all exit case like process kill and
             may not work on all OS.
     """
-    #: CSP provider name, must be the same as waited "provider" argument value
+    #: CSP provider name (str), must be the same as waited "provider" argument value
     CSP_NAME = None
 
     #: Link to CSP documentation or website
@@ -148,7 +142,7 @@ class CSPGenericClass(_utl.ABC):
         self._instance_url = _utl.format_url(config.get_default(
             'csp', 'instance_url', overwrite=instance_url))
         self._role = config.get_default(
-            'csp', 'role', overwrite=role)
+            'csp', 'role', overwrite=role, default="MyRole")
         self._project_id = config.get_default(
             'csp', 'project_id', overwrite=project_id)
         self._auth_url = config.get_default(

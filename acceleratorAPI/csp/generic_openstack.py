@@ -15,34 +15,43 @@ class OpenStackClass(_CSPGenericClass):
 
     Args:
         provider (str): Cloud service provider name.
-            If set will override value from configuration file.
         config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
-        client_id (str):CSP Client ID. See with your provider to generate this value.
-            If set will override value from configuration file.
-        secret_id (str):CSP secret ID. See with your provider to generate this value.
-            If set will override value from configuration file.
-        region (str): CSP region. Check with your provider which region are using instances with FPGA.
-             If set will override value from configuration file.
-        instance_type:
-        ssh_key (str): SSH key to use with your CSP. If set will override value from configuration file.
-        security_group:
-        instance_id (str): CSP Instance ID to reuse. If set will override value from configuration file.
-        instance_url (str): CSP Instance URL or IP address to reuse. If set will override value from configuration file.
-        project_id:
-        auth_url:
-        interface:
-        stop_mode (int): Define the "stop_instance" method behavior. See "stop_mode"
-            property for more information and possible values.
-        exit_instance_on_signal (bool): If True, exit CSP instances
+        client_id (str): OpenStack Access Key ID.
+        secret_id (str): OpenStack Secret Access Key.
+        region (str): OpenStack region. Needs a region supporting instances with FPGA devices.
+        instance_type (str): OpenStack Flavor. Default defined by accelerator.
+        ssh_key (str): OpenStack Key pair. Default to 'MySSHKey'.
+        security_group: OpenStack Security group. Default to 'MySecurityGroup'.
+        instance_id (str): Instance ID of an already existing OpenStack nova instance to use.
+            If not specified, create a new instance.
+        instance_url (str): IP address of an already existing OpenStack nova instance to use.
+            If not specified, create a new instance.
+        project_id (str): OpenStack Project
+        auth_url (str): OpenStack auth-URL
+        interface (str): OpenStack interface (default to 'public')
+        stop_mode (str or int): Define the "stop_instance" method behavior. Default to 'term'.
+            See "stop_mode" property for more information and possible values.
+        exit_instance_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
             if Python interpreter is not exited properly. Note: this is provided for
             convenience and does not cover all exit case like process kill and
-            may not work on all OS."""
+            may not work on all OS.
+    """
+
+    #: Default OpenStack auth-URL to use (str)
+    OPENSTACK_AUTH_URL = None
+
+    #: Default Interface to use (str)
+    OPENSTACK_INTERFACE = 'public'
 
     def __init__(self, **kwargs):
         _CSPGenericClass.__init__(self, **kwargs)
+
+        # Use default auth_url and interface if not specified
+        self._auth_url = self._auth_url or self.OPENSTACK_AUTH_URL
+        self._interface = self._interface or self.OPENSTACK_INTERFACE
 
         # Checks mandatory configuration values
         self._check_arguments('project_id', 'auth_url', 'interface')
