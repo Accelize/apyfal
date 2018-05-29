@@ -63,6 +63,39 @@ class AWSClass(_CSPGenericClass):
             region_name=self._region
         )
 
+    @staticmethod
+    def _handle_boto_exception(exception, filter_error_codes=None,
+                               exception_msg=None):
+        """
+        Handle Boto exceptions.
+
+        Args:
+            exception (botocore.exceptions.ClientError): exception to handle
+            filter_error_codes (list of str or str): AWS error code to filter.
+            exception_msg (str): Message of the exception to raise in error
+                code not in filter
+
+        Raises:
+            acceleratorAPI.exceptions.CSPInstanceException:
+                error code not in filter_error_codes
+        """
+        # Try to get error code and message
+        try:
+            error_dict = exception.response['Error']
+            error_code = error_dict['Code']
+        except (AttributeError, KeyError):
+            raise _exc.CSPInstanceException(
+                exception_msg, exc=exception)
+
+        # Converts single str to tuple
+        if isinstance(filter_error_codes, str):
+            filter_error_codes = (filter_error_codes,)
+
+        # Raises if not in filter
+        if error_code not in filter_error_codes:
+            raise _exc.CSPInstanceException(
+                exception_msg, exc=error_dict['Message'])
+
     def check_credential(self):
         """
         Check CSP credentials.
@@ -92,8 +125,8 @@ class AWSClass(_CSPGenericClass):
             return True
 
         # Key does not exist on the CSP, create it
-        except ec2_client.exceptions.ClientError:
-            # TODO: to catch properly
+        except ec2_client.exceptions.ClientError as exception:
+            self._handle_boto_exception(exception, 'InvalidKeyPair.NotFound')
 
             ec2_resource = self._session.resource('ec2')
             key_pair = ec2_resource.create_key_pair(KeyName=self._ssh_key)
