@@ -456,6 +456,7 @@ def test_acceleratorclient_use_last_configuration():
     # Mock Swagger REST API ConfigurationApi
     Config = collections.namedtuple('Config', ['url', 'used'])
     config_list = []
+    configuration_list_raises = False
 
     class ConfigurationApi:
         """Fake swagger_client.ConfigurationApi"""
@@ -467,6 +468,8 @@ def test_acceleratorclient_use_last_configuration():
         @staticmethod
         def configuration_list():
             """Returns fake response"""
+            if configuration_list_raises:
+                raise ValueError
             Response = collections.namedtuple('Response', ['results'])
             return Response(results=config_list)
 
@@ -492,6 +495,11 @@ def test_acceleratorclient_use_last_configuration():
         accelerator = DummyAccelerator('Dummy', url='https://www.accelize.com')
         assert accelerator.configuration_url is None
 
+        configuration_list_raises = True
+        accelerator = DummyAccelerator('Dummy', url='https://www.accelize.com')
+        assert accelerator.configuration_url is None
+        configuration_list_raises = False
+
         # Unused previous configuration
         config_list.append(Config(url='dummy_config_url', used=0))
         accelerator = DummyAccelerator('Dummy', url='https://www.accelize.com')
@@ -516,6 +524,7 @@ def test_acceleratorclient_stop():
     # Mock Swagger REST API StopApi
     is_alive = True
     stop_list = {'app': {'status': 0, 'msg': ''}}
+    stop_list_raise = None
 
     class StopApi:
         """Fake swagger_client.StopApi"""
@@ -530,6 +539,10 @@ def test_acceleratorclient_stop():
             """Simulates accelerator stop and returns fake response"""
             # Stop AcceleratorClient
             cls.is_running = False
+
+            # Fake error
+            if stop_list_raise:
+                raise swagger_client.rest.ApiException
 
             # Return result
             return stop_list
@@ -555,6 +568,12 @@ def test_acceleratorclient_stop():
         # AcceleratorClient to stop
         assert DummyAccelerator('Dummy').stop() == stop_list
         assert not StopApi.is_running
+
+        # Ignore swagger exceptions
+        stop_list_raise = True
+        assert DummyAccelerator('Dummy').stop() is None
+        assert not StopApi.is_running
+        stop_list_raise = False
 
         # Auto-stops with context manager
         StopApi.is_running = True

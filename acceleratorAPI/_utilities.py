@@ -22,9 +22,9 @@ if sys.version_info[0] >= 3:
     ABC = abc.ABC
 
 else:
-    # Python 2: defines backports
+    # Python 2: defines back ports
 
-    # Backport of "os.makedirs" with exists_ok
+    # Back port of "os.makedirs" with exists_ok
     def makedirs(name, mode=0o777, exist_ok=False):
         """
         Super-mkdir; create a leaf directory and all intermediate ones. Works like
@@ -34,7 +34,7 @@ else:
 
         Args:
             name (str): Path
-            mode (int): The mode parameter is passed to mkdir();
+            mode (int): The mode parameter is passed to os.mkdir();
                 see the os.mkdir() description for how it is interpreted.
             exist_ok (bool): Don't raises error if target directory already exists.
 
@@ -44,12 +44,10 @@ else:
         try:
             os.makedirs(name, mode)
         except OSError:
-            # Cannot rely on checking for EEXIST, since the operating system
-            # could give priority to other errors like EACCES or EROFS
             if not exist_ok or not os.path.isdir(name):
                 raise
 
-    # Backport of "abc.ABC" base abstract class
+    # Back port of "abc.ABC" base abstract class
     ABC = abc.ABCMeta('ABC', (object,), {})
 
 
@@ -88,12 +86,13 @@ class Timeout:
         return False
 
 
-def http_session(max_retries=2):
+def http_session(max_retries=2, https=True):
     """
     Instantiate HTTP session
 
     Args:
         max_retries (int): The maximum number of retries each connection should attempt
+        https (bool): If True, enables HTTPS and HTTP support. Else only HTTP support.
 
     Returns:
         requests.Session: Http session
@@ -101,7 +100,8 @@ def http_session(max_retries=2):
     session = requests.Session()
     adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
     session.mount('http://', adapter)
-    session.mount('https://', adapter)
+    if https:
+        session.mount('https://', adapter)
     return session
 
 
@@ -121,13 +121,13 @@ def check_url(url, timeout=0.0, max_retries=0, sleep=0.5):
     Returns:
         bool: True if success, False elsewhere
     """
-    session = http_session(max_retries=max_retries)
+    session = http_session(max_retries=max_retries, https=False)
     with Timeout(timeout, sleep=sleep) as timeout:
         while True:
             try:
                 if session.get(url).status_code == 200:
                     return True
-            except requests.ConnectionError:
+            except requests.RequestException:
                 pass
             if timeout.reached():
                 return False
@@ -178,6 +178,7 @@ def get_host_public_ip():
     Returns:
         str: IP address in "XXX.XXX.XXX.XXX/32" format.
     """
+    # Lazy import since not always used
     import ipgetter
     return "%s/32" % ipgetter.myip()
 
@@ -210,20 +211,30 @@ def create_ssh_key_file(ssh_key, key_content):
     makedirs(ssh_dir, 0o700, exist_ok=True)
 
     # Find SSH key file path
-    ssh_key_file = "%s.pem" % ssh_key
     ssh_files = os.listdir(ssh_dir)
 
-    if ssh_key_file not in ssh_files:
-        return os.path.join(ssh_dir, ssh_key_file)
-
-    idx = 1
+    # Check if SSH file already exists
+    # and increment name if another file
+    # with different content exists
+    index = 1
     while True:
-        ssh_key_file = "%s_%d.pem" % (ssh_key, idx)
-        if ssh_key_file not in ssh_files:
-            break
-        idx += 1
+        # File name
+        ssh_key_file = "%s%s.pem" % (
+            ssh_key, ('_%d' % index) if index > 1 else '')
+        key_filename = os.path.join(ssh_dir, ssh_key_file)
 
-    key_filename = os.path.join(ssh_dir, ssh_key_file)
+        # File with same name exists
+        if ssh_key_file in ssh_files:
+            # File already exist, returns
+            with open(key_filename, 'rt') as key_file:
+                if key_file.read() == key_content:
+                    return
+            # Else increment name
+            index += 1
+
+        # File don't exists
+        else:
+            break
 
     # Create file
     with open(key_filename, "wt") as key_file:

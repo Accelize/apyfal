@@ -735,8 +735,5 @@ class CSPGenericClass(_utl.ABC):
         """
         if cls.CSP_HELP_URL:
             args = list(exception.args)
-            try:
-                args[0] = '%s, please refer to: %s' % (args[0].rstrip('.'), cls.CSP_HELP_URL)
-            except (TypeError, AttributeError):
-                args[0] = 'CSP error, please refer to: %s' % cls.CSP_HELP_URL
+            args[0] = '%s, please refer to: %s' % (args[0].rstrip('.'), cls.CSP_HELP_URL)
             exception.args = tuple(args)

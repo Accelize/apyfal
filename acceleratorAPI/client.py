@@ -300,8 +300,7 @@ class AcceleratorClient(object):
             "env": {
                 "client_id": self.client_id,
                 "client_secret": self.secret_id}}
-        if csp_env:
-            parameters['env'].update(csp_env)
+        parameters['env'].update(csp_env or {})
         parameters.update(accelerator_parameters)
 
         if datafile is None:

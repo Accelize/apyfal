@@ -5,6 +5,13 @@ import pytest
 from tests.test_csp___init__ import run_full_real_test_sequence
 
 
+def test_awsclass_import():
+    """AWSClass import"""
+    # Test: Import by factory without errors
+    from acceleratorAPI.csp import CSPGenericClass
+    CSPGenericClass(provider='AWS', region='dummy_region')
+
+
 @pytest.mark.need_csp
 @pytest.mark.need_csp_aws
 def test_awsclass_real():

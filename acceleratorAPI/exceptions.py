@@ -7,14 +7,15 @@ class AcceleratorApiBaseException(Exception):
 
     Args:
         msg (str): Exception message
-        exc: Exception or other details to add to description"""
+        exc (Exception or str): Exception or other details to
+            add to description"""
     DEFAULT_MESSAGE = ""
 
     def __init__(self, msg=None,  exc=None, *args, **kwargs):
         # Set default message if nothing passed as argument.
-        if not msg and self.DEFAULT_MESSAGE:
-            msg = self.DEFAULT_MESSAGE
+        msg = msg or self.DEFAULT_MESSAGE
 
+        # Augment exception with source error message
         if exc is not None:
             msg = '%s, more details: %r' % (msg.rstrip('.'), exc)
         Exception.__init__(self, msg, *args, **kwargs)
@@ -22,6 +23,7 @@ class AcceleratorApiBaseException(Exception):
 
 class AcceleratorException(AcceleratorApiBaseException):
     """Generic AcceleratorClient related exception."""
+    DEFAULT_MESSAGE = "Accelerator Client Error"
 
 
 class AcceleratorAuthenticationException(AcceleratorException):
@@ -42,6 +44,7 @@ class CSPException(AcceleratorApiBaseException):
 
 class CSPInstanceException(CSPException):
     """Error with CSP instance"""
+    DEFAULT_MESSAGE = "CSP Error"
 
 
 class CSPAuthenticationException(CSPException):

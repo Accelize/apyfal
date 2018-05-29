@@ -1,6 +1,7 @@
 # coding=utf-8
 """acceleratorAPI.csp tests"""
 import gc
+import time
 import warnings
 
 import pytest
@@ -519,6 +520,7 @@ def test_cspgenericclass_set_accelerator_requirements():
     from acceleratorAPI.exceptions import CSPConfigurationException
 
     # Mock variables
+    dummy_provider = 'dummy_provider'
     region = "dummy_region"
     image_id = "dummy_image_id"
     instance_type = "dummy_instance_type"
@@ -536,7 +538,7 @@ def test_cspgenericclass_set_accelerator_requirements():
         def get_requirements(provider):
             """Checks argument and returns fake result"""
             # Checks arguments
-            assert provider == get_dummy_csp_class().CSP_NAME
+            assert provider == dummy_provider
 
             # Returns fake value
             return accel_parameters
@@ -552,7 +554,7 @@ def test_cspgenericclass_set_accelerator_requirements():
     assert accelerator in csp._get_instance_name()
 
     # Test: Pass client
-    csp = get_dummy_csp_class()(region=region)
+    csp = get_dummy_csp_class()(provider=dummy_provider, region=region)
     csp._config_env = config_env
     csp._set_accelerator_requirements(accel_client=DummyClient())
     assert csp._image_id == image_id
@@ -567,12 +569,16 @@ def test_cspgenericclass_set_accelerator_requirements():
         csp._set_accelerator_requirements(accel_parameters=accel_parameters)
 
 
-def run_full_real_test_sequence(provider, environment):
+def run_full_real_test_sequence(provider, environment,
+                                use_full_images=False):
     """Run common real tests for all CSP.
 
     Args:
         provider (str): CSP provider.
         environment (dict): Environment to use
+        use_full_images (bool): If True, uses full
+            images with host application that provides
+            HTTP access.
     """
     from acceleratorAPI.configuration import Configuration
 
@@ -584,29 +590,57 @@ def run_full_real_test_sequence(provider, environment):
     if config.get_default('csp', 'provider') != provider:
         pytest.skip('No configuration for %s.' % provider)
 
-    from acceleratorAPI.csp import CSPGenericClass
+    # Enable logger
+    from acceleratorAPI import get_logger
+    get_logger(stdout=True)
 
     # Add accelerator to environment
     environment['accelerator'] = 'pytest_testing'
 
-    # Test: Start and terminate
-    with CSPGenericClass(config=config, stop_mode='term') as csp:
-        csp.start_instance(accel_parameters=environment)
+    # Mock instance URL check
+    # Since used basic image don't provide HTTP access
+    if not use_full_images:
+        import acceleratorAPI._utilities
 
-    # Test: Start and stop, then terminate
-    # Also check getting instance handle with ID
-    with CSPGenericClass(config=config, stop_mode='stop') as csp:
-        csp.start_instance(accel_parameters=environment)
-        instance_id = csp.instance_id
+        def dummy_check_url(_, timeout=0.0, **__):
+            """Don't check URL, only waits if timeout and returns True"""
+            if timeout:
+                time.sleep(60)
+            return True
 
-    with CSPGenericClass(config=config, instance_id=instance_id, stop_mode='term') as csp:
-        csp.start_instance()
+        utilities_check_url = acceleratorAPI._utilities.check_url
+        acceleratorAPI._utilities.check_url = dummy_check_url
 
-    # Test: Start and keep, then
-    # Also check getting instance handle with URL
-    with CSPGenericClass(config=config, stop_mode='keep') as csp:
-        csp.start_instance(accel_parameters=environment)
-        instance_url = csp.instance_url
+    # Tests:
+    from acceleratorAPI.csp import CSPGenericClass
 
-    with CSPGenericClass(config=config, instance_url=instance_url, stop_mode='term') as csp:
-        csp.start_instance()
+    try:
+
+        # Start and terminate
+        with CSPGenericClass(config=config, stop_mode='term') as csp:
+            csp.start_instance(accel_parameters=environment)
+
+        # Start and stop, then terminate
+        # Also check getting instance handle with ID
+        with CSPGenericClass(config=config, stop_mode='stop') as csp:
+            csp.start_instance(accel_parameters=environment)
+            instance_id = csp.instance_id
+
+        with CSPGenericClass(config=config, instance_id=instance_id,
+                             stop_mode='term') as csp:
+            csp.start_instance()
+
+        # Start and keep, then
+        # Also check getting instance handle with URL
+        with CSPGenericClass(config=config, stop_mode='keep') as csp:
+            csp.start_instance(accel_parameters=environment)
+            instance_url = csp.instance_url
+
+        with CSPGenericClass(config=config, instance_url=instance_url,
+                             stop_mode='term') as csp:
+            csp.start_instance()
+
+    # Restore check_url
+    finally:
+        if not use_full_images:
+            acceleratorAPI._utilities.check_url = utilities_check_url
