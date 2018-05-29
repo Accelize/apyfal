@@ -96,7 +96,7 @@ class AWSClass(_CSPGenericClass):
             raise _exc.CSPInstanceException(
                 exception_msg, exc=error_dict['Message'])
 
-    def check_credential(self):
+    def _check_credential(self):
         """
         Check CSP credentials.
 

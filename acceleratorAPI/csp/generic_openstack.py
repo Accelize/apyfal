@@ -69,7 +69,7 @@ class OpenStackClass(_CSPGenericClass):
             identity_interface=self._interface
         )
 
-    def check_credential(self):
+    def _check_credential(self):
         """
         Check CSP credentials.
 

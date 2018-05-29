@@ -235,6 +235,10 @@ class CSPGenericClass(_utl.ABC):
         Returns:
             str: URL
         """
+        # Check if status OK
+        self._instance_status()
+
+        # Returns URL
         return self._instance_url
 
     @property
@@ -299,7 +303,7 @@ class CSPGenericClass(_utl.ABC):
         self._stop_mode = stop_mode
 
     @_abstractmethod
-    def check_credential(self):
+    def _check_credential(self):
         """
         Check CSP credentials.
 
@@ -308,7 +312,7 @@ class CSPGenericClass(_utl.ABC):
                 Authentication failed.
         """
 
-    def instance_status(self):
+    def _instance_status(self):
         """
         Returns current status of current instance.
 
@@ -373,10 +377,10 @@ class CSPGenericClass(_utl.ABC):
         self.stop_mode = stop_mode
 
         # Starts instance only if not already started
-        if self.instance_url is None:
+        if self._instance_url is None:
 
             # Checks CSP credential
-            self.check_credential()
+            self._check_credential()
 
             # Creates and starts instance if not exists
             if self.instance_id is None:
@@ -407,7 +411,7 @@ class CSPGenericClass(_utl.ABC):
 
             # If exists, starts it directly
             else:
-                state = self.instance_status()
+                state = self._instance_status()
                 self._start_existing_instance(state)
 
             # Waiting for instance provisioning
@@ -464,7 +468,7 @@ class CSPGenericClass(_utl.ABC):
         with _utl.Timeout(self.CSP_TIMEOUT) as timeout:
             while True:
                 # Get instance status
-                status = self.instance_status()
+                status = self._instance_status()
                 if status.lower() == self.STATUS_RUNNING:
                     return
                 elif timeout.reached():
@@ -527,7 +531,7 @@ class CSPGenericClass(_utl.ABC):
 
         # Checks if instance to stop
         try:
-            self.instance_status()
+            self._instance_status()
         except _exc.CSPInstanceException:
             return
 

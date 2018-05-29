@@ -70,7 +70,7 @@ def get_dummy_csp_class():
         def _get_instance_private_ip(self):
             """Dummy method"""
 
-        def check_credential(self):
+        def _check_credential(self):
             """Dummy method"""
 
         def _get_instance_status(self):
@@ -124,6 +124,9 @@ def test_cspgenericclass_properties():
         def _get_instance_private_ip(self):
             """Returns fake result"""
             return instance_private_ip
+
+        def _instance_status(self):
+            """Do nothing"""
 
     csp = DummyClass(
         provider=provider, instance_url=instance_url,
@@ -189,7 +192,7 @@ def test_cspgenericclass_properties():
 
 
 def test_cspgenericclass_instance_status():
-    """Tests CSPGenericClass.instance_status"""
+    """Tests CSPGenericClass._instance_status"""
     from acceleratorAPI.exceptions import CSPInstanceException
 
     # Mock variables
@@ -218,16 +221,16 @@ def test_cspgenericclass_instance_status():
 
     # Test: No instance id
     with pytest.raises(CSPInstanceException):
-        csp.instance_status()
+        csp._instance_status()
 
     # Test: instance id but no instance started
     csp._instance_id = 'dummy_id'
     with pytest.raises(CSPInstanceException):
-        csp.instance_status()
+        csp._instance_status()
 
     # Test: instance id and instance started
     instance = 'dummy_instance'
-    assert csp.instance_status() == status
+    assert csp._instance_status() == status
     assert csp._instance == instance
 
 
@@ -262,7 +265,7 @@ def test_cspgenericclass_start_instance():
         def _set_accelerator_requirements(*_, **__):
             """Tested separately"""
 
-        def check_credential(self):
+        def _check_credential(self):
             """Marks as executed"""
             self.mark_credential_checked = True
 
@@ -417,7 +420,7 @@ def test_cspgenericclass_start_instance():
         # Test: Start from an instance URL
         csp = DummyClass(region='dummy_region', instance_url=instance_url)
         csp.start_instance()
-        assert csp.instance_url == instance_url
+        assert csp._instance_url == instance_url
 
         # Test: Start from an instance URL not reachable
         raises_on_boot = True
