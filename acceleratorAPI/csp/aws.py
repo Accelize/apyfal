@@ -31,11 +31,11 @@ class AWSClass(_CSPGenericClass):
         security_group: AWS Security group. Default to 'MySecurityGroup'.
         instance_id (str): Instance ID of an already existing AWS EC2 instance to use.
             If not specified, create a new instance.
-        instance_url (str): IP address of an already existing AWS EC2 instance to use.
+        instance_ip (str): IP or URL address of an already existing AWS EC2 instance to use.
             If not specified, create a new instance.
         role (str): AWS IAM role. Generated to allow instance to load AGFI (FPGA bitstream).
             Default to 'MyRole'.
-        stop_mode (str or int): Define the "stop_instance" method behavior. Default to 'term'.
+        stop_mode (str or int): Define the "stop" method behavior. Default to 'term'.
             See "stop_mode" property for more information and possible values.
         exit_instance_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
@@ -44,10 +44,10 @@ class AWSClass(_CSPGenericClass):
             may not work on all OS.
     """
     #: Provider name to use
-    CSP_NAME = 'AWS'
+    NAME = 'AWS'
 
     #: AWS Website
-    CSP_HELP_URL = "https://aws.amazon.com"
+    DOC_URL = "https://aws.amazon.com"
 
     STATUS_RUNNING = "running"
     STATUS_STOPPED = 'stopped'
@@ -119,9 +119,9 @@ class AWSClass(_CSPGenericClass):
         except ec2_client.exceptions.ClientError as exception:
             raise _exc.CSPAuthenticationException(exc=exception)
 
-    def _init_ssh_key(self):
+    def _init_key_pair(self):
         """
-        Initialize SSH key.
+        Initialize key pair.
 
         Returns:
             bool: True if reuse existing key
@@ -355,7 +355,7 @@ class AWSClass(_CSPGenericClass):
         """
         return self._session.resource('ec2').Instance(self._instance_id)
 
-    def _get_instance_public_ip(self):
+    def _get_public_ip(self):
         """
         Read current instance public IP from CSP instance.
 
@@ -367,7 +367,7 @@ class AWSClass(_CSPGenericClass):
         except _boto_exceptions.ClientError as exception:
             raise _exc.CSPInstanceException("Could not return instance URL", exc=exception)
 
-    def _get_instance_private_ip(self):
+    def _get_private_ip(self):
         """
         Read current instance private IP from CSP instance.
 
@@ -379,7 +379,7 @@ class AWSClass(_CSPGenericClass):
         except _boto_exceptions.ClientError as exception:
             raise _exc.CSPInstanceException("Could not return instance URL", exc=exception)
 
-    def _get_instance_status(self):
+    def _get_status(self):
         """
         Returns current status of current instance.
 

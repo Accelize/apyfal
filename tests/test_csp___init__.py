@@ -67,24 +67,24 @@ def get_dummy_csp_class():
 
     class BaseDummyClass(CSPGenericClass):
         """Base dummy class"""
-        CSP_NAME = 'Dummy'
+        NAME = 'Dummy'
 
-        def _get_instance_public_ip(self):
+        def _get_public_ip(self):
             """Dummy method"""
 
-        def _get_instance_private_ip(self):
+        def _get_private_ip(self):
             """Dummy method"""
 
         def _check_credential(self):
             """Dummy method"""
 
-        def _get_instance_status(self):
+        def _get_status(self):
             """Dummy method"""
 
         def _get_instance(self):
             """Dummy method"""
 
-        def _init_ssh_key(self):
+        def _init_key_pair(self):
             """Dummy method"""
 
         def _create_instance(self):
@@ -111,9 +111,9 @@ def test_cspgenericclass_properties():
 
     # Mock variables
     provider = 'dummy_provider'
-    instance_ip = 'dummy_public_ip'
-    instance_private_ip = 'dummy_private_ip'
-    instance_url = 'http://127.0.0.1'
+    public_ip = 'dummy_public_ip'
+    private_ip = 'dummy_private_ip'
+    url = 'http://127.0.0.1'
     instance_id = 'dummy_instance_id'
     stop_mode = 'keep'
     region = 'dummy_region'
@@ -122,28 +122,28 @@ def test_cspgenericclass_properties():
     class DummyClass(get_dummy_csp_class()):
         """Dummy CSP"""
 
-        def _get_instance_public_ip(self):
+        def _get_public_ip(self):
             """Returns fake result"""
-            return instance_ip
+            return public_ip
 
-        def _get_instance_private_ip(self):
+        def _get_private_ip(self):
             """Returns fake result"""
-            return instance_private_ip
+            return private_ip
 
-        def _instance_status(self):
+        def _status(self):
             """Do nothing"""
 
     csp = DummyClass(
-        provider=provider, instance_url=instance_url,
+        provider=provider, instance_ip=url,
         instance_id=instance_id, stop_mode=stop_mode,
         region=region)
     csp._instance = 'dummy_instance'
 
     # Test: properties values
     assert csp.provider == provider
-    assert csp.instance_ip == instance_ip
-    assert csp.instance_private_ip == instance_private_ip
-    assert csp.instance_url == instance_url
+    assert csp.public_ip == public_ip
+    assert csp.private_ip == private_ip
+    assert csp.url == url
     assert csp.instance_id == instance_id
     assert csp.stop_mode == stop_mode
 
@@ -153,10 +153,10 @@ def test_cspgenericclass_properties():
     # don't want property crash in this case, only return
     # a dict without not existing values
     csp._INFO_NAMES.add('not_exists')
-    info = csp.instance_info
+    info = csp.info
     for name in {
-            'provider', 'instance_ip',
-            'instance_private_ip', 'instance_url',
+            'provider', 'public_ip',
+            'private_ip', 'url',
             'instance_id', 'region', 'stop_mode'}:
         assert info[name] == locals()[name]
     assert 'not_exists' not in info
@@ -164,10 +164,10 @@ def test_cspgenericclass_properties():
     # Test: properties if no instance
     csp._instance = None
     with pytest.raises(CSPInstanceException):
-        csp.instance_ip
+        csp.public_ip
 
     with pytest.raises(CSPInstanceException):
-        csp.instance_private_ip
+        csp.private_ip
 
     # Test: Stop mode setter, no change if no value set
     csp.stop_mode = None
@@ -196,8 +196,8 @@ def test_cspgenericclass_properties():
         csp.stop_mode = -1
 
 
-def test_cspgenericclass_instance_status():
-    """Tests CSPGenericClass._instance_status"""
+def test_cspgenericclass_status():
+    """Tests CSPGenericClass._status"""
     from acceleratorAPI.exceptions import CSPInstanceException
 
     # Mock variables
@@ -214,7 +214,7 @@ def test_cspgenericclass_instance_status():
         def __del__(self):
             """Do nothing"""
 
-        def _get_instance_status(self):
+        def _get_status(self):
             """Returns fake result"""
             return status
 
@@ -226,28 +226,28 @@ def test_cspgenericclass_instance_status():
 
     # Test: No instance id
     with pytest.raises(CSPInstanceException):
-        csp._instance_status()
+        csp._status()
 
     # Test: instance id but no instance started
     csp._instance_id = 'dummy_id'
     with pytest.raises(CSPInstanceException):
-        csp._instance_status()
+        csp._status()
 
     # Test: instance id and instance started
     instance = 'dummy_instance'
-    assert csp._instance_status() == status
+    assert csp._status() == status
     assert csp._instance == instance
 
 
-def test_cspgenericclass_start_instance():
-    """Tests CSPGenericClass.start_instance"""
+def test_cspgenericclass_start():
+    """Tests CSPGenericClass.start"""
     from acceleratorAPI.exceptions import CSPException
     import acceleratorAPI._utilities as utl
 
     # Mock variables
     status = 'dummy_status'
     instance = 'dummy_instance'
-    instance_url = 'http://127.0.0.1'
+    dummy_url = 'http://127.0.0.1'
     instance_id = 'dummy_id'
     raises_on_create_instance = False
     raises_on_start_instance = False
@@ -260,11 +260,11 @@ def test_cspgenericclass_start_instance():
     # Mock CSP class
     class DummyClass(get_dummy_csp_class()):
         """Dummy CSP"""
-        CSP_HELP_URL = 'dummy_csp_help'
+        DOC_URL = 'dummy_csp_help'
         STATUS_RUNNING = status
-        CSP_TIMEOUT = 0.0
+        TIMEOUT = 0.0
         mark_credential_checked = False
-        mark_ssh_key_created = False
+        mark_key_pair_created = False
         mark_instance_created = False
         mark_instance_terminated = False
         mark_instance_started = False
@@ -277,9 +277,9 @@ def test_cspgenericclass_start_instance():
             """Marks as executed"""
             self.mark_credential_checked = True
 
-        def _init_ssh_key(self):
+        def _init_key_pair(self):
             """Marks as executed, returns fake result"""
-            self.mark_ssh_key_created = True
+            self.mark_key_pair_created = True
             return True
 
         def _create_instance(self):
@@ -305,7 +305,7 @@ def test_cspgenericclass_start_instance():
             return instance, instance_id
 
         @staticmethod
-        def _get_instance_status():
+        def _get_status():
             """Returns fake result"""
             return status
 
@@ -320,14 +320,14 @@ def test_cspgenericclass_start_instance():
             self.mark_instance_started = True
 
         @staticmethod
-        def _get_instance_public_ip():
+        def _get_public_ip():
             """Marks as executed"""
-            return instance_url
+            return dummy_url
 
     # Mock check_url function
     def dummy_check_url(url, **_):
         """Checks argument and returns fake result"""
-        assert url == instance_url
+        assert url == dummy_url
         return not raises_on_boot
 
     utl_check_url = utl.check_url
@@ -337,12 +337,12 @@ def test_cspgenericclass_start_instance():
     try:
         # Test: start from nothing with success
         csp = DummyClass(**dummy_kwargs)
-        csp.start_instance()
+        csp.start()
         assert csp._instance == instance
         assert csp.instance_id == instance_id
-        assert csp.instance_url == instance_url
+        assert csp.url == dummy_url
         assert csp.mark_credential_checked
-        assert csp.mark_ssh_key_created
+        assert csp.mark_key_pair_created
         assert csp.mark_instance_created
         assert csp.mark_instance_started
         assert not csp.mark_instance_terminated
@@ -351,9 +351,9 @@ def test_cspgenericclass_start_instance():
         raises_on_create_instance = True
         csp = DummyClass(**dummy_kwargs)
         with pytest.raises(CSPException):
-            csp.start_instance()
+            csp.start()
         assert csp.mark_credential_checked
-        assert csp.mark_ssh_key_created
+        assert csp.mark_key_pair_created
         assert not csp.mark_instance_created
         assert csp.mark_instance_terminated
 
@@ -366,8 +366,8 @@ def test_cspgenericclass_start_instance():
         raises_on_create_instance = True
         csp = DummyClass(**dummy_kwargs)
         with pytest.raises(CSPException) as exc_info:
-            csp.start_instance()
-            assert csp.CSP_HELP_URL in exc_info
+            csp.start()
+            assert csp.DOC_URL in exc_info
         assert not csp.mark_instance_created
         assert not csp.mark_instance_terminated
 
@@ -378,10 +378,10 @@ def test_cspgenericclass_start_instance():
         raises_on_start_instance = True
         csp = DummyClass(**dummy_kwargs)
         with pytest.raises(CSPException) as exc_info:
-            csp.start_instance()
-            assert csp.CSP_HELP_URL in exc_info
+            csp.start()
+            assert csp.DOC_URL in exc_info
         assert csp.mark_credential_checked
-        assert csp.mark_ssh_key_created
+        assert csp.mark_key_pair_created
         assert csp.mark_instance_created
         assert not csp.mark_instance_started
         assert csp.mark_instance_terminated
@@ -392,10 +392,10 @@ def test_cspgenericclass_start_instance():
         csp = DummyClass(**dummy_kwargs)
         csp.STATUS_RUNNING = 'bad_status'
         with pytest.raises(CSPException) as exc_info:
-            csp.start_instance()
-            assert csp.CSP_HELP_URL in exc_info
+            csp.start()
+            assert csp.DOC_URL in exc_info
         assert csp.mark_credential_checked
-        assert csp.mark_ssh_key_created
+        assert csp.mark_key_pair_created
         assert csp.mark_instance_created
         assert csp.mark_instance_started
         assert csp.mark_instance_terminated
@@ -404,9 +404,9 @@ def test_cspgenericclass_start_instance():
         raises_on_boot = True
         csp = DummyClass(**dummy_kwargs)
         with pytest.raises(CSPException):
-            csp.start_instance()
+            csp.start()
         assert csp.mark_credential_checked
-        assert csp.mark_ssh_key_created
+        assert csp.mark_key_pair_created
         assert csp.mark_instance_created
         assert csp.mark_instance_started
         assert not csp.mark_instance_terminated
@@ -415,26 +415,26 @@ def test_cspgenericclass_start_instance():
 
         # Test: Start from an instance ID
         csp = DummyClass(region='dummy_region', instance_id=instance_id)
-        csp.start_instance()
+        csp.start()
         assert csp._instance == instance
         assert csp.instance_id == instance_id
-        assert csp.instance_url == instance_url
+        assert csp.url == dummy_url
         assert csp.mark_credential_checked
-        assert not csp.mark_ssh_key_created
+        assert not csp.mark_key_pair_created
         assert not csp.mark_instance_created
         assert csp.mark_instance_started
         assert not csp.mark_instance_terminated
 
         # Test: Start from an instance URL
-        csp = DummyClass(region='dummy_region', instance_url=instance_url)
-        csp.start_instance()
-        assert csp._instance_url == instance_url
+        csp = DummyClass(region='dummy_region', instance_ip=dummy_url)
+        csp.start()
+        assert csp._url == dummy_url
 
         # Test: Start from an instance URL not reachable
         raises_on_boot = True
-        csp = DummyClass(region='dummy_region', instance_url=instance_url)
+        csp = DummyClass(region='dummy_region', instance_ip=dummy_url)
         with pytest.raises(CSPException):
-            csp.start_instance()
+            csp.start()
 
         raises_on_boot = False
 
@@ -443,8 +443,8 @@ def test_cspgenericclass_start_instance():
         utl.check_url = utl_check_url
 
 
-def test_cspgenericclass_stop_instance():
-    """Tests CSPGenericClass.stop_instance"""
+def test_cspgenericclass_stop():
+    """Tests CSPGenericClass.stop"""
     from acceleratorAPI.csp import CSPGenericClass
 
     # Mock variables
@@ -466,7 +466,7 @@ def test_cspgenericclass_stop_instance():
 
             # Value like already started instance
             self._instance = instance
-            self._instance_url = 'http://127.0.0.1'
+            self._url = 'http://127.0.0.1'
             self._instance_id = 'dummy_id'
 
         def _terminate_instance(self):
@@ -486,13 +486,13 @@ def test_cspgenericclass_stop_instance():
     # Test: Stop mode passed on instantiation
     for stop_mode in ('term', 'stop'):
         csp = DummyCSP(stop_mode=stop_mode)
-        csp.stop_instance()
+        csp.stop()
         assert csp.stopped_mode == stop_mode
 
-    # Test: Stop mode passed on stop_instance
+    # Test: Stop mode passed on stop
     for stop_mode in ('term', 'stop'):
         csp = DummyCSP()
-        csp.stop_instance(stop_mode)
+        csp.stop(stop_mode)
         assert csp.stopped_mode == stop_mode
 
     # Test: Keep stop mode, don't stop but warn user
@@ -501,16 +501,16 @@ def test_cspgenericclass_stop_instance():
 
         csp = DummyCSP(stop_mode='keep')
         with pytest.warns(Warning):
-            csp.stop_instance()
+            csp.stop()
 
         csp = DummyCSP()
         with pytest.warns(Warning):
-            csp.stop_instance(stop_mode='keep')
+            csp.stop(stop_mode='keep')
 
     # Test: Stop with no instance started
     instance = None
     csp = DummyCSP(stop_mode='term')
-    csp.stop_instance()
+    csp.stop()
     assert csp.stopped_mode == 'keep'
     instance = 'dummy_instance'
 
@@ -639,7 +639,7 @@ def run_full_real_test_sequence(provider, environment,
             return True
 
         utilities_check_url = acceleratorAPI._utilities.check_url
-        #acceleratorAPI._utilities.check_url = dummy_check_url
+        acceleratorAPI._utilities.check_url = dummy_check_url
 
     # Tests:
     from acceleratorAPI.csp import CSPGenericClass
@@ -648,27 +648,27 @@ def run_full_real_test_sequence(provider, environment,
 
         # Start and terminate
         with CSPGenericClass(config=config, stop_mode='term') as csp:
-            csp.start_instance(accel_parameters=environment)
+            csp.start(accel_parameters=environment)
 
         # Start and stop, then terminate
         # Also check getting instance handle with ID
         with CSPGenericClass(config=config, stop_mode='stop') as csp:
-            csp.start_instance(accel_parameters=environment)
+            csp.start(accel_parameters=environment)
             instance_id = csp.instance_id
 
         with CSPGenericClass(config=config, instance_id=instance_id,
                              stop_mode='term') as csp:
-            csp.start_instance()
+            csp.start()
 
         # Start and keep, then
         # Also check getting instance handle with URL
         with CSPGenericClass(config=config, stop_mode='keep') as csp:
-            csp.start_instance(accel_parameters=environment)
-            instance_url = csp.instance_url
+            csp.start(accel_parameters=environment)
+            url = csp.url
 
-        with CSPGenericClass(config=config, instance_url=instance_url,
+        with CSPGenericClass(config=config, instance_ip=url,
                              stop_mode='term') as csp:
-            csp.start_instance()
+            csp.start()
 
     # Restore check_url
     finally:

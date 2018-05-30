@@ -24,6 +24,7 @@ __licence__ = "Apache 2.0"
 
 import acceleratorAPI.csp as csp
 import acceleratorAPI.client as _clt
+import acceleratorAPI.exceptions as _exc
 import acceleratorAPI.configuration as _cfg
 from acceleratorAPI._utilities import get_logger as _get_logger
 
@@ -34,7 +35,8 @@ get_logger = _get_logger
 
 class AcceleratorClass(object):
     """
-    This class automatically handle AcceleratorClient and CSP classes.
+    This class provides the full accelerator features by handling
+    both Accelerator client and CSP.
 
     Args:
         accelerator (str): Name of the accelerator you want to initialize,
@@ -42,55 +44,47 @@ class AcceleratorClass(object):
         config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
-        provider (str): Cloud service provider name.
-        region (str): CSP region. Needs a region supporting instances with FPGA devices.
-        xlz_client_id (str): Accelize Client ID.
+        accelize_client_id (str): Accelize Client ID.
             Client ID is part of the access key you can generate on
             "https:/accelstore.accelize.com/user/applications".
-        xlz_secret_id (str): Accelize Secret ID. Secret ID come with xlz_client_id.
-        csp_client_id (str): CSP Access Key ID.
-        csp_secret_id (str): CSP Secret Access Key.
-        ssh_key (str): CSP Key pair. Default to 'MySSHKey'.
+        accelize_secret_id (str): Accelize Secret ID. Secret ID come with xlz_client_id.
+        provider (str): Cloud service provider name.
+        region (str): CSP region. Needs a region supporting instances with FPGA devices.
+        client_id (str): CSP Access Key ID.
+        secret_id (str): CSP Secret Access Key.
         instance_id (str): Instance ID of an already existing CSP instance to use.
             If not specified, create a new instance.
         instance_ip (str): IP address of an already existing CSP instance to use.
             If not specified, create a new instance..
-        instance_url (str): IP address of an already existing CSP instance to use.
-            If not specified, create a new instance.
         stop_mode (str or int): CSP stop mode. Default to 'term'.
             See "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
             information and possible values.
-        exit_instance_on_signal (bool): If True, exit instance
-            on OS exit signals. This may help to not have instance still running
-            if Python interpreter is not exited properly. Note: this is provided for
-            convenience and does not cover all exit case like process kill and
-            may not work on all OS.
+        csp_kwargs: Keyword arguments related to specific CSP. See targeted CSP class
+            to see full list of arguments.
     """
-    def __init__(self, accelerator, config_file=None, provider=None,
-                 region=None, xlz_client_id=None, xlz_secret_id=None, csp_client_id=None,
-                 csp_secret_id=None, ssh_key=None, instance_id=None, instance_url=None, instance_ip=None,
-                 stop_mode='term', exit_instance_on_signal=False):
+    def __init__(self, accelerator, config=None, accelize_client_id=None, accelize_secret_id=None,
+                 provider=None, region=None, client_id=None, secret_id=None, instance_id=None,
+                 instance_ip=None, stop_mode='term', **csp_kwargs):
 
         # Initialize configuration
-        config = _cfg.create_configuration(config_file)
+        config = _cfg.create_configuration(config)
 
         # Create CSP object
-        self._host = csp.CSPGenericClass(
-            provider=provider, config=config, client_id=csp_client_id, secret_id=csp_secret_id, region=region,
-            ssh_key=ssh_key, instance_id=instance_id, instance_url=instance_url,
-            stop_mode=stop_mode, exit_instance_on_signal=exit_instance_on_signal)
+        self._csp = csp.CSPGenericClass(
+            provider=provider, config=config, client_id=client_id, secret_id=secret_id,
+            region=region, instance_id=instance_id, instance_ip=instance_ip,
+            stop_mode=stop_mode, **csp_kwargs)
 
         # Create AcceleratorClient object
         self._client = _clt.AcceleratorClient(
-            accelerator, client_id=xlz_client_id, secret_id=xlz_secret_id, config=config)
+            accelerator, accelize_client_id=accelize_client_id,
+            accelize_secret_id=accelize_secret_id, config=config)
 
-        # Check CSP ID if provided
-        if instance_id:
-            self._client.url = self._host.instance_url
-
-        # Set CSP URL if provided
-        elif instance_url or instance_ip:
-            self._client.url = instance_url if instance_url else instance_ip
+        # Try to pass CSP URL to Accelerator client if available
+        try:
+            self._client.url = self._csp.url
+        except _exc.CSPException:
+            pass
 
     def __enter__(self):
         return self
@@ -112,14 +106,14 @@ class AcceleratorClass(object):
         return self._client
 
     @property
-    def host(self):
+    def csp(self):
         """
-        Accelerator host.
+        Accelerator CSP.
 
         Returns:
             acceleratorAPI.csp.CSPGenericClass subclass: CSP Instance
         """
-        return self._host
+        return self._csp
 
     def start(self, stop_mode=None, datafile=None, accelerator_parameters=None, **kwargs):
         """
@@ -143,16 +137,16 @@ class AcceleratorClass(object):
                 Take a look accelerator documentation for more information.
         """
         # Start CSP instance if needed (Do nothing if already started)
-        self._host.start_instance(accel_client=self._client, stop_mode=stop_mode)
+        self._csp.start(accel_client=self._client, stop_mode=stop_mode)
 
         # Set accelerator URL to CSP instance URL
-        self._client.url = self._host.instance_url
+        self._client.url = self._csp.url
 
         # Configure accelerator if needed
         if kwargs or self._client.configuration_url is None or datafile is not None:
             return self._client.start(
                 datafile=datafile, accelerator_parameters=accelerator_parameters,
-                csp_env=self._host.get_configuration_env(**kwargs))
+                csp_env=self._csp.get_configuration_env(**kwargs))
 
     def process(self, file_in=None, file_out=None, process_parameter=None):
         """
@@ -195,7 +189,7 @@ class AcceleratorClass(object):
 
         # Stops CSP instance
         finally:
-            self._host.stop_instance(stop_mode)
+            self._csp.stop(stop_mode)
 
         return stop_result
 
@@ -249,14 +243,14 @@ class AcceleratorClass(object):
                 fps = 1.0 / global_time
                 logger.info(
                     "- Server processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
-                    self._host.provider, bw, fps)
+                    self._csp.provider, bw, fps)
 
             if total_bytes > 0.0 and fpga_time > 0.0:
                 bw = total_bytes / fpga_time / 1024.0 / 1024.0
                 fps = 1.0 / fpga_time
                 logger.info(
                     "- FPGA processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
-                    self._host.provider, bw, fps)
+                    self._csp.provider, bw, fps)
 
         # Handle Specific result
         try:

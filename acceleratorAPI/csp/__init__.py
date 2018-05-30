@@ -29,9 +29,9 @@ class CSPGenericClass(_utl.ABC):
         security_group: CSP Security group. Default to 'MySecurityGroup'.
         instance_id (str): Instance ID of an already existing CSP instance to use.
             If not specified, create a new instance.
-        instance_url (str): IP address of an already existing CSP instance to use.
+        instance_ip (str): IP or URL address of an already existing CSP instance to use.
             If not specified, create a new instance.
-        stop_mode (str or int): Define the "stop_instance" method behavior. Default to 'term'.
+        stop_mode (str or int): Define the "stop" method behavior. Default to 'term'.
             See "stop_mode" property for more information and possible values.
         exit_instance_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
@@ -40,13 +40,13 @@ class CSPGenericClass(_utl.ABC):
             may not work on all OS.
     """
     #: CSP provider name (str), must be the same as expected "provider" argument value
-    CSP_NAME = None
+    NAME = None
 
     #: Link to CSP documentation or website
-    CSP_HELP_URL = ''
+    DOC_URL = ''
 
     #: Timeout for instance status change in seconds
-    CSP_TIMEOUT = 360.0
+    TIMEOUT = 360.0
 
     #: Possible stop_mode int values
     STOP_MODES = {
@@ -60,11 +60,11 @@ class CSPGenericClass(_utl.ABC):
     #: Instance status when stopped
     STATUS_STOPPED = 'stopped'
 
-    # Attributes returned as dict by "instance_info" property
+    # Attributes returned as dict by "info" property
     _INFO_NAMES = {
-        '_provider', 'instance_ip', 'instance_private_ip',
+        '_provider', 'public_ip', 'private_ip',
         '_region', '_instance_type', '_ssh_key', '_security_group', '_instance_id',
-        '_stop_mode', '_instance_url', '_instance_type_name'}
+        '_stop_mode', '_url', '_instance_type_name'}
 
     def __new__(cls, **kwargs):
         # If call from a subclass, instantiate this subclass directly
@@ -92,7 +92,7 @@ class CSPGenericClass(_utl.ABC):
         for name in dir(csp_module):
             member = getattr(csp_module, name)
             try:
-                if getattr(member, 'CSP_NAME') == provider:
+                if getattr(member, 'NAME') == provider:
                     break
             except AttributeError:
                 continue
@@ -105,7 +105,7 @@ class CSPGenericClass(_utl.ABC):
 
     def __init__(self, provider=None, config=None, client_id=None, secret_id=None, region=None,
                  instance_type=None, ssh_key=None, security_group=None, instance_id=None,
-                 instance_url=None,
+                 instance_ip=None,
                  stop_mode=None, exit_instance_on_signal=False, **kwargs):
 
         # Default some attributes
@@ -138,8 +138,8 @@ class CSPGenericClass(_utl.ABC):
             'csp', 'security_group', overwrite=security_group, default="MySecurityGroup")
         self._instance_id = config.get_default(
             'csp', 'instance_id', overwrite=instance_id)
-        self._instance_url = _utl.format_url(config.get_default(
-            'csp', 'instance_url', overwrite=instance_url))
+        self._url = _utl.format_url(config.get_default(
+            'csp', 'instance_ip', overwrite=instance_ip))
         self.stop_mode = config.get_default(
             "csp", "stop_mode", overwrite=stop_mode, default='term')
 
@@ -148,9 +148,9 @@ class CSPGenericClass(_utl.ABC):
 
         if (self._client_id is None and
                 self._instance_id is None and
-                self._instance_url is None):
+                self._url is None):
             raise _exc.CSPConfigurationException(
-                "Need at least 'client_id', 'instance_id' or 'instance_url' "
+                "Need at least 'client_id', 'instance_id' or 'instance_ip' "
                 "argument. See documentation for more information.")
 
         # Enable optional Signal handler
@@ -160,10 +160,10 @@ class CSPGenericClass(_utl.ABC):
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.stop_instance()
+        self.stop()
 
     def __del__(self):
-        self.stop_instance()
+        self.stop()
 
     @property
     def provider(self):
@@ -176,7 +176,7 @@ class CSPGenericClass(_utl.ABC):
         return self._provider
 
     @property
-    def instance_ip(self):
+    def public_ip(self):
         """
         Public IP of the current instance.
 
@@ -189,10 +189,10 @@ class CSPGenericClass(_utl.ABC):
         """
         if self._instance is None:
             raise _exc.CSPInstanceException("No instance found")
-        return self._get_instance_public_ip()
+        return self._get_public_ip()
 
     @_abstractmethod
-    def _get_instance_public_ip(self):
+    def _get_public_ip(self):
         """
         Read current instance public IP from CSP instance.
 
@@ -201,7 +201,7 @@ class CSPGenericClass(_utl.ABC):
         """
 
     @property
-    def instance_private_ip(self):
+    def private_ip(self):
         """
         Private IP of the current instance.
 
@@ -214,10 +214,10 @@ class CSPGenericClass(_utl.ABC):
         """
         if self._instance is None:
             raise _exc.CSPInstanceException("No instance found")
-        return self._get_instance_private_ip()
+        return self._get_private_ip()
 
     @_abstractmethod
-    def _get_instance_private_ip(self):
+    def _get_private_ip(self):
         """
         Read current instance private IP from CSP instance.
 
@@ -226,18 +226,18 @@ class CSPGenericClass(_utl.ABC):
         """
 
     @property
-    def instance_url(self):
+    def url(self):
         """
-        Public URL of the current instance.
+        URL of the current instance.
 
         Returns:
             str: URL
         """
         # Check if status OK
-        self._instance_status()
+        self._status()
 
         # Returns URL
-        return self._instance_url
+        return self._url
 
     @property
     def instance_id(self):
@@ -252,14 +252,14 @@ class CSPGenericClass(_utl.ABC):
     @property
     def stop_mode(self):
         """
-        Define the "stop_instance" method behavior.
+        Define the "stop" method behavior.
 
         Possible values ares:
             0: TERM, terminate and delete instance.
             1: STOP, stop and pause instance.
             2: KEEP, let instance running.
 
-        "stop_instance" can be called manually but is also called when:
+        "stop" can be called manually but is also called when:
             - "with" exit if class is used as context manager.
             - On CSP object deletion by garbage collector.
             - On OS signals if "exit_instance_on_signal" was set to True
@@ -310,7 +310,7 @@ class CSPGenericClass(_utl.ABC):
                 Authentication failed.
         """
 
-    def _instance_status(self):
+    def _status(self):
         """
         Returns current status of current instance.
 
@@ -331,10 +331,10 @@ class CSPGenericClass(_utl.ABC):
             raise _exc.CSPInstanceException("No instance available")
 
         # Read instance status
-        return self._get_instance_status()
+        return self._get_status()
 
     @_abstractmethod
-    def _get_instance_status(self):
+    def _get_status(self):
         """
         Returns current status of current instance.
 
@@ -352,15 +352,15 @@ class CSPGenericClass(_utl.ABC):
         """
 
     @_abstractmethod
-    def _init_ssh_key(self):
+    def _init_key_pair(self):
         """
-        Initialize SSH key.
+        Initialize key pair.
 
         Returns:
             bool: True if reuses existing key
         """
 
-    def start_instance(self, accel_client=None, accel_parameters=None, stop_mode=None):
+    def start(self, accel_client=None, accel_parameters=None, stop_mode=None):
         """
         Start instance if not already started. Create instance if necessary.
 
@@ -375,7 +375,7 @@ class CSPGenericClass(_utl.ABC):
         self.stop_mode = stop_mode
 
         # Starts instance only if not already started
-        if self._instance_url is None:
+        if self._url is None:
 
             # Checks CSP credential
             self._check_credential()
@@ -388,7 +388,7 @@ class CSPGenericClass(_utl.ABC):
                     accel_client, accel_parameters)
 
                 # Configure and create instance
-                reuse_key = self._init_ssh_key()
+                reuse_key = self._init_key_pair()
                 _get_logger().info(
                     "Reused KeyPair %s" if reuse_key
                     else "Created KeyPair %s", self._ssh_key)
@@ -409,7 +409,7 @@ class CSPGenericClass(_utl.ABC):
 
             # If exists, starts it directly
             else:
-                state = self._instance_status()
+                state = self._status()
                 self._start_existing_instance(state)
 
             # Waiting for instance provisioning
@@ -421,14 +421,14 @@ class CSPGenericClass(_utl.ABC):
                 raise
 
             # Update instance URL
-            self._instance_url = _utl.format_url(self.instance_ip)
+            self._url = _utl.format_url(self.public_ip)
 
             # Waiting for the instance to boot
             _get_logger().info("Waiting for the instance booting...")
             self._wait_instance_boot()
 
         # If started from URl, checks this URL is reachable
-        elif not _utl.check_url(self._instance_url):
+        elif not _utl.check_url(self._url):
             raise _exc.CSPInstanceException("Unable to reach instance URL.")
 
         _get_logger().info("The instance is now up and running")
@@ -463,10 +463,10 @@ class CSPGenericClass(_utl.ABC):
         Wait until instance is ready.
         """
         # Waiting for the instance provisioning
-        with _utl.Timeout(self.CSP_TIMEOUT) as timeout:
+        with _utl.Timeout(self.TIMEOUT) as timeout:
             while True:
                 # Get instance status
-                status = self._instance_status()
+                status = self._status()
                 if status.lower() == self.STATUS_RUNNING:
                     return
                 elif timeout.reached():
@@ -480,7 +480,7 @@ class CSPGenericClass(_utl.ABC):
         Raises:
             acceleratorAPI.exceptions.CSPInstanceException:
                 Timeout while booting."""
-        if not _utl.check_url(self._instance_url, timeout=self.CSP_TIMEOUT):
+        if not _utl.check_url(self._url, timeout=self.TIMEOUT):
             raise _exc.CSPInstanceException("Timed out while waiting CSP instance to boot.")
 
     def _get_instance_name(self):
@@ -491,7 +491,7 @@ class CSPGenericClass(_utl.ABC):
         return "Accelize accelerator %s" % self._accelerator
 
     @property
-    def instance_info(self):
+    def info(self):
         """
         Returns some instance information.
 
@@ -508,7 +508,7 @@ class CSPGenericClass(_utl.ABC):
             info[name.strip('_')] = value
         return info
 
-    def stop_instance(self, stop_mode=None):
+    def stop(self, stop_mode=None):
         """
         Stop instance accordingly with the current stop_mode.
         See "stop_mode" property for more information.
@@ -523,13 +523,13 @@ class CSPGenericClass(_utl.ABC):
         if stop_mode == 'keep':
             import warnings
             warnings.warn("Instance with URL %s (ID=%s) is still running!" %
-                          (self.instance_url, self.instance_id),
+                          (self.url, self.instance_id),
                           Warning)
             return
 
         # Checks if instance to stop
         try:
-            self._instance_status()
+            self._status()
         except _exc.CSPInstanceException:
             return
 
@@ -681,7 +681,7 @@ class CSPGenericClass(_utl.ABC):
         provider = config.get_default("csp", "provider", overwrite=provider)
         if not provider:
             # Use default value if any
-            provider = cls.CSP_NAME
+            provider = cls.NAME
         if not provider:
             raise _exc.CSPConfigurationException("No CSP provider defined.")
         return provider
@@ -703,7 +703,7 @@ class CSPGenericClass(_utl.ABC):
         for signal_name in ('SIGTERM', 'SIGINT', 'SIGQUIT'):
             # Check signal exist on current OS before setting it
             if hasattr(signal, signal_name):
-                signal.signal(getattr(signal, signal_name), self.stop_instance)
+                signal.signal(getattr(signal, signal_name), self.stop)
 
     def _check_arguments(self, *arg_name):
         """
@@ -729,7 +729,7 @@ class CSPGenericClass(_utl.ABC):
         Args:
             exception (Exception): exception.
         """
-        if cls.CSP_HELP_URL:
+        if cls.DOC_URL:
             args = list(exception.args)
-            args[0] = '%s, please refer to: %s' % (args[0].rstrip('.'), cls.CSP_HELP_URL)
+            args[0] = '%s, please refer to: %s' % (args[0].rstrip('.'), cls.DOC_URL)
             exception.args = tuple(args)

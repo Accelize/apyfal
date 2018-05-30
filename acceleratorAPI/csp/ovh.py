@@ -20,11 +20,12 @@ class OVHClass(_OpenStackClass):
         security_group: OVH Security group. Default to 'MySecurityGroup'.
         instance_id (str): Instance ID of an already existing OVH nova instance to use.
             If not specified, create a new instance.
-        instance_url (str): IP address of an already existing OVH nova instance to use.
+        instance_ip (str): IP or URL address of an already existing OVH nova instance to use.
             If not specified, create a new instance.
         project_id (str): OVH Project
+        auth_url (str): OVH auth-URL (default to 'https://horizon.cloud.ovh.net')
         interface (str): OVH interface (default to 'public')
-        stop_mode (str or int): Define the "stop_instance" method behavior. Default to 'term'.
+        stop_mode (str or int): Define the "stop" method behavior. Default to 'term'.
             See "stop_mode" property for more information and possible values.
         exit_instance_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
@@ -33,10 +34,13 @@ class OVHClass(_OpenStackClass):
             may not work on all OS.
     """
     #: Provider name to use
-    CSP_NAME = 'OVH'
+    NAME = 'OVH'
 
     #: OVH Website
-    CSP_HELP_URL = "https://horizon.cloud.ovh.net"
+    DOC_URL = "https://horizon.cloud.ovh.net"
 
     #: OVH OpenStack auth-URL
     OPENSTACK_AUTH_URL = 'https://auth.cloud.ovh.net/'
+
+    #: OVH OpenStack interface
+    OPENSTACK_INTERFACE = 'public'

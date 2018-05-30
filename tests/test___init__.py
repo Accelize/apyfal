@@ -61,7 +61,7 @@ def test_acceleratorclass():
     # Mocks CSP
     class DummyCSP:
         """Dummy acceleratorAPI.csp.CSPGenericClass"""
-        instance_url = dummy_url
+        url = dummy_url
         running = True
 
         def __init__(self, **kwargs):
@@ -75,13 +75,13 @@ def test_acceleratorclass():
             """Do nothing"""
 
         @staticmethod
-        def start_instance(accel_client, stop_mode):
+        def start(accel_client, stop_mode):
             """Checks arguments"""
             assert isinstance(accel_client, DummyClient)
             assert stop_mode == dummy_stop_mode
 
         @staticmethod
-        def stop_instance(stop_mode):
+        def stop(stop_mode):
             """Checks arguments"""
             if DummyCSP.running:
                 assert stop_mode == dummy_stop_mode
@@ -97,7 +97,7 @@ def test_acceleratorclass():
     try:
         # Creating New instance
         accelerator = AcceleratorClass(dummy_accelerator, provider=dummy_provider)
-        assert isinstance(accelerator.host, DummyCSP)
+        assert isinstance(accelerator.csp, DummyCSP)
         assert isinstance(accelerator.client, DummyClient)
         assert DummyClient.running
         assert DummyCSP.running

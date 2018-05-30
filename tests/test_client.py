@@ -81,7 +81,7 @@ def test_acceleratorclient_check_accelize_credential():
 
         # Test: Everything OK
         accelerator = AcceleratorClient(
-            'dummy', client_id=client_id, secret_id=secret_id)
+            'dummy', accelize_client_id=client_id, accelize_secret_id=secret_id)
         assert accelerator._access_token == access_token
         assert accelerator._client_id == client_id
         assert accelerator._secret_id == secret_id
@@ -89,7 +89,7 @@ def test_acceleratorclient_check_accelize_credential():
         # Test: Authentication failed
         Response.status_code = 400
         with pytest.raises(exc.AcceleratorAuthenticationException):
-            AcceleratorClient('dummy', client_id=client_id, secret_id=secret_id)
+            AcceleratorClient('dummy', accelize_client_id=client_id, accelize_secret_id=secret_id)
 
     # Restore requests
     finally:
@@ -116,7 +116,7 @@ def test_acceleratorclient_check_accelize_credential_real():
 
     # Test: Keep same client_id but use bad secret_id
     with pytest.raises(AcceleratorAuthenticationException):
-        AcceleratorClient('dummy', config=config, secret_id='bad_secret_id')
+        AcceleratorClient('dummy', config=config, accelize_secret_id='bad_secret_id')
 
 
 @pytest.mark.need_accelize
@@ -130,8 +130,8 @@ def test_acceleratorclient_check_accelize_credential_real_no_cred():
 
     # Test: Bad client_id
     with pytest.raises(AcceleratorAuthenticationException):
-        AcceleratorClient('dummy', client_id='bad_client_id',
-                          secret_id='bad_secret_id')
+        AcceleratorClient('dummy', accelize_client_id='bad_client_id',
+                          accelize_secret_id='bad_secret_id')
 
 
 def test_acceleratorclient_is_alive():
@@ -327,7 +327,7 @@ def test_acceleratorclient_url():
     url = 'http://%s' % ip_address
     accelerator.url = url
     assert accelerator._url == url
-    assert accelerator._api_client.configuration.host == url
+    assert accelerator._api_client.configuration.csp == url
     assert accelerator.use_last_configuration_called
 
     # Test: URL set with IP
@@ -401,7 +401,8 @@ def test_acceleratorclient_start():
             return 'dummy_accelerator_url'
 
     accelerator = DummyAccelerator(
-        'Dummy', client_id='dummy_client_id', secret_id='dummy_secret_id')
+        'Dummy', accelize_client_id='dummy_client_id',
+        accelize_secret_id='dummy_secret_id')
 
     base_parameters = {
         "env": {
@@ -492,22 +493,26 @@ def test_acceleratorclient_use_last_configuration():
     try:
 
         # No previous configuration
-        accelerator = DummyAccelerator('Dummy', url='https://www.accelize.com')
+        accelerator = DummyAccelerator(
+            'Dummy', instance_ip='https://www.accelize.com')
         assert accelerator.configuration_url is None
 
         configuration_list_raises = True
-        accelerator = DummyAccelerator('Dummy', url='https://www.accelize.com')
+        accelerator = DummyAccelerator(
+            'Dummy', instance_ip='https://www.accelize.com')
         assert accelerator.configuration_url is None
         configuration_list_raises = False
 
         # Unused previous configuration
         config_list.append(Config(url='dummy_config_url', used=0))
-        accelerator = DummyAccelerator('Dummy', url='https://www.accelize.com')
+        accelerator = DummyAccelerator(
+            'Dummy', instance_ip='https://www.accelize.com')
         assert accelerator.configuration_url is None
 
         # Used previous configuration
         config_list.insert(0, Config(url='dummy_config_url_2', used=1))
-        accelerator = DummyAccelerator('Dummy', url='https://www.accelize.com')
+        accelerator = DummyAccelerator(
+            'Dummy', instance_ip='https://www.accelize.com')
         assert accelerator.configuration_url == 'dummy_config_url_2'
 
     # Restore Swagger client API

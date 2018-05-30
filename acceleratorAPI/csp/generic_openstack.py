@@ -27,12 +27,12 @@ class OpenStackClass(_CSPGenericClass):
         security_group: OpenStack Security group. Default to 'MySecurityGroup'.
         instance_id (str): Instance ID of an already existing OpenStack nova instance to use.
             If not specified, create a new instance.
-        instance_url (str): IP address of an already existing OpenStack nova instance to use.
+        instance_ip (str): IP or URL address of an already existing OpenStack nova instance to use.
             If not specified, create a new instance.
         project_id (str): OpenStack Project
         auth_url (str): OpenStack auth-URL
-        interface (str): OpenStack interface (default to 'public')
-        stop_mode (str or int): Define the "stop_instance" method behavior. Default to 'term'.
+        interface (str): OpenStack interface
+        stop_mode (str or int): Define the "stop" method behavior. Default to 'term'.
             See "stop_mode" property for more information and possible values.
         exit_instance_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
@@ -45,7 +45,7 @@ class OpenStackClass(_CSPGenericClass):
     OPENSTACK_AUTH_URL = None
 
     #: Default Interface to use (str)
-    OPENSTACK_INTERFACE = 'public'
+    OPENSTACK_INTERFACE = None
 
     _INFO_NAMES = _CSPGenericClass._INFO_NAMES.copy()
     _INFO_NAMES.update({'_project_id', '_auth_url', '_interface'})
@@ -91,9 +91,9 @@ class OpenStackClass(_CSPGenericClass):
         except _keystoneauth_exceptions.Unauthorized:
             raise _exc.CSPAuthenticationException()
 
-    def _init_ssh_key(self):
+    def _init_key_pair(self):
         """
-        Initialize SSH key.
+        Initialize key pair.
 
         Returns:
             bool: True if reuse existing key
@@ -162,7 +162,7 @@ class OpenStackClass(_CSPGenericClass):
             raise _exc.CSPInstanceException(
                 "Could not find an instance with ID '%s'", self._instance_id, exc=exception)
 
-    def _get_instance_public_ip(self):
+    def _get_public_ip(self):
         """
         Read current instance public IP from CSP instance.
 
@@ -174,7 +174,7 @@ class OpenStackClass(_CSPGenericClass):
                 return address['addr']
         raise _exc.CSPInstanceException("No instance address found")
 
-    def _get_instance_private_ip(self):
+    def _get_private_ip(self):
         """
         Read current instance private IP from CSP instance.
 
@@ -183,7 +183,7 @@ class OpenStackClass(_CSPGenericClass):
         """
         return ''
 
-    def _get_instance_status(self):
+    def _get_status(self):
         """
         Returns current status of current instance.
 
@@ -268,9 +268,9 @@ class OpenStackClass(_CSPGenericClass):
             raise _exc.CSPInstanceException("CSP exception", exc=msg)
 
         # Check instance status
-        state = self._get_instance_status()
+        state = self._get_status()
         if state.lower() == "error":
-            self.stop_instance()
+            self.stop()
             raise _exc.CSPInstanceException("Instance has an invalid status: %s", state)
 
     def _start_new_instance(self):

@@ -3,7 +3,7 @@
 This section explains how to use AcceleratorAPI with Python to run accelerators.
 
 All of theses examples requires that you first install the AcceleratorAPI
-and get configuration requirements like at least your Accelize credentials (`xlz_client_id` and `xlz_secret_id`
+and get configuration requirements like at least your Accelize credentials (`accelize_client_id` and `accelize_secret_id`
 parameters in following examples).
 
 ```eval_rst
@@ -32,7 +32,7 @@ Parameters required in this case may depends on the CSP used, but it need always
 
 * `provider`: CSP name
 * `region`: CSP region name, need a region that support FPGA instance.
-* `csp_client_id` and `csp_secret_id`: CSP credentials
+* `client_id` and `secret_id`: CSP credentials
 
 See your CSP documentation to know how obtains theses values.
 
@@ -42,9 +42,14 @@ import acceleratorAPI
 
 # Choose an accelerator to use and configure it.
 with acceleratorAPI.AcceleratorClass(
-        accelerator='my_accelerator', provider='my_provider', region='my_region', 
-        csp_client_id='my_csp_client_id', csp_secret_id='my_csp_secret_id',
-        xlz_client_id='my_xlz_client_id', xlz_secret_id='my_xlz_secret_id') as myaccel:
+        # Accelerator parameters
+        accelerator='my_accelerator',
+        # CSP parameters
+        provider='my_provider', region='my_region', 
+        client_id='my_client_id', secret_id='my_secret_id',
+        # Accelize parameters
+        accelize_client_id='my_accelize_client_id',
+        accelize_secret_id='my_accelize_secret_id') as myaccel:
 
     # Start the accelerator:
     # In this case a new CSP instance will be provisioned credential passed to 
@@ -59,8 +64,8 @@ with acceleratorAPI.AcceleratorClass(
     # ... We can run any file as we need.
 
 # The accelerator is automatically closed  on "with" exit.
-# In this case, assuming the stop_mode is 1 (TERM) in configuration file,
-# the previously created instance will be deleted and all the content lost.
+# In this case, the default stop_mode ('term') is used:
+# the previously created instance will be deleted and all its content lost.
 ```
 
 ### Keeping instance running
@@ -77,17 +82,18 @@ import acceleratorAPI
 with acceleratorAPI.AcceleratorClass(
         accelerator='my_accelerator',
         provider='my_provider', region='my_region', 
-        csp_client_id='my_csp_client_id', csp_secret_id='my_csp_secret_id',
-        xlz_client_id='my_xlz_client_id', xlz_secret_id='my_xlz_secret_id') as myaccel:
+        client_id='my_client_id', secret_id='my_secret_id',
+        accelize_client_id='my_accelize_client_id',
+        accelize_secret_id='my_accelize_secret_id') as myaccel:
 
-    # We can start accelerator with "KEEP" stop mode to keep instance running
-    myaccel.start(stop_mode=acceleratorAPI.KEEP)
+    # We can start accelerator with "keep" stop mode to keep instance running
+    myaccel.start(stop_mode='keep')
 
     myaccel.process(file_in='/path/myfile.dat', file_out='/path/result.dat')
     
     # We can get and store instance IP and ID for later use
-    my_instance_id = myaccel.host.instance_id
-    my_instance_ip = myaccel.host.instance_ip
+    my_instance_id = myaccel.csp.instance_id
+    my_instance_ip = myaccel.csp.public_ip
 
 # This time instance is not deleted and will stay running when accelerator is close.
 ```
@@ -97,7 +103,7 @@ with acceleratorAPI.AcceleratorClass(
 #### With instance ID and full instance access
 
 With `instance_id`, depending your CSP, your can reuse an already existing instance without providing
-`csp_client_id` and `csp_secret_id`.
+`client_id` and `secret_id`.
 
 An accelerator started with `instance_id` keep control on this instance an can stop it.
 
@@ -108,10 +114,13 @@ import acceleratorAPI
 # with its ID stored previously
 with acceleratorAPI.AcceleratorClass(
         accelerator='my_accelerator',
-        provider='my_provider', region='my_region', instance_id='my_instance_id',
-        xlz_client_id='my_xlz_client_id', xlz_secret_id='my_xlz_secret_id') as myaccel:
+        provider='my_provider', region='my_region',
+        # Use 'instance_id' and removed 'client_id' and 'secret_id'
+        instance_id='my_instance_id',
+        accelize_client_id='my_accelize_client_id',
+        accelize_secret_id='my_accelize_secret_id') as myaccel:
 
-    myaccel.start(stop_mode=acceleratorAPI.KEEP)
+    myaccel.start(stop_mode='keep')
 
     myaccel.process(file_in='/path/myfile.dat', file_out='/path/result.dat')
 ```
@@ -129,8 +138,10 @@ import acceleratorAPI
 # with its IP address stored previously
 with acceleratorAPI.AcceleratorClass(
         accelerator='my_accelerator', 
+        # Use 'instance_ip' and removed 'client_id' and 'secret_id'
         instance_ip='my_instance_ip',
-        xlz_client_id='my_xlz_client_id', xlz_secret_id='my_xlz_secret_id') as myaccel:
+        accelize_client_id='my_accelize_client_id',
+        accelize_secret_id='my_accelize_secret_id') as myaccel:
 
     myaccel.start()
 

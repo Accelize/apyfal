@@ -46,11 +46,11 @@ class AcceleratorClient(object):
     Args:
         accelerator (str): Name of the accelerator you want to initialize,
             to know the accelerator list please visit "https://accelstore.accelize.com".
-        client_id (str): Accelize Client ID.
+        accelize_client_id (str): Accelize Client ID.
             Client ID is part of the access key you can generate on
             "https:/accelstore.accelize.com/user/applications".
-        secret_id (str): Accelize Secret ID. Secret ID come with client_id.
-        url (str): IP address of the CSP instance that host the accelerator.
+        accelize_secret_id (str): Accelize Secret ID. Secret ID come with client_id.
+        instance_ip (str): IP or URL address of the CSP instance that host the accelerator.
         config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values
@@ -65,7 +65,8 @@ class AcceleratorClient(object):
         "enable-sw-comparison": 0,
         "logging": {"format": 1, "verbosity": 2}}}
 
-    def __init__(self, accelerator, client_id=None, secret_id=None, url=None, config=None):
+    def __init__(self, accelerator, accelize_client_id=None, accelize_secret_id=None,
+                 instance_ip=None, config=None):
         self._name = accelerator
         self._access_token = None
         self._configuration_url = None
@@ -73,8 +74,8 @@ class AcceleratorClient(object):
 
         # Read configuration
         config = _cfg.create_configuration(config)
-        self._client_id = config.get_default('accelize', 'client_id', overwrite=client_id)
-        self._secret_id = config.get_default('accelize', 'secret_id', overwrite=secret_id)
+        self._client_id = config.get_default('accelize', 'client_id', overwrite=accelize_client_id)
+        self._secret_id = config.get_default('accelize', 'secret_id', overwrite=accelize_secret_id)
 
         self._configuration_parameters = config.get_default(
             'configuration', 'parameters', is_literal=True,
@@ -90,8 +91,8 @@ class AcceleratorClient(object):
         self._api_client = _api.ApiClient()
 
         # Sets URL and configures
-        if url:
-            self.url = url
+        if instance_ip:
+            self.url = instance_ip
 
     def __enter__(self):
         return self
@@ -276,14 +277,12 @@ class AcceleratorClient(object):
         Create an AcceleratorClient configuration.
 
         Args:
-            datafile (str): Depending on the accelerator (like for HyperFiRe),
+            datafile (str): Depending on the accelerator,
                 a configuration need to be loaded before a process can be run.
-                In such case please define the path of the configuration file
-                (for HyperFiRe the corpus file path).
+                In such case please define the path of the configuration file.
             accelerator_parameters (dict): If set will overwrite the value content in the configuration file
                 Parameters can be forwarded to the accelerator for the configuration step using these parameters.
                 Take a look accelerator documentation for more information.
-            csp_env:
 
         Returns:
             dict: AcceleratorClient response. Contain output information from configuration operation.

@@ -18,10 +18,10 @@ Your user account provides also to you metering information on your accelerator 
 
 ### CSP configuration
 
-Accelerator needs an FPGA host to run. This host can be a cloud instance that need to be configured.
+Accelerator needs an CSP with FPGA device that needs to be configured to run.
 
 ```eval_rst
-See :doc:`getting_started` to see examples of possible host cases.
+See :doc:`getting_started` to see examples of possible cases.
 ```
 
 ## Accelerator configuration
