@@ -453,7 +453,7 @@ class AcceleratorClient(object):
 
             # Write result file
             if file_out:
-                response = _utl.http_session().get(
+                response = _utl.http_session(https=False).get(
                     api_response.datafileresult, stream=True)
                 with open(file_out, 'wb') as out_file:
                     _shutil.copyfileobj(response.raw, out_file)

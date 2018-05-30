@@ -9,6 +9,7 @@ import boto3 as _boto3
 import botocore.exceptions as _boto_exceptions
 
 from acceleratorAPI.csp import CSPGenericClass as _CSPGenericClass
+import acceleratorAPI.configuration as _cfg
 import acceleratorAPI.exceptions as _exc
 import acceleratorAPI._utilities as _utl
 from acceleratorAPI._utilities import get_logger as _get_logger
@@ -47,14 +48,20 @@ class AWSClass(_CSPGenericClass):
 
     #: AWS Website
     CSP_HELP_URL = "https://aws.amazon.com"
+
     STATUS_RUNNING = "running"
     STATUS_STOPPED = 'stopped'
 
-    def __init__(self, **kwargs):
-        _CSPGenericClass.__init__(self, **kwargs)
+    _INFO_NAMES = _CSPGenericClass._INFO_NAMES.copy()
+    _INFO_NAMES.add('_role')
 
-        # Checks mandatory configuration values
-        self._check_arguments('role')
+    def __init__(self, config=None,  role=None, **kwargs):
+        config = _cfg.create_configuration(config)
+        _CSPGenericClass.__init__(self, config=config, **kwargs)
+
+        # Get AWS specific arguments
+        self._role = config.get_default(
+            'csp', 'role', overwrite=role, default="MyRole")
 
         # Load session
         self._session = _boto3.session.Session(
@@ -88,7 +95,9 @@ class AWSClass(_CSPGenericClass):
                 exception_msg, exc=exception)
 
         # Converts single str to tuple
-        if isinstance(filter_error_codes, str):
+        if filter_error_codes is None:
+            filter_error_codes = ()
+        elif isinstance(filter_error_codes, str):
             filter_error_codes = (filter_error_codes,)
 
         # Raises if not in filter
@@ -119,21 +128,31 @@ class AWSClass(_CSPGenericClass):
         """
         ec2_client = self._session.client('ec2')
 
-        # Checks if Key pairs exists
+        # Checks if Key pairs exists, needs to get the full pairs list
+        # and compare in lower case because Boto perform its checks case sensitive
+        # and AWS use case insensitive names.
         try:
-            ec2_client.describe_key_pairs(KeyNames=[self._ssh_key])
-            return True
+            key_pairs = ec2_client.describe_key_pairs()
+        except ec2_client.exceptions.ClientError as exception:
+            self._handle_boto_exception(exception)
+
+        name_lower = self._ssh_key.lower()
+        for key_pair in key_pairs['KeyPairs']:
+            key_pair_name = key_pair['KeyName']
+            if key_pair_name.lower() == name_lower:
+                self._ssh_key = key_pair_name
+                return True
 
         # Key does not exist on the CSP, create it
-        except ec2_client.exceptions.ClientError as exception:
-            self._handle_boto_exception(exception, 'InvalidKeyPair.NotFound')
-
-            ec2_resource = self._session.resource('ec2')
+        ec2_resource = self._session.resource('ec2')
+        try:
             key_pair = ec2_resource.create_key_pair(KeyName=self._ssh_key)
+        except _boto_exceptions.ClientError as exception:
+            self._handle_boto_exception(exception)
 
-            _utl.create_ssh_key_file(self._ssh_key, key_pair.key_material)
+        _utl.create_ssh_key_file(self._ssh_key, key_pair.key_material)
 
-            return False
+        return False
 
     def _init_policy(self, policy):
         """
@@ -229,10 +248,8 @@ class AWSClass(_CSPGenericClass):
 
         except iam_client.exceptions.EntityAlreadyExistsException:
             # TODO: check if cached properly
-            pass
-
-        else:
-            _get_logger().info("Attached policy '%s' to role '%s'.", policy_arn, self._role)
+            return
+        _get_logger().info("Attached policy '%s' to role '%s'.", policy_arn, self._role)
 
     def _init_instance_profile(self):
         """
@@ -257,37 +274,60 @@ class AWSClass(_CSPGenericClass):
             # Attach role to instance profile
             instance_profile.add_role(RoleName=self._role)
             _get_logger().info(
-                "Attachd role '%s' to instance profile '%s' to allow FPGA loading ",
+                "Attach role '%s' to instance profile '%s' to allow FPGA loading ",
                 self._role, instance_profile_name)
 
     def _init_security_group(self):
         """
         Initialize CSP security group.
         """
+        # Get list of security groups
+        # Checks if Key pairs exists, like for key pairs
+        # needs  case insensitive names check
         ec2_client = self._session.client('ec2')
+        try:
+            security_groups = ec2_client.describe_security_groups()
+        except ec2_client.exceptions.ClientError as exception:
+            self._handle_boto_exception(exception)
 
-        # Get VPC
-        vpc_id = ec2_client.describe_vpcs().get('Vpcs', [{}])[0].get('VpcId', '')
+        name_lower = self._security_group.lower()
+        group_exists = False
+        for security_group in security_groups['SecurityGroups']:
+            group_name = security_group['GroupName']
+            if group_name.lower() == name_lower:
+                # Update name
+                self._security_group = group_name
+
+                # Get group ID
+                security_group_id = security_group['GroupId']
+
+                # Mark as existing
+                group_exists = True
+                break
 
         # Try to create security group if not exist
-        try:
-            response_create_security_group = ec2_client.create_security_group(
-                GroupName=self._security_group,
-                Description="Generated by accelize API", VpcId=vpc_id)
-            security_group_id = response_create_security_group['GroupId']
-        except ec2_client.exceptions.ClientError:
-            # TODO: to catch properly
-            # TODO: except if error with VPC
-            pass
-        else:
+        if not group_exists:
+            # Get VPC
+            vpc_id = ec2_client.describe_vpcs().get('Vpcs', [{}])[0].get('VpcId', '')
+
+            try:
+                response = ec2_client.create_security_group(
+                    GroupName=self._security_group,
+                    Description="Generated by Accelize acceleratorAPI", VpcId=vpc_id)
+            except ec2_client.exceptions.ClientError as exception:
+                self._handle_boto_exception(exception)
+
+            # Get group ID
+            security_group_id = response['GroupId']
+
             _get_logger().info("Created security group with ID %s in vpc %s", security_group_id, vpc_id)
 
         # Add host IP to security group if not already done
         public_ip = _utl.get_host_public_ip()
-        my_sg = ec2_client.describe_security_groups(GroupNames=[self._security_group, ], )
+
         try:
             ec2_client.authorize_security_group_ingress(
-                GroupId=my_sg['SecurityGroups'][0]['GroupId'],
+                GroupId=security_group_id,
                 IpPermissions=[
                     {'IpProtocol': 'tcp',
                      'FromPort': 80,
@@ -300,12 +340,11 @@ class AWSClass(_CSPGenericClass):
                      'IpRanges': [{'CidrIp': public_ip}]
                      }
                 ])
-        except ec2_client.exceptions.ClientError:
-            # TODO: to catch properly
-            pass
-        else:
-            _get_logger().info("Added in security group '%s': SSH and HTTP for IP %s.",
-                               self._security_group, public_ip)
+        except ec2_client.exceptions.ClientError as exception:
+            self._handle_boto_exception(exception, 'InvalidPermission.Duplicate')
+
+        _get_logger().info("Added in security group '%s': SSH and HTTP for IP %s.",
+                           self._security_group, public_ip)
 
     def _get_instance(self):
         """
@@ -448,10 +487,12 @@ class AWSClass(_CSPGenericClass):
         """
         Terminate and delete instance.
         """
-        return self._instance.terminate()
+        if self._instance is not None:
+            return self._instance.terminate()
 
     def _pause_instance(self):
         """
         Pause instance.
         """
-        return self._instance.stop()
+        if self._instance is not None:
+            return self._instance.stop()

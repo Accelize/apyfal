@@ -18,7 +18,7 @@ def test_cspgenericclass_new_init():
     # Note that provider is not specified here
     config = Configuration()
     config.remove_section('csp')
-    kwargs = {'region': 'region', 'project_id': 'project_id',
+    kwargs = {'region': 'region', 'project_id': 'project_id', 'client_id': 'client_id',
               'auth_url': 'auth_url', 'interface': 'interface', 'config': config}
 
     # Test: Existing CSP class and module
@@ -42,6 +42,11 @@ def test_cspgenericclass_new_init():
     # Test: Instantiation with missing mandatory arguments
     with pytest.raises(CSPConfigurationException):
         CSPGenericClass(provider="OVH", config=config)
+
+    kwargs_no_client_id = kwargs.copy()
+    del kwargs_no_client_id['client_id']
+    with pytest.raises(CSPConfigurationException):
+        CSPGenericClass(provider="OVH", **kwargs_no_client_id)
 
     # Test: Abstract class still working with factory
     class UncompletedCSP(CSPGenericClass):
@@ -248,6 +253,9 @@ def test_cspgenericclass_start_instance():
     raises_on_start_instance = False
     raises_on_stop_instance = False
     raises_on_boot = False
+    dummy_kwargs = {
+        'region': 'dummy_region',
+        'client_id': 'dummy_client_id'}
 
     # Mock CSP class
     class DummyClass(get_dummy_csp_class()):
@@ -328,7 +336,7 @@ def test_cspgenericclass_start_instance():
     # Tests
     try:
         # Test: start from nothing with success
-        csp = DummyClass(region='dummy_region')
+        csp = DummyClass(**dummy_kwargs)
         csp.start_instance()
         assert csp._instance == instance
         assert csp.instance_id == instance_id
@@ -341,7 +349,7 @@ def test_cspgenericclass_start_instance():
 
         # Test: Fail on create instance
         raises_on_create_instance = True
-        csp = DummyClass(region='dummy_region')
+        csp = DummyClass(**dummy_kwargs)
         with pytest.raises(CSPException):
             csp.start_instance()
         assert csp.mark_credential_checked
@@ -356,7 +364,7 @@ def test_cspgenericclass_start_instance():
         # try to stop and fail silently
         raises_on_stop_instance = True
         raises_on_create_instance = True
-        csp = DummyClass(region='dummy_region')
+        csp = DummyClass(**dummy_kwargs)
         with pytest.raises(CSPException) as exc_info:
             csp.start_instance()
             assert csp.CSP_HELP_URL in exc_info
@@ -368,7 +376,7 @@ def test_cspgenericclass_start_instance():
 
         # Test: Fail on start instance
         raises_on_start_instance = True
-        csp = DummyClass(region='dummy_region')
+        csp = DummyClass(**dummy_kwargs)
         with pytest.raises(CSPException) as exc_info:
             csp.start_instance()
             assert csp.CSP_HELP_URL in exc_info
@@ -381,7 +389,7 @@ def test_cspgenericclass_start_instance():
         raises_on_start_instance = False
 
         # Test: Fail on instance provisioning
-        csp = DummyClass(region='dummy_region')
+        csp = DummyClass(**dummy_kwargs)
         csp.STATUS_RUNNING = 'bad_status'
         with pytest.raises(CSPException) as exc_info:
             csp.start_instance()
@@ -394,7 +402,7 @@ def test_cspgenericclass_start_instance():
 
         # Test: Fail on boot instance
         raises_on_boot = True
-        csp = DummyClass(region='dummy_region')
+        csp = DummyClass(**dummy_kwargs)
         with pytest.raises(CSPException):
             csp.start_instance()
         assert csp.mark_credential_checked
@@ -452,7 +460,9 @@ def test_cspgenericclass_stop_instance():
 
         def __init__(self, **kwargs):
             """Simulate already started instance"""
-            dummy_csp_class.__init__(self, region='dummy_region', **kwargs)
+            dummy_csp_class.__init__(
+                self, region='dummy_region',
+                client_id='dummy_client_id', **kwargs)
 
             # Value like already started instance
             self._instance = instance
@@ -547,7 +557,8 @@ def test_cspgenericclass_set_accelerator_requirements():
             return accel_parameters
 
     # Test: Everything is OK
-    csp = get_dummy_csp_class()(region=region)
+    csp = get_dummy_csp_class()(
+        region=region, client_id='dummy_client_id')
     csp._config_env = config_env
     csp._set_accelerator_requirements(accel_parameters=accel_parameters)
     assert csp._image_id == image_id
@@ -557,7 +568,8 @@ def test_cspgenericclass_set_accelerator_requirements():
     assert accelerator in csp._get_instance_name()
 
     # Test: Pass client
-    csp = get_dummy_csp_class()(provider=dummy_provider, region=region)
+    csp = get_dummy_csp_class()(
+        provider=dummy_provider, region=region, client_id='dummy_client_id')
     csp._config_env = config_env
     csp._set_accelerator_requirements(accel_client=DummyClient())
     assert csp._image_id == image_id
@@ -570,6 +582,21 @@ def test_cspgenericclass_set_accelerator_requirements():
     accel_parameters = {'another_region': region_parameters, 'accelerator': accelerator}
     with pytest.raises(CSPConfigurationException):
         csp._set_accelerator_requirements(accel_parameters=accel_parameters)
+
+
+def import_from_generic_test(provider, **kwargs):
+    """
+    Test to import a class from generic.
+
+    Args:
+        provider( str): CSP provider
+        kwargs: Other args required
+    """
+    from acceleratorAPI.csp import CSPGenericClass
+    CSPGenericClass(
+        provider=provider, region='dummy_region',
+        client_id='dummy_client_id', secret_id='dummy_secret_id',
+        **kwargs)
 
 
 def run_full_real_test_sequence(provider, environment,
@@ -612,7 +639,7 @@ def run_full_real_test_sequence(provider, environment,
             return True
 
         utilities_check_url = acceleratorAPI._utilities.check_url
-        acceleratorAPI._utilities.check_url = dummy_check_url
+        #acceleratorAPI._utilities.check_url = dummy_check_url
 
     # Tests:
     from acceleratorAPI.csp import CSPGenericClass

@@ -2,14 +2,13 @@
 """acceleratorAPI.csp.aws tests"""
 
 import pytest
-from tests.test_csp___init__ import run_full_real_test_sequence
+from tests.test_csp___init__ import run_full_real_test_sequence, import_from_generic_test
 
 
 def test_awsclass_import():
     """AWSClass import"""
     # Test: Import by factory without errors
-    from acceleratorAPI.csp import CSPGenericClass
-    CSPGenericClass(provider='AWS', region='dummy_region')
+    import_from_generic_test('AWS')
 
 
 @pytest.mark.need_csp

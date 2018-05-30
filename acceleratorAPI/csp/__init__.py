@@ -39,7 +39,7 @@ class CSPGenericClass(_utl.ABC):
             convenience and does not cover all exit case like process kill and
             may not work on all OS.
     """
-    #: CSP provider name (str), must be the same as waited "provider" argument value
+    #: CSP provider name (str), must be the same as expected "provider" argument value
     CSP_NAME = None
 
     #: Link to CSP documentation or website
@@ -64,8 +64,7 @@ class CSPGenericClass(_utl.ABC):
     _INFO_NAMES = {
         '_provider', 'instance_ip', 'instance_private_ip',
         '_region', '_instance_type', '_ssh_key', '_security_group', '_instance_id',
-        '_role', '_project_id', '_auth_url', '_interface', '_stop_mode',
-        '_instance_url', '_instance_type_name'}
+        '_stop_mode', '_instance_url', '_instance_type_name'}
 
     def __new__(cls, **kwargs):
         # If call from a subclass, instantiate this subclass directly
@@ -106,8 +105,8 @@ class CSPGenericClass(_utl.ABC):
 
     def __init__(self, provider=None, config=None, client_id=None, secret_id=None, region=None,
                  instance_type=None, ssh_key=None, security_group=None, instance_id=None,
-                 instance_url=None, project_id=None, auth_url=None, interface=None, role=None,
-                 stop_mode=None, exit_instance_on_signal=False):
+                 instance_url=None,
+                 stop_mode=None, exit_instance_on_signal=False, **kwargs):
 
         # Default some attributes
         self._session = None
@@ -141,19 +140,18 @@ class CSPGenericClass(_utl.ABC):
             'csp', 'instance_id', overwrite=instance_id)
         self._instance_url = _utl.format_url(config.get_default(
             'csp', 'instance_url', overwrite=instance_url))
-        self._role = config.get_default(
-            'csp', 'role', overwrite=role, default="MyRole")
-        self._project_id = config.get_default(
-            'csp', 'project_id', overwrite=project_id)
-        self._auth_url = config.get_default(
-            'csp', 'auth_url', overwrite=auth_url)
-        self._interface = config.get_default(
-            'csp', 'interface', overwrite=interface)
         self.stop_mode = config.get_default(
             "csp", "stop_mode", overwrite=stop_mode, default='term')
 
         # Checks mandatory configuration values
         self._check_arguments('region')
+
+        if (self._client_id is None and
+                self._instance_id is None and
+                self._instance_url is None):
+            raise _exc.CSPConfigurationException(
+                "Need at least 'client_id', 'instance_id' or 'instance_url' "
+                "argument. See documentation for more information.")
 
         # Enable optional Signal handler
         self._set_signals(exit_instance_on_signal)

@@ -5,6 +5,7 @@ import keystoneauth1.exceptions.http as _keystoneauth_exceptions
 import openstack as _openstack
 
 from acceleratorAPI.csp import CSPGenericClass as _CSPGenericClass
+import acceleratorAPI.configuration as _cfg
 import acceleratorAPI.exceptions as _exc
 import acceleratorAPI._utilities as _utl
 from acceleratorAPI._utilities import get_logger as _get_logger
@@ -46,12 +47,20 @@ class OpenStackClass(_CSPGenericClass):
     #: Default Interface to use (str)
     OPENSTACK_INTERFACE = 'public'
 
-    def __init__(self, **kwargs):
-        _CSPGenericClass.__init__(self, **kwargs)
+    _INFO_NAMES = _CSPGenericClass._INFO_NAMES.copy()
+    _INFO_NAMES.update({'_project_id', '_auth_url', '_interface'})
 
-        # Use default auth_url and interface if not specified
-        self._auth_url = self._auth_url or self.OPENSTACK_AUTH_URL
-        self._interface = self._interface or self.OPENSTACK_INTERFACE
+    def __init__(self, config=None, project_id=None, auth_url=None, interface=None, **kwargs):
+        config = _cfg.create_configuration(config)
+        _CSPGenericClass.__init__(self, config=config, **kwargs)
+
+        # OpenStack specific arguments
+        self._project_id = config.get_default(
+            'csp', 'project_id', overwrite=project_id)
+        self._auth_url = config.get_default(
+            'csp', 'auth_url', overwrite=auth_url, default=self.OPENSTACK_AUTH_URL)
+        self._interface = config.get_default(
+            'csp', 'interface', overwrite=interface, default=self.OPENSTACK_INTERFACE)
 
         # Checks mandatory configuration values
         self._check_arguments('project_id', 'auth_url', 'interface')

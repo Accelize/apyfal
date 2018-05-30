@@ -2,15 +2,13 @@
 """acceleratorAPI.ovh tests"""
 
 import pytest
-from tests.test_csp___init__ import run_full_real_test_sequence
+from tests.test_csp___init__ import run_full_real_test_sequence, import_from_generic_test
 
 
 def test_ovhclass_import():
     """OVHClass import"""
     # Test: Import by factory without errors
-    from acceleratorAPI.csp import CSPGenericClass
-    CSPGenericClass(provider='OVH', region='dummy_region',
-                    project_id='dummy_project')
+    import_from_generic_test('AWS', project_id='dummy_project')
 
 
 @pytest.mark.need_csp

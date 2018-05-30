@@ -226,8 +226,7 @@ class AcceleratorClass(object):
         except KeyError:
             pass
         else:
-            logger.info("Profiling information from result:\n%s",
-                        json.dumps(profiling, indent=4).replace('\\n', '\n').replace('\\t', '\t'))
+            logger.info("Profiling information from result:")
 
             # Compute and show information only on DEBUG level
             values = dict()
@@ -242,18 +241,21 @@ class AcceleratorClass(object):
             global_time = values.get('wall-clock-time', 0.0)
             fpga_time = values.get('fpga-elapsed-time', 0.0)
 
+            if global_time > 0.0:
+                logger.info('- Total processing time: %.3fs' % global_time)
+
             if total_bytes > 0.0 and global_time > 0.0:
                 bw = total_bytes / global_time / 1024.0 / 1024.0
                 fps = 1.0 / global_time
                 logger.info(
-                    "Server processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
+                    "- Server processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
                     self._host.provider, bw, fps)
 
             if total_bytes > 0.0 and fpga_time > 0.0:
                 bw = total_bytes / fpga_time / 1024.0 / 1024.0
                 fps = 1.0 / fpga_time
                 logger.info(
-                    "FPGA processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
+                    "- FPGA processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
                     self._host.provider, bw, fps)
 
         # Handle Specific result
