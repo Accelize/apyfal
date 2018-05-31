@@ -455,12 +455,12 @@ class CSPGenericClass(_utl.ABC):
         """
 
     @_abstractmethod
-    def _start_existing_instance(self, state):
+    def _start_existing_instance(self, status):
         """
         Start a existing instance.
 
         Args:
-            state (str): Status of the instance.
+            status (str): Status of the instance.
         """
 
     def _wait_instance_ready(self):

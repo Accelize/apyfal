@@ -50,8 +50,9 @@ class AWSClass(_CSPGenericClass):
     #: AWS Website
     DOC_URL = "https://aws.amazon.com"
 
-    STATUS_RUNNING = "running"
+    STATUS_RUNNING = 'running'
     STATUS_STOPPED = 'stopped'
+    STATUS_STOPPING = 'stopping'
 
     _INFO_NAMES = _CSPGenericClass._INFO_NAMES.copy()
     _INFO_NAMES.add('_role')
@@ -470,20 +471,35 @@ class AWSClass(_CSPGenericClass):
 
         return instance, instance.id
 
-    def _start_existing_instance(self, state):
+    def _start_existing_instance(self, status):
         """
         Start a existing instance.
 
         Args:
-            state (str): Status of the instance.
+            status (str): Status of the instance.
         """
-        if state == self.STATUS_STOPPED:
+        # Waiting for the instance stop if currently stopping
+        if status == self.STATUS_STOPPING:
+            with _utl.Timeout(self.TIMEOUT) as timeout:
+                while True:
+                    # Get instance status
+                    status = self._status()
+                    if status != self.STATUS_STOPPING:
+                        break
+                    elif timeout.reached():
+                        raise _exc.CSPInstanceException(
+                            "Timed out while waiting CSP instance stopping"
+                            " (last status: %s)." % status)
+
+        # If instance stopped, starts it
+        if status == self.STATUS_STOPPED:
             self._instance.start()
 
-        elif state != self.STATUS_RUNNING:
+        # If another status, raises error
+        elif status != self.STATUS_RUNNING:
             raise _exc.CSPInstanceException(
-                "Instance ID %s cannot be started because it is not in a valid state (%s).",
-                self._instance_id, state)
+                "Instance ID %s cannot be started because it is not in a valid status (%s).",
+                self._instance_id, status)
 
     def _terminate_instance(self):
         """

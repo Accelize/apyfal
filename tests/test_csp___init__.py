@@ -623,7 +623,7 @@ def run_full_real_test_sequence(provider, environment,
     get_logger(stdout=True)
 
     # Add accelerator to environment
-    environment['accelerator'] = 'pytest_testing'
+    environment['accelerator'] = 'acceleratorAPI_testing'
 
     # Mock instance URL check
     # Since used basic image don't provide HTTP access
@@ -643,28 +643,47 @@ def run_full_real_test_sequence(provider, environment,
     from acceleratorAPI.csp import CSPGenericClass
 
     try:
-
         # Start and terminate
+        print('Test: Start and terminate')
         with CSPGenericClass(config=config, stop_mode='term') as csp:
             csp.start(accel_parameters=environment)
 
+        gc.collect()
+
         # Start and stop, then terminate
         # Also check getting instance handle with ID
+        print('Test: Start and stop')
         with CSPGenericClass(config=config, stop_mode='stop') as csp:
             csp.start(accel_parameters=environment)
             instance_id = csp.instance_id
 
+        gc.collect()
+
+        print('Test: Start from stopped and terminate')
         with CSPGenericClass(config=config, instance_id=instance_id,
                              stop_mode='term') as csp:
             csp.start()
 
+        gc.collect()
+
         # Start and keep, then
         # Also check getting instance handle with URL
+        print('Test: Start and keep')
         with CSPGenericClass(config=config, stop_mode='keep') as csp:
             csp.start(accel_parameters=environment)
-            url = csp.url
+            instance_ip = csp.url
+            instance_id = csp.instance_id
 
-        with CSPGenericClass(config=config, instance_ip=url,
+        gc.collect()
+
+        print('Test: Reuse with instance IP')
+        with CSPGenericClass(config=config, instance_ip=instance_ip) as csp:
+            csp.start()
+
+        gc.collect()
+
+        print('Test: Reuse with instance ID and terminate')
+        with CSPGenericClass(config=config, instance_id=instance_id,
                              stop_mode='term') as csp:
             csp.start()
 

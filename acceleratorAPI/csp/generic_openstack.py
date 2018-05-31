@@ -291,14 +291,14 @@ class OpenStackClass(_CSPGenericClass):
 
         return instance, instance.id
 
-    def _start_existing_instance(self, state):
+    def _start_existing_instance(self, status):
         """
         Start a existing instance.
 
         Args:
-            state (str): Status of the instance.
+            status (str): Status of the instance.
         """
-        if state.lower() != "active":
+        if status.lower() != "active":
             self._session.start_server(self._instance)
 
     def _terminate_instance(self):
