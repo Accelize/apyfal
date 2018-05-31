@@ -120,7 +120,7 @@ with acceleratorAPI.AcceleratorClass(
         accelize_client_id='my_accelize_client_id',
         accelize_secret_id='my_accelize_secret_id') as myaccel:
 
-    myaccel.start(stop_mode='keep')
+    myaccel.start()
 
     myaccel.process(file_in='/path/myfile.dat', file_out='/path/result.dat')
 ```

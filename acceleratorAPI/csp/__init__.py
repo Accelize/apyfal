@@ -25,13 +25,14 @@ class CSPGenericClass(_utl.ABC):
         secret_id (str): CSP Secret Access Key.
         region (str): CSP region. Needs a region supporting instances with FPGA devices.
         instance_type (str): CSP instance type. Default defined by accelerator.
-        ssh_key (str): CSP Key pair. Default to 'MySSHKey'.
-        security_group: CSP Security group. Default to 'MySecurityGroup'.
+        ssh_key (str): CSP Key pair. Default to 'Accelize<CSPNAME>KeyPair'.
+        security_group: CSP Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing CSP instance to use.
             If not specified, create a new instance.
         instance_ip (str): IP or URL address of an already existing CSP instance to use.
             If not specified, create a new instance.
-        stop_mode (str or int): Define the "stop" method behavior. Default to 'term'.
+        stop_mode (str or int): Define the "stop" method behavior.
+            Default to 'term' if new instance, or 'keep' if already existing instance.
             See "stop_mode" property for more information and possible values.
         exit_instance_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
@@ -133,15 +134,19 @@ class CSPGenericClass(_utl.ABC):
         self._instance_type = config.get_default(
             'csp', 'instance_type', overwrite=instance_type)
         self._ssh_key = config.get_default(
-            'csp', 'ssh_key', overwrite=ssh_key, default="MySSHKey")
+            'csp', 'ssh_key', overwrite=ssh_key,
+            default=self._default_parameter_value(
+                'KeyPair', include_provider=True))
         self._security_group = config.get_default(
-            'csp', 'security_group', overwrite=security_group, default="MySecurityGroup")
+            'csp', 'security_group', overwrite=security_group,
+            default=self._default_parameter_value('SecurityGroup'))
         self._instance_id = config.get_default(
             'csp', 'instance_id', overwrite=instance_id)
         self._url = _utl.format_url(config.get_default(
             'csp', 'instance_ip', overwrite=instance_ip))
         self.stop_mode = config.get_default(
-            "csp", "stop_mode", overwrite=stop_mode, default='term')
+            "csp", "stop_mode", overwrite=stop_mode,
+            default='keep' if instance_id or instance_ip else 'term')
 
         # Checks mandatory configuration values
         self._check_arguments('region')
@@ -516,6 +521,11 @@ class CSPGenericClass(_utl.ABC):
         Args:
             stop_mode (str or int): If not None, override current "stop_mode" value.
         """
+        # No instance to stop
+        if self._instance is None:
+            return
+
+        # Define stop mode
         if stop_mode is None:
             stop_mode = self._stop_mode
 
@@ -536,11 +546,13 @@ class CSPGenericClass(_utl.ABC):
         # Terminates and delete instance completely
         if stop_mode == 'term':
             self._terminate_instance()
+            self._instance = None
             _get_logger().info("Instance ID %s has been terminated", self._instance_id)
 
         # Pauses instance and keep it alive
         else:
             self._pause_instance()
+            self._instance = None
             _get_logger().info("Instance ID %s has been stopped", self._instance_id)
 
     @_abstractmethod
@@ -733,3 +745,18 @@ class CSPGenericClass(_utl.ABC):
             args = list(exception.args)
             args[0] = '%s, please refer to: %s' % (args[0].rstrip('.'), cls.DOC_URL)
             exception.args = tuple(args)
+
+    @classmethod
+    def _default_parameter_value(cls, parameter_name, include_provider=False):
+        """
+        Returns a CamelCase name for default parameter
+        value.
+
+        Args:
+            parameter_name (str): Name of parameter
+            include_provider (bool): If True, include provider name in name.
+
+        Returns:
+            str: default parameter value.
+        """
+        return 'Accelize%s%s' % (cls.NAME if include_provider else '', parameter_name)

@@ -493,19 +493,17 @@ def test_cspgenericclass_stop():
     for stop_mode in ('term', 'stop'):
         csp = DummyCSP()
         csp.stop(stop_mode)
+        assert not csp._instance
         assert csp.stopped_mode == stop_mode
 
-    # Test: Keep stop mode, don't stop but warn user
-    with warnings.catch_warnings():
-        warnings.simplefilter("always")
+    # Test: Keep stop mode, don't stop
+    csp = DummyCSP(stop_mode='keep')
+    csp.stop()
+    assert csp._instance
 
-        csp = DummyCSP(stop_mode='keep')
-        with pytest.warns(Warning):
-            csp.stop()
-
-        csp = DummyCSP()
-        with pytest.warns(Warning):
-            csp.stop(stop_mode='keep')
+    csp = DummyCSP()
+    csp.stop(stop_mode='keep')
+    assert csp._instance
 
     # Test: Stop with no instance started
     instance = None

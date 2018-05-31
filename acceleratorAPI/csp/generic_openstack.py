@@ -23,8 +23,8 @@ class OpenStackClass(_CSPGenericClass):
         secret_id (str): OpenStack Secret Access Key.
         region (str): OpenStack region. Needs a region supporting instances with FPGA devices.
         instance_type (str): OpenStack Flavor. Default defined by accelerator.
-        ssh_key (str): OpenStack Key pair. Default to 'MySSHKey'.
-        security_group: OpenStack Security group. Default to 'MySecurityGroup'.
+        ssh_key (str): OpenStack Key pair. Default to 'Accelize<CSPNAME>KeyPair'.
+        security_group: OpenStack Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing OpenStack nova instance to use.
             If not specified, create a new instance.
         instance_ip (str): IP or URL address of an already existing OpenStack nova instance to use.
@@ -32,7 +32,8 @@ class OpenStackClass(_CSPGenericClass):
         project_id (str): OpenStack Project
         auth_url (str): OpenStack auth-URL
         interface (str): OpenStack interface
-        stop_mode (str or int): Define the "stop" method behavior. Default to 'term'.
+        stop_mode (str or int): Define the "stop" method behavior.
+            Default to 'term' if new instance, or 'keep' if already existing instance.
             See "stop_mode" property for more information and possible values.
         exit_instance_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
@@ -58,9 +59,11 @@ class OpenStackClass(_CSPGenericClass):
         self._project_id = config.get_default(
             'csp', 'project_id', overwrite=project_id)
         self._auth_url = config.get_default(
-            'csp', 'auth_url', overwrite=auth_url, default=self.OPENSTACK_AUTH_URL)
+            'csp', 'auth_url', overwrite=auth_url,
+            default=self.OPENSTACK_AUTH_URL)
         self._interface = config.get_default(
-            'csp', 'interface', overwrite=interface, default=self.OPENSTACK_INTERFACE)
+            'csp', 'interface', overwrite=interface,
+            default=self.OPENSTACK_INTERFACE)
 
         # Checks mandatory configuration values
         self._check_arguments('project_id', 'auth_url', 'interface')

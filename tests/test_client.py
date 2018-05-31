@@ -327,7 +327,7 @@ def test_acceleratorclient_url():
     url = 'http://%s' % ip_address
     accelerator.url = url
     assert accelerator._url == url
-    assert accelerator._api_client.configuration.csp == url
+    assert accelerator._api_client.configuration.host == url
     assert accelerator.use_last_configuration_called
 
     # Test: URL set with IP

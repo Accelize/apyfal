@@ -56,7 +56,8 @@ class AcceleratorClass(object):
             If not specified, create a new instance.
         instance_ip (str): IP address of an already existing CSP instance to use.
             If not specified, create a new instance..
-        stop_mode (str or int): CSP stop mode. Default to 'term'.
+        stop_mode (str or int): CSP stop mode.
+            Default to 'term' if new instance, or 'keep' if already existing instance.
             See "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
             information and possible values.
         csp_kwargs: Keyword arguments related to specific CSP. See targeted CSP class

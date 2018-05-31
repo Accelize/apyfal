@@ -27,15 +27,16 @@ class AWSClass(_CSPGenericClass):
         secret_id (str): AWS Secret Access Key.
         region (str): AWS region. Needs a EC2 region supporting instances with FPGA devices.
         instance_type (str): AWS EC2 Instance type. Default defined by accelerator.
-        ssh_key (str): AWS Key pair. Default to 'MySSHKey'.
-        security_group: AWS Security group. Default to 'MySecurityGroup'.
+        ssh_key (str): AWS Key pair. Default to 'AccelizeAWSKeyPair'.
+        security_group: AWS Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing AWS EC2 instance to use.
             If not specified, create a new instance.
         instance_ip (str): IP or URL address of an already existing AWS EC2 instance to use.
             If not specified, create a new instance.
         role (str): AWS IAM role. Generated to allow instance to load AGFI (FPGA bitstream).
-            Default to 'MyRole'.
-        stop_mode (str or int): Define the "stop" method behavior. Default to 'term'.
+            Default to 'AccelizeRole'.
+        stop_mode (str or int): Define the "stop" method behavior.
+            Default to 'term' if new instance, or 'keep' if already existing instance.
             See "stop_mode" property for more information and possible values.
         exit_instance_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
@@ -61,7 +62,8 @@ class AWSClass(_CSPGenericClass):
 
         # Get AWS specific arguments
         self._role = config.get_default(
-            'csp', 'role', overwrite=role, default="MyRole")
+            'csp', 'role', overwrite=role,
+            default=self._default_parameter_value('Role'))
 
         # Load session
         self._session = _boto3.session.Session(
@@ -460,7 +462,7 @@ class AWSClass(_CSPGenericClass):
                 'ResourceType': 'instance',
                 'Tags': [
                     {'Key': 'Generated',
-                     'Value': 'Accelize script'},
+                     'Value': 'Accelize acceleratorAPI'},
                     {'Key': 'Name',
                      'Value': self._get_instance_name()}
                 ]}],

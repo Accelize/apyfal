@@ -12,34 +12,44 @@ Required Python Packages:
 + `openstack` (Optional): Required for OVH.
 + `pycurl` (Optional): Improve upload performance and file size limit.
 
-Credentials:
-
-+ Accelize Access Key (create it within your [AccelStore account](https://accelstore.accelize.com/user/application))
-+ Cloud Service Provider Access Key (See your CSP documentation for more information).
-
-```eval_rst
-See :doc:`configuration` for more information.
-```
-
 ### Linux
 On Linux, some extra packages are required:
 
-+ `python-pip` package is required.
++ *Pip* is required (Package is named `python-pip` for Python 2 and `python3-pip` for Python 3).
 
 + Depending on the Python version, CSP targeted and wheel format availability, a C/C++ compiler may also be required 
-for install dependencies. In this case, `gcc` & `python-devel` are required.
+for install dependencies. In this case, *GCC* (Or another compatible compiler) & *Python-dev* are required.
 
-+ `pycurl` need the `curl` package.
++ *PycURL* need `curl` package.
 
-Install is done with the package manager of your Linux distribution, example:
+Install is done with the package manager of your Linux distribution.
 
-+ On Redhat: 
-```
+**On RHEL or CentOS**:
+
+*Python-dev* is named `python-devel` for Python2 and `python3-devel` for Python 3.
+
+Python 2:
+```bash
 sudo yum install gcc python-pip python-devel curl
 ```
-+ On Debian or Ubuntu:
+
+Python 3:
+```bash
+sudo yum install gcc python3-pip python3-devel curl
 ```
+
+**On Debian or Ubuntu**:
+
+*Python-dev* is named `python-dev` for Python2 and `python3-dev` for Python 3.
+
+Python 2:
+```bash
 sudo apt-get install gcc python-pip python-dev curl
+```
+
+Python 3:
+```bash
+sudo apt-get install gcc python3-pip python3-dev curl
 ```
 
 ### Windows
