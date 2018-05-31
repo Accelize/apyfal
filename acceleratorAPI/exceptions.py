@@ -9,22 +9,22 @@ class AcceleratorApiBaseException(Exception):
 
     Args:
         msg (str): Exception message
-        gen_msg (list of str or str): Arguments for acceleratorAPI._utilities.gen_msg
+        gen_msg (tuple of str or str): Arguments for acceleratorAPI._utilities.gen_msg
         exc (Exception or str): Exception or other details to
             add to description"""
     DEFAULT_MESSAGE = ""
 
     def __init__(self, msg=None, gen_msg=None, exc=None, *args, **kwargs):
-        # Get message from pre-generated message
+        # Gets message from pre-generated messages
         if gen_msg:
             if isinstance(gen_msg, str):
                 gen_msg = (gen_msg,)
             msg = _get_msg(*gen_msg)
 
-        # Set default message if nothing passed as argument.
+        # Sets default message if nothing passed as argument.
         msg = msg or self.DEFAULT_MESSAGE
 
-        # Augment exception with source error message
+        # Augments exception with source error message
         if exc is not None:
             msg = '%s: %r' % (msg.rstrip('.'), exc)
         Exception.__init__(self, msg, *args, **kwargs)
