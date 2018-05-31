@@ -117,8 +117,7 @@ class AcceleratorClient(object):
             # Checks Client ID and secret ID presence
             if self._client_id is None or self._secret_id is None:
                 raise _exc.AcceleratorConfigurationException(
-                    "Accelize client ID and secret ID are mandatory. "
-                    "Provide them in the configuration file or through function arguments.")
+                    "Accelize client ID and secret ID are mandatory.")
 
             # Check access and get token from server
             response = _utl.http_session().post(
@@ -191,7 +190,7 @@ class AcceleratorClient(object):
         # Check URL
         if not url:
             raise _exc.AcceleratorConfigurationException(
-                "An accelerator url is required .")
+                "An accelerator URL is required .")
 
         self._url = _utl.format_url(url)
 
@@ -211,7 +210,8 @@ class AcceleratorClient(object):
         if self.url is None:
             raise _exc.AcceleratorRuntimeException("No accelerator running")
         if not _utl.check_url(self.url, max_retries=2):
-            raise _exc.AcceleratorRuntimeException("Failed to reach accelerator url: %s" % self.url)
+            raise _exc.AcceleratorRuntimeException(
+                gen_msg=('unable_reach_url', self._url))
 
     def get_requirements(self, provider):
         """

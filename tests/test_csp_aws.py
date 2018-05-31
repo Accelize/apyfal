@@ -17,6 +17,8 @@ def test_awsclass_real():
     """AWSClass in real case"""
     run_full_real_test_sequence('AWS', {
         'eu-west-1': {
+            # Image name: ubuntu-xenial-16.04-amd64-server-20180522
             'image': 'ami-58d7e821',
             'instancetype': 't2.nano',
-            'fpgaimage': 'None'}})
+            'fpgaimage': 'None'
+        }})

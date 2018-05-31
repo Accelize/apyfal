@@ -2,6 +2,7 @@
 """Cloud Service Providers"""
 
 from abc import abstractmethod as _abstractmethod
+from datetime import datetime as _datetime
 from importlib import import_module as _import_module
 
 import acceleratorAPI.configuration as _cfg
@@ -115,6 +116,7 @@ class CSPGenericClass(_utl.ABC):
         self._config_env = {}
         self._image_id = None
         self._image_name = None
+        self._instance_name = None
         self._instance_type = None
         self._instance_type_name = None
         self._accelerator = None
@@ -193,7 +195,7 @@ class CSPGenericClass(_utl.ABC):
                 No instance from which get IP.
         """
         if self._instance is None:
-            raise _exc.CSPInstanceException("No instance found")
+            raise _exc.CSPInstanceException(gen_msg='no_instance')
         return self._get_public_ip()
 
     @_abstractmethod
@@ -218,7 +220,7 @@ class CSPGenericClass(_utl.ABC):
                 No instance from which get IP.
         """
         if self._instance is None:
-            raise _exc.CSPInstanceException("No instance found")
+            raise _exc.CSPInstanceException(gen_msg='no_instance')
         return self._get_private_ip()
 
     @_abstractmethod
@@ -327,13 +329,14 @@ class CSPGenericClass(_utl.ABC):
                 No instance from which get status.
         """
         if self._instance_id is None:
-            raise _exc.CSPInstanceException("No instance ID provided")
+            raise _exc.CSPInstanceException(gen_msg='no_instance')
 
         # Update instance
         self._instance = self._get_instance()
 
         if self._instance is None:
-            raise _exc.CSPInstanceException("No instance available")
+            raise _exc.CSPInstanceException(
+                gen_msg=('no_instance_id', self._instance_id))
 
         # Read instance status
         return self._get_status()
@@ -394,9 +397,9 @@ class CSPGenericClass(_utl.ABC):
 
                 # Configure and create instance
                 reuse_key = self._init_key_pair()
-                _get_logger().info(
-                    "Reused KeyPair %s" if reuse_key
-                    else "Created KeyPair %s", self._ssh_key)
+                if not reuse_key:
+                    _get_logger().info(_utl.gen_msg(
+                        "created_named", self._ssh_key))
 
                 try:
                     self._create_instance()
@@ -410,7 +413,8 @@ class CSPGenericClass(_utl.ABC):
                     self._stop_silently(exception)
                     raise
 
-                _get_logger().info("Created instance ID: %s", self._instance_id)
+                _get_logger().info(_utl.gen_msg(
+                    'created_named', 'instance', self._instance_id))
 
             # If exists, starts it directly
             else:
@@ -418,7 +422,7 @@ class CSPGenericClass(_utl.ABC):
                 self._start_existing_instance(state)
 
             # Waiting for instance provisioning
-            _get_logger().info("Waiting for the instance provisioning...")
+            _get_logger().info("Waiting instance provisioning...")
             try:
                 self._wait_instance_ready()
             except _exc.CSPException as exception:
@@ -429,25 +433,26 @@ class CSPGenericClass(_utl.ABC):
             self._url = _utl.format_url(self.public_ip)
 
             # Waiting for the instance to boot
-            _get_logger().info("Waiting for the instance booting...")
+            _get_logger().info("Waiting instance boot...")
             self._wait_instance_boot()
 
         # If started from URl, checks this URL is reachable
         elif not _utl.check_url(self._url):
-            raise _exc.CSPInstanceException("Unable to reach instance URL.")
+            raise _exc.CSPInstanceException(
+                gen_msg=('unable_reach_url', self._url))
 
-        _get_logger().info("The instance is now up and running")
+        _get_logger().info("Instance ready")
 
     @_abstractmethod
     def _create_instance(self):
         """
-        Initialize and create instance.
+        Initializes and creates instance.
         """
 
     @_abstractmethod
     def _start_new_instance(self):
         """
-        Start a new instance.
+        Starts a new instance.
 
         Returns:
             object: Instance
@@ -457,7 +462,7 @@ class CSPGenericClass(_utl.ABC):
     @_abstractmethod
     def _start_existing_instance(self, status):
         """
-        Start a existing instance.
+        Starts a existing instance.
 
         Args:
             status (str): Status of the instance.
@@ -465,35 +470,39 @@ class CSPGenericClass(_utl.ABC):
 
     def _wait_instance_ready(self):
         """
-        Wait until instance is ready.
+        Waits until instance is ready.
         """
         # Waiting for the instance provisioning
         with _utl.Timeout(self.TIMEOUT) as timeout:
             while True:
                 # Get instance status
                 status = self._status()
-                if status.lower() == self.STATUS_RUNNING:
+                if status == self.STATUS_RUNNING:
                     return
                 elif timeout.reached():
                     raise _exc.CSPInstanceException(
-                        "Timed out while waiting CSP instance provisioning"
-                        " (last status: %s)." % status)
+                        gen_msg=('timeout_status', "provisioning", status))
 
     def _wait_instance_boot(self):
-        """Wait until instance has booted and webservice is OK
+        """Waits until instance has booted and webservice is OK
 
         Raises:
             acceleratorAPI.exceptions.CSPInstanceException:
                 Timeout while booting."""
         if not _utl.check_url(self._url, timeout=self.TIMEOUT):
-            raise _exc.CSPInstanceException("Timed out while waiting CSP instance to boot.")
+            raise _exc.CSPInstanceException(
+                gen_msg=('timeout', "boot"))
 
     def _get_instance_name(self):
-        """Returns name to use for instance name
+        """Returns name to use as instance name
 
         Returns:
-            str: name"""
-        return "Accelize accelerator %s" % self._accelerator
+            str: name with format
+                'Accelize_<AcceleratorName>_<DateTime>'"""
+        if self._instance_name is None:
+            self._instance_name = "accelize_%s_%s" % (
+                self._accelerator, _datetime.now().strftime('%y%m%d%H%M%S'))
+        return self._instance_name
 
     @property
     def info(self):
@@ -532,9 +541,8 @@ class CSPGenericClass(_utl.ABC):
         # Keep instance alive
         if stop_mode == 'keep':
             import warnings
-            warnings.warn("Instance with URL %s (ID=%s) is still running!" %
-                          (self.url, self.instance_id),
-                          Warning)
+            warnings.warn(
+                "Instance '%s' is still running" % self.instance_id, Warning)
             return
 
         # Checks if instance to stop
@@ -547,13 +555,13 @@ class CSPGenericClass(_utl.ABC):
         if stop_mode == 'term':
             self._terminate_instance()
             self._instance = None
-            _get_logger().info("Instance ID %s has been terminated", self._instance_id)
+            _get_logger().info("Instance '%s' has been terminated", self._instance_id)
 
         # Pauses instance and keep it alive
         else:
             self._pause_instance()
             self._instance = None
-            _get_logger().info("Instance ID %s has been stopped", self._instance_id)
+            _get_logger().info("Instance '%s' has been stopped", self._instance_id)
 
     @_abstractmethod
     def _terminate_instance(self):
@@ -610,8 +618,8 @@ class CSPGenericClass(_utl.ABC):
         # Check if region is valid
         if self._region not in parameters.keys():
             raise _exc.CSPConfigurationException(
-                "Region '%s' is not supported. Available regions are: %s", self._region,
-                ', '.join(parameters))
+                "Region '%s' is not supported. Available regions are: %s" % (
+                    self._region, ', '.join(parameters)))
 
         # Get accelerator name
         self._accelerator = parameters['accelerator']
@@ -695,7 +703,7 @@ class CSPGenericClass(_utl.ABC):
             # Use default value if any
             provider = cls.NAME
         if not provider:
-            raise _exc.CSPConfigurationException("No CSP provider defined.")
+            raise _exc.CSPConfigurationException("No provider defined.")
         return provider
 
     def _set_signals(self, exit_instance_on_signal=True):

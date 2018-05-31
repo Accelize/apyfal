@@ -598,7 +598,8 @@ def import_from_generic_test(provider, **kwargs):
 
 
 def run_full_real_test_sequence(provider, environment,
-                                use_full_images=False):
+                                use_full_images=False,
+                                support_stop_restart=True):
     """Run common real tests for all CSP.
 
     Args:
@@ -607,16 +608,22 @@ def run_full_real_test_sequence(provider, environment,
         use_full_images (bool): If True, uses full
             images with host application that provides
             HTTP access.
+        support_stop_restart (bool): If True support pause instance
+            and restart.
     """
     from acceleratorAPI.configuration import Configuration
 
-    # Skip if no configuration with this provider
+    # Skip if no correct configuration with this provider
     config = Configuration()
     if not config.has_csp_credential():
         pytest.skip('No CSP credentials')
 
     if config.get_default('csp', 'provider') != provider:
         pytest.skip('No configuration for %s.' % provider)
+
+    elif config.get_default('csp', 'region') not in environment:
+        pytest.skip("No configuration for '%s' region on %s." %
+                    (config.get_default('csp', 'region'), provider))
 
     # Enable logger
     from acceleratorAPI import get_logger
@@ -652,19 +659,20 @@ def run_full_real_test_sequence(provider, environment,
 
         # Start and stop, then terminate
         # Also check getting instance handle with ID
-        print('Test: Start and stop')
-        with CSPGenericClass(config=config, stop_mode='stop') as csp:
-            csp.start(accel_parameters=environment)
-            instance_id = csp.instance_id
+        if support_stop_restart:
+            print('Test: Start and stop')
+            with CSPGenericClass(config=config, stop_mode='stop') as csp:
+                csp.start(accel_parameters=environment)
+                instance_id = csp.instance_id
 
-        gc.collect()
+            gc.collect()
 
-        print('Test: Start from stopped and terminate')
-        with CSPGenericClass(config=config, instance_id=instance_id,
-                             stop_mode='term') as csp:
-            csp.start()
+            print('Test: Start from stopped and terminate')
+            with CSPGenericClass(config=config, instance_id=instance_id,
+                                 stop_mode='term') as csp:
+                csp.start()
 
-        gc.collect()
+            gc.collect()
 
         # Start and keep, then
         # Also check getting instance handle with URL
