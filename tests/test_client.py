@@ -930,11 +930,11 @@ def test_acceleratorclient_process(tmpdir):
         in_error = False
 
         # Check if working as excepted
-        excpected_parameters_result = copy.deepcopy(parameters_result)
-        del excpected_parameters_result['app']['specific']
+        expected_parameters_result = copy.deepcopy(parameters_result)
+        del expected_parameters_result['app']['specific']
         assert accelerator.process(
             str(file_in), str(file_out), info_dict=True) == (
-            specific, excpected_parameters_result)
+            specific, expected_parameters_result)
         assert file_out.read_binary() == out_content
 
         # Checks without info_dict
