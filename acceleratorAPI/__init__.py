@@ -116,7 +116,7 @@ class AcceleratorClass(object):
         """
         return self._csp
 
-    def start(self, stop_mode=None, datafile=None, accelerator_parameters=None, **kwargs):
+    def start(self, stop_mode=None, datafile=None, csp_env=None, **parameters):
         """
         Starts and/or configure an accelerator instance.
 
@@ -128,10 +128,12 @@ class AcceleratorClass(object):
                 a configuration need to be loaded before a process can be run.
                 In such case please define the path of the configuration file
                 (for HyperFiRe the corpus file path).
-            accelerator_parameters (dict): If set will overwrite the value content in the configuration file
-                Parameters can be forwarded to the accelerator for the configuration step using these parameters.
-                Take a look accelerator documentation for more information.
-            kwargs:
+            parameters (str or dict): Accelerator configuration specific parameters
+                Can also be a full configuration parameters dictionary
+                (Or JSON equivalent as str literal or path to file)
+                Parameters dictionary override default configuration values,
+                individuals specific parameters overrides parameters dictionary values.
+                Take a look accelerator documentation for more information on possible parameters.
 
         Returns:
             dict: AcceleratorClient response. Contain output information from configuration operation.
@@ -144,21 +146,25 @@ class AcceleratorClass(object):
         self._client.url = self._csp.url
 
         # Configure accelerator if needed
-        if kwargs or self._client.configuration_url is None or datafile is not None:
+        if csp_env or self._client.configuration_url is None or datafile is not None:
             return self._client.start(
-                datafile=datafile, accelerator_parameters=accelerator_parameters,
-                csp_env=self._csp.get_configuration_env(**kwargs))
+                datafile=datafile,
+                csp_env=self._csp.get_configuration_env(**(csp_env or dict())),
+                **parameters)
 
-    def process(self, file_in=None, file_out=None, process_parameter=None):
+    def process(self, file_in=None, file_out=None, **parameters):
         """
         Process a file with accelerator.
 
         Args:
             file_in (str): Path where you want the processed file will be stored.
             file_out (str): Path to the file you want to process.
-            process_parameter (dict): If set will overwrite the value content in the configuration file Parameters
-                an be forwarded to the accelerator for the process step using these parameters.
-                Take a look accelerator documentation for more information.
+            parameters (str or dict): Accelerator process specific parameters
+                Can also be a full process parameters dictionary
+                (Or JSON equivalent as str literal or path to file)
+                Parameters dictionary override default configuration values,
+                individuals specific parameters overrides parameters dictionary values.
+                Take a look accelerator documentation for more information on possible parameters.
 
         Returns:
             dict: AcceleratorClient response. Contain output information from process operation.
@@ -166,7 +172,7 @@ class AcceleratorClass(object):
         """
         # Process file with accelerator
         process_result = self._client.process(
-            file_in=file_in, file_out=file_out, accelerator_parameters=process_parameter)
+            file_in=file_in, file_out=file_out, **parameters)
 
         self._log_profiling_info(process_result)
         return process_result

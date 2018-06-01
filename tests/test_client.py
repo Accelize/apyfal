@@ -1,6 +1,7 @@
 # coding=utf-8
 """acceleratorAPI.client tests"""
 import collections
+import copy
 import io
 import gc
 import json
@@ -421,14 +422,15 @@ def test_acceleratorclient_start():
         # Check with arguments
         accelerator_parameters = {'dummy_param': None}
         excepted_parameters = base_parameters.copy()
-        excepted_parameters.update(accelerator_parameters)
+        excepted_parameters.update(accelerator._configuration_parameters)
+        excepted_parameters['app']['specific'] = accelerator_parameters
         excepted_datafile = 'dummy_datafile'
         excepted_response = base_response.copy()
         excepted_response.update(base_parameters_result)
 
         assert excepted_response == accelerator.start(
             datafile=excepted_datafile,
-            accelerator_parameters=accelerator_parameters)
+            **accelerator_parameters)
 
         # Check default values
         excepted_datafile = ''
@@ -805,6 +807,7 @@ def test_acceleratorclient_process(tmpdir):
     # Mocks some variables
     processed = False
     in_error = True
+    dummy_process_parameters = {'dummy_process_parameters': None}
     parameters_result = {'app': {
         'status': 0, 'msg': 'dummy_parameters_result'}}
     datafile_result = {'app': {
@@ -923,3 +926,56 @@ def test_acceleratorclient_process(tmpdir):
     finally:
         requests.Session = requests_session
         swagger_client.ProcessApi = swagger_client_process_api
+
+
+def test_acceleratorclient_get_parameters(tmpdir):
+    """Tests AcceleratorClient._get_parameters"""
+    from acceleratorAPI.client import AcceleratorClient
+
+    # Mocks some variables
+    default_parameters = {'app': {'specific': {}, "key0": 0, "key1": 1}}
+
+    # Mocks Client
+    class DummyClient(AcceleratorClient):
+        """Dummy Client"""
+
+        def function(self, **parameters):
+            """Passe parameters to _get_parameters and return result"""
+            return self._get_parameters(parameters, default_parameters)
+
+    client = DummyClient('Dummy')
+
+    # Test: Pass specific parameters as keyword arguments
+    excepted_parameters = copy.deepcopy(default_parameters)
+    excepted_parameters['app']['specific'] = {'key0': 0, 'key1': 1}
+    assert client.function(key0=0, key1=1) == excepted_parameters
+
+    # Test: loads parameters dict
+    dummy_parameters = {'app': {'specific': {'key1': 1}, "key0": 1}}
+    excepted_parameters = copy.deepcopy(default_parameters)
+    excepted_parameters.update(dummy_parameters)
+
+    assert client.function(
+        parameters=dummy_parameters) == excepted_parameters
+
+    # Test: loads parameters dict as JSON literal
+    assert client.function(parameters=json.dumps(
+        dummy_parameters)) == excepted_parameters
+
+    # Test: loads parameters dict as JSON file
+    json_file = tmpdir.join('parameters.json')
+    json_file.write(json.dumps(dummy_parameters))
+    assert client.function(parameters=str(json_file)) == excepted_parameters
+
+    # Test: Simultaneous parameters dict + keyword arguments
+    excepted_parameters = copy.deepcopy(default_parameters)
+    excepted_parameters.update(dummy_parameters)
+    excepted_parameters['app']['specific'].update({'key0': 0, 'key1': 0})
+    assert client.function(
+        parameters=dummy_parameters, key0=0, key1=0) == excepted_parameters
+
+    # Test: Missing specific section in source
+    excepted_parameters = copy.deepcopy(default_parameters)
+    del default_parameters['app']['specific']
+    excepted_parameters['app']['specific'] = {'key0': 0, 'key1': 1}
+    assert client.function(key0=0, key1=1) == excepted_parameters
