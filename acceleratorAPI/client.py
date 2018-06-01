@@ -22,7 +22,6 @@ except ImportError:
     _USE_PYCURL = False
 
 import acceleratorAPI._utilities as _utl
-from acceleratorAPI._utilities import get_logger as _get_logger
 import acceleratorAPI.exceptions as _exc
 import acceleratorAPI.configuration as _cfg
 
@@ -276,7 +275,7 @@ class AcceleratorClient(object):
         # The last configuration URL should be keep in order to not request it to user.
         self._configuration_url = last_config.url
 
-    def start(self, datafile=None, csp_env=None, **parameters):
+    def start(self, datafile=None, info_dict=False, csp_env=None, **parameters):
         """
         Create an AcceleratorClient configuration.
 
@@ -284,19 +283,27 @@ class AcceleratorClient(object):
             datafile (str): Depending on the accelerator,
                 a configuration need to be loaded before a process can be run.
                 In such case please define the path of the configuration file.
+            info_dict (bool): If True, returns a dict containing information on
+                configuration operation.
             parameters (str or dict): Accelerator configuration specific parameters
                 Can also be a full configuration parameters dictionary
                 (Or JSON equivalent as str literal or path to file)
                 Parameters dictionary override default configuration values,
                 individuals specific parameters overrides parameters dictionary values.
-                Take a look accelerator documentation for more information on possible parameters.
+                Take a look to accelerator documentation for more information on possible parameters.
 
         Returns:
-            dict: AcceleratorClient response. Contain output information from configuration operation.
+            dict: Optional, only if "info_dict" is True. AcceleratorClient response.
+                AcceleratorClient contain output information from  configuration operation.
                 Take a look accelerator documentation for more information.
         """
         # TODO: Detail response dict in docstring
-        # Check parameters
+
+        # Skips configuration if already configured
+        if not (self._configuration_url is None or datafile or parameters or csp_env):
+            return
+
+        # Checks parameters
         parameters = self._get_parameters(parameters, self._configuration_parameters)
         parameters.update({
             "env": {"client_id": self.client_id, "client_secret": self.secret_id}})
@@ -305,31 +312,35 @@ class AcceleratorClient(object):
         if datafile is None:
             datafile = ""
 
-        # Configure  accelerator
+        # Configures  accelerator
         api_instance = self._rest_api_configuration()
         api_response = api_instance.configuration_create(
             parameters=_json.dumps(parameters), datafile=datafile)
-        _get_logger().debug("configuration_create api_response:\n%s", api_response)
 
+        # Checks operation success
         config_result = _literal_eval(api_response.parametersresult)
-        self._raise_for_status(config_result, "Configuration of accelerator failed: ")
-
-        config_result['url_config'] = self._configuration_url = api_response.url
-        config_result['url_instance'] = self.url
+        self._raise_for_status(config_result, "Failed to configure accelerator: ")
 
         api_response_read = api_instance.configuration_read(api_response.id)
         if api_response_read.inerror:
             raise _exc.AcceleratorRuntimeException(
                 "Cannot start the configuration %s" % api_response_read.url)
 
-        return config_result
+        # Memorizes configuration
+        self._configuration_url = api_response.url
 
-    def _process_swagger(self, accelerator_parameters, datafile):
+        # Returns optional response
+        if info_dict:
+            config_result['url_config'] = self._configuration_url
+            config_result['url_instance'] = self.url
+            return config_result
+
+    def _process_swagger(self, json_parameters, datafile):
         """
         Process using Swagger REST API.
 
         Args:
-            accelerator_parameters (str): AcceleratorClient parameter as JSON
+            json_parameters (str): AcceleratorClient parameter as JSON
             datafile (str): Path to input datafile
 
         Returns:
@@ -337,15 +348,15 @@ class AcceleratorClient(object):
             bool: True if processed
         """
         api_response = self._rest_api_process().process_create(
-            self.configuration_url, parameters=accelerator_parameters, datafile=datafile)
+            self.configuration_url, parameters=json_parameters, datafile=datafile)
         return api_response.id, api_response.processed
 
-    def _process_curl(self, accelerator_parameters, datafile):
+    def _process_curl(self, json_parameters, datafile):
         """
         Process using cURL (PycURL)
 
         Args:
-            accelerator_parameters (str): AcceleratorClient parameter as JSON
+            json_parameters (str): AcceleratorClient parameter as JSON
             datafile (str): Path to input datafile
 
         Returns:
@@ -355,7 +366,7 @@ class AcceleratorClient(object):
         # Configure cURL
         curl = _pycurl.Curl()
 
-        post = [("parameters", accelerator_parameters),
+        post = [("parameters", json_parameters),
                 ("configuration", self.configuration_url)]
         if datafile is not None:
             post.append(("datafile", (_pycurl.FORM_FILE, datafile)))
@@ -402,22 +413,26 @@ class AcceleratorClient(object):
 
         return api_response['id'], api_response['processed']
 
-    def process(self, file_in=None, file_out=None, **parameters):
+    def process(self, file_in=None, file_out=None, info_dict=False, **parameters):
         """
         Process a file with accelerator.
 
         Args:
             file_in (str): Path to the file you want to process.
             file_out (str): Path where you want the processed file will be stored.
+            info_dict (bool): If True, returns a dict containing information on
+                process operation.
             parameters (str or dict): Accelerator process specific parameters
                 Can also be a full process parameters dictionary
                 (Or JSON equivalent as str literal or path to file)
                 Parameters dictionary override default configuration values,
                 individuals specific parameters overrides parameters dictionary values.
-                Take a look accelerator documentation for more information on possible parameters.
+                Take a look to accelerator documentation for more information on possible parameters.
 
         Returns:
-            dict: AcceleratorClient response. Contain output information from process operation.
+            dict or None: Result from process operation, depending used accelerator.
+            dict: Optional, only if "info_dict" is True. AcceleratorClient response.
+                AcceleratorClient contain output information from  process operation.
                 Take a look accelerator documentation for more information.
         """
         # TODO: Detail response dict in docstring
@@ -449,12 +464,14 @@ class AcceleratorClient(object):
                 api_response = api_instance.process_read(api_resp_id)
                 processed = api_response.processed
 
+            # Checks for success
             if api_response.inerror:
                 raise _exc.AcceleratorRuntimeException(
-                    "Failed to process data: %s" % _utl.pretty_dict(api_response.parametersresult))
+                    "Failed to process data: %s" %
+                    _utl.pretty_dict(api_response.parametersresult))
 
-            process_result = _literal_eval(api_response.parametersresult)
-            self._raise_for_status(process_result, "Processing failed: ")
+            process_response = _literal_eval(api_response.parametersresult)
+            self._raise_for_status(process_response, "Processing failed: ")
 
             # Write result file
             if file_out:
@@ -467,15 +484,29 @@ class AcceleratorClient(object):
             # Process_delete api_response
             api_instance.process_delete(api_resp_id)
 
-        return process_result
+        # Get result from response and returns
+        try:
+            result = process_response['app'].pop('specific')
+        except KeyError:
+            result = None
 
-    def stop(self):
+        if info_dict:
+            # Returns with optional response
+            return result, process_response
+        return result
+
+    def stop(self, info_dict=False):
         """
         Stop your accelerator session.
 
+        Args:
+            info_dict (bool): If True, returns a dict containing information on
+                stop operation.
+
         Returns:
-            dict: AcceleratorClient response. Contain output information from stop operation.
-                Take a look accelerator documentation for more information.
+            dict: Optional, only if "info_dict" is True. AcceleratorClient response.
+                AcceleratorClient contain output information from  stop operation.
+                Take a look to accelerator documentation for more information.
         """
         # TODO: Detail response dict in docstring
         try:
@@ -484,7 +515,9 @@ class AcceleratorClient(object):
             # No AcceleratorClient to stop
             return None
         try:
-            return self._rest_api_stop().stop_list()
+            result = self._rest_api_stop().stop_list()
+            if info_dict:
+                return result
         except _api.rest.ApiException:
             pass
 

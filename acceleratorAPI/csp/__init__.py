@@ -418,8 +418,8 @@ class CSPGenericClass(_utl.ABC):
 
             # If exists, starts it directly
             else:
-                state = self._status()
-                self._start_existing_instance(state)
+                status = self._status()
+                self._start_existing_instance(status)
 
             # Waiting for instance provisioning
             _get_logger().info("Waiting instance provisioning...")
@@ -436,12 +436,12 @@ class CSPGenericClass(_utl.ABC):
             _get_logger().info("Waiting instance boot...")
             self._wait_instance_boot()
 
-        # If started from URl, checks this URL is reachable
+            _get_logger().info("Instance ready")
+
+        # If URL exists, checks if reachable
         elif not _utl.check_url(self._url):
             raise _exc.CSPInstanceException(
                 gen_msg=('unable_reach_url', self._url))
-
-        _get_logger().info("Instance ready")
 
     @_abstractmethod
     def _create_instance(self):

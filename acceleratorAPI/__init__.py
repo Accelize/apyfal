@@ -116,7 +116,7 @@ class AcceleratorClass(object):
         """
         return self._csp
 
-    def start(self, stop_mode=None, datafile=None, csp_env=None, **parameters):
+    def start(self, stop_mode=None, datafile=None, info_dict=False, csp_env=None, **parameters):
         """
         Starts and/or configure an accelerator instance.
 
@@ -128,6 +128,8 @@ class AcceleratorClass(object):
                 a configuration need to be loaded before a process can be run.
                 In such case please define the path of the configuration file
                 (for HyperFiRe the corpus file path).
+            info_dict (bool): If True, returns a dict containing information on
+                configuration operation.
             parameters (str or dict): Accelerator configuration specific parameters
                 Can also be a full configuration parameters dictionary
                 (Or JSON equivalent as str literal or path to file)
@@ -136,8 +138,9 @@ class AcceleratorClass(object):
                 Take a look accelerator documentation for more information on possible parameters.
 
         Returns:
-            dict: AcceleratorClient response. Contain output information from configuration operation.
-                Take a look accelerator documentation for more information.
+            dict: Optional, only if "info_dict" is True. AcceleratorClient response.
+                AcceleratorClient contain output information from  configuration operation.
+                Take a look to accelerator documentation for more information.
         """
         # Start CSP instance if needed (Do nothing if already started)
         self._csp.start(accel_client=self._client, stop_mode=stop_mode)
@@ -146,19 +149,20 @@ class AcceleratorClass(object):
         self._client.url = self._csp.url
 
         # Configure accelerator if needed
-        if csp_env or self._client.configuration_url is None or datafile is not None:
-            return self._client.start(
-                datafile=datafile,
-                csp_env=self._csp.get_configuration_env(**(csp_env or dict())),
-                **parameters)
+        return self._client.start(
+            datafile=datafile,
+            csp_env=self._csp.get_configuration_env(**(csp_env or dict())),
+            info_dict=info_dict, **parameters)
 
-    def process(self, file_in=None, file_out=None, **parameters):
+    def process(self, file_in=None, file_out=None, info_dict=False, **parameters):
         """
         Process a file with accelerator.
 
         Args:
             file_in (str): Path where you want the processed file will be stored.
             file_out (str): Path to the file you want to process.
+            info_dict (bool): If True, returns a dict containing information on
+                process operation.
             parameters (str or dict): Accelerator process specific parameters
                 Can also be a full process parameters dictionary
                 (Or JSON equivalent as str literal or path to file)
@@ -167,17 +171,21 @@ class AcceleratorClass(object):
                 Take a look accelerator documentation for more information on possible parameters.
 
         Returns:
-            dict: AcceleratorClient response. Contain output information from process operation.
-                Take a look accelerator documentation for more information.
+            bytes or None: Result from process operation, depending used accelerator.
+            dict: Optional, only if "info_dict" is True. AcceleratorClient response.
+                AcceleratorClient contain output information from  process operation.
+                Take a look to accelerator documentation for more information.
         """
+        info_dict = True if _get_logger().isEnabledFor(20) else info_dict
+
         # Process file with accelerator
         process_result = self._client.process(
-            file_in=file_in, file_out=file_out, **parameters)
+            file_in=file_in, file_out=file_out, info_dict=info_dict, **parameters)
 
         self._log_profiling_info(process_result)
         return process_result
 
-    def stop(self, stop_mode=None):
+    def stop(self, stop_mode=None, info_dict=False):
         """
         Stop your accelerator session and accelerator csp instance depending of the parameters
 
@@ -185,14 +193,17 @@ class AcceleratorClass(object):
             stop_mode (str or int): CSP stop mode. If not None, override current "stop_mode" value.
                 See "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
                 information and possible values.
+            info_dict (bool): If True, returns a dict containing information on
+                stop operation.
 
         Returns:
-            dict: AcceleratorClient response. Contain output information from stop operation.
-                Take a look accelerator documentation for more information.
+            dict: Optional, only if "info_dict" is True. AcceleratorClient response.
+                AcceleratorClient contain output information from  stop operation.
+                Take a look to accelerator documentation for more information.
         """
         # Stops accelerator
         try:
-            stop_result = self._client.stop()
+            stop_result = self._client.stop(info_dict=info_dict)
 
         # Stops CSP instance
         finally:

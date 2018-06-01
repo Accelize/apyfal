@@ -134,10 +134,11 @@ def test_cspgenericclass_properties():
             """Do nothing"""
 
     csp = DummyClass(
-        provider=provider, instance_ip=url,
+        provider=provider,
         instance_id=instance_id, stop_mode=stop_mode,
         region=region)
     csp._instance = 'dummy_instance'
+    csp._url = 'http://127.0.0.1'
 
     # Test: properties values
     assert csp.provider == provider
@@ -425,14 +426,12 @@ def test_cspgenericclass_start():
         assert csp.mark_instance_started
         assert not csp.mark_instance_terminated
 
-        # Test: Start from an instance URL
-        csp = DummyClass(region='dummy_region', instance_ip=dummy_url)
+        # Test: Start with already existing URL
         csp.start()
         assert csp._url == dummy_url
 
-        # Test: Start from an instance URL not reachable
+        # Test: Start with already existing URL but not reachable
         raises_on_boot = True
-        csp = DummyClass(region='dummy_region', instance_ip=dummy_url)
         with pytest.raises(CSPException):
             csp.start()
 
@@ -655,8 +654,6 @@ def run_full_real_test_sequence(provider, environment,
         with CSPGenericClass(config=config, stop_mode='term') as csp:
             csp.start(accel_parameters=environment)
 
-        gc.collect()
-
         # Start and stop, then terminate
         # Also check getting instance handle with ID
         if support_stop_restart:
@@ -672,23 +669,12 @@ def run_full_real_test_sequence(provider, environment,
                                  stop_mode='term') as csp:
                 csp.start()
 
-            gc.collect()
-
         # Start and keep, then
         # Also check getting instance handle with URL
         print('Test: Start and keep')
         with CSPGenericClass(config=config, stop_mode='keep') as csp:
             csp.start(accel_parameters=environment)
-            instance_ip = csp.url
             instance_id = csp.instance_id
-
-        gc.collect()
-
-        print('Test: Reuse with instance IP')
-        with CSPGenericClass(config=config, instance_ip=instance_ip) as csp:
-            csp.start()
-
-        gc.collect()
 
         print('Test: Reuse with instance ID and terminate')
         with CSPGenericClass(config=config, instance_id=instance_id,

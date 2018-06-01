@@ -37,18 +37,18 @@ def test_acceleratorclass():
         def __del__(self):
             """Don nothing"""
 
-        def start(self, datafile=None, csp_env=None, **parameters):
+        def start(self, datafile=None, csp_env=None, info_dict=True, **parameters):
             """Checks arguments and returns fake result"""
             assert datafile == dummy_datafile
             assert parameters == {'parameters': dummy_accelerator_parameters}
             return dummy_start_result
 
-        def stop(self):
+        def stop(self, info_dict=True):
             """Returns fake result"""
             DummyClient.running = False
             return dummy_stop_result
 
-        def process(self, file_in, file_out, **parameters):
+        def process(self, file_in, file_out, info_dict=True, **parameters):
             """Checks arguments and returns fake result"""
             assert parameters == {'parameters': dummy_accelerator_parameters}
             assert file_in == dummy_file_in
@@ -102,13 +102,13 @@ def test_acceleratorclass():
         assert DummyClient.running
         assert DummyCSP.running
         assert accelerator.start(
-            datafile=dummy_datafile, stop_mode=dummy_stop_mode,
+            datafile=dummy_datafile, stop_mode=dummy_stop_mode, info_dict=True,
             parameters=dummy_accelerator_parameters) == dummy_start_result
         assert accelerator.client.url == dummy_url
         assert accelerator.process(
-            file_in=dummy_file_in, file_out=dummy_file_out,
+            file_in=dummy_file_in, file_out=dummy_file_out, info_dict=True,
             parameters=dummy_accelerator_parameters) == dummy_process_result
-        assert accelerator.stop(stop_mode=dummy_stop_mode) == dummy_stop_result
+        assert accelerator.stop(stop_mode=dummy_stop_mode, info_dict=True) == dummy_stop_result
         assert not DummyClient.running
         assert not DummyCSP.running
 

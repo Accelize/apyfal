@@ -429,7 +429,7 @@ def test_acceleratorclient_start():
         excepted_response.update(base_parameters_result)
 
         assert excepted_response == accelerator.start(
-            datafile=excepted_datafile,
+            datafile=excepted_datafile, info_dict=True,
             **accelerator_parameters)
 
         # Check default values
@@ -439,12 +439,18 @@ def test_acceleratorclient_start():
         excepted_response = base_response.copy()
         excepted_response.update(base_parameters_result)
 
-        assert excepted_response == accelerator.start()
+        # On already configured
+        assert accelerator.start(info_dict=True) is None
+
+        # On not configured
+        accelerator._configuration_url = None
+        assert accelerator.start(info_dict=True) == excepted_response
 
         # Check error from host
         configuration_read_in_error = 1
+        accelerator._configuration_url = None
         with pytest.raises(AcceleratorRuntimeException):
-            assert excepted_response == accelerator.start()
+            accelerator.start()
 
     # Restore Swagger client API
     finally:
@@ -573,12 +579,14 @@ def test_acceleratorclient_stop():
     # Tests
     try:
         # AcceleratorClient to stop
-        assert DummyAccelerator('Dummy').stop() == stop_list
+        assert DummyAccelerator('Dummy').stop(
+            info_dict=True) == stop_list
         assert not StopApi.is_running
 
         # Ignore swagger exceptions
         stop_list_raise = True
-        assert DummyAccelerator('Dummy').stop() is None
+        assert DummyAccelerator('Dummy').stop(
+            info_dict=True) is None
         assert not StopApi.is_running
         stop_list_raise = False
 
@@ -597,7 +605,8 @@ def test_acceleratorclient_stop():
 
         # No accelerator to stop
         is_alive = False
-        assert DummyAccelerator('Dummy').stop() is None
+        assert DummyAccelerator('Dummy').stop(
+            info_dict=True) is None
 
     # Restore Swagger client API
     finally:
@@ -807,9 +816,11 @@ def test_acceleratorclient_process(tmpdir):
     # Mocks some variables
     processed = False
     in_error = True
-    dummy_process_parameters = {'dummy_process_parameters': None}
+    specific = {'result': '1'}
     parameters_result = {'app': {
-        'status': 0, 'msg': 'dummy_parameters_result'}}
+        'status': 0,
+        'msg': 'dummy_parameters_result',
+        'specific': specific}}
     datafile_result = {'app': {
         'status': 0, 'msg': 'dummy_datafile_result'}}
     out_content = b'file out content'
@@ -919,8 +930,19 @@ def test_acceleratorclient_process(tmpdir):
         in_error = False
 
         # Check if working as excepted
-        assert accelerator.process(str(file_in), str(file_out)) == parameters_result
+        excpected_parameters_result = copy.deepcopy(parameters_result)
+        del excpected_parameters_result['app']['specific']
+        assert accelerator.process(
+            str(file_in), str(file_out), info_dict=True) == (
+            specific, excpected_parameters_result)
         assert file_out.read_binary() == out_content
+
+        # Checks without info_dict
+        assert accelerator.process(str(file_in), str(file_out)) == specific
+
+        # Checks without result
+        del parameters_result['app']['specific']
+        assert accelerator.process(str(file_in), str(file_out)) is None
 
     # Restore requests and swagger API
     finally:
