@@ -943,6 +943,9 @@ def test_acceleratorclient_get_parameters(tmpdir):
             """Passe parameters to _get_parameters and return result"""
             return self._get_parameters(parameters, default_parameters)
 
+        def _check_accelize_credential(self):
+            """Don't check credential"""
+
     client = DummyClient('Dummy')
 
     # Test: Pass specific parameters as keyword arguments

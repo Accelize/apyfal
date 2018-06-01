@@ -153,13 +153,13 @@ with acceleratorAPI.AcceleratorClass(
 Some accelerators requires to be configured to run. Accelerator configuration is done with `start` and `process`
 methods.
 
-### Start configuration
+### Configuration step: the "start" method
 
-Configuration passed to `start` applies to every `process` calls that follows.
+Parameters passed to `start` applies to every `process` calls that follows.
 
-It is possible to call `start` a new time to change configuration.
+It is possible to call `start` a new time to change parameters.
 
-The `start` configuration is divided in two parts:
+The `start` parameters is divided in two parts:
 
 * The `datafile` argument: Some accelerator may require a data file to run, this argument is simply the path to 
 this file. Read the accelerator documentation to see the file format to use.
@@ -177,22 +177,22 @@ with acceleratorAPI.AcceleratorClass(accelerator='my_accelerator') as myaccel:
     # - parameter1, parameter2: Keywords parameters passed to "**parameters" arguments.
     myaccel.start(datafile='/path/datafile1.dat', parameter1='my_parameter_1', parameter2='my_parameter_2')
     
-    # Every "process" call after start use the previously specified configuration to perform processing 
+    # Every "process" call after start use the previously specified parameters to perform processing 
     myaccel.process(file_in='/path/myfile1.dat', file_out='/path/result1.dat')
     myaccel.process(file_in='/path/myfile2.dat', file_out='/path/result2.dat') 
     # ...
 
-    # It is possible to re-call "start" method with other parameters to change configuration
+    # It is possible to re-call "start" method with other parameters
     myaccel.start(datafile='/path/datafile2.dat')
     
-    # Following "process" will use the new configuration.
+    # Following "process" will use new parameters.
     myaccel.process(file_in='/path/myfile3.dat', file_out='/path/result3.dat')
     # ...
 ```
 
-### Process configuration
+### Process step: the "Process" method
 
-Configuration passed to `process` applies only to this `process` call.
+Parameters passed to `process` applies only to this `process` call.
 
 The `process` method accept the following arguments:
 
@@ -206,7 +206,6 @@ argument overrides default configuration values.
 import acceleratorAPI
 
 with acceleratorAPI.AcceleratorClass(accelerator='my_accelerator') as myaccel:
-
     myaccel.start()
     
     # The parameters are passed to "process" to configure it, parameters are:
@@ -215,21 +214,32 @@ with acceleratorAPI.AcceleratorClass(accelerator='my_accelerator') as myaccel:
                     parameter1='my_parameter_1', parameter2='my_parameter_2')
 ```
 
-### Configuration and Process parameters dict/JSON
+### Configuration and Process JSON parameters files
 
-TODO:
+The low level accelerator API that run on FPGA host work parameters files:
 
-#### Using "**parameters" argument with dict or JSON
+This files are JSON that have the following format:
+```python
+{
+    "app": {
+        "specific":{
+        # Specific parameters as key, values pairs.
+        }
+    }
+}
+```
+Read the accelerator documentation to see possibles specific parameters values.
+
+#### Using "**parameters" argument with JSON parameters files
 
 The `**parameters` argument passed to `start` and `process` methods can also be used to pass
-*parameters dict/JSON* like defined previously. In this case, `**parameters` is used as `parameters=`
+*JSON parameters files* like defined previously. In this case, `**parameters` is used as `parameters=`
 
-Assuming `parameter_dict` is the parameters `dict`:
+Assuming `parameters.json` is the JSON parameters files:
 
-* To pass the `parameter_dict` directly as `dict`: `parameters=parameter_dict`.
-* To pass the `parameter_dict` as JSON `str` literal: `parameters=parameter_dict_json_dump`.
-* To pass the `parameter_dict` as JSON file, in this case simply pass its path:
-`parameters='/path/parameter_dict.json'`.
+* To pass the `parameters.json` file, simply pass its path: `parameters='/path/parameters.json'`.
+* To pass the `parameters.json` content as JSON `str` literal: `parameters=parameters_json_content`.
+* To pass the `dict` equivalent of `parameters.json`: `parameters=parameters_json_content_as_dict`.
 
 `parameters=` can be used with classical `**parameters` keywords arguments, in this case keywords arguments overrides
 values already existing in in dict passed to `parameters=`.
@@ -238,13 +248,21 @@ values already existing in in dict passed to `parameters=`.
 import acceleratorAPI
 
 with acceleratorAPI.AcceleratorClass(accelerator='my_accelerator') as myaccel:
-
     myaccel.start()
     
-    # Example passing the JSON file of "parameter_dict" + keywords arguments
+    # Example passing the parameter JSON file and keywords arguments at same time
     myaccel.process(file_in='/path/myfile1.dat', file_out='/path/result1.dat',
-                    # Passing Path to JSON file of "parameter_dict" to "parameters="
-                    parameters='/path/parameter_dict.json',
-                    # Passing keywords arguments like previously
+                    # Passing Path to JSON file to "parameters="
+                    parameters='/path/parameters.json',
+                    # Passing keywords arguments
                     parameter1='my_parameter_1', parameter2='my_parameter_2')
+```
+
+#### Using JSON parameters files with the configuration file
+
+JSON parameters files can also be defined directly in `accelerator.conf`. Parameters in configuration files
+will act as default values and will be overridden by any parameter passed directly to `start` and `process` methods. 
+
+```eval_rst
+See :doc:`configuration` for more information.
 ```
