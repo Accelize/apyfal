@@ -545,7 +545,7 @@ def test_cspgenericclass_set_accelerator_requirements():
         """Dummy accelerator client"""
 
         @staticmethod
-        def get_requirements(provider):
+        def get_csp_requirements(provider):
             """Checks argument and returns fake result"""
             # Checks arguments
             assert provider == dummy_provider

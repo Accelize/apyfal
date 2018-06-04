@@ -125,7 +125,7 @@ class AcceleratorClient(object):
             # Check access and get token from server
             response = _utl.http_session().post(
                 _cfg.METERING_SERVER + '/o/token/',
-                data={"grant_type": "client_credentials"}, auth=(self.client_id, self.secret_id))
+                data={"grant_type": "client_credentials"}, auth=(self._client_id, self._secret_id))
 
             if response.status_code != 200:
                 raise _exc.AcceleratorAuthenticationException(
@@ -140,42 +140,12 @@ class AcceleratorClient(object):
     @property
     def name(self):
         """
-        AcceleratorClient name
+        Accelerator name
 
         Returns:
             str: name
         """
         return self._name
-
-    @property
-    def client_id(self):
-        """
-        User's Accelize client ID
-
-        Returns:
-            str: ID
-        """
-        return self._client_id
-
-    @property
-    def secret_id(self):
-        """
-        User's Accelize secret ID
-
-        Returns:
-            str: ID
-        """
-        return self._secret_id
-
-    @property
-    def configuration_url(self):
-        """
-        AcceleratorClient configuration URL
-
-        Returns:
-            str: URL
-        """
-        return self._configuration_url
 
     @property
     def url(self):
@@ -216,7 +186,7 @@ class AcceleratorClient(object):
             raise _exc.AcceleratorRuntimeException(
                 gen_msg=('unable_reach_url', self._url))
 
-    def get_requirements(self, provider):
+    def get_csp_requirements(self, provider):
         """
         Gets accelerators requirements to use with CSP.
 
@@ -306,7 +276,7 @@ class AcceleratorClient(object):
         # Checks parameters
         parameters = self._get_parameters(parameters, self._configuration_parameters)
         parameters.update({
-            "env": {"client_id": self.client_id, "client_secret": self.secret_id}})
+            "env": {"client_id": self._client_id, "client_secret": self._secret_id}})
         parameters['env'].update(csp_env or dict())
 
         if datafile is None:
@@ -348,7 +318,7 @@ class AcceleratorClient(object):
             bool: True if processed
         """
         api_response = self._rest_api_process().process_create(
-            self.configuration_url, parameters=json_parameters, datafile=datafile)
+            self._configuration_url, parameters=json_parameters, datafile=datafile)
         return api_response.id, api_response.processed
 
     def _process_curl(self, json_parameters, datafile):
@@ -367,7 +337,7 @@ class AcceleratorClient(object):
         curl = _pycurl.Curl()
 
         post = [("parameters", json_parameters),
-                ("configuration", self.configuration_url)]
+                ("configuration", self._configuration_url)]
         if datafile is not None:
             post.append(("datafile", (_pycurl.FORM_FILE, datafile)))
 
@@ -437,7 +407,7 @@ class AcceleratorClient(object):
         """
         # TODO: Detail response dict in docstring
         # Check if configuration was done
-        if self.configuration_url is None:
+        if self._configuration_url is None:
             raise _exc.AcceleratorConfigurationException(
                 "AcceleratorClient has not been configured. Use 'start' function.")
 

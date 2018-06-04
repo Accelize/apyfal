@@ -610,7 +610,7 @@ class CSPGenericClass(_utl.ABC):
         # Get parameters
         parameters = dict()
         if accel_client is not None:
-            parameters.update(accel_client.get_requirements(self._provider))
+            parameters.update(accel_client.get_csp_requirements(self._provider))
 
         if accel_parameters is not None:
             parameters.update(accel_parameters)

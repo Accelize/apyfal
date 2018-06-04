@@ -183,8 +183,8 @@ def test_acceleratorclient_raise_for_status():
         AcceleratorClient._raise_for_status({'app': {'status': 1, 'msg': 'error'}})
 
 
-def test_acceleratorclient_get_requirements():
-    """Tests AcceleratorClient.get_requirements
+def test_acceleratorclient_get_csp_requirements():
+    """Tests AcceleratorClient.get_csp_requirements
 
     without Accelize server"""
     from acceleratorAPI.client import AcceleratorClient
@@ -240,17 +240,17 @@ def test_acceleratorclient_get_requirements():
         # Test: Invalid AcceleratorClient name
         accelerator = DummyAccelerator('accelerator_not_exists')
         with pytest.raises(AcceleratorConfigurationException):
-            accelerator.get_requirements(provider)
+            accelerator.get_csp_requirements(provider)
 
         # Test: Provider not exists
         accelerator = DummyAccelerator(accelerator_name)
         with pytest.raises(AcceleratorConfigurationException):
-            accelerator.get_requirements('no_exist_CSP')
+            accelerator.get_csp_requirements('no_exist_CSP')
 
         # Test: Everything OK
         accelerator = DummyAccelerator(accelerator_name)
         assert accelerator.name == accelerator_name
-        response = accelerator.get_requirements(provider)
+        response = accelerator.get_csp_requirements(provider)
         config['accelerator'] = accelerator_name
         assert response == config
 
@@ -261,7 +261,7 @@ def test_acceleratorclient_get_requirements():
 
 @pytest.mark.need_accelize
 def test_acceleratorclient_get_requirements_real():
-    """Tests AcceleratorClient.get_requirements
+    """Tests AcceleratorClient.get_csp_requirements
 
     with Accelize server"""
     # Skip test if Accelize credentials not available
@@ -274,17 +274,17 @@ def test_acceleratorclient_get_requirements_real():
     # Test: Invalid AcceleratorClient name
     accelerator = AcceleratorClient('accelerator_not_exists', config=config)
     with pytest.raises(AcceleratorConfigurationException):
-        accelerator.get_requirements('OVH')
+        accelerator.get_csp_requirements('OVH')
 
     # Test: Provider not exists
     accelerator = AcceleratorClient('axonerve_hyperfire', config=config)
     with pytest.raises(AcceleratorConfigurationException):
-        accelerator.get_requirements('no_exist_CSP')
+        accelerator.get_csp_requirements('no_exist_CSP')
 
     # Test: Everything OK
     name = 'axonerve_hyperfire'
     accelerator = AcceleratorClient(name, config=config)
-    response = accelerator.get_requirements('OVH')
+    response = accelerator.get_csp_requirements('OVH')
     assert response['accelerator'] == name
 
 
@@ -407,8 +407,8 @@ def test_acceleratorclient_start():
 
     base_parameters = {
         "env": {
-            "client_id": accelerator.client_id,
-            "client_secret": accelerator.secret_id}}
+            "client_id": accelerator._client_id,
+            "client_secret": accelerator._secret_id}}
 
     base_response = {'url_config': 'dummy_url',
                      'url_instance': accelerator.url}
@@ -503,25 +503,25 @@ def test_acceleratorclient_use_last_configuration():
         # No previous configuration
         accelerator = DummyAccelerator(
             'Dummy', instance_ip='https://www.accelize.com')
-        assert accelerator.configuration_url is None
+        assert accelerator._configuration_url is None
 
         configuration_list_raises = True
         accelerator = DummyAccelerator(
             'Dummy', instance_ip='https://www.accelize.com')
-        assert accelerator.configuration_url is None
+        assert accelerator._configuration_url is None
         configuration_list_raises = False
 
         # Unused previous configuration
         config_list.append(Config(url='dummy_config_url', used=0))
         accelerator = DummyAccelerator(
             'Dummy', instance_ip='https://www.accelize.com')
-        assert accelerator.configuration_url is None
+        assert accelerator._configuration_url is None
 
         # Used previous configuration
         config_list.insert(0, Config(url='dummy_config_url_2', used=1))
         accelerator = DummyAccelerator(
             'Dummy', instance_ip='https://www.accelize.com')
-        assert accelerator.configuration_url == 'dummy_config_url_2'
+        assert accelerator._configuration_url == 'dummy_config_url_2'
 
     # Restore Swagger client API
     finally:
