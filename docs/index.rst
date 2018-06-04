@@ -55,23 +55,23 @@ Feature
    :maxdepth: 2
    :caption: User Documentation
    
-   installation.md
-   configuration.md
-   getting_started.md
+   installation
+   configuration
+   getting_started
 
 .. toctree::
    :maxdepth: 2
    :caption: API Documentation
    
-   api.md
-   rest.md
+   api
+   rest
 
 .. toctree::
    :maxdepth: 2
    :caption: Developer Guide
    
-   build.md
-   changes.md
+   build
+   changes
    
 .. toctree::
    :maxdepth: 2

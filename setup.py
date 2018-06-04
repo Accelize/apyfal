@@ -60,9 +60,6 @@ PACKAGE_INFO = dict(
     cmdclass={}
     )
 
-# Requirements for Sphinx and ReadTheDocs
-BUILD_SPHINX_REQUIRES = ['sphinx', 'recommonmark', 'sphinx_rtd_theme']
-
 # Gets package __version__ from package
 SETUP_DIR = abspath(dirname(__file__))
 with open(join(SETUP_DIR, 'acceleratorAPI', '__init__.py')) as source_file:
@@ -239,7 +236,7 @@ if {'pytest', 'test', 'ptr'}.intersection(argv):
 
 # Add Sphinx requirements if needed
 elif 'build_sphinx' in argv:
-    PACKAGE_INFO['setup_requires'] += BUILD_SPHINX_REQUIRES
+    PACKAGE_INFO['setup_requires'] += ['sphinx', 'sphinx_rtd_theme']
 
 # Generates wildcard "all" extras_require
 PACKAGE_INFO['extras_require']['all'] = list(set(

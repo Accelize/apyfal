@@ -70,4 +70,4 @@ dist/
 # Sphinx generated files #
 ##########################
 docs/_build/
-docs/configuration_file.md
+docs/configuration_file.rst
