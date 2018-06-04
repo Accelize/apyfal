@@ -41,7 +41,7 @@ with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
 
 # Documentation
 
-For more information apyfal, please read the [documentation](ttps://apyfal.readthedocs.io).
+For more information apyfal, please read the [documentation](https://apyfal.readthedocs.io).
 
 # Installation
 
