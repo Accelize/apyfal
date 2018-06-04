@@ -78,3 +78,8 @@ Example for installing the `all` extra:
 ```bash
 pip install acceleratorAPI[all]
 ```
+
+Example for installing the `AWS` + `optional` extras:
+```bash
+pip install acceleratorAPI[AWS,optional]
+```
