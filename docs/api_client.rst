@@ -1,5 +1,5 @@
 apyfal.client
-==========================
+=============
 
 .. automodule:: apyfal.client
    :members:

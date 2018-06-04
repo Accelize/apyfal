@@ -1,5 +1,5 @@
 apyfal.configuration
-============================
+====================
 
 See also :doc:`configuration`
 

@@ -1,5 +1,5 @@
-apyfal
-===================
+Apyfal
+======
 
 .. automodule:: apyfal
    :members:

@@ -15,7 +15,7 @@ from setuptools import setup, find_packages, Command
 PACKAGE_INFO = dict(
     name='apyfal',
     description='Apyfal is a powerful and flexible '
-                'toolkit for testing and operate FPGA accelerated function.',
+                'toolkit to operate FPGA accelerated functions.',
     long_description_content_type='text/markdown; charset=UTF-8',
     classifiers=[
         # Must be listed on: https://pypi.org/classifiers/
@@ -32,14 +32,15 @@ PACKAGE_INFO = dict(
         'Programming Language :: Python :: 3.6',
         'Operating System :: OS Independent'
         ],
-    keywords='fpga cloud accelerator accelize',
+    keywords='cloud accelerator accelize fpga hpc',
     author='Accelize',
     author_email='info@accelize.com',
     url='https://github.com/Accelize/apyfal',
     project_urls={
+        'Download': 'https://pypi.org/project/apyfal/',
         'AccelStore': 'https://accelstore.accelize.com/',
         'Accelize Website': 'https://www.accelize.com/',
-        'Contact': 'https://www.accelize.com/contact-us/'
+        'Contact': 'https://www.accelize.com/contact-us/',
     },
     license='Apache',
     python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',

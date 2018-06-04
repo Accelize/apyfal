@@ -1,5 +1,5 @@
 apyfal.csp
-==================
+==========
 
 .. automodule:: apyfal.csp
    :members:

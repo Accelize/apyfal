@@ -4,7 +4,7 @@ Welcome to Apyfal's documentation!
 Overview
 --------
 
-Apyfal is a powerful and flexible toolkit to operate FPGA [#fpga]_ accelerated function .
+Apyfal is a powerful and flexible toolkit to operate FPGA [#fpga]_ accelerated functions.
 
 Some reasons you might want to use Apyfal :
 
@@ -75,11 +75,12 @@ Feature
    
 .. toctree::
    :maxdepth: 2
-   :caption: Accelize links 
+   :caption: Accelize links
 
-   Website <https://www.accelize.com>
    AccelStore <https://accelstore.accelize.com>
-   GitHub <https://github.com/Accelize>
+   Apyfal on GitHub <https://github.com/Accelize/apyfal>
+   Apyfal on PyPI <https://pypi.org/project/apyfal>
+   Accelize Website <https://www.accelize.com>
    Contact us <https://www.accelize.com/contact>
 
 Indices and tables

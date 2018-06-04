@@ -4,7 +4,7 @@ Changelog
 1.0.0 (2018/06)
 ---------------
 
-Created a new *apyfal* library based on legacy *acceleratorAPI*.
+Created the new *apyfal* library based on legacy *acceleratorAPI*.
 
 Apyfal keeps all the features from acceleratorAPI but was largely improved. Apyfal is not backward compatible with
 acceleratorAPI (Read the documentation to see how update your code). Future version of Apyfal will be compatible with
