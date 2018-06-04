@@ -942,7 +942,7 @@ def test_acceleratorclient_process(tmpdir):
 
         # Checks without result
         del parameters_result['app']['specific']
-        assert accelerator.process(str(file_in), str(file_out)) is None
+        assert accelerator.process(str(file_in), str(file_out)) == dict()
 
     # Restore requests and swagger API
     finally:
