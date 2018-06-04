@@ -400,7 +400,7 @@ class AcceleratorClient(object):
                 Take a look to accelerator documentation for more information on possible parameters.
 
         Returns:
-            dict or None: Result from process operation, depending used accelerator.
+            dict: Result from process operation, depending used accelerator.
             dict: Optional, only if "info_dict" is True. AcceleratorClient response.
                 AcceleratorClient contain output information from  process operation.
                 Take a look accelerator documentation for more information.
@@ -458,7 +458,7 @@ class AcceleratorClient(object):
         try:
             result = process_response['app'].pop('specific')
         except KeyError:
-            result = None
+            result = dict()
 
         if info_dict:
             # Returns with optional response

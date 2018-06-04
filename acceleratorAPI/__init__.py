@@ -139,8 +139,8 @@ class AcceleratorClass(object):
 
         Returns:
             dict: Optional, only if "info_dict" is True. AcceleratorClient response.
-                AcceleratorClient contain output information from  configuration operation.
-                Take a look to accelerator documentation for more information.
+                  AcceleratorClient contain output information from  configuration operation.
+                  Take a look to accelerator documentation for more information.
         """
         # Start CSP instance if needed (Do nothing if already started)
         self._csp.start(accel_client=self._client, stop_mode=stop_mode)
@@ -171,7 +171,7 @@ class AcceleratorClass(object):
                 Take a look accelerator documentation for more information on possible parameters.
 
         Returns:
-            bytes or None: Result from process operation, depending used accelerator.
+            dict: Result from process operation, depending used accelerator.
             dict: Optional, only if "info_dict" is True. AcceleratorClient response.
                 AcceleratorClient contain output information from  process operation.
                 Take a look to accelerator documentation for more information.
