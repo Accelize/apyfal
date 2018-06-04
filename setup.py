@@ -218,12 +218,7 @@ class SwaggerCommand(Command):
 PACKAGE_INFO['cmdclass']['swagger_codegen'] = SwaggerCommand
 
 # Gets requirements from Swagger generated REST API
-if 'swagger_codegen' not in argv:
-    if not isfile(REST_API_SETUP):
-        raise RuntimeError(
-            "REST API not generated, "
-            "please run 'setup.py swagger_codegen' first")
-
+if 'swagger_codegen' not in argv and isfile(REST_API_SETUP):
     from ast import literal_eval
     with open(REST_API_SETUP) as source_file:
         for line in source_file:
@@ -257,5 +252,9 @@ PACKAGE_INFO['command_options']['build_sphinx'] = {
 
 # Runs setup
 if __name__ == '__main__':
+    if 'swagger_codegen' not in argv and not isfile(REST_API_SETUP):
+        raise RuntimeError(
+            "REST API not generated, "
+            "please run 'setup.py swagger_codegen' first")
     chdir(SETUP_DIR)
     setup(**PACKAGE_INFO)
