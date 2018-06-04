@@ -1,4 +1,4 @@
-Apyfal
+apyfal
 ======
 
 .. automodule:: apyfal
