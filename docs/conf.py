@@ -27,7 +27,7 @@ SPHINX_INFO = PACKAGE_INFO['command_options']['build_sphinx']
 if os.environ.get('READTHEDOCS'):
     from subprocess import Popen
     commands = (
-        'python -m pip install --upgrade %s' % (' '.join(BUILD_SPHINX_REQUIRES)),
+        'python -m pip install %s' % (' '.join(BUILD_SPHINX_REQUIRES)),
         'python -m pip install -e .[all]'
     )
     current_dir = os.getcwd()
