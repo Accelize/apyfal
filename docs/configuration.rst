@@ -54,9 +54,9 @@ This file is automatically loaded by the API if found in the current
 working directory or current user home directory. A custom path can also
 be passed as argument to the API.
 
-:download:`accelerator.conf example file <../acceleratorAPI/accelerator.conf>`.
+:download:`accelerator.conf example file <../apyfal/accelerator.conf>`.
 
-Passing as parameters to acceleratorAPI
+Passing as parameters to apyfal
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The use of the configuration file is not mandatory, all parameters can

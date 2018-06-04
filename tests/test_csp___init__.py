@@ -1,5 +1,5 @@
 # coding=utf-8
-"""acceleratorAPI.csp tests"""
+"""apyfal.csp tests"""
 import gc
 import time
 import warnings
@@ -8,11 +8,11 @@ import pytest
 
 
 def test_cspgenericclass_new_init():
-    """Tests CSPGenericClass.__new__ and CSPGenericClass.__init__"""
-    from acceleratorAPI.configuration import Configuration
-    from acceleratorAPI.csp import CSPGenericClass
-    from acceleratorAPI.csp.ovh import OVHClass
-    from acceleratorAPI.exceptions import CSPConfigurationException
+    """Tests CSPGeneric.__new__ and CSPGeneric.__init__"""
+    from apyfal.configuration import Configuration
+    from apyfal.csp import CSPGeneric
+    from apyfal.csp.ovh import OVHCSP
+    from apyfal.exceptions import CSPConfigurationException
 
     # Mock arguments and configuration
     # Note that provider is not specified here
@@ -22,34 +22,34 @@ def test_cspgenericclass_new_init():
               'auth_url': 'auth_url', 'interface': 'interface', 'config': config}
 
     # Test: Existing CSP class and module
-    assert isinstance(CSPGenericClass(provider="OVH", **kwargs), OVHClass)
+    assert isinstance(CSPGeneric(provider="OVH", **kwargs), OVHCSP)
 
     # Test: Not existing CSP module
     with pytest.raises(CSPConfigurationException):
-        CSPGenericClass(provider="no_existing_csp")
+        CSPGeneric(provider="no_existing_csp")
 
     # Test: Existing CSP module, with no valid class
     with pytest.raises(CSPConfigurationException):
-        CSPGenericClass(provider="generic_openstack")
+        CSPGeneric(provider="generic_openstack")
 
     # Test: direct instantiation of subclass without specify provider
-    OVHClass(**kwargs)
+    OVHCSP(**kwargs)
 
     # Test: Instantiation of without specify provider
     with pytest.raises(CSPConfigurationException):
-        CSPGenericClass(**kwargs)
+        CSPGeneric(**kwargs)
 
     # Test: Instantiation with missing mandatory arguments
     with pytest.raises(CSPConfigurationException):
-        CSPGenericClass(provider="OVH", config=config)
+        CSPGeneric(provider="OVH", config=config)
 
     kwargs_no_client_id = kwargs.copy()
     del kwargs_no_client_id['client_id']
     with pytest.raises(CSPConfigurationException):
-        CSPGenericClass(provider="OVH", **kwargs_no_client_id)
+        CSPGeneric(provider="OVH", **kwargs_no_client_id)
 
     # Test: Abstract class still working with factory
-    class UncompletedCSP(CSPGenericClass):
+    class UncompletedCSP(CSPGeneric):
         """Uncompleted CSP class"""
 
     with pytest.raises(TypeError):
@@ -58,14 +58,14 @@ def test_cspgenericclass_new_init():
 
 def get_dummy_csp_class():
     """
-    Returns a base dummy subclass of CSPGenericClass
+    Returns a base dummy subclass of CSPGeneric
 
     Returns:
-        acceleratorAPI.csp.CSPGenericClass subclass
+        apyfal.csp.CSPGeneric subclass
     """
-    from acceleratorAPI.csp import CSPGenericClass
+    from apyfal.csp import CSPGeneric
 
-    class BaseDummyClass(CSPGenericClass):
+    class BaseDummyClass(CSPGeneric):
         """Base dummy class"""
         NAME = 'Dummy'
 
@@ -106,8 +106,8 @@ def get_dummy_csp_class():
 
 
 def test_cspgenericclass_properties():
-    """Tests CSPGenericClass properties"""
-    from acceleratorAPI.exceptions import CSPInstanceException
+    """Tests CSPGeneric properties"""
+    from apyfal.exceptions import CSPInstanceException
 
     # Mock variables
     provider = 'dummy_provider'
@@ -198,8 +198,8 @@ def test_cspgenericclass_properties():
 
 
 def test_cspgenericclass_status():
-    """Tests CSPGenericClass._status"""
-    from acceleratorAPI.exceptions import CSPInstanceException
+    """Tests CSPGeneric._status"""
+    from apyfal.exceptions import CSPInstanceException
 
     # Mock variables
     status = 'dummy_status'
@@ -241,9 +241,9 @@ def test_cspgenericclass_status():
 
 
 def test_cspgenericclass_start():
-    """Tests CSPGenericClass.start"""
-    from acceleratorAPI.exceptions import CSPException
-    import acceleratorAPI._utilities as utl
+    """Tests CSPGeneric.start"""
+    from apyfal.exceptions import CSPException
+    import apyfal._utilities as utl
 
     # Mock variables
     status = 'dummy_status'
@@ -443,8 +443,8 @@ def test_cspgenericclass_start():
 
 
 def test_cspgenericclass_stop():
-    """Tests CSPGenericClass.stop"""
-    from acceleratorAPI.csp import CSPGenericClass
+    """Tests CSPGeneric.stop"""
+    from apyfal.csp import CSPGeneric
 
     # Mock variables
     instance = "dummy_instance"
@@ -515,7 +515,7 @@ def test_cspgenericclass_stop():
     DummyCSP.class_stopped_mode = 'keep'
     with DummyCSP(stop_mode='term') as csp:
         # Checks __enter__ returned object
-        assert isinstance(csp, CSPGenericClass)
+        assert isinstance(csp, CSPGeneric)
     assert DummyCSP.class_stopped_mode == 'term'
 
     # Test: Auto-stops on garbage collection
@@ -526,8 +526,8 @@ def test_cspgenericclass_stop():
 
 
 def test_cspgenericclass_set_accelerator_requirements():
-    """Tests CSPGenericClass._set_accelerator_requirements"""
-    from acceleratorAPI.exceptions import CSPConfigurationException
+    """Tests CSPGeneric._set_accelerator_requirements"""
+    from apyfal.exceptions import CSPConfigurationException
 
     # Mock variables
     dummy_provider = 'dummy_provider'
@@ -589,8 +589,8 @@ def import_from_generic_test(provider, **kwargs):
         provider( str): CSP provider
         kwargs: Other args required
     """
-    from acceleratorAPI.csp import CSPGenericClass
-    CSPGenericClass(
+    from apyfal.csp import CSPGeneric
+    CSPGeneric(
         provider=provider, region='dummy_region',
         client_id='dummy_client_id', secret_id='dummy_secret_id',
         **kwargs)
@@ -610,7 +610,7 @@ def run_full_real_test_sequence(provider, environment,
         support_stop_restart (bool): If True support pause instance
             and restart.
     """
-    from acceleratorAPI.configuration import Configuration
+    from apyfal.configuration import Configuration
 
     # Skip if no correct configuration with this provider
     config = Configuration()
@@ -625,7 +625,7 @@ def run_full_real_test_sequence(provider, environment,
                     (config.get_default('csp', 'region'), provider))
 
     # Enable logger
-    from acceleratorAPI import get_logger
+    from apyfal import get_logger
     get_logger(stdout=True)
 
     # Add accelerator to environment
@@ -634,7 +634,7 @@ def run_full_real_test_sequence(provider, environment,
     # Mock instance URL check
     # Since used basic image don't provide HTTP access
     if not use_full_images:
-        import acceleratorAPI._utilities
+        import apyfal._utilities
 
         def dummy_check_url(_, timeout=0.0, **__):
             """Don't check URL, only waits if timeout and returns True"""
@@ -642,46 +642,46 @@ def run_full_real_test_sequence(provider, environment,
                 time.sleep(60)
             return True
 
-        utilities_check_url = acceleratorAPI._utilities.check_url
-        acceleratorAPI._utilities.check_url = dummy_check_url
+        utilities_check_url = apyfal._utilities.check_url
+        apyfal._utilities.check_url = dummy_check_url
 
     # Tests:
-    from acceleratorAPI.csp import CSPGenericClass
+    from apyfal.csp import CSPGeneric
 
     try:
         # Start and terminate
         print('Test: Start and terminate')
-        with CSPGenericClass(config=config, stop_mode='term') as csp:
+        with CSPGeneric(config=config, stop_mode='term') as csp:
             csp.start(accel_parameters=environment)
 
         # Start and stop, then terminate
         # Also check getting instance handle with ID
         if support_stop_restart:
             print('Test: Start and stop')
-            with CSPGenericClass(config=config, stop_mode='stop') as csp:
+            with CSPGeneric(config=config, stop_mode='stop') as csp:
                 csp.start(accel_parameters=environment)
                 instance_id = csp.instance_id
 
             gc.collect()
 
             print('Test: Start from stopped and terminate')
-            with CSPGenericClass(config=config, instance_id=instance_id,
+            with CSPGeneric(config=config, instance_id=instance_id,
                                  stop_mode='term') as csp:
                 csp.start()
 
         # Start and keep, then
         # Also check getting instance handle with URL
         print('Test: Start and keep')
-        with CSPGenericClass(config=config, stop_mode='keep') as csp:
+        with CSPGeneric(config=config, stop_mode='keep') as csp:
             csp.start(accel_parameters=environment)
             instance_id = csp.instance_id
 
         print('Test: Reuse with instance ID and terminate')
-        with CSPGenericClass(config=config, instance_id=instance_id,
+        with CSPGeneric(config=config, instance_id=instance_id,
                              stop_mode='term') as csp:
             csp.start()
 
     # Restore check_url
     finally:
         if not use_full_images:
-            acceleratorAPI._utilities.check_url = utilities_check_url
+            apyfal._utilities.check_url = utilities_check_url

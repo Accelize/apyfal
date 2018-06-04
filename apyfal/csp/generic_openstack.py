@@ -4,19 +4,19 @@
 import keystoneauth1.exceptions.http as _keystoneauth_exceptions
 import openstack as _openstack
 
-from acceleratorAPI.csp import CSPGenericClass as _CSPGenericClass
-import acceleratorAPI.configuration as _cfg
-import acceleratorAPI.exceptions as _exc
-import acceleratorAPI._utilities as _utl
-from acceleratorAPI._utilities import get_logger as _get_logger
+from apyfal.csp import CSPGeneric as _CSPGeneric
+import apyfal.configuration as _cfg
+import apyfal.exceptions as _exc
+import apyfal._utilities as _utl
+from apyfal._utilities import get_logger as _get_logger
 
 
-class OpenStackClass(_CSPGenericClass):
+class OpenStackCSP(_CSPGeneric):
     """Generic class for OpenStack based CSP
 
     Args:
         provider (str): Cloud service provider name.
-        config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
         client_id (str): OpenStack Access Key ID.
@@ -48,12 +48,12 @@ class OpenStackClass(_CSPGenericClass):
     #: Default Interface to use (str)
     OPENSTACK_INTERFACE = None
 
-    _INFO_NAMES = _CSPGenericClass._INFO_NAMES.copy()
+    _INFO_NAMES = _CSPGeneric._INFO_NAMES.copy()
     _INFO_NAMES.update({'_project_id', '_auth_url', '_interface'})
 
     def __init__(self, config=None, project_id=None, auth_url=None, interface=None, **kwargs):
         config = _cfg.create_configuration(config)
-        _CSPGenericClass.__init__(self, config=config, **kwargs)
+        _CSPGeneric.__init__(self, config=config, **kwargs)
 
         # OpenStack specific arguments
         self._project_id = config.get_default(
@@ -86,7 +86,7 @@ class OpenStackClass(_CSPGenericClass):
         Check CSP credentials.
 
         Raises:
-            acceleratorAPI.exceptions.CSPAuthenticationException:
+            apyfal.exceptions.CSPAuthenticationException:
                 Authentication failed.
         """
         try:
@@ -143,7 +143,7 @@ class OpenStackClass(_CSPGenericClass):
         # Create rule on SSH
         try:
             self._session.create_security_group_rule(
-                security_group.id, port_range_min=22,port_range_max=22,
+                security_group.id, port_range_min=22, port_range_max=22,
                 protocol="tcp", remote_ip_prefix=public_ip,
                 project_id=self._project_id)
         except _openstack.exceptions.SDKException:
@@ -226,7 +226,7 @@ class OpenStackClass(_CSPGenericClass):
             str: image_id
         """
         # Gets image
-        image_id = _CSPGenericClass._get_image_id_from_region(
+        image_id = _CSPGeneric._get_image_id_from_region(
             self, accel_parameters_in_region)
 
         # Checks if image exists and get its name
@@ -256,7 +256,7 @@ class OpenStackClass(_CSPGenericClass):
             str: instance_type
         """
         # Get instance type (flavor)
-        self._instance_type_name = _CSPGenericClass._get_instance_type_from_region(
+        self._instance_type_name = _CSPGeneric._get_instance_type_from_region(
             self, accel_parameters_in_region)
         try:
             instance_type = self._session.compute.find_flavor(

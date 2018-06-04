@@ -1,15 +1,15 @@
 # coding=utf-8
-"""AcceleratorAPI Exceptions"""
+"""Apyfal Exceptions"""
 
-from acceleratorAPI._utilities import gen_msg as _get_msg
+from apyfal._utilities import gen_msg as _get_msg
 
 
 class AcceleratorApiBaseException(Exception):
-    """Base exception for acceleratorAPI exceptions
+    """Base exception for apyfal exceptions
 
     Args:
         msg (str): Exception message
-        gen_msg (tuple of str or str): Arguments for acceleratorAPI._utilities.gen_msg
+        gen_msg (tuple of str or str): Arguments for apyfal._utilities.gen_msg
         exc (Exception or str): Exception or other details to
             add to description"""
     DEFAULT_MESSAGE = ""

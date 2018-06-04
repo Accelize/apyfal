@@ -1,7 +1,7 @@
-Building acceleratorAPI
+Building apyfal
 =======================
 
-Installing acceleratorAPI build environment
+Installing apyfal build environment
 -------------------------------------------
 
 Prepare Python environment
@@ -17,20 +17,20 @@ to date.
 Clone repository from Github
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-acceleratorAPI development version is hosted on github, to get it use
+apyfal development version is hosted on github, to get it use
 git clone:
 
 .. code-block:: bash
 
-    git clone https://github.com/Accelize/acceleratorAPI.git
+    git clone https://github.com/Accelize/apyfal.git
 
 Generating REST API client with Swagger-Codegen
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-acceleratorAPI REST API client code (``acceleratorAPI._swagger_client``)
+apyfal REST API client code (``apyfal._swagger_client``)
 is not stored in repository but generated with *Swagger-Codegen*.
 
-This code need to be generated before run acceleratorAPI in your
+This code need to be generated before run apyfal in your
 development environment.
 
    *Java* is required to perform this step.
@@ -41,10 +41,10 @@ To generate client code, run the following line in repository directory:
 
     ./setup.py swagger_codegen
 
-Installing all acceleratorAPI requirements
+Installing all apyfal requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To install all package that are required to run acceleratorAPI, run the
+To install all package that are required to run apyfal, run the
 following line in repository directory:
 
 .. code-block:: bash

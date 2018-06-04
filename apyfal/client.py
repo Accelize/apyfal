@@ -20,13 +20,14 @@ try:
 
 except ImportError:
     _USE_PYCURL = False
+    _pycurl = None
 
-import acceleratorAPI._utilities as _utl
-import acceleratorAPI.exceptions as _exc
-import acceleratorAPI.configuration as _cfg
+import apyfal._utilities as _utl
+import apyfal.exceptions as _exc
+import apyfal.configuration as _cfg
 
 try:
-    import acceleratorAPI._swagger_client as _api
+    import apyfal._swagger_client as _api
 except ImportError:
     # swagger_client is dynamically generated with Swagger-codegen and
     # not provided in repository, so it is possible
@@ -51,7 +52,7 @@ class AcceleratorClient(object):
             "https:/accelstore.accelize.com/user/applications".
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with client_id.
         instance_ip (str): IP or URL address of the CSP instance that host the accelerator.
-        config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values
     """
@@ -430,9 +431,11 @@ class AcceleratorClient(object):
         # Get result
         api_instance = self._rest_api_process()
         try:
-            while processed is not True:
+            while True:
                 api_response = api_instance.process_read(api_resp_id)
                 processed = api_response.processed
+                if processed is True:
+                    break
 
             # Checks for success
             if api_response.inerror:
@@ -501,7 +504,7 @@ class AcceleratorClient(object):
             message (str): Optional exception message to add before REST API message.
 
         Raises:
-            acceleratorAPI.exceptions.AcceleratorRuntimeException: Exception from arguments.
+            apyfal.exceptions.AcceleratorRuntimeException: Exception from arguments.
         """
         try:
             status = api_result['app']['status']
@@ -515,7 +518,7 @@ class AcceleratorClient(object):
         Instantiate and configure REST API class.
 
         Args:
-            api: API class from acceleratorAPI.rest_api.swagger_client
+            api: API class from apyfal.rest_api.swagger_client
 
         Returns:
             Configured instance of api class.
@@ -529,7 +532,7 @@ class AcceleratorClient(object):
         Instantiate Process REST API
 
         Returns:
-            acceleratorAPI.rest_api.swagger_client.ProcessApi: class instance
+            apyfal.rest_api.swagger_client.ProcessApi: class instance
         """
         return self._init_rest_api_class(_api.ProcessApi)
 
@@ -538,7 +541,7 @@ class AcceleratorClient(object):
         Instantiate Configuration REST API
 
         Returns:
-            acceleratorAPI.rest_api.swagger_client.ConfigurationApi: class instance
+            apyfal.rest_api.swagger_client.ConfigurationApi: class instance
         """
         # /v1.0/configuration/
         return self._init_rest_api_class(_api.ConfigurationApi)
@@ -548,7 +551,7 @@ class AcceleratorClient(object):
         Instantiate Stop REST API
 
         Returns:
-            acceleratorAPI.rest_api.swagger_client.StopApi: class instance
+            apyfal.rest_api.swagger_client.StopApi: class instance
         """
         # /v1.0/stop
         return self._init_rest_api_class(_api.StopApi)

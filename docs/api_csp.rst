@@ -1,7 +1,7 @@
-acceleratorAPI.csp
+apyfal.csp
 ==================
 
-.. automodule:: acceleratorAPI.csp
+.. automodule:: apyfal.csp
    :members:
    :inherited-members:
 

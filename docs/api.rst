@@ -1,7 +1,7 @@
-acceleratorAPI
+apyfal
 ===================
 
-.. automodule:: acceleratorAPI
+.. automodule:: apyfal
    :members:
    :inherited-members:
 

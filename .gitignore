@@ -61,7 +61,7 @@ Thumbs.db
 
 # Build generated files #
 #########################
-acceleratorAPI/_swagger_client/
+apyfal/_swagger_client/
 build/
 dist/
 .eggs/

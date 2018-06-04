@@ -5,13 +5,13 @@ from abc import abstractmethod as _abstractmethod
 from datetime import datetime as _datetime
 from importlib import import_module as _import_module
 
-import acceleratorAPI.configuration as _cfg
-import acceleratorAPI.exceptions as _exc
-import acceleratorAPI._utilities as _utl
-from acceleratorAPI._utilities import get_logger as _get_logger
+import apyfal.configuration as _cfg
+import apyfal.exceptions as _exc
+import apyfal._utilities as _utl
+from apyfal._utilities import get_logger as _get_logger
 
 
-class CSPGenericClass(_utl.ABC):
+class CSPGeneric(_utl.ABC):
     """This is base abstract class for all CSP classes.
 
     This is also a factory which instantiate CSP subclass related to
@@ -19,7 +19,7 @@ class CSPGenericClass(_utl.ABC):
 
     Args:
         provider (str): Cloud service provider name.
-        config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
         client_id (str): CSP Access Key ID.
@@ -70,7 +70,7 @@ class CSPGenericClass(_utl.ABC):
 
     def __new__(cls, **kwargs):
         # If call from a subclass, instantiate this subclass directly
-        if cls is not CSPGenericClass:
+        if cls is not CSPGeneric:
             return object.__new__(cls)
 
         # Get provider from configuration or argument
@@ -108,7 +108,7 @@ class CSPGenericClass(_utl.ABC):
     def __init__(self, provider=None, config=None, client_id=None, secret_id=None, region=None,
                  instance_type=None, ssh_key=None, security_group=None, instance_id=None,
                  instance_ip=None,
-                 stop_mode=None, exit_instance_on_signal=False, **kwargs):
+                 stop_mode=None, exit_instance_on_signal=False, **_):
 
         # Default some attributes
         self._session = None
@@ -191,7 +191,7 @@ class CSPGenericClass(_utl.ABC):
             str: IP address
 
         Raises:
-            acceleratorAPI.exceptions.CSPInstanceException:
+            apyfal.exceptions.CSPInstanceException:
                 No instance from which get IP.
         """
         if self._instance is None:
@@ -216,7 +216,7 @@ class CSPGenericClass(_utl.ABC):
             str: IP address
 
         Raises:
-            acceleratorAPI.exceptions.CSPInstanceException:
+            apyfal.exceptions.CSPInstanceException:
                 No instance from which get IP.
         """
         if self._instance is None:
@@ -313,7 +313,7 @@ class CSPGenericClass(_utl.ABC):
         Check CSP credentials.
 
         Raises:
-            acceleratorAPI.exceptions.CSPAuthenticationException:
+            apyfal.exceptions.CSPAuthenticationException:
                 Authentication failed.
         """
 
@@ -325,7 +325,7 @@ class CSPGenericClass(_utl.ABC):
             str: Status
 
         Raises:
-            acceleratorAPI.exceptions.CSPInstanceException:
+            apyfal.exceptions.CSPInstanceException:
                 No instance from which get status.
         """
         if self._instance_id is None:
@@ -375,7 +375,7 @@ class CSPGenericClass(_utl.ABC):
         Needs "accel_client" or "accel_parameters".
 
         Args:
-            accel_client (acceleratorAPI.client.AcceleratorClient): Accelerator client.
+            accel_client (apyfal.client.AcceleratorClient): Accelerator client.
             accel_parameters (dict): Can override parameters from accelerator client.
             stop_mode (str or int): See "stop_mode" property for more information.
         """
@@ -487,7 +487,7 @@ class CSPGenericClass(_utl.ABC):
         """Waits until instance has booted and webservice is OK
 
         Raises:
-            acceleratorAPI.exceptions.CSPInstanceException:
+            apyfal.exceptions.CSPInstanceException:
                 Timeout while booting."""
         if not _utl.check_url(self._url, timeout=self.TIMEOUT):
             raise _exc.CSPInstanceException(
@@ -600,11 +600,11 @@ class CSPGenericClass(_utl.ABC):
         Needs "accel_client" or "accel_parameters".
 
         Args:
-            accel_client (acceleratorAPI.client.AcceleratorClient): Accelerator client.
+            accel_client (apyfal.client.AcceleratorClient): Accelerator client.
             accel_parameters (dict): Can override parameters from accelerator client.
 
         Raises:
-            acceleratorAPI.exceptions.CSPConfigurationException:
+            apyfal.exceptions.CSPConfigurationException:
                 Parameters are not valid..
         """
         # Get parameters
@@ -669,14 +669,11 @@ class CSPGenericClass(_utl.ABC):
         """
         return self._config_env
 
-    def get_configuration_env(self, **kwargs):
+    def get_configuration_env(self, **_):
         """
         Return environment to pass to
-        "acceleratorAPI.client.AcceleratorClient.start"
+        "apyfal.client.AcceleratorClient.start"
         "csp_env" argument.
-
-        Args:
-            kwargs:
 
         Returns:
             dict: Configuration environment.
@@ -690,13 +687,13 @@ class CSPGenericClass(_utl.ABC):
 
         Args:
             provider (str): Override result if not None.
-            config (acceleratorAPI.configuration.Configuration): Configuration.
+            config (apyfal.configuration.Configuration): Configuration.
 
         Returns:
             str: CSP provider.
 
         Raises:
-            acceleratorAPI.exceptions.CSPConfigurationException: No provider found.
+            apyfal.exceptions.CSPConfigurationException: No provider found.
         """
         provider = config.get_default("csp", "provider", overwrite=provider)
         if not provider:
@@ -733,7 +730,7 @@ class CSPGenericClass(_utl.ABC):
             arg_name (str): Argument names to check.
 
         Raises:
-            acceleratorAPI.exceptions.CSPConfigurationException:
+            apyfal.exceptions.CSPConfigurationException:
                 A specified argument is None.
         """
         for name in arg_name:

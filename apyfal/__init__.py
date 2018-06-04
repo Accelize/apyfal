@@ -1,5 +1,5 @@
 # coding=utf-8
-"""Accelize AcceleratorAPI
+"""Apyfal
 
 
 Copyright 2018 Accelize
@@ -22,18 +22,18 @@ __version__ = "2.1.0"
 __copyright__ = "Copyright 2018 Accelize"
 __licence__ = "Apache 2.0"
 
-import acceleratorAPI.csp as csp
-import acceleratorAPI.client as _clt
-import acceleratorAPI.exceptions as _exc
-import acceleratorAPI.configuration as _cfg
-from acceleratorAPI._utilities import get_logger as _get_logger
+import apyfal.csp as csp
+import apyfal.client as _clt
+import apyfal.exceptions as _exc
+import apyfal.configuration as _cfg
+from apyfal._utilities import get_logger as _get_logger
 
 
 # Makes get_logger available here for easy access
 get_logger = _get_logger
 
 
-class AcceleratorClass(object):
+class Accelerator(object):
     """
     This class provides the full accelerator features by handling
     both Accelerator client and CSP.
@@ -41,7 +41,7 @@ class AcceleratorClass(object):
     Args:
         accelerator (str): Name of the accelerator you want to initialize,
             to know the accelerator list please visit "https://accelstore.accelize.com".
-        config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
         accelize_client_id (str): Accelize Client ID.
@@ -58,7 +58,7 @@ class AcceleratorClass(object):
             If not specified, create a new instance..
         stop_mode (str or int): CSP stop mode.
             Default to 'term' if new instance, or 'keep' if already existing instance.
-            See "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
+            See "apyfal.csp.CSPGeneric.stop_mode" property for more
             information and possible values.
         csp_kwargs: Keyword arguments related to specific CSP. See targeted CSP class
             to see full list of arguments.
@@ -71,7 +71,7 @@ class AcceleratorClass(object):
         config = _cfg.create_configuration(config)
 
         # Create CSP object
-        self._csp = csp.CSPGenericClass(
+        self._csp = csp.CSPGeneric(
             provider=provider, config=config, client_id=client_id, secret_id=secret_id,
             region=region, instance_id=instance_id, instance_ip=instance_ip,
             stop_mode=stop_mode, **csp_kwargs)
@@ -102,7 +102,7 @@ class AcceleratorClass(object):
         Accelerator client.
 
         Returns:
-            acceleratorAPI.client.AcceleratorClient: Accelerator client
+            apyfal.client.AcceleratorClient: Accelerator client
         """
         return self._client
 
@@ -112,7 +112,7 @@ class AcceleratorClass(object):
         Accelerator CSP.
 
         Returns:
-            acceleratorAPI.csp.CSPGenericClass subclass: CSP Instance
+            apyfal.csp.CSPGeneric subclass: CSP Instance
         """
         return self._csp
 
@@ -122,7 +122,7 @@ class AcceleratorClass(object):
 
         Args:
             stop_mode (str or int): CSP stop mode. If not None, override current "stop_mode" value.
-                See "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
+                See "apyfal.csp.CSPGeneric.stop_mode" property for more
                 information and possible values.
             datafile (str): Depending on the accelerator (like for HyperFiRe),
                 a configuration need to be loaded before a process can be run.
@@ -191,7 +191,7 @@ class AcceleratorClass(object):
 
         Args:
             stop_mode (str or int): CSP stop mode. If not None, override current "stop_mode" value.
-                See "acceleratorAPI.csp.CSPGenericClass.stop_mode" property for more
+                See "apyfal.csp.CSPGeneric.stop_mode" property for more
                 information and possible values.
             info_dict (bool): If True, returns a dict containing information on
                 stop operation.

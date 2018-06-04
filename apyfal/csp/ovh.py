@@ -1,15 +1,15 @@
 # coding=utf-8
 """OVH"""
 
-from acceleratorAPI.csp.generic_openstack import OpenStackClass as _OpenStackClass
+from apyfal.csp.generic_openstack import OpenStackCSP as _OpenStackCSP
 
 
-class OVHClass(_OpenStackClass):
+class OVHCSP(_OpenStackCSP):
     """OVH CSP Class
 
     Args:
         provider (str): Cloud service provider name. Default to "OVH".
-        config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
         client_id (str): OVH Access Key ID.

@@ -1,22 +1,22 @@
-[![Linux Build Status](https://travis-ci.org/Accelize/acceleratorAPI.svg?branch=master)](https://travis-ci.org/Accelize/acceleratorAPI)
+[![Linux Build Status](https://travis-ci.org/Accelize/apyfal.svg?branch=master)](https://travis-ci.org/Accelize/apyfal)
 [![Windows Build status](https://ci.appveyor.com/api/projects/status/qo4tfua8spb2jt42/branch/master?svg=true)](https://ci.appveyor.com/project/xlz-jgoutin/acceleratorapi/branch/master)
-[![Coverage Status](https://coveralls.io/repos/github/Accelize/acceleratorAPI/badge.svg?branch=master)](https://coveralls.io/github/Accelize/acceleratorAPI?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/Accelize/apyfal/badge.svg?branch=master)](https://coveralls.io/github/Accelize/apyfal?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/acceleratorapi/badge/?version=latest)](https://acceleratorapi.readthedocs.io/en/latest/?badge=latest)
 
 # Overview
 
-Accelize AcceleratorAPI is a powerful and flexible toolkit to operate FPGA <sup>[1](#fpga)</sup> accelerated function .
+Apyfal is a powerful and flexible toolkit to operate FPGA <sup>[1](#fpga)</sup> accelerated function .
 
-Some reasons you might want to use AcceleratorAPI :
+Some reasons you might want to use Apyfal :
 
-+ Accelize AcceleratorAPI provides an abstraction layer to use the power of FPGA accelerated function in a hybrid
++ Apyfal provides an abstraction layer to use the power of FPGA accelerated function in a hybrid
   multi-cloud environment.
 + The configuration and the provisioning is generated for you in your FPGA cloud context.
 + Don't like Python ? Use the REST API and generate a client in the language of your choice.
 
 ## All the accelerated functions
 
-AcceleratorAPI provides a variety of accelerated functions.
+Apyfal provides a variety of accelerated functions.
 
 Browse our web site [AccelStore](https://accelstore.accelize.com), to discover them.
 
@@ -26,10 +26,10 @@ Accelerator API is easy to use and only need few lines of codes for instantiate 
  process files:
 
 ```python
-import acceleratorAPI
+import apyfal
 
 # Choose and initialize an accelerator
-with acceleratorAPI.AcceleratorClass(accelerator='my_accelerator') as myaccel:
+with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
 
    # Start and configure accelerator
    myaccel.start()
@@ -41,7 +41,7 @@ with acceleratorAPI.AcceleratorClass(accelerator='my_accelerator') as myaccel:
 
 # Documentation
 
-For more information acceleratorAPI, please read the [documentation](https://acceleratorapi.readthedocs.io).
+For more information apyfal, please read the [documentation](https://acceleratorapi.readthedocs.io).
 
 # Installation
 
@@ -50,7 +50,7 @@ documentation for more information).
 
 You can install the full package with all options using:
 ```bash
-pip install acceleratorAPI[all]
+pip install apyfal[all]
 ```
 
 # Support and enhancement requests

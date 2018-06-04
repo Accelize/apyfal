@@ -1,10 +1,10 @@
 # Manifest file for setup.py
 
 # Excludes useless generated files from Swagger REST API
-prune acceleratorAPI/rest_api/test
+prune apyfal/rest_api/test
 
 # Includes configuration file
-recursive-include acceleratorAPI *.conf
+recursive-include apyfal *.conf
 
 # Excludes tests and documentation
 prune docs

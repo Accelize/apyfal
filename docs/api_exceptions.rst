@@ -1,6 +1,6 @@
-acceleratorAPI.exceptions
+apyfal.exceptions
 =========================
 
-.. automodule:: acceleratorAPI.exceptions
+.. automodule:: apyfal.exceptions
    :members:
    :inherited-members:

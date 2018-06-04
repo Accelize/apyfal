@@ -1,8 +1,8 @@
-acceleratorAPI.configuration
+apyfal.configuration
 ============================
 
 See also :doc:`configuration`
 
-.. automodule:: acceleratorAPI.configuration
+.. automodule:: apyfal.configuration
    :members:
    :inherited-members:

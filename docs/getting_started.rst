@@ -1,11 +1,11 @@
 Getting Started
 ===============
 
-This section explains how to use AcceleratorAPI with Python to run
+This section explains how to use Apyfal with Python to run
 accelerators.
 
 All of theses examples requires that you first install the
-AcceleratorAPI and get configuration requirements like at least your
+Apyfal and get configuration requirements like at least your
 Accelize credentials (``accelize_client_id`` and ``accelize_secret_id``
 parameters in following examples).
 
@@ -19,13 +19,13 @@ See `AccelStore <https://accelstore.accelize.com>`_ for more information.
 *Examples below uses configuration as arguments to be more explicit,
 but you can also set them with configuration file.*
 
-*For testing and examples, it is possible to enable acceleratorAPI
+*For testing and examples, it is possible to enable apyfal
 logger to see more details on running steps:*
 
 .. code-block:: python
 
-    import acceleratorAPI
-    acceleratorAPI.get_logger(True)
+    import apyfal
+    apyfal.get_logger(True)
 
 Running an accelerator on a cloud instance
 ------------------------------------------
@@ -46,10 +46,10 @@ See your CSP documentation to know how obtains theses values.
 .. code-block:: python
 
     # Import the accelerator module.
-    import acceleratorAPI
+    import apyfal
 
     # Choose an accelerator to use and configure it.
-    with acceleratorAPI.AcceleratorClass(
+    with apyfal.Accelerator(
             # Accelerator parameters
             accelerator='my_accelerator',
             # CSP parameters
@@ -61,7 +61,7 @@ See your CSP documentation to know how obtains theses values.
 
         # Start the accelerator:
         # In this case a new CSP instance will be provisioned credential passed to
-        # AcceleratorClass
+        # Accelerator
         # Note: This step can take some minutes depending your CSP
         myaccel.start()
 
@@ -87,9 +87,9 @@ Depending your CSP, note that you will pay until your instance is alive.
 
 .. code-block:: python
 
-   import acceleratorAPI
+   import apyfal
 
-   with acceleratorAPI.AcceleratorClass(
+   with apyfal.Accelerator(
            accelerator='my_accelerator',
            provider='my_provider', region='my_region',
            client_id='my_client_id', secret_id='my_secret_id',
@@ -121,11 +121,11 @@ instance an can stop it.
 
 .. code-block:: python
 
-   import acceleratorAPI
+   import apyfal
 
-   # We select the instance to use on AcceleratorClass instantiation
+   # We select the instance to use on Accelerator instantiation
    # with its ID stored previously
-   with acceleratorAPI.AcceleratorClass(
+   with apyfal.Accelerator(
            accelerator='my_accelerator',
            provider='my_provider', region='my_region',
            # Use 'instance_id' and removed 'client_id' and 'secret_id'
@@ -149,11 +149,11 @@ instance and can't stop it.
 
 .. code-block:: python
 
-   import acceleratorAPI
+   import apyfal
 
-   # We also can select the instance to use on AcceleratorClass instantiation
+   # We also can select the instance to use on Accelerator instantiation
    # with its IP address stored previously
-   with acceleratorAPI.AcceleratorClass(
+   with apyfal.Accelerator(
            accelerator='my_accelerator',
            # Use 'instance_ip' and removed 'client_id' and 'secret_id'
            instance_ip='my_instance_ip',
@@ -191,9 +191,9 @@ The ``start`` parameters is divided in two parts:
 
 .. code-block:: python
 
-   import acceleratorAPI
+   import apyfal
 
-   with acceleratorAPI.AcceleratorClass(accelerator='my_accelerator') as myaccel:
+   with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
 
        # The parameters are passed to "start" to configure accelerator, parameters are:
        # - datafile: The path to "datafile1.dat" file.
@@ -234,9 +234,9 @@ The ``process`` method accept the following arguments:
 
 .. code-block:: python
 
-   import acceleratorAPI
+   import apyfal
 
-   with acceleratorAPI.AcceleratorClass(accelerator='my_accelerator') as myaccel:
+   with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
        myaccel.start()
 
        # The parameters are passed to "process" to configure it, parameters are:
@@ -287,9 +287,9 @@ existing in in dict passed to ``parameters=``.
 
 .. code-block:: python
 
-   import acceleratorAPI
+   import apyfal
 
-   with acceleratorAPI.AcceleratorClass(accelerator='my_accelerator') as myaccel:
+   with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
        myaccel.start()
 
        # Example passing the parameter JSON file and keywords arguments at same time

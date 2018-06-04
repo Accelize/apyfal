@@ -8,19 +8,19 @@ import time as _time
 import boto3 as _boto3
 import botocore.exceptions as _boto_exceptions
 
-from acceleratorAPI.csp import CSPGenericClass as _CSPGenericClass
-import acceleratorAPI.configuration as _cfg
-import acceleratorAPI.exceptions as _exc
-import acceleratorAPI._utilities as _utl
-from acceleratorAPI._utilities import get_logger as _get_logger
+from apyfal.csp import CSPGeneric as _CSPGeneric
+import apyfal.configuration as _cfg
+import apyfal.exceptions as _exc
+import apyfal._utilities as _utl
+from apyfal._utilities import get_logger as _get_logger
 
 
-class AWSClass(_CSPGenericClass):
+class AWSCSP(_CSPGeneric):
     """AWS CSP Class
 
     Args:
         provider (str): Cloud service provider name. Default to "AWS".
-        config (str or acceleratorAPI.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
         client_id (str): AWS Access Key ID.
@@ -54,12 +54,12 @@ class AWSClass(_CSPGenericClass):
     STATUS_STOPPED = 'stopped'
     STATUS_STOPPING = 'stopping'
 
-    _INFO_NAMES = _CSPGenericClass._INFO_NAMES.copy()
+    _INFO_NAMES = _CSPGeneric._INFO_NAMES.copy()
     _INFO_NAMES.add('_role')
 
     def __init__(self, config=None,  role=None, **kwargs):
         config = _cfg.create_configuration(config)
-        _CSPGenericClass.__init__(self, config=config, **kwargs)
+        _CSPGeneric.__init__(self, config=config, **kwargs)
 
         # Get AWS specific arguments
         self._role = config.get_default(
@@ -86,7 +86,7 @@ class AWSClass(_CSPGenericClass):
                 code not in filter
 
         Raises:
-            acceleratorAPI.exceptions.CSPInstanceException:
+            apyfal.exceptions.CSPInstanceException:
                 error code not in filter_error_codes
         """
         # Try to get error code and message
@@ -113,7 +113,7 @@ class AWSClass(_CSPGenericClass):
         Check CSP credentials.
 
         Raises:
-            acceleratorAPI.exceptions.CSPAuthenticationException:
+            apyfal.exceptions.CSPAuthenticationException:
                 Authentication failed.
         """
         ec2_client = self._session.client('ec2')
@@ -138,6 +138,7 @@ class AWSClass(_CSPGenericClass):
             key_pairs = ec2_client.describe_key_pairs()
         except ec2_client.exceptions.ClientError as exception:
             self._handle_boto_exception(exception)
+            return
 
         name_lower = self._ssh_key.lower()
         for key_pair in key_pairs['KeyPairs']:
@@ -152,6 +153,7 @@ class AWSClass(_CSPGenericClass):
             key_pair = ec2_resource.create_key_pair(KeyName=self._ssh_key)
         except _boto_exceptions.ClientError as exception:
             self._handle_boto_exception(exception)
+            return
 
         _utl.create_ssh_key_file(self._ssh_key, key_pair.key_material)
 
@@ -303,9 +305,11 @@ class AWSClass(_CSPGenericClass):
             security_groups = ec2_client.describe_security_groups()
         except ec2_client.exceptions.ClientError as exception:
             self._handle_boto_exception(exception)
+            return
 
         name_lower = self._security_group.lower()
         group_exists = False
+        security_group_id = ''
         for security_group in security_groups['SecurityGroups']:
             group_name = security_group['GroupName']
             if group_name.lower() == name_lower:
@@ -327,6 +331,7 @@ class AWSClass(_CSPGenericClass):
                     'Vpcs', [{}])[0].get('VpcId', '')
             except ec2_client.exceptions.ClientError as exception:
                 self._handle_boto_exception(exception)
+                return
 
             try:
                 response = ec2_client.create_security_group(
@@ -335,6 +340,7 @@ class AWSClass(_CSPGenericClass):
                     VpcId=vpc_id)
             except ec2_client.exceptions.ClientError as exception:
                 self._handle_boto_exception(exception)
+                return
 
             # Get group ID
             security_group_id = response['GroupId']
@@ -437,7 +443,7 @@ class AWSClass(_CSPGenericClass):
     def get_configuration_env(self, **kwargs):
         """
         Return environment to pass to
-        "acceleratorAPI.accelerator.AcceleratorClient.start"
+        "apyfal.accelerator.AcceleratorClient.start"
         "csp_env" argument.
 
         Args:

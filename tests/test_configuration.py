@@ -1,11 +1,11 @@
 # coding=utf-8
-"""acceleratorAPI.client tests"""
+"""apyfal.client tests"""
 import os
 
 
 def test_configuration(tmpdir):
     """Tests Configuration"""
-    from acceleratorAPI.configuration import Configuration
+    from apyfal.configuration import Configuration
 
     # Mocks configuration
     dummy_configuration = 'dummy_configuration.conf'
@@ -14,6 +14,7 @@ def test_configuration(tmpdir):
                "secret_id = secret\n")
 
     class DummyConfiguration(Configuration):
+        """Dummy configuration"""
         DEFAULT_CONFIG_FILE = dummy_configuration
 
     # Test: No configuration file
@@ -64,7 +65,7 @@ def test_configuration(tmpdir):
 
 def test_create_configuration():
     """Tests create_configuration"""
-    from acceleratorAPI.configuration import (
+    from apyfal.configuration import (
         create_configuration, Configuration)
 
     # Test: Create configuration

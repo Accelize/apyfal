@@ -1,6 +1,6 @@
-acceleratorAPI.csp.ovh
+apyfal.csp.ovh
 ======================
 
-.. automodule:: acceleratorAPI.csp.ovh
+.. automodule:: apyfal.csp.ovh
    :members:
    :inherited-members:

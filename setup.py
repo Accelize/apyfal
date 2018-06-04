@@ -13,8 +13,8 @@ from setuptools import setup, find_packages, Command
 
 # Sets Package information
 PACKAGE_INFO = dict(
-    name='acceleratorAPI',
-    description='Accelize AcceleratorAPI is a powerful and flexible '
+    name='apyfal',
+    description='Apyfal is a powerful and flexible '
                 'toolkit for testing and operate FPGA accelerated function.',
     long_description_content_type='text/markdown; charset=UTF-8',
     classifiers=[
@@ -35,7 +35,7 @@ PACKAGE_INFO = dict(
     keywords='fpga cloud accelerator accelize',
     author='Accelize',
     author_email='info@accelize.com',
-    url='https://github.com/Accelize/acceleratorAPI',
+    url='https://github.com/Accelize/apyfal',
     project_urls={
         'AccelStore': 'https://accelstore.accelize.com/',
         'Accelize Website': 'https://www.accelize.com/',
@@ -62,7 +62,7 @@ PACKAGE_INFO = dict(
 
 # Gets package __version__ from package
 SETUP_DIR = abspath(dirname(__file__))
-with open(join(SETUP_DIR, 'acceleratorAPI', '__init__.py')) as source_file:
+with open(join(SETUP_DIR, 'apyfal', '__init__.py')) as source_file:
     for line in source_file:
         if line.rstrip().startswith('__version__'):
             PACKAGE_INFO['version'] = line.split('=', 1)[1].strip(" \"\'\n")
@@ -76,7 +76,7 @@ with open(join(SETUP_DIR, 'README.md')) as source_file:
 REST_API_BUILD_DIR = join(SETUP_DIR, 'build', 'rest_api')
 REST_API_GENERATED_DIR = join(REST_API_BUILD_DIR, 'output')
 REST_API_SETUP = join(REST_API_GENERATED_DIR, 'setup.py')
-REST_API_DST = join(SETUP_DIR, 'acceleratorAPI', '_swagger_client')
+REST_API_DST = join(SETUP_DIR, 'apyfal', '_swagger_client')
 REST_API_SRC = join(REST_API_GENERATED_DIR, 'swagger_client')
 
 
@@ -84,7 +84,7 @@ class SwaggerCommand(Command):
     """
     Generate Python REST API client using Swagger-Codegen
     """
-    description = "Generate REST API client (acceleratorAPI/_swagger_client)"
+    description = "Generate REST API client (apyfal/_swagger_client)"
     user_options = [
         ('swagger-version=', None, 'Force use of a specific Swagger-Codegen version'),
     ]
@@ -183,9 +183,9 @@ class SwaggerCommand(Command):
 
                 # Fix imports
                 replacements = [
-                    ('from swagger_client', 'from acceleratorAPI._swagger_client'),
-                    ('import swagger_client', 'import acceleratorAPI._swagger_client'),
-                    ('getattr(swagger_client.', 'getattr(acceleratorAPI._swagger_client.'),
+                    ('from swagger_client', 'from apyfal._swagger_client'),
+                    ('import swagger_client', 'import apyfal._swagger_client'),
+                    ('getattr(swagger_client.', 'getattr(apyfal._swagger_client.'),
                 ]
 
                 # Fix Swagger bug:
@@ -204,7 +204,7 @@ class SwaggerCommand(Command):
                 with open(file_path, 'wt') as file_handle:
                     file_handle.write(content)
 
-        # Move Result to acceleratorAPI/rest_api
+        # Move Result to apyfal/rest_api
         print('Clearing %s' % REST_API_DST)
         rmtree(REST_API_DST, ignore_errors=True)
 

@@ -2,7 +2,7 @@ Accelerator REST API
 ====================
 
 It is possible to use accelerators using the REST API instead of Python
-acceleratorAPI. But, note that in this case, CSP instance configuration
+apyfal. But, note that in this case, CSP instance configuration
 is not supported.
 
 Generating REST API client in any language using Swagger-Codegen
@@ -12,11 +12,11 @@ Swagger-Codegen can be used to generate client for almost any language
 (Java, Javascript, ...)
 
 -  Download and install `Swagger-Codegen`_.
--  Download the AcceleratorAPI repository:
+-  Download the Apyfal repository:
 
 .. code-block:: bash
 
-    git clone https://github.com/Accelize/acceleratorAPI.git
+    git clone https://github.com/Accelize/apyfal.git
 
 -  From the repository directory, run Swagger-Codegen with the following
    command after replacing ``$SWAGGER_CODEGEN_CLI`` with the path to the

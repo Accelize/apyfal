@@ -1,5 +1,5 @@
 # coding=utf-8
-"""acceleratorAPI.client tests"""
+"""apyfal.client tests"""
 import collections
 import copy
 import io
@@ -17,9 +17,9 @@ def accelize_credentials_available():
     Skips test if not, else, returns configuration.
 
     Returns:
-        acceleratorAPI.configuration.Configuration
+        apyfal.configuration.Configuration
     """
-    from acceleratorAPI.configuration import Configuration
+    from apyfal.configuration import Configuration
     config = Configuration()
     if not config.has_accelize_credential():
         pytest.skip('Accelize Credentials required')
@@ -31,9 +31,9 @@ def test_acceleratorclient_check_accelize_credential():
     """Tests AcceleratorClient._check_accelize_credential
 
     without Accelize server"""
-    from acceleratorAPI.client import AcceleratorClient
-    from acceleratorAPI.configuration import Configuration, METERING_SERVER
-    import acceleratorAPI.exceptions as exc
+    from apyfal.client import AcceleratorClient
+    from apyfal.configuration import Configuration, METERING_SERVER
+    import apyfal.exceptions as exc
 
     # Load user configuration but remove any accelize credential
     # information from it
@@ -107,8 +107,8 @@ def test_acceleratorclient_check_accelize_credential_real():
     config = accelize_credentials_available()
 
     # Import modules
-    from acceleratorAPI.client import AcceleratorClient
-    from acceleratorAPI.exceptions import AcceleratorAuthenticationException
+    from apyfal.client import AcceleratorClient
+    from apyfal.exceptions import AcceleratorAuthenticationException
 
     # Test: Valid credentials
     # Assuming Accelize credentials in configuration file are valid, should pass
@@ -126,8 +126,8 @@ def test_acceleratorclient_check_accelize_credential_real_no_cred():
 
     with Accelize server
     Test parts that don't needs credentials"""
-    from acceleratorAPI.client import AcceleratorClient
-    from acceleratorAPI.exceptions import AcceleratorAuthenticationException
+    from apyfal.client import AcceleratorClient
+    from apyfal.exceptions import AcceleratorAuthenticationException
 
     # Test: Bad client_id
     with pytest.raises(AcceleratorAuthenticationException):
@@ -137,8 +137,8 @@ def test_acceleratorclient_check_accelize_credential_real_no_cred():
 
 def test_acceleratorclient_is_alive():
     """Tests AcceleratorClient._raise_for_status"""
-    from acceleratorAPI.client import AcceleratorClient
-    from acceleratorAPI.exceptions import AcceleratorRuntimeException
+    from apyfal.client import AcceleratorClient
+    from apyfal.exceptions import AcceleratorRuntimeException
 
     # Mock some accelerators parts
     class DummyAccelerator(AcceleratorClient):
@@ -168,8 +168,8 @@ def test_acceleratorclient_is_alive():
 
 def test_acceleratorclient_raise_for_status():
     """Tests AcceleratorClient._raise_for_status"""
-    from acceleratorAPI.client import AcceleratorClient
-    from acceleratorAPI.exceptions import AcceleratorRuntimeException
+    from apyfal.client import AcceleratorClient
+    from apyfal.exceptions import AcceleratorRuntimeException
 
     # Test: Result without error
     AcceleratorClient._raise_for_status({'app': {'status': 0, 'msg': ''}})
@@ -187,9 +187,9 @@ def test_acceleratorclient_get_csp_requirements():
     """Tests AcceleratorClient.get_csp_requirements
 
     without Accelize server"""
-    from acceleratorAPI.client import AcceleratorClient
-    from acceleratorAPI.configuration import METERING_SERVER
-    from acceleratorAPI.exceptions import AcceleratorConfigurationException
+    from apyfal.client import AcceleratorClient
+    from apyfal.configuration import METERING_SERVER
+    from apyfal.exceptions import AcceleratorConfigurationException
 
     # Mocks some variables
     access_token = 'dummy_token'
@@ -268,8 +268,8 @@ def test_acceleratorclient_get_requirements_real():
     config = accelize_credentials_available()
 
     # Import modules
-    from acceleratorAPI.client import AcceleratorClient
-    from acceleratorAPI.exceptions import AcceleratorConfigurationException
+    from apyfal.client import AcceleratorClient
+    from apyfal.exceptions import AcceleratorConfigurationException
 
     # Test: Invalid AcceleratorClient name
     accelerator = AcceleratorClient('accelerator_not_exists', config=config)
@@ -290,8 +290,8 @@ def test_acceleratorclient_get_requirements_real():
 
 def test_acceleratorclient_url():
     """Tests AcceleratorClient.url"""
-    from acceleratorAPI.client import AcceleratorClient
-    from acceleratorAPI.exceptions import AcceleratorConfigurationException
+    from apyfal.client import AcceleratorClient
+    from apyfal.exceptions import AcceleratorConfigurationException
 
     # Mock some accelerators parts
     class DummyAccelerator(AcceleratorClient):
@@ -338,9 +338,9 @@ def test_acceleratorclient_url():
 
 def test_acceleratorclient_start():
     """Tests AcceleratorClient.start"""
-    from acceleratorAPI.client import AcceleratorClient
-    from acceleratorAPI.exceptions import AcceleratorRuntimeException
-    import acceleratorAPI._swagger_client as swagger_client
+    from apyfal.client import AcceleratorClient
+    from apyfal.exceptions import AcceleratorRuntimeException
+    import apyfal._swagger_client as swagger_client
 
     # Mock Swagger REST API ConfigurationApi
     excepted_parameters = None
@@ -459,8 +459,8 @@ def test_acceleratorclient_start():
 
 def test_acceleratorclient_use_last_configuration():
     """Tests AcceleratorClient._use_last_configuration"""
-    from acceleratorAPI.client import AcceleratorClient
-    import acceleratorAPI._swagger_client as swagger_client
+    from apyfal.client import AcceleratorClient
+    import apyfal._swagger_client as swagger_client
 
     # Mock Swagger REST API ConfigurationApi
     Config = collections.namedtuple('Config', ['url', 'used'])
@@ -530,9 +530,9 @@ def test_acceleratorclient_use_last_configuration():
 
 def test_acceleratorclient_stop():
     """Tests AcceleratorClient.stop"""
-    from acceleratorAPI.client import AcceleratorClient
-    from acceleratorAPI.exceptions import AcceleratorRuntimeException
-    import acceleratorAPI._swagger_client as swagger_client
+    from apyfal.client import AcceleratorClient
+    from apyfal.exceptions import AcceleratorRuntimeException
+    import apyfal._swagger_client as swagger_client
 
     # Mock Swagger REST API StopApi
     is_alive = True
@@ -623,12 +623,12 @@ def test_acceleratorclient_process_curl():
         return
 
     # Check PycURL is enabled in accelerator API
-    import acceleratorAPI.client
-    assert acceleratorAPI.client._USE_PYCURL
+    import apyfal.client
+    assert apyfal.client._USE_PYCURL
 
     # Start testing
-    from acceleratorAPI.client import AcceleratorClient
-    from acceleratorAPI.exceptions import AcceleratorRuntimeException
+    from apyfal.client import AcceleratorClient
+    from apyfal.exceptions import AcceleratorRuntimeException
 
     # Mock some accelerators parts
     class DummyAccelerator(AcceleratorClient):
@@ -721,19 +721,19 @@ def test_acceleratorclient_process_swagger():
     if pycurl_module is not None:
         sys.modules['pycurl'] = None
         try:
-            del sys.modules['acceleratorAPI.client']
+            del sys.modules['apyfal.client']
         except KeyError:
             pass
         gc.collect()
 
     # Check PycURL is disabled in accelerator API
-    import acceleratorAPI.client
-    assert not acceleratorAPI.client._USE_PYCURL
+    import apyfal.client
+    assert not apyfal.client._USE_PYCURL
 
     # Starts testing with PycURL disabled
     try:
-        from acceleratorAPI.client import AcceleratorClient
-        import acceleratorAPI._swagger_client as swagger_client
+        from apyfal.client import AcceleratorClient
+        import apyfal._swagger_client as swagger_client
 
         # Mock some variables
         dummy_id = 'dummy_id'
@@ -795,7 +795,7 @@ def test_acceleratorclient_process_swagger():
         if pycurl_module is not None:
             sys.modules['pycurl'] = pycurl_module
             try:
-                del sys.modules['acceleratorAPI.client']
+                del sys.modules['apyfal.client']
             except KeyError:
                 pass
             gc.collect()
@@ -803,9 +803,9 @@ def test_acceleratorclient_process_swagger():
 
 def test_acceleratorclient_process(tmpdir):
     """Tests AcceleratorClient._process"""
-    from acceleratorAPI.client import AcceleratorClient
-    import acceleratorAPI.exceptions as exc
-    import acceleratorAPI._swagger_client as swagger_client
+    from apyfal.client import AcceleratorClient
+    import apyfal.exceptions as exc
+    import apyfal._swagger_client as swagger_client
 
     # Creates temporary output dir and file in
     tmp_dir = tmpdir.dirpath()
@@ -952,7 +952,7 @@ def test_acceleratorclient_process(tmpdir):
 
 def test_acceleratorclient_get_parameters(tmpdir):
     """Tests AcceleratorClient._get_parameters"""
-    from acceleratorAPI.client import AcceleratorClient
+    from apyfal.client import AcceleratorClient
 
     # Mocks some variables
     default_parameters = {'app': {'specific': {}, "key0": 0, "key1": 1}}

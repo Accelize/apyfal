@@ -1,5 +1,5 @@
 # coding=utf-8
-"""acceleratorAPI tests
+"""apyfal tests
 
 "pytest" required
 

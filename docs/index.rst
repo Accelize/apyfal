@@ -1,21 +1,21 @@
-Welcome to Accelize AcceleratorAPI's documentation!
+Welcome to Apyfal's documentation!
 ===================================================
 
 Overview
 --------
 
-Accelize AcceleratorAPI is a powerful and flexible toolkit to operate FPGA [#fpga]_ accelerated function .
+Apyfal is a powerful and flexible toolkit to operate FPGA [#fpga]_ accelerated function .
 
-Some reasons you might want to use AcceleratorAPI :
+Some reasons you might want to use Apyfal :
 
-+ Accelize AcceleratorAPI provides an abstraction layer to use the power of FPGA accelerated function in a hybrid
++ Apyfal provides an abstraction layer to use the power of FPGA accelerated function in a hybrid
   multi-cloud environment.
 + The configuration and the provisioning is generated for you in your FPGA cloud context.
 + Don't like Python ? Use the REST API and generate a client in the language of your choice.
 
 **All the accelerated functions**
 
-AcceleratorAPI provides a variety of accelerated functions.
+Apyfal provides a variety of accelerated functions.
 
 Browse our web site `AccelStore <https://accelstore.accelize.com>`_, to discover them.
 
@@ -26,10 +26,10 @@ process files:
 
 .. code-block:: python
 
-   import acceleratorAPI
+   import apyfal
 
    # Choose and initialize an accelerator
-   with acceleratorAPI.AcceleratorClass(accelerator='my_accelerator') as myaccel:
+   with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
 
        # Start and configure accelerator
        myaccel.start()

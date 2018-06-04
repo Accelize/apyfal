@@ -1,12 +1,12 @@
 # coding=utf-8
-"""acceleratorAPI.client tests"""
+"""apyfal.client tests"""
 import os
 import time
 
 
 def test_timeout():
     """Tests Timeout"""
-    from acceleratorAPI._utilities import Timeout
+    from apyfal._utilities import Timeout
 
     # Should not timeout
     with Timeout(timeout=1, sleep=0.001) as timeout:
@@ -24,7 +24,7 @@ def test_timeout():
 
 def test_get_host_public_ip():
     """Tests get_host_public_ip"""
-    from acceleratorAPI._utilities import get_host_public_ip
+    from apyfal._utilities import get_host_public_ip
     import ipgetter
 
     # Mock ipgetter.myip
@@ -51,7 +51,7 @@ def test_get_host_public_ip():
 
 def test_create_ssh_key_file(tmpdir):
     """Tests create_ssh_key_file"""
-    from acceleratorAPI._utilities import create_ssh_key_file
+    from apyfal._utilities import create_ssh_key_file
 
     tmp_dir = tmpdir.dirpath()
     ssh_dir = tmp_dir.join('.ssh')

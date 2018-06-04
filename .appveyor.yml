@@ -25,7 +25,7 @@ install:
 
 test_script:
     # Runs tests
-    - "py.test -v --cov=acceleratorAPI --cov-report=term-missing"
+    - "py.test -v --cov=apyfal --cov-report=term-missing"
 
 after_test:
     # Sends coverage to coveralls.io

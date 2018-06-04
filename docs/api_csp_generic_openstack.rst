@@ -1,6 +1,6 @@
-acceleratorAPI.csp.generic_openstack
+apyfal.csp.generic_openstack
 ====================================
 
-.. automodule:: acceleratorAPI.csp.generic_openstack
+.. automodule:: apyfal.csp.generic_openstack
    :members:
    :inherited-members:

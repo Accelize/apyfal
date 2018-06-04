@@ -82,7 +82,7 @@ Installation is done using PIP:
 
 .. code-block:: bash
 
-    pip install acceleratorAPI
+    pip install apyfal
 
 All mandatory dependencies are automatically installed. It is possible
 to install also optional dependencies passing following setuptools
@@ -97,12 +97,12 @@ Example for installing the ``all`` extra:
 
 .. code-block:: bash
 
-    pip install acceleratorAPI[all]
+    pip install apyfal[all]
 
 Example for installing the ``AWS`` + ``optional`` extras:
 
 .. code-block:: bash
 
-    pip install acceleratorAPI[AWS,optional]
+    pip install apyfal[AWS,optional]
 
 .. _Windows Compilers on Python documentation: https://wiki.python.org/moin/WindowsCompilers

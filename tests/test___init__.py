@@ -1,12 +1,12 @@
 # coding=utf-8
-"""acceleratorAPI tests"""
+"""apyfal tests"""
 import gc
 
 
-def test_acceleratorclass():
-    """Tests AcceleratorClass"""
-    from acceleratorAPI import AcceleratorClass
-    import acceleratorAPI
+def test_accelerator():
+    """Tests Accelerator"""
+    from apyfal import Accelerator
+    import apyfal
 
     # Mocks variables
     dummy_url = 'dummy_url'
@@ -24,8 +24,8 @@ def test_acceleratorclass():
     dummy_id = 'dummy_id'
 
     # Mocks client
-    class DummyClient(acceleratorAPI.client.AcceleratorClient):
-        """Dummy acceleratorAPI.client.AcceleratorClient"""
+    class DummyClient(apyfal.client.AcceleratorClient):
+        """Dummy apyfal.client.AcceleratorClient"""
         url = None
         configuration_url = dummy_config_url
         running = True
@@ -55,12 +55,12 @@ def test_acceleratorclass():
             assert file_out == dummy_file_out
             return dummy_process_result
 
-    accelerator_client_class = acceleratorAPI.client.AcceleratorClient
-    acceleratorAPI.client.AcceleratorClient = DummyClient
+    accelerator_client_class = apyfal.client.AcceleratorClient
+    apyfal.client.AcceleratorClient = DummyClient
 
     # Mocks CSP
     class DummyCSP:
-        """Dummy acceleratorAPI.csp.CSPGenericClass"""
+        """Dummy apyfal.csp.CSPGeneric"""
         url = dummy_url
         running = True
 
@@ -90,13 +90,13 @@ def test_acceleratorclass():
         def get_configuration_env(*_, **__):
             """Do nothing"""
 
-    csp_class = acceleratorAPI.csp.CSPGenericClass
-    acceleratorAPI.csp.CSPGenericClass = DummyCSP
+    csp_class = apyfal.csp.CSPGeneric
+    apyfal.csp.CSPGeneric = DummyCSP
 
     # Tests
     try:
         # Creating New instance
-        accelerator = AcceleratorClass(dummy_accelerator, provider=dummy_provider)
+        accelerator = Accelerator(dummy_accelerator, provider=dummy_provider)
         assert isinstance(accelerator.csp, DummyCSP)
         assert isinstance(accelerator.client, DummyClient)
         assert DummyClient.running
@@ -113,12 +113,12 @@ def test_acceleratorclass():
         assert not DummyCSP.running
 
         # Using existing IP
-        accelerator = AcceleratorClass(
+        accelerator = Accelerator(
             dummy_accelerator, provider=dummy_provider, instance_ip=dummy_url)
         assert accelerator.client.url == dummy_url
 
         # Using existing instance ID
-        accelerator = AcceleratorClass(
+        accelerator = Accelerator(
             dummy_accelerator, provider=dummy_provider, instance_id=dummy_id)
         assert accelerator.client.url == dummy_url
 
@@ -126,21 +126,21 @@ def test_acceleratorclass():
         dummy_stop_mode = None
         DummyClient.running = True
         DummyCSP.running = True
-        with AcceleratorClass(
+        with Accelerator(
                 dummy_accelerator, provider=dummy_provider) as accelerator:
-            assert isinstance(accelerator, AcceleratorClass)
+            assert isinstance(accelerator, Accelerator)
         assert not DummyClient.running
         assert not DummyCSP.running
 
         # Auto-stops on garbage collection
         DummyClient.running = True
         DummyCSP.running = True
-        AcceleratorClass(dummy_accelerator, provider=dummy_provider)
+        Accelerator(dummy_accelerator, provider=dummy_provider)
         gc.collect()
         assert not DummyClient.running
         assert not DummyCSP.running
 
     # Restore classes
     finally:
-        acceleratorAPI.client.AcceleratorClient = accelerator_client_class
-        acceleratorAPI.csp.CSPGenericClass = csp_class
+        apyfal.client.AcceleratorClient = accelerator_client_class
+        apyfal.csp.CSPGeneric = csp_class

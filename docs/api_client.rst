@@ -1,6 +1,6 @@
-acceleratorAPI.client
+apyfal.client
 ==========================
 
-.. automodule:: acceleratorAPI.client
+.. automodule:: apyfal.client
    :members:
    :inherited-members:
