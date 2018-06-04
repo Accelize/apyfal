@@ -12,9 +12,33 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+import os
 from os.path import abspath, dirname
 import sys
-sys.path.insert(0, abspath(dirname(dirname(__file__))))
+
+SETUP_PATH = abspath(dirname(dirname(__file__)))
+sys.path.insert(0, SETUP_PATH)
+
+# Get Package infos
+from setup import PACKAGE_INFO, BUILD_SPHINX_REQUIRES
+SPHINX_INFO = PACKAGE_INFO['command_options']['build_sphinx']
+
+# ReadTheDocs: Build package and install dependencies before anything
+if os.environ.get('READTHEDOCS'):
+    from subprocess import Popen
+    commands = (
+        'python -m pip install --upgrade setuptools pip wheel',
+        'python -m pip install --upgrade %s' % (' '.join(BUILD_SPHINX_REQUIRES)),
+        'python ./setup.py swagger_codegen',
+        'python -m pip install -e .[all]'
+    )
+    current_dir = os.getcwd()
+    os.chdir(SETUP_PATH)
+    try:
+        for command in commands:
+            Popen(command, shell=True).communicate()
+    finally:
+        os.chdir(current_dir)
 
 # Import recommonmark extension for Markdown support
 from recommonmark.parser import CommonMarkParser
@@ -81,14 +105,14 @@ md_from_conf('../acceleratorAPI/accelerator.conf', 'configuration_file.md')
 
 # -- Project information -----------------------------------------------------
 
-project = 'Accelize AcceleratorAPI'
-copyright = 'setup.py generated'
-author = 'Accelize'
+project = SPHINX_INFO['project'][1]
+copyright = SPHINX_INFO['copyright'][1]
+author = PACKAGE_INFO['author']
 
 # The short X.Y version
-version = 'dev'  # setup.py generated'
-# The full version, including alpha/beta/rc tags
-release = 'dev'  # setup.py generated'
+version = SPHINX_INFO['version'][1]
+# The full version, including alpha/beta/rc tags.
+release = SPHINX_INFO['release'][1]
 
 
 # -- General configuration ---------------------------------------------------
@@ -199,8 +223,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'AccelizeAcceleratorAPI.tex', 'Accelize AcceleratorAPI Documentation',
-     'Accelize', 'manual'),
+    (master_doc, '%s.tex' % project, '%s Documentation' % project,
+     author, 'manual'),
 ]
 
 
@@ -209,7 +233,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'accelizeacceleratorapi', 'Accelize AcceleratorAPI Documentation',
+    (master_doc, PACKAGE_INFO['name'], '%s Documentation' % project,
      [author], 1)
 ]
 
@@ -220,8 +244,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'AccelizeAcceleratorAPI', 'Accelize AcceleratorAPI Documentation',
-     author, 'AccelizeAcceleratorAPI', 'One line description of project.',
+    (master_doc, project, '%s Documentation' % project,
+     author, project, PACKAGE_INFO['description'],
      'Miscellaneous'),
 ]
 
