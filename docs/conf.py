@@ -13,7 +13,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
-from os.path import abspath, dirname, join
+from os.path import abspath, dirname, join, isdir
 import sys
 
 SETUP_PATH = abspath(dirname(dirname(__file__)))
@@ -39,6 +39,11 @@ if os.environ.get('READTHEDOCS'):
         os.chdir(current_dir)
 
     # Mock _swagger_client since Java not available on ReadTheDocs
+    try:
+        os.makedirs(REST_API_DST)
+    except OSError:
+        if not isdir(REST_API_DST):
+            raise
     with open(join(REST_API_DST, '__init__.py'), 'wt') as rest_init:
         rest_init.write('')
 
