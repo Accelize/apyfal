@@ -32,11 +32,12 @@ PACKAGE_INFO = dict(
         'Programming Language :: Python :: 3.6',
         'Operating System :: OS Independent'
         ],
-    keywords='cloud accelerator accelize fpga hpc',
+    keywords='cloud accelerator fpga hpc',
     author='Accelize',
     author_email='info@accelize.com',
     url='https://github.com/Accelize/apyfal',
     project_urls={
+        'Documentation': 'https://apyfal.readthedocs.io',
         'Download': 'https://pypi.org/project/apyfal/',
         'AccelStore': 'https://accelstore.accelize.com/',
         'Accelize Website': 'https://www.accelize.com/',
