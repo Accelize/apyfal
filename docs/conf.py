@@ -13,23 +13,21 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 import sys
 
 SETUP_PATH = abspath(dirname(dirname(__file__)))
 sys.path.insert(0, SETUP_PATH)
 
 # Get Package infos
-from setup import PACKAGE_INFO, BUILD_SPHINX_REQUIRES
+from setup import PACKAGE_INFO, BUILD_SPHINX_REQUIRES, REST_API_DST
 SPHINX_INFO = PACKAGE_INFO['command_options']['build_sphinx']
 
 # ReadTheDocs: Build package and install dependencies before anything
 if os.environ.get('READTHEDOCS'):
     from subprocess import Popen
     commands = (
-        'python -m pip install --upgrade setuptools pip wheel',
-        'python -m pip install --upgrade %s' % (' '.join(BUILD_SPHINX_REQUIRES)),
-        'python ./setup.py swagger_codegen',
+        'python -m pip install %s' % (' '.join(BUILD_SPHINX_REQUIRES)),
         'python -m pip install -e .[all]'
     )
     current_dir = os.getcwd()
@@ -39,6 +37,10 @@ if os.environ.get('READTHEDOCS'):
             Popen(command, shell=True).communicate()
     finally:
         os.chdir(current_dir)
+
+    # Mock _swagger_client since Java not available on ReadTheDocs
+    with open(join(REST_API_DST, '__init__.py'), 'wt') as rest_init:
+        rest_init.write('')
 
 # Import recommonmark extension for Markdown support
 from recommonmark.parser import CommonMarkParser

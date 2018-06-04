@@ -79,6 +79,8 @@ with open(join(SETUP_DIR, 'README.md')) as source_file:
 REST_API_BUILD_DIR = join(SETUP_DIR, 'build', 'rest_api')
 REST_API_GENERATED_DIR = join(REST_API_BUILD_DIR, 'output')
 REST_API_SETUP = join(REST_API_GENERATED_DIR, 'setup.py')
+REST_API_DST = join(SETUP_DIR, 'acceleratorAPI', '_swagger_client')
+REST_API_SRC = join(REST_API_GENERATED_DIR, 'swagger_client')
 
 
 class SwaggerCommand(Command):
@@ -176,7 +178,7 @@ class SwaggerCommand(Command):
 
         # Fix generated source code
         from os import walk
-        for root, _, files in walk(join(REST_API_GENERATED_DIR, 'swagger_client')):
+        for root, _, files in walk(REST_API_SRC):
             for file_name in files:
                 file_path = join(root, file_name)
                 with open(file_path, 'rt') as file_handle:
@@ -206,26 +208,30 @@ class SwaggerCommand(Command):
                     file_handle.write(content)
 
         # Move Result to acceleratorAPI/rest_api
-        rest_api_dst = join(SETUP_DIR, 'acceleratorAPI', '_swagger_client')
-        print('Clearing %s' % rest_api_dst)
-        rmtree(rest_api_dst, ignore_errors=True)
+        print('Clearing %s' % REST_API_DST)
+        rmtree(REST_API_DST, ignore_errors=True)
 
-        rest_api_src = join(REST_API_GENERATED_DIR, 'swagger_client')
-        print('Copying REST API from %s to %s' % (rest_api_src, rest_api_dst))
-        copytree(rest_api_src, rest_api_dst)
+        print('Copying REST API from %s to %s' % (REST_API_SRC, REST_API_DST))
+        copytree(REST_API_SRC, REST_API_DST)
 
 
 PACKAGE_INFO['cmdclass']['swagger_codegen'] = SwaggerCommand
 
 # Gets requirements from Swagger generated REST API
-if 'swagger_codegen' not in argv and isfile(REST_API_SETUP):
-    from ast import literal_eval
-    with open(REST_API_SETUP) as source_file:
-        for line in source_file:
-            if line.rstrip().startswith('REQUIRES = ['):
-                PACKAGE_INFO['install_requires'].extend(
-                    literal_eval(line.split('=', 1)[1].strip(" \n")))
-                break
+if 'swagger_codegen' not in argv:
+    if isfile(REST_API_SETUP):
+        from ast import literal_eval
+        with open(REST_API_SETUP) as source_file:
+            for line in source_file:
+                if line.rstrip().startswith('REQUIRES = ['):
+                    PACKAGE_INFO['install_requires'].extend(
+                        literal_eval(line.split('=', 1)[1].strip(" \n")))
+                    break
+    else:
+        import warnings
+        warnings.warn(
+            "REST API not generated, "
+            "please run 'setup.py swagger_codegen' first", Warning)
 
 # Add pytest_runner requirement if needed
 if {'pytest', 'test', 'ptr'}.intersection(argv):
@@ -252,9 +258,5 @@ PACKAGE_INFO['command_options']['build_sphinx'] = {
 
 # Runs setup
 if __name__ == '__main__':
-    if 'swagger_codegen' not in argv and not isfile(REST_API_SETUP):
-        raise RuntimeError(
-            "REST API not generated, "
-            "please run 'setup.py swagger_codegen' first")
     chdir(SETUP_DIR)
     setup(**PACKAGE_INFO)
