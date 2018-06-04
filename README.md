@@ -1,7 +1,7 @@
 [![Linux Build Status](https://travis-ci.org/Accelize/apyfal.svg?branch=master)](https://travis-ci.org/Accelize/apyfal)
-[![Windows Build status](https://ci.appveyor.com/api/projects/status/qo4tfua8spb2jt42/branch/master?svg=true)](https://ci.appveyor.com/project/xlz-jgoutin/acceleratorapi/branch/master)
+[![Windows Build status](https://ci.appveyor.com/api/projects/status/bcqp6qgm59dubnv0/branch/master?svg=true)](https://ci.appveyor.com/project/xlz-jgoutin/apyfal/branch/master)
 [![Coverage Status](https://coveralls.io/repos/github/Accelize/apyfal/badge.svg?branch=master)](https://coveralls.io/github/Accelize/apyfal?branch=master)
-[![Documentation Status](https://readthedocs.org/projects/acceleratorapi/badge/?version=latest)](https://acceleratorapi.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/apyfal/badge/?version=latest)](https://apyfal.readthedocs.io/en/latest/?badge=latest)
 
 # Overview
 
@@ -41,7 +41,7 @@ with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
 
 # Documentation
 
-For more information apyfal, please read the [documentation](https://acceleratorapi.readthedocs.io).
+For more information apyfal, please read the [documentation](ttps://apyfal.readthedocs.io).
 
 # Installation
 
