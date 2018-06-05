@@ -52,8 +52,8 @@ class HostException(ClientException):
     """Generic host related exception"""
 
 
-class HostInstanceException(HostException):
-    """Error with host instance"""
+class HostRuntimeException(HostException):
+    """Error with host on runtime"""
     DEFAULT_MESSAGE = "Host Exception"
 
 

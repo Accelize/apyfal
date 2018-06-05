@@ -104,7 +104,7 @@ def get_dummy_csp_class():
 
 def test_csphost_properties():
     """Tests Host properties"""
-    from apyfal.exceptions import HostInstanceException
+    from apyfal.exceptions import HostRuntimeException
 
     # Mock variables
     host_type = 'dummy_host_type'
@@ -161,10 +161,10 @@ def test_csphost_properties():
 
     # Test: properties if no instance
     csp._instance = None
-    with pytest.raises(HostInstanceException):
+    with pytest.raises(HostRuntimeException):
         csp.public_ip
 
-    with pytest.raises(HostInstanceException):
+    with pytest.raises(HostRuntimeException):
         csp.private_ip
 
     # Test: Stop mode setter, no change if no value set
@@ -196,7 +196,7 @@ def test_csphost_properties():
 
 def test_csphost_status():
     """Tests Host._status"""
-    from apyfal.exceptions import HostInstanceException
+    from apyfal.exceptions import HostRuntimeException
 
     # Mock variables
     status = 'dummy_status'
@@ -223,12 +223,12 @@ def test_csphost_status():
     csp = DummyClass()
 
     # Test: No instance id
-    with pytest.raises(HostInstanceException):
+    with pytest.raises(HostRuntimeException):
         csp._status()
 
     # Test: instance id but no instance started
     csp._instance_id = 'dummy_id'
-    with pytest.raises(HostInstanceException):
+    with pytest.raises(HostRuntimeException):
         csp._status()
 
     # Test: instance id and instance started

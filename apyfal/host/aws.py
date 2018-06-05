@@ -86,7 +86,7 @@ class AWSHost(_CSPHost):
                 code not in filter
 
         Raises:
-            apyfal.exceptions.HostInstanceException:
+            apyfal.exceptions.HostRuntimeException:
                 error code not in filter_error_codes
         """
         # Try to get error code and message
@@ -94,7 +94,7 @@ class AWSHost(_CSPHost):
             error_dict = exception.response['Error']
             error_code = error_dict['Code']
         except (AttributeError, KeyError):
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 exception_msg, exc=exception)
 
         # Converts single str to tuple
@@ -105,7 +105,7 @@ class AWSHost(_CSPHost):
 
         # Raises if not in filter
         if error_code not in filter_error_codes:
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 exception_msg, exc=error_dict['Message'])
 
     def _check_credential(self):
@@ -382,7 +382,7 @@ class AWSHost(_CSPHost):
         try:
             return self._session.resource('ec2').Instance(self._instance_id)
         except _boto_exceptions.ClientError as exception:
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 gen_msg=('no_instance_id', self._instance_id),
                 exc=exception)
 
@@ -396,7 +396,7 @@ class AWSHost(_CSPHost):
         try:
             return self._instance.public_ip_address
         except _boto_exceptions.ClientError as exception:
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 gen_msg='no_instance_ip', exc=exception)
 
     def _get_private_ip(self):
@@ -409,7 +409,7 @@ class AWSHost(_CSPHost):
         try:
             return self._instance.private_ip_address
         except _boto_exceptions.ClientError as exception:
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 gen_msg='no_instance_ip', exc=exception)
 
     def _get_status(self):
@@ -422,7 +422,7 @@ class AWSHost(_CSPHost):
         try:
             instance_state = self._instance.state
         except _boto_exceptions.ClientError as exception:
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 gen_msg=('no_instance_id', self._instance_id),
                 exc=exception)
         return instance_state["Name"]
@@ -518,7 +518,7 @@ class AWSHost(_CSPHost):
                     if status != self.STATUS_STOPPING:
                         break
                     elif timeout.reached():
-                        raise _exc.HostInstanceException(
+                        raise _exc.HostRuntimeException(
                             gen_msg=('timeout_status', 'stop', status))
 
         # If instance stopped, starts it
@@ -527,7 +527,7 @@ class AWSHost(_CSPHost):
 
         # If another status, raises error
         elif status != self.STATUS_RUNNING:
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 gen_msg=('unable_to_status', 'start', status))
 
     def _terminate_instance(self):

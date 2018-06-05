@@ -104,11 +104,11 @@ class CSPHost(_Host):
             str: IP address
 
         Raises:
-            apyfal.exceptions.HostInstanceException:
+            apyfal.exceptions.HostRuntimeException:
                 No instance from which get IP.
         """
         if self._instance is None:
-            raise _exc.HostInstanceException(gen_msg='no_instance')
+            raise _exc.HostRuntimeException(gen_msg='no_instance')
         return self._get_public_ip()
 
     @_abstractmethod
@@ -129,11 +129,11 @@ class CSPHost(_Host):
             str: IP address
 
         Raises:
-            apyfal.exceptions.HostInstanceException:
+            apyfal.exceptions.HostRuntimeException:
                 No instance from which get IP.
         """
         if self._instance is None:
-            raise _exc.HostInstanceException(gen_msg='no_instance')
+            raise _exc.HostRuntimeException(gen_msg='no_instance')
         return self._get_private_ip()
 
     @_abstractmethod
@@ -187,17 +187,17 @@ class CSPHost(_Host):
             str: Status
 
         Raises:
-            apyfal.exceptions.HostInstanceException:
+            apyfal.exceptions.HostRuntimeException:
                 No instance from which get status.
         """
         if self._instance_id is None:
-            raise _exc.HostInstanceException(gen_msg='no_instance')
+            raise _exc.HostRuntimeException(gen_msg='no_instance')
 
         # Update instance
         self._instance = self._get_instance()
 
         if self._instance is None:
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 gen_msg=('no_instance_id', self._instance_id))
 
         # Read instance status
@@ -302,7 +302,7 @@ class CSPHost(_Host):
 
         # If URL exists, checks if reachable
         elif not _utl.check_url(self._url):
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 gen_msg=('unable_reach_url', self._url))
 
     @_abstractmethod
@@ -342,17 +342,17 @@ class CSPHost(_Host):
                 if status == self.STATUS_RUNNING:
                     return
                 elif timeout.reached():
-                    raise _exc.HostInstanceException(
+                    raise _exc.HostRuntimeException(
                         gen_msg=('timeout_status', "provisioning", status))
 
     def _wait_instance_boot(self):
         """Waits until instance has booted and webservice is OK
 
         Raises:
-            apyfal.exceptions.HostInstanceException:
+            apyfal.exceptions.HostRuntimeException:
                 Timeout while booting."""
         if not _utl.check_url(self._url, timeout=self.TIMEOUT):
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 gen_msg=('timeout', "boot"))
 
     def _get_instance_name(self):
@@ -392,7 +392,7 @@ class CSPHost(_Host):
         # Checks if instance to stop
         try:
             self._status()
-        except _exc.HostInstanceException:
+        except _exc.HostRuntimeException:
             return
 
         # Terminates and delete instance completely

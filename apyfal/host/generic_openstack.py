@@ -106,7 +106,7 @@ class OpenStackHost(_CSPHost):
         try:
             key_pair = self._session.compute.find_keypair(self._ssh_key, ignore_missing=True)
         except _openstack.exceptions.SDKException as exception:
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 gen_msg=('no_find', "key pair"), exc=exception)
 
         # Use existing key
@@ -117,7 +117,7 @@ class OpenStackHost(_CSPHost):
         try:
             key_pair = self._session.compute.create_keypair(name=self._ssh_key)
         except _openstack.exceptions.SDKException as exception:
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 gen_msg=('created_failed', "key pair"), exc=exception)
 
         _utl.create_ssh_key_file(self._ssh_key, key_pair.private_key)
@@ -174,7 +174,7 @@ class OpenStackHost(_CSPHost):
 
         # Instance not found
         except _openstack.exceptions.SDKException as exception:
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 gen_msg=('no_instance_id', self._instance_id),
                 exc=exception)
 
@@ -188,7 +188,7 @@ class OpenStackHost(_CSPHost):
         for address in list(self._instance.addresses.values())[0]:
             if address['version'] == 4:
                 return address['addr']
-        raise _exc.HostInstanceException(gen_msg='no_instance_ip')
+        raise _exc.HostRuntimeException(gen_msg='no_instance_ip')
 
     def _get_private_ip(self):
         """
@@ -281,13 +281,13 @@ class OpenStackHost(_CSPHost):
                 msg = self._instance.fault.message
             except AttributeError:
                 msg = exception
-            raise _exc.HostInstanceException(exc=msg)
+            raise _exc.HostRuntimeException(exc=msg)
 
         # Check instance status
         status = self._get_status()
         if status.lower() == "error":
             self.stop()
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 gen_msg=('unable_to_status', "initialize", status))
 
     def _start_new_instance(self):
@@ -305,7 +305,7 @@ class OpenStackHost(_CSPHost):
                 key_name=self._ssh_key,
                 security_groups=[{"name": self._security_group}])
         except _openstack.exceptions.SDKException as exception:
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 gen_msg=('unable_to', "start"), exc=exception)
 
         return instance, instance.id
@@ -321,7 +321,7 @@ class OpenStackHost(_CSPHost):
             try:
                 self._session.start_server(self._instance)
             except _openstack.exceptions.SDKException as exception:
-                raise _exc.HostInstanceException(
+                raise _exc.HostRuntimeException(
                     gen_msg=('unable_to', "start"), exc=exception)
 
     def _terminate_instance(self):
@@ -330,9 +330,9 @@ class OpenStackHost(_CSPHost):
         """
         try:
             if not self._session.delete_server(self._instance, wait=True):
-                raise _exc.HostInstanceException(_utl.gen_msg('unable_to', "delete"))
+                raise _exc.HostRuntimeException(_utl.gen_msg('unable_to', "delete"))
         except _openstack.exceptions.SDKException as exception:
-            raise _exc.HostInstanceException(
+            raise _exc.HostRuntimeException(
                 gen_msg=('unable_to', "delete"), exc=exception)
 
     def _pause_instance(self):
