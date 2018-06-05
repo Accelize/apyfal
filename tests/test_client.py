@@ -564,10 +564,6 @@ def test_acceleratorclient_stop():
     class DummyAccelerator(AcceleratorClient):
         """Dummy AcceleratorClient"""
 
-        #def __init__(self, **kwargs):
-            #AcceleratorClient.__init__(self, **kwargs)
-            #self._stopped = True
-
         def _check_accelize_credential(self):
             """Don't check credential"""
 
@@ -663,12 +659,7 @@ def test_acceleratorclient_process_curl():
                 raise pycurl.error
 
             # Write api_response
-            try:
-                # Python 3
-                self.mock_write(api_response.encode('ascii'))
-            except AttributeError:
-                # Python 2
-                self.mock_write(api_response)
+            self.mock_write(api_response.encode())
 
         def setopt(self, *args):
             """set cURL options and intercept WRITEFUNCTION"""

@@ -370,7 +370,7 @@ class AcceleratorClient(object):
         curl.close()
 
         # Get result
-        content = write_buffer.getvalue()
+        content = write_buffer.getvalue().decode()
 
         try:
             api_response = _json.loads(content)
