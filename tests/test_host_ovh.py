@@ -2,11 +2,11 @@
 """apyfal.ovh tests"""
 
 import pytest
-from tests.test_csp___init__ import run_full_real_test_sequence, import_from_generic_test
+from tests.test_host_generic_csp import run_full_real_test_sequence, import_from_generic_test
 
 
 def test_ovhclass_import():
-    """OVHCSP import"""
+    """OVHHost import"""
     # Test: Import by factory without errors
     import_from_generic_test('OVH', project_id='dummy_project')
 
@@ -14,7 +14,7 @@ def test_ovhclass_import():
 @pytest.mark.need_csp
 @pytest.mark.need_csp_ovh
 def test_ovhclass_real():
-    """OVHCSP in real case"""
+    """OVHHost in real case"""
     # Test: Full generic sequence
     run_full_real_test_sequence('OVH', {
         'GRA3': {

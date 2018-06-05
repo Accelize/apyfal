@@ -9,6 +9,6 @@ apyfal
    :maxdepth: 2
 
    api_client
-   api_csp
+   api_host
    api_configuration
    api_exceptions

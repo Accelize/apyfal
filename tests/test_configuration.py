@@ -23,8 +23,8 @@ def test_configuration(tmpdir):
     # Test: has_* methods
     assert not config.has_section('accelize')
     assert not config.has_accelize_credential()
-    assert not config.has_section('csp')
-    assert not config.has_csp_credential()
+    assert not config.has_section('host')
+    assert not config.has_host_credential()
 
     # Test: get_default
     assert config.get_default('accelize', 'dummy') is None

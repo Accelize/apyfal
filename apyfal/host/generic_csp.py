@@ -3,22 +3,19 @@
 
 from abc import abstractmethod as _abstractmethod
 from datetime import datetime as _datetime
-from importlib import import_module as _import_module
 
+from apyfal.host import Host as _Host
 import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
 from apyfal._utilities import get_logger as _get_logger
 
 
-class CSPGeneric(_utl.ABC):
-    """This is base abstract class for all CSP classes.
-
-    This is also a factory which instantiate CSP subclass related to
-    specified Cloud Service Provider.
+class CSPHost(_Host):
+    """This is base abstract class for all Cloud instances classes.
 
     Args:
-        provider (str): Cloud service provider name.
+        host_type (str): Cloud service provider name.
         config (str or apyfal.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
@@ -26,36 +23,21 @@ class CSPGeneric(_utl.ABC):
         secret_id (str): CSP Secret Access Key.
         region (str): CSP region. Needs a region supporting instances with FPGA devices.
         instance_type (str): CSP instance type. Default defined by accelerator.
-        ssh_key (str): CSP Key pair. Default to 'Accelize<CSPNAME>KeyPair'.
+        ssh_key (str): CSP Key pair. Default to 'Accelize<HostName>KeyPair'.
         security_group: CSP Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing CSP instance to use.
             If not specified, create a new instance.
-        instance_ip (str): IP or URL address of an already existing CSP instance to use.
+        host_ip (str): IP or URL address of an already existing CSP instance to use.
             If not specified, create a new instance.
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing instance.
             See "stop_mode" property for more information and possible values.
-        exit_instance_on_signal (bool): If True, exit instance
+        exit_host_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
             if Python interpreter is not exited properly. Note: this is provided for
             convenience and does not cover all exit case like process kill and
             may not work on all OS.
     """
-    #: CSP provider name (str), must be the same as expected "provider" argument value
-    NAME = None
-
-    #: Link to CSP documentation or website
-    DOC_URL = ''
-
-    #: Timeout for instance status change in seconds
-    TIMEOUT = 360.0
-
-    #: Possible stop_mode int values
-    STOP_MODES = {
-        0: "term",
-        1: "stop",
-        2: "keep"}
-
     #: Instance status when running
     STATUS_RUNNING = 'running'
 
@@ -63,52 +45,15 @@ class CSPGeneric(_utl.ABC):
     STATUS_STOPPED = 'stopped'
 
     # Attributes returned as dict by "info" property
-    _INFO_NAMES = {
-        '_provider', 'public_ip', 'private_ip',
-        '_region', '_instance_type', '_ssh_key', '_security_group', '_instance_id',
-        '_stop_mode', '_url', '_instance_type_name'}
+    _INFO_NAMES = _Host._INFO_NAMES.copy()
+    _INFO_NAMES.update({
+        'public_ip', 'private_ip', '_region', '_instance_type',
+        '_ssh_key', '_security_group', '_instance_id', '_instance_type_name'})
 
-    def __new__(cls, **kwargs):
-        # If call from a subclass, instantiate this subclass directly
-        if cls is not CSPGeneric:
-            return object.__new__(cls)
-
-        # Get provider from configuration or argument
-        config = _cfg.create_configuration(kwargs.get('config'))
-        provider = cls._provider_from_config(kwargs.get('provider'), config)
-
-        # Finds module containing CSP class
-        module_name = '%s.%s' % (cls.__module__, provider.lower())
-        try:
-            csp_module = _import_module(module_name)
-        except ImportError as exception:
-            if provider.lower() in str(exception):
-                # If ImportError for current module name, may be
-                # a configuration error.
-                raise _exc.CSPConfigurationException(
-                    "No module '%s' for '%s' provider" % (module_name, provider))
-            # ImportError of another module, raised as it
-            raise
-
-        # Finds CSP class
-        for name in dir(csp_module):
-            member = getattr(csp_module, name)
-            try:
-                if getattr(member, 'NAME') == provider:
-                    break
-            except AttributeError:
-                continue
-        else:
-            raise _exc.CSPConfigurationException(
-                "No class found in '%s' for '%s' provider" % (module_name, provider))
-
-        # Instantiates CSP class
-        return object.__new__(member)
-
-    def __init__(self, provider=None, config=None, client_id=None, secret_id=None, region=None,
-                 instance_type=None, ssh_key=None, security_group=None, instance_id=None,
-                 instance_ip=None,
-                 stop_mode=None, exit_instance_on_signal=False, **_):
+    def __init__(self, config=None, client_id=None, secret_id=None, region=None,
+                 instance_type=None, ssh_key=None, security_group=None, instance_id=None, **kwargs):
+        config = _cfg.create_configuration(config)
+        _Host.__init__(self, config=config, **kwargs)
 
         # Default some attributes
         self._session = None
@@ -119,68 +64,36 @@ class CSPGeneric(_utl.ABC):
         self._instance_name = None
         self._instance_type = None
         self._instance_type_name = None
-        self._accelerator = None
-        self._stop_mode = None
 
         # Read configuration from file
-        config = _cfg.create_configuration(config)
-
-        self._provider = self._provider_from_config(provider, config)
-
         self._client_id = config.get_default(
-            'csp', 'client_id', overwrite=client_id)
+            'host', 'client_id', overwrite=client_id)
         self._secret_id = config.get_default(
-            'csp', 'secret_id', overwrite=secret_id)
+            'host', 'secret_id', overwrite=secret_id)
         self._region = config.get_default(
-            'csp', 'region', overwrite=region)
+            'host', 'region', overwrite=region)
         self._instance_type = config.get_default(
-            'csp', 'instance_type', overwrite=instance_type)
+            'host', 'instance_type', overwrite=instance_type)
         self._ssh_key = config.get_default(
-            'csp', 'ssh_key', overwrite=ssh_key,
-            default=self._default_parameter_value(
-                'KeyPair', include_provider=True))
+            'host', 'ssh_key', overwrite=ssh_key,
+            default=self._default_parameter_value('KeyPair', include_host=True))
         self._security_group = config.get_default(
-            'csp', 'security_group', overwrite=security_group,
+            'host', 'security_group', overwrite=security_group,
             default=self._default_parameter_value('SecurityGroup'))
         self._instance_id = config.get_default(
-            'csp', 'instance_id', overwrite=instance_id)
-        self._url = _utl.format_url(config.get_default(
-            'csp', 'instance_ip', overwrite=instance_ip))
+            'host', 'instance_id', overwrite=instance_id)
         self.stop_mode = config.get_default(
-            "csp", "stop_mode", overwrite=stop_mode,
-            default='keep' if instance_id or instance_ip else 'term')
+            "host", "stop_mode", overwrite=kwargs.get('stop_mode'),
+            default='keep' if instance_id or kwargs.get('host_ip') else 'term')
 
         # Checks mandatory configuration values
         self._check_arguments('region')
 
         if (self._client_id is None and
-                self._instance_id is None and
-                self._url is None):
-            raise _exc.CSPConfigurationException(
-                "Need at least 'client_id', 'instance_id' or 'instance_ip' "
+                self._instance_id is None and self._url is None):
+            raise _exc.HostConfigurationException(
+                "Need at least 'client_id', 'instance_id' or 'host_ip' "
                 "argument. See documentation for more information.")
-
-        # Enable optional Signal handler
-        self._set_signals(exit_instance_on_signal)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.stop()
-
-    def __del__(self):
-        self.stop()
-
-    @property
-    def provider(self):
-        """
-        Cloud Service Provider
-
-        Returns:
-            str: CSP name
-        """
-        return self._provider
 
     @property
     def public_ip(self):
@@ -191,11 +104,11 @@ class CSPGeneric(_utl.ABC):
             str: IP address
 
         Raises:
-            apyfal.exceptions.CSPInstanceException:
+            apyfal.exceptions.HostInstanceException:
                 No instance from which get IP.
         """
         if self._instance is None:
-            raise _exc.CSPInstanceException(gen_msg='no_instance')
+            raise _exc.HostInstanceException(gen_msg='no_instance')
         return self._get_public_ip()
 
     @_abstractmethod
@@ -216,11 +129,11 @@ class CSPGeneric(_utl.ABC):
             str: IP address
 
         Raises:
-            apyfal.exceptions.CSPInstanceException:
+            apyfal.exceptions.HostInstanceException:
                 No instance from which get IP.
         """
         if self._instance is None:
-            raise _exc.CSPInstanceException(gen_msg='no_instance')
+            raise _exc.HostInstanceException(gen_msg='no_instance')
         return self._get_private_ip()
 
     @_abstractmethod
@@ -231,6 +144,16 @@ class CSPGeneric(_utl.ABC):
         Returns:
             str: IP address
         """
+
+    @property
+    def instance_id(self):
+        """
+        ID of the current instance.
+
+        Returns:
+            str: ID
+        """
+        return self._instance_id
 
     @property
     def url(self):
@@ -246,74 +169,13 @@ class CSPGeneric(_utl.ABC):
         # Returns URL
         return self._url
 
-    @property
-    def instance_id(self):
-        """
-        ID of the current instance.
-
-        Returns:
-            str: ID
-        """
-        return self._instance_id
-
-    @property
-    def stop_mode(self):
-        """
-        Define the "stop" method behavior.
-
-        Possible values ares:
-            0: TERM, terminate and delete instance.
-            1: STOP, stop and pause instance.
-            2: KEEP, let instance running.
-
-        "stop" can be called manually but is also called when:
-            - "with" exit if class is used as context manager.
-            - On CSP object deletion by garbage collector.
-            - On OS signals if "exit_instance_on_signal" was set to True
-              on class instantiation.
-
-        Returns:
-            str: stop mode.
-        """
-        return self._stop_mode
-
-    @stop_mode.setter
-    def stop_mode(self, stop_mode):
-        """
-        Set stop_mode.
-
-        Args:
-            stop_mode (str or int): stop mode value to set
-        """
-        if stop_mode is None:
-            return
-
-        # Converts from int values
-        try:
-            stop_mode = int(stop_mode)
-        except (TypeError, ValueError):
-            pass
-
-        if isinstance(stop_mode, int):
-            stop_mode = self.STOP_MODES.get(stop_mode, '')
-
-        # Checks value
-        stop_mode = stop_mode.lower()
-        if stop_mode not in self.STOP_MODES.values():
-            raise ValueError(
-                "Invalid value %s, Possible values are %s" % (
-                    stop_mode, ', '.join(
-                        value for value in self.STOP_MODES.values())))
-
-        self._stop_mode = stop_mode
-
     @_abstractmethod
     def _check_credential(self):
         """
         Check CSP credentials.
 
         Raises:
-            apyfal.exceptions.CSPAuthenticationException:
+            apyfal.exceptions.HostAuthenticationException:
                 Authentication failed.
         """
 
@@ -325,17 +187,17 @@ class CSPGeneric(_utl.ABC):
             str: Status
 
         Raises:
-            apyfal.exceptions.CSPInstanceException:
+            apyfal.exceptions.HostInstanceException:
                 No instance from which get status.
         """
         if self._instance_id is None:
-            raise _exc.CSPInstanceException(gen_msg='no_instance')
+            raise _exc.HostInstanceException(gen_msg='no_instance')
 
         # Update instance
         self._instance = self._get_instance()
 
         if self._instance is None:
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 gen_msg=('no_instance_id', self._instance_id))
 
         # Read instance status
@@ -403,13 +265,13 @@ class CSPGeneric(_utl.ABC):
 
                 try:
                     self._create_instance()
-                except _exc.CSPException as exception:
+                except _exc.HostException as exception:
                     self._stop_silently(exception)
                     raise
 
                 try:
                     self._instance, self._instance_id = self._start_new_instance()
-                except _exc.CSPException as exception:
+                except _exc.HostException as exception:
                     self._stop_silently(exception)
                     raise
 
@@ -425,7 +287,7 @@ class CSPGeneric(_utl.ABC):
             _get_logger().info("Waiting instance provisioning...")
             try:
                 self._wait_instance_ready()
-            except _exc.CSPException as exception:
+            except _exc.HostException as exception:
                 self._stop_silently(exception)
                 raise
 
@@ -440,7 +302,7 @@ class CSPGeneric(_utl.ABC):
 
         # If URL exists, checks if reachable
         elif not _utl.check_url(self._url):
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 gen_msg=('unable_reach_url', self._url))
 
     @_abstractmethod
@@ -480,17 +342,17 @@ class CSPGeneric(_utl.ABC):
                 if status == self.STATUS_RUNNING:
                     return
                 elif timeout.reached():
-                    raise _exc.CSPInstanceException(
+                    raise _exc.HostInstanceException(
                         gen_msg=('timeout_status', "provisioning", status))
 
     def _wait_instance_boot(self):
         """Waits until instance has booted and webservice is OK
 
         Raises:
-            apyfal.exceptions.CSPInstanceException:
+            apyfal.exceptions.HostInstanceException:
                 Timeout while booting."""
         if not _utl.check_url(self._url, timeout=self.TIMEOUT):
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 gen_msg=('timeout', "boot"))
 
     def _get_instance_name(self):
@@ -504,24 +366,6 @@ class CSPGeneric(_utl.ABC):
                 self._accelerator, _datetime.now().strftime('%y%m%d%H%M%S'))
         return self._instance_name
 
-    @property
-    def info(self):
-        """
-        Returns some instance information.
-
-        Returns:
-            dict: Dictionary containing information on
-                current instance.
-        """
-        info = {}
-        for name in self._INFO_NAMES:
-            try:
-                value = getattr(self, name)
-            except (AttributeError, _exc.CSPException):
-                continue
-            info[name.strip('_')] = value
-        return info
-
     def stop(self, stop_mode=None):
         """
         Stop instance accordingly with the current stop_mode.
@@ -530,7 +374,7 @@ class CSPGeneric(_utl.ABC):
         Args:
             stop_mode (str or int): If not None, override current "stop_mode" value.
         """
-        # No instance to stop
+        # No instance to stop (Avoid double call with __exit__ + __del__)
         if self._instance is None:
             return
 
@@ -548,7 +392,7 @@ class CSPGeneric(_utl.ABC):
         # Checks if instance to stop
         try:
             self._status()
-        except _exc.CSPInstanceException:
+        except _exc.HostInstanceException:
             return
 
         # Terminates and delete instance completely
@@ -590,7 +434,7 @@ class CSPGeneric(_utl.ABC):
         # Force stop instance, ignore exception if any
         try:
             self._terminate_instance()
-        except _exc.CSPException:
+        except _exc.HostException:
             pass
 
     def _set_accelerator_requirements(self, accel_client=None, accel_parameters=None):
@@ -604,20 +448,20 @@ class CSPGeneric(_utl.ABC):
             accel_parameters (dict): Can override parameters from accelerator client.
 
         Raises:
-            apyfal.exceptions.CSPConfigurationException:
+            apyfal.exceptions.HostConfigurationException:
                 Parameters are not valid..
         """
         # Get parameters
         parameters = dict()
         if accel_client is not None:
-            parameters.update(accel_client.get_csp_requirements(self._provider))
+            parameters.update(accel_client.get_host_requirements(self._host_type))
 
         if accel_parameters is not None:
             parameters.update(accel_parameters)
 
         # Check if region is valid
         if self._region not in parameters.keys():
-            raise _exc.CSPConfigurationException(
+            raise _exc.HostConfigurationException(
                 "Region '%s' is not supported. Available regions are: %s" % (
                     self._region, ', '.join(parameters)))
 
@@ -668,100 +512,3 @@ class CSPGeneric(_utl.ABC):
             dict: configuration environment
         """
         return self._config_env
-
-    def get_configuration_env(self, **_):
-        """
-        Return environment to pass to
-        "apyfal.client.AcceleratorClient.start"
-        "csp_env" argument.
-
-        Returns:
-            dict: Configuration environment.
-        """
-        return self._config_env
-
-    @classmethod
-    def _provider_from_config(cls, provider, config):
-        """
-        Get CSP provider from configuration.
-
-        Args:
-            provider (str): Override result if not None.
-            config (apyfal.configuration.Configuration): Configuration.
-
-        Returns:
-            str: CSP provider.
-
-        Raises:
-            apyfal.exceptions.CSPConfigurationException: No provider found.
-        """
-        provider = config.get_default("csp", "provider", overwrite=provider)
-        if not provider:
-            # Use default value if any
-            provider = cls.NAME
-        if not provider:
-            raise _exc.CSPConfigurationException("No provider defined.")
-        return provider
-
-    def _set_signals(self, exit_instance_on_signal=True):
-        """
-        Set a list of interrupt signals to be handled asynchronously to emergency stop
-        instance in case of unexpected exit.
-
-        Args:
-            exit_instance_on_signal (bool): If True, enable stop on signals.
-        """
-        if not exit_instance_on_signal:
-            return
-
-        # Lazy import since optional feature
-        import signal
-
-        for signal_name in ('SIGTERM', 'SIGINT', 'SIGQUIT'):
-            # Check signal exist on current OS before setting it
-            if hasattr(signal, signal_name):
-                signal.signal(getattr(signal, signal_name), self.stop)
-
-    def _check_arguments(self, *arg_name):
-        """
-        Check in attributes if arguments are set.
-
-        Args:
-            arg_name (str): Argument names to check.
-
-        Raises:
-            apyfal.exceptions.CSPConfigurationException:
-                A specified argument is None.
-        """
-        for name in arg_name:
-            if getattr(self, '_%s' % name) is None:
-                raise _exc.CSPConfigurationException(
-                    "Parameter '%s' is required %s" % (name, self._provider))
-
-    @classmethod
-    def _add_csp_help_to_exception_message(cls, exception):
-        """
-        Improve exception message by adding CSP help indication.
-
-        Args:
-            exception (Exception): exception.
-        """
-        if cls.DOC_URL:
-            args = list(exception.args)
-            args[0] = '%s, please refer to: %s' % (args[0].rstrip('.'), cls.DOC_URL)
-            exception.args = tuple(args)
-
-    @classmethod
-    def _default_parameter_value(cls, parameter_name, include_provider=False):
-        """
-        Returns a CamelCase name for default parameter
-        value.
-
-        Args:
-            parameter_name (str): Name of parameter
-            include_provider (bool): If True, include provider name in name.
-
-        Returns:
-            str: default parameter value.
-        """
-        return 'Accelize%s%s' % (cls.NAME if include_provider else '', parameter_name)

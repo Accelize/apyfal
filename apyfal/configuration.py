@@ -69,7 +69,7 @@ class Configuration(_configparser.ConfigParser):
 
         # Read configuration file if exists
         # If not, return empty Configuration file, this will force
-        # CSP and accelerator classes to uses defaults values
+        # host and accelerator classes to uses defaults values
         if configuration_file:
             self.read(configuration_file)
 
@@ -110,12 +110,12 @@ class Configuration(_configparser.ConfigParser):
         return (self.get_default('accelize', 'client_id') and
                 self.get_default('accelize', 'secret_id'))
 
-    def has_csp_credential(self):
+    def has_host_credential(self):
         """
-        Check if CSP credentials are present in configuration file.
+        Check if host credentials are present in configuration file.
 
         Returns:
             bool: True if credentials founds in file.
         """
-        return (self.get_default('csp', 'client_id') and
-                self.get_default('csp', 'secret_id'))
+        return (self.get_default('host', 'client_id') and
+                self.get_default('host', 'secret_id'))

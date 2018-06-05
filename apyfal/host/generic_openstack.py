@@ -4,18 +4,18 @@
 import keystoneauth1.exceptions.http as _keystoneauth_exceptions
 import openstack as _openstack
 
-from apyfal.csp import CSPGeneric as _CSPGeneric
+from apyfal.host.generic_csp import CSPHost as _CSPHost
 import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
 from apyfal._utilities import get_logger as _get_logger
 
 
-class OpenStackCSP(_CSPGeneric):
+class OpenStackHost(_CSPHost):
     """Generic class for OpenStack based CSP
 
     Args:
-        provider (str): Cloud service provider name.
+        host_type (str): Cloud service provider name.
         config (str or apyfal.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
@@ -23,7 +23,7 @@ class OpenStackCSP(_CSPGeneric):
         secret_id (str): OpenStack Secret Access Key.
         region (str): OpenStack region. Needs a region supporting instances with FPGA devices.
         instance_type (str): OpenStack Flavor. Default defined by accelerator.
-        ssh_key (str): OpenStack Key pair. Default to 'Accelize<CSPNAME>KeyPair'.
+        ssh_key (str): OpenStack Key pair. Default to 'Accelize<HostName>KeyPair'.
         security_group: OpenStack Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing OpenStack nova instance to use.
             If not specified, create a new instance.
@@ -35,7 +35,7 @@ class OpenStackCSP(_CSPGeneric):
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing instance.
             See "stop_mode" property for more information and possible values.
-        exit_instance_on_signal (bool): If True, exit instance
+        exit_host_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
             if Python interpreter is not exited properly. Note: this is provided for
             convenience and does not cover all exit case like process kill and
@@ -48,21 +48,21 @@ class OpenStackCSP(_CSPGeneric):
     #: Default Interface to use (str)
     OPENSTACK_INTERFACE = None
 
-    _INFO_NAMES = _CSPGeneric._INFO_NAMES.copy()
+    _INFO_NAMES = _CSPHost._INFO_NAMES.copy()
     _INFO_NAMES.update({'_project_id', '_auth_url', '_interface'})
 
     def __init__(self, config=None, project_id=None, auth_url=None, interface=None, **kwargs):
         config = _cfg.create_configuration(config)
-        _CSPGeneric.__init__(self, config=config, **kwargs)
+        _CSPHost.__init__(self, config=config, **kwargs)
 
         # OpenStack specific arguments
         self._project_id = config.get_default(
-            'csp', 'project_id', overwrite=project_id)
+            'host', 'project_id', overwrite=project_id)
         self._auth_url = config.get_default(
-            'csp', 'auth_url', overwrite=auth_url,
+            'host', 'auth_url', overwrite=auth_url,
             default=self.OPENSTACK_AUTH_URL)
         self._interface = config.get_default(
-            'csp', 'interface', overwrite=interface,
+            'host', 'interface', overwrite=interface,
             default=self.OPENSTACK_INTERFACE)
 
         # Checks mandatory configuration values
@@ -86,14 +86,14 @@ class OpenStackCSP(_CSPGeneric):
         Check CSP credentials.
 
         Raises:
-            apyfal.exceptions.CSPAuthenticationException:
+            apyfal.exceptions.HostAuthenticationException:
                 Authentication failed.
         """
         try:
             list(self._session.network.networks())
         except (_keystoneauth_exceptions.Unauthorized,
                 _openstack.exceptions.SDKException) as exception:
-            raise _exc.CSPAuthenticationException(exc=exception)
+            raise _exc.HostAuthenticationException(exc=exception)
 
     def _init_key_pair(self):
         """
@@ -106,7 +106,7 @@ class OpenStackCSP(_CSPGeneric):
         try:
             key_pair = self._session.compute.find_keypair(self._ssh_key, ignore_missing=True)
         except _openstack.exceptions.SDKException as exception:
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 gen_msg=('no_find', "key pair"), exc=exception)
 
         # Use existing key
@@ -117,7 +117,7 @@ class OpenStackCSP(_CSPGeneric):
         try:
             key_pair = self._session.compute.create_keypair(name=self._ssh_key)
         except _openstack.exceptions.SDKException as exception:
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 gen_msg=('created_failed', "key pair"), exc=exception)
 
         _utl.create_ssh_key_file(self._ssh_key, key_pair.private_key)
@@ -174,7 +174,7 @@ class OpenStackCSP(_CSPGeneric):
 
         # Instance not found
         except _openstack.exceptions.SDKException as exception:
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 gen_msg=('no_instance_id', self._instance_id),
                 exc=exception)
 
@@ -185,10 +185,10 @@ class OpenStackCSP(_CSPGeneric):
         Returns:
             str: IP address
         """
-        for address in self._instance.addresses.values()[0]:
+        for address in list(self._instance.addresses.values())[0]:
             if address['version'] == 4:
                 return address['addr']
-        raise _exc.CSPInstanceException(gen_msg='no_instance_ip')
+        raise _exc.HostInstanceException(gen_msg='no_instance_ip')
 
     def _get_private_ip(self):
         """
@@ -226,20 +226,20 @@ class OpenStackCSP(_CSPGeneric):
             str: image_id
         """
         # Gets image
-        image_id = _CSPGeneric._get_image_id_from_region(
+        image_id = _CSPHost._get_image_id_from_region(
             self, accel_parameters_in_region)
 
         # Checks if image exists and get its name
         try:
             image = self._session.compute.find_image(image_id)
         except _openstack.exceptions.ResourceNotFound:
-            raise _exc.CSPConfigurationException(gen_msg=(
+            raise _exc.HostConfigurationException(gen_msg=(
                 'unable_find_from', 'image', image_id, 'Accelize'))
         else:
             try:
                 self._image_name = image.name
             except AttributeError:
-                raise _exc.CSPConfigurationException(gen_msg=(
+                raise _exc.HostConfigurationException(gen_msg=(
                     'unable_find_from', 'image', image_id, 'Accelize'))
 
         return image_id
@@ -256,15 +256,15 @@ class OpenStackCSP(_CSPGeneric):
             str: instance_type
         """
         # Get instance type (flavor)
-        self._instance_type_name = _CSPGeneric._get_instance_type_from_region(
+        self._instance_type_name = _CSPHost._get_instance_type_from_region(
             self, accel_parameters_in_region)
         try:
             instance_type = self._session.compute.find_flavor(
                 self._instance_type_name).id
         except _openstack.exceptions.ResourceNotFound:
-            raise _exc.CSPConfigurationException(gen_msg=(
+            raise _exc.HostConfigurationException(gen_msg=(
                 'unable_find_from', 'flavor',
-                self._instance_type_name, self._provider))
+                self._instance_type_name, self._host_type))
 
         return instance_type
 
@@ -281,13 +281,13 @@ class OpenStackCSP(_CSPGeneric):
                 msg = self._instance.fault.message
             except AttributeError:
                 msg = exception
-            raise _exc.CSPInstanceException(exc=msg)
+            raise _exc.HostInstanceException(exc=msg)
 
         # Check instance status
         status = self._get_status()
         if status.lower() == "error":
             self.stop()
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 gen_msg=('unable_to_status', "initialize", status))
 
     def _start_new_instance(self):
@@ -305,7 +305,7 @@ class OpenStackCSP(_CSPGeneric):
                 key_name=self._ssh_key,
                 security_groups=[{"name": self._security_group}])
         except _openstack.exceptions.SDKException as exception:
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 gen_msg=('unable_to', "start"), exc=exception)
 
         return instance, instance.id
@@ -321,7 +321,7 @@ class OpenStackCSP(_CSPGeneric):
             try:
                 self._session.start_server(self._instance)
             except _openstack.exceptions.SDKException as exception:
-                raise _exc.CSPInstanceException(
+                raise _exc.HostInstanceException(
                     gen_msg=('unable_to', "start"), exc=exception)
 
     def _terminate_instance(self):
@@ -330,9 +330,9 @@ class OpenStackCSP(_CSPGeneric):
         """
         try:
             if not self._session.delete_server(self._instance, wait=True):
-                raise _exc.CSPInstanceException(_utl.gen_msg('unable_to', "delete"))
+                raise _exc.HostInstanceException(_utl.gen_msg('unable_to', "delete"))
         except _openstack.exceptions.SDKException as exception:
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 gen_msg=('unable_to', "delete"), exc=exception)
 
     def _pause_instance(self):

@@ -22,7 +22,7 @@ __version__ = "2.1.0"
 __copyright__ = "Copyright 2018 Accelize"
 __licence__ = "Apache 2.0"
 
-import apyfal.csp as csp
+import apyfal.host as _hst
 import apyfal.client as _clt
 import apyfal.exceptions as _exc
 import apyfal.configuration as _cfg
@@ -36,7 +36,7 @@ get_logger = _get_logger
 class Accelerator(object):
     """
     This class provides the full accelerator features by handling
-    both Accelerator client and CSP.
+    Accelerator and its host.
 
     Args:
         accelerator (str): Name of the accelerator you want to initialize,
@@ -48,43 +48,36 @@ class Accelerator(object):
             Client ID is part of the access key you can generate on
             "https:/accelstore.accelize.com/user/applications".
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with xlz_client_id.
-        provider (str): Cloud service provider name.
-        region (str): CSP region. Needs a region supporting instances with FPGA devices.
-        client_id (str): CSP Access Key ID.
-        secret_id (str): CSP Secret Access Key.
-        instance_id (str): Instance ID of an already existing CSP instance to use.
-            If not specified, create a new instance.
-        instance_ip (str): IP address of an already existing CSP instance to use.
-            If not specified, create a new instance..
-        stop_mode (str or int): CSP stop mode.
-            Default to 'term' if new instance, or 'keep' if already existing instance.
-            See "apyfal.csp.CSPGeneric.stop_mode" property for more
+        host_type (str): Type of host to use.
+        host_ip (str): IP or URL address of an already existing host to use.
+            If not specified, create a new host.
+        stop_mode (str or int): Host stop mode.
+            Default to 'term' if new host, or 'keep' if already existing host.
+            See "apyfal.host.Host.stop_mode" property for more
             information and possible values.
-        csp_kwargs: Keyword arguments related to specific CSP. See targeted CSP class
+        host_kwargs: Keyword arguments related to specific host. See targeted host class
             to see full list of arguments.
     """
     def __init__(self, accelerator, config=None, accelize_client_id=None, accelize_secret_id=None,
-                 provider=None, region=None, client_id=None, secret_id=None, instance_id=None,
-                 instance_ip=None, stop_mode='term', **csp_kwargs):
+                 host_type=None, host_ip=None, stop_mode='term', **host_kwargs):
 
         # Initialize configuration
         config = _cfg.create_configuration(config)
 
-        # Create CSP object
-        self._csp = csp.CSPGeneric(
-            provider=provider, config=config, client_id=client_id, secret_id=secret_id,
-            region=region, instance_id=instance_id, instance_ip=instance_ip,
-            stop_mode=stop_mode, **csp_kwargs)
+        # Create host object
+        self._host = _hst.Host(
+            host_type=host_type, config=config, host_ip=host_ip,
+            stop_mode=stop_mode, **host_kwargs)
 
         # Create AcceleratorClient object
         self._client = _clt.AcceleratorClient(
             accelerator, accelize_client_id=accelize_client_id,
             accelize_secret_id=accelize_secret_id, config=config)
 
-        # Try to pass CSP URL to Accelerator client if available
+        # Try to pass host URL to Accelerator client if available
         try:
-            self._client.url = self._csp.url
-        except _exc.CSPException:
+            self._client.url = self._host.url
+        except (_exc.HostException, _exc.ClientException):
             pass
 
     def __enter__(self):
@@ -107,22 +100,22 @@ class Accelerator(object):
         return self._client
 
     @property
-    def csp(self):
+    def host(self):
         """
-        Accelerator CSP.
+        Accelerator host.
 
         Returns:
-            apyfal.csp.CSPGeneric subclass: CSP Instance
+            apyfal.host.Host subclass: Host
         """
-        return self._csp
+        return self._host
 
-    def start(self, stop_mode=None, datafile=None, info_dict=False, csp_env=None, **parameters):
+    def start(self, stop_mode=None, datafile=None, info_dict=False, host_env=None, **parameters):
         """
-        Starts and/or configure an accelerator instance.
+        Starts and/or configure an accelerator.
 
         Args:
-            stop_mode (str or int): CSP stop mode. If not None, override current "stop_mode" value.
-                See "apyfal.csp.CSPGeneric.stop_mode" property for more
+            stop_mode (str or int): Host stop mode. If not None, override current "stop_mode" value.
+                See "apyfal.host.Host.stop_mode" property for more
                 information and possible values.
             datafile (str): Depending on the accelerator (like for HyperFiRe),
                 a configuration need to be loaded before a process can be run.
@@ -142,16 +135,16 @@ class Accelerator(object):
                   AcceleratorClient contain output information from  configuration operation.
                   Take a look to accelerator documentation for more information.
         """
-        # Start CSP instance if needed (Do nothing if already started)
-        self._csp.start(accel_client=self._client, stop_mode=stop_mode)
+        # Start host if needed (Do nothing if already started)
+        self._host.start(accel_client=self._client, stop_mode=stop_mode)
 
-        # Set accelerator URL to CSP instance URL
-        self._client.url = self._csp.url
+        # Set accelerator URL to host URL
+        self._client.url = self._host.url
 
         # Configure accelerator if needed
         return self._client.start(
             datafile=datafile,
-            csp_env=self._csp.get_configuration_env(**(csp_env or dict())),
+            host_env=self._host.get_configuration_env(**(host_env or dict())),
             info_dict=info_dict, **parameters)
 
     def process(self, file_in=None, file_out=None, info_dict=False, **parameters):
@@ -182,16 +175,16 @@ class Accelerator(object):
         process_result = self._client.process(
             file_in=file_in, file_out=file_out, info_dict=info_dict, **parameters)
 
-        self._log_profiling_info(process_result)
+        self._log_profiling_info(process_result[1])
         return process_result
 
     def stop(self, stop_mode=None, info_dict=False):
         """
-        Stop your accelerator session and accelerator csp instance depending of the parameters
+        Stop your accelerator session and accelerator host depending of the parameters
 
         Args:
-            stop_mode (str or int): CSP stop mode. If not None, override current "stop_mode" value.
-                See "apyfal.csp.CSPGeneric.stop_mode" property for more
+            stop_mode (str or int): Host stop mode. If not None, override current "stop_mode" value.
+                See "apyfal.host.Host.stop_mode" property for more
                 information and possible values.
             info_dict (bool): If True, returns a dict containing information on
                 stop operation.
@@ -205,9 +198,15 @@ class Accelerator(object):
         try:
             stop_result = self._client.stop(info_dict=info_dict)
 
-        # Stops CSP instance
+        except (AttributeError, _exc.ClientException):
+            stop_result = None
+
+        # Stops host
         finally:
-            self._csp.stop(stop_mode)
+            try:
+                self._host.stop(stop_mode)
+            except (AttributeError, _exc.HostException):
+                pass
 
         return stop_result
 
@@ -261,14 +260,14 @@ class Accelerator(object):
                 fps = 1.0 / global_time
                 logger.info(
                     "- Server processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
-                    self._csp.provider, bw, fps)
+                    self._host.host_type, bw, fps)
 
             if total_bytes > 0.0 and fpga_time > 0.0:
                 bw = total_bytes / fpga_time / 1024.0 / 1024.0
                 fps = 1.0 / fpga_time
                 logger.info(
                     "- FPGA processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
-                    self._csp.provider, bw, fps)
+                    self._host.host_type, bw, fps)
 
         # Handle Specific result
         try:

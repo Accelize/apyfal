@@ -14,7 +14,7 @@ Features of the 1.0.0 version:
 
 - Accelerator start, process and stop in cloud environment.
 - Accelerator configuration with arguments and/or configuration file.
-- Support for *generic* OpenStack CSP.
-- Support for AWS and OVH public CSP.
+- Support for *generic* OpenStack host.
+- Support for AWS and OVH public host.
 - Complete unittest for the core or the package.
 - Full Sphinx documentation.

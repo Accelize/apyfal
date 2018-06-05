@@ -2,8 +2,7 @@ Accelerator REST API
 ====================
 
 It is possible to use accelerators using the REST API instead of Python
-apyfal. But, note that in this case, CSP instance configuration
-is not supported.
+Apyfal. But, note that in this case, host configuration is not supported.
 
 Generating REST API client in any language using Swagger-Codegen
 ----------------------------------------------------------------

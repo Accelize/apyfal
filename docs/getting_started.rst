@@ -27,18 +27,17 @@ logger to see more details on running steps:*
     import apyfal
     apyfal.get_logger(True)
 
-Running an accelerator on a cloud instance
-------------------------------------------
+Running an accelerator on a cloud instance host
+-----------------------------------------------
 
-This tutorial will cover creating a simple accelerator instance and
-process a file using a Cloud Service Provider (*CSP*).
+This tutorial will cover creating a simple accelerator and
+process a file using a Cloud Service Provider (*CSP*) as host.
 
 Parameters required in this case may depends on the CSP used, but it
 need always at least:
 
--  ``provider``: CSP name
--  ``region``: CSP region name, need a region that support FPGA
-   instance.
+-  ``host_type``: CSP name
+-  ``region``: CSP region name, need a region that support FPGA.
 -  ``client_id`` and ``secret_id``: CSP credentials
 
 See your CSP documentation to know how obtains theses values.
@@ -52,16 +51,16 @@ See your CSP documentation to know how obtains theses values.
     with apyfal.Accelerator(
             # Accelerator parameters
             accelerator='my_accelerator',
-            # CSP parameters
-            provider='my_provider', region='my_region',
+            # host parameters
+            host_type='my_provider', region='my_region',
             client_id='my_client_id', secret_id='my_secret_id',
             # Accelize parameters
             accelize_client_id='my_accelize_client_id',
             accelize_secret_id='my_accelize_secret_id') as myaccel:
 
         # Start the accelerator:
-        # In this case a new CSP instance will be provisioned credential passed to
-        # Accelerator
+        # In this case a new cloud instance will be provisioned credential passed to
+        # Accelerator as host
         # Note: This step can take some minutes depending your CSP
         myaccel.start()
 
@@ -73,17 +72,17 @@ See your CSP documentation to know how obtains theses values.
 
     # The accelerator is automatically closed  on "with" exit.
     # In this case, the default stop_mode ('term') is used:
-    # the previously created instance will be deleted and all its content lost.
+    # the previously created host will be deleted and all its content lost.
 
-Keeping instance running
+Keeping host running
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Starting instance take long time, so it may be a good idea to keeping it
+Starting host take long time, so it may be a good idea to keeping it
 running for reusing it later.
 
 This is done with the ``stop_mode`` parameter.
 
-Depending your CSP, note that you will pay until your instance is alive.
+Depending your CSP, note that you will pay until your host is alive.
 
 .. code-block:: python
 
@@ -91,45 +90,45 @@ Depending your CSP, note that you will pay until your instance is alive.
 
    with apyfal.Accelerator(
            accelerator='my_accelerator',
-           provider='my_provider', region='my_region',
+           host_type='my_provider', region='my_region',
            client_id='my_client_id', secret_id='my_secret_id',
            accelize_client_id='my_accelize_client_id',
            accelize_secret_id='my_accelize_secret_id') as myaccel:
 
-       # We can start accelerator with "keep" stop mode to keep instance running
+       # We can start accelerator with "keep" stop mode to keep host running
        myaccel.start(stop_mode='keep')
 
        myaccel.process(file_in='/path/myfile.dat', file_out='/path/result.dat')
 
-       # We can get and store instance IP and ID for later use
-       my_instance_id = myaccel.csp.instance_id
-       my_instance_ip = myaccel.csp.public_ip
+       # We can get and store host IP and instance ID for later use
+       my_host_instance_id = myaccel.host.instance_id
+       my_host_ip = myaccel.host.public_ip
 
-   # This time instance is not deleted and will stay running when accelerator is close.
+   # This time host is not deleted and will stay running when accelerator is close.
 
-Reusing existing instance
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Reusing existing host
+~~~~~~~~~~~~~~~~~~~~~
 
-With instance ID and full instance access
+With host instance ID and full host access
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 With ``instance_id``, depending your CSP, your can reuse an already
-existing instance without providing ``client_id`` and ``secret_id``.
+existing host without providing ``client_id`` and ``secret_id``.
 
 An accelerator started with ``instance_id`` keep control on this
-instance an can stop it.
+host an can stop it.
 
 .. code-block:: python
 
    import apyfal
 
-   # We select the instance to use on Accelerator instantiation
-   # with its ID stored previously
+   # We select the host to use on Accelerator instantiation
+   # with its instance ID stored previously
    with apyfal.Accelerator(
            accelerator='my_accelerator',
-           provider='my_provider', region='my_region',
+           host_type='my_provider', region='my_region',
            # Use 'instance_id' and removed 'client_id' and 'secret_id'
-           instance_id='my_instance_id',
+           instance_id='my_host_instance_id',
            accelize_client_id='my_accelize_client_id',
            accelize_secret_id='my_accelize_secret_id') as myaccel:
 
@@ -138,25 +137,25 @@ instance an can stop it.
        myaccel.process(file_in='/path/myfile.dat', file_out='/path/result.dat')
 
 
-With instance IP with accelerator only access
+With host IP with accelerator only access
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-With ``instance_ip``, your can reuse an already existing instance ID
-without providing any CSP information.
+With ``host_ip``, your can reuse an already existing host
+without providing any other host information.
 
-An accelerator started with ``instance_ip`` have no control over this
-instance and can't stop it.
+An accelerator started with ``host_ip`` have no control over this
+host and can't stop it.
 
 .. code-block:: python
 
    import apyfal
 
-   # We also can select the instance to use on Accelerator instantiation
+   # We also can select the host to use on Accelerator instantiation
    # with its IP address stored previously
    with apyfal.Accelerator(
            accelerator='my_accelerator',
-           # Use 'instance_ip' and removed 'client_id' and 'secret_id'
-           instance_ip='my_instance_ip',
+           # Use 'host_ip' and removed any other host parameter
+           host_ip='my_host_ip',
            accelize_client_id='my_accelize_client_id',
            accelize_secret_id='my_accelize_secret_id') as myaccel:
 

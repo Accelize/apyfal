@@ -20,10 +20,10 @@ accelerator:
 Your user account provides also to you metering information on your
 accelerator use `AccelStore account`_.
 
-CSP configuration
+Host configuration
 ~~~~~~~~~~~~~~~~~
 
-Accelerator needs an CSP with FPGA device that needs to be configured to
+Accelerator needs an host with FPGA device that needs to be configured to
 run.
 
 See :doc:`getting_started` to see examples of possible cases.

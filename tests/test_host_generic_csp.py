@@ -1,5 +1,5 @@
 # coding=utf-8
-"""apyfal.csp tests"""
+"""apyfal.host.generic_csp tests"""
 import gc
 import time
 import warnings
@@ -7,49 +7,46 @@ import warnings
 import pytest
 
 
-def test_cspgenericclass_new_init():
-    """Tests CSPGeneric.__new__ and CSPGeneric.__init__"""
+def test_csphost_new_init():
+    """Tests Host.__new__ and Host.__init__"""
     from apyfal.configuration import Configuration
-    from apyfal.csp import CSPGeneric
-    from apyfal.csp.ovh import OVHCSP
-    from apyfal.exceptions import CSPConfigurationException
+    from apyfal.host import Host
+    from apyfal.host.generic_csp import CSPHost
+    from apyfal.host.ovh import OVHHost
+    from apyfal.exceptions import HostConfigurationException
 
     # Mock arguments and configuration
-    # Note that provider is not specified here
+    # Note that host_type is not specified here
     config = Configuration()
-    config.remove_section('csp')
+    config.remove_section('host')
     kwargs = {'region': 'region', 'project_id': 'project_id', 'client_id': 'client_id',
               'auth_url': 'auth_url', 'interface': 'interface', 'config': config}
 
     # Test: Existing CSP class and module
-    assert isinstance(CSPGeneric(provider="OVH", **kwargs), OVHCSP)
+    assert isinstance(Host(host_type="OVH", **kwargs), OVHHost)
 
     # Test: Not existing CSP module
-    with pytest.raises(CSPConfigurationException):
-        CSPGeneric(provider="no_existing_csp")
+    with pytest.raises(HostConfigurationException):
+        Host(host_type="no_existing_csp")
 
     # Test: Existing CSP module, with no valid class
-    with pytest.raises(CSPConfigurationException):
-        CSPGeneric(provider="generic_openstack")
+    with pytest.raises(HostConfigurationException):
+        Host(host_type="generic_openstack")
 
-    # Test: direct instantiation of subclass without specify provider
-    OVHCSP(**kwargs)
-
-    # Test: Instantiation of without specify provider
-    with pytest.raises(CSPConfigurationException):
-        CSPGeneric(**kwargs)
+    # Test: direct instantiation of subclass without specify host_type
+    OVHHost(**kwargs)
 
     # Test: Instantiation with missing mandatory arguments
-    with pytest.raises(CSPConfigurationException):
-        CSPGeneric(provider="OVH", config=config)
+    with pytest.raises(HostConfigurationException):
+        Host(host_type="OVH", config=config)
 
     kwargs_no_client_id = kwargs.copy()
     del kwargs_no_client_id['client_id']
-    with pytest.raises(CSPConfigurationException):
-        CSPGeneric(provider="OVH", **kwargs_no_client_id)
+    with pytest.raises(HostConfigurationException):
+        Host(host_type="OVH", **kwargs_no_client_id)
 
-    # Test: Abstract class still working with factory
-    class UncompletedCSP(CSPGeneric):
+    # Test: Abstract class
+    class UncompletedCSP(CSPHost):
         """Uncompleted CSP class"""
 
     with pytest.raises(TypeError):
@@ -58,14 +55,14 @@ def test_cspgenericclass_new_init():
 
 def get_dummy_csp_class():
     """
-    Returns a base dummy subclass of CSPGeneric
+    Returns a base dummy subclass of Host
 
     Returns:
-        apyfal.csp.CSPGeneric subclass
+        apyfal.host.generic_csp.CSPHost subclass
     """
-    from apyfal.csp import CSPGeneric
+    from apyfal.host.generic_csp import CSPHost
 
-    class BaseDummyClass(CSPGeneric):
+    class BaseDummyClass(CSPHost):
         """Base dummy class"""
         NAME = 'Dummy'
 
@@ -105,12 +102,12 @@ def get_dummy_csp_class():
     return BaseDummyClass
 
 
-def test_cspgenericclass_properties():
-    """Tests CSPGeneric properties"""
-    from apyfal.exceptions import CSPInstanceException
+def test_csphost_properties():
+    """Tests Host properties"""
+    from apyfal.exceptions import HostInstanceException
 
     # Mock variables
-    provider = 'dummy_provider'
+    host_type = 'dummy_host_type'
     public_ip = 'dummy_public_ip'
     private_ip = 'dummy_private_ip'
     url = 'http://127.0.0.1'
@@ -134,14 +131,14 @@ def test_cspgenericclass_properties():
             """Do nothing"""
 
     csp = DummyClass(
-        provider=provider,
+        host_type=host_type,
         instance_id=instance_id, stop_mode=stop_mode,
         region=region)
     csp._instance = 'dummy_instance'
     csp._url = 'http://127.0.0.1'
 
     # Test: properties values
-    assert csp.provider == provider
+    assert csp.host_type == host_type
     assert csp.public_ip == public_ip
     assert csp.private_ip == private_ip
     assert csp.url == url
@@ -156,7 +153,7 @@ def test_cspgenericclass_properties():
     csp._INFO_NAMES.add('not_exists')
     info = csp.info
     for name in {
-            'provider', 'public_ip',
+            'host_type', 'public_ip',
             'private_ip', 'url',
             'instance_id', 'region', 'stop_mode'}:
         assert info[name] == locals()[name]
@@ -164,10 +161,10 @@ def test_cspgenericclass_properties():
 
     # Test: properties if no instance
     csp._instance = None
-    with pytest.raises(CSPInstanceException):
+    with pytest.raises(HostInstanceException):
         csp.public_ip
 
-    with pytest.raises(CSPInstanceException):
+    with pytest.raises(HostInstanceException):
         csp.private_ip
 
     # Test: Stop mode setter, no change if no value set
@@ -197,9 +194,9 @@ def test_cspgenericclass_properties():
         csp.stop_mode = -1
 
 
-def test_cspgenericclass_status():
-    """Tests CSPGeneric._status"""
-    from apyfal.exceptions import CSPInstanceException
+def test_csphost_status():
+    """Tests Host._status"""
+    from apyfal.exceptions import HostInstanceException
 
     # Mock variables
     status = 'dummy_status'
@@ -226,12 +223,12 @@ def test_cspgenericclass_status():
     csp = DummyClass()
 
     # Test: No instance id
-    with pytest.raises(CSPInstanceException):
+    with pytest.raises(HostInstanceException):
         csp._status()
 
     # Test: instance id but no instance started
     csp._instance_id = 'dummy_id'
-    with pytest.raises(CSPInstanceException):
+    with pytest.raises(HostInstanceException):
         csp._status()
 
     # Test: instance id and instance started
@@ -240,9 +237,9 @@ def test_cspgenericclass_status():
     assert csp._instance == instance
 
 
-def test_cspgenericclass_start():
-    """Tests CSPGeneric.start"""
-    from apyfal.exceptions import CSPException
+def test_csphost_start():
+    """Tests Host.start"""
+    from apyfal.exceptions import HostException
     import apyfal._utilities as utl
 
     # Mock variables
@@ -287,13 +284,13 @@ def test_cspgenericclass_start():
             """Marks as executed, simulate exception"""
             if raises_on_create_instance:
                 # Exception with no message
-                raise CSPException
+                raise HostException
             self.mark_instance_created = True
 
         def _terminate_instance(self):
             """Marks as executed, simulate exception"""
             if raises_on_stop_instance:
-                raise CSPException
+                raise HostException
             self.mark_instance_terminated = True
 
         def _start_new_instance(self):
@@ -301,7 +298,7 @@ def test_cspgenericclass_start():
             and returns fake result"""
             if raises_on_start_instance:
                 # Exception with message
-                raise CSPException('Error on start')
+                raise HostException('Error on start')
             self.mark_instance_started = True
             return instance, instance_id
 
@@ -351,7 +348,7 @@ def test_cspgenericclass_start():
         # Test: Fail on create instance
         raises_on_create_instance = True
         csp = DummyClass(**dummy_kwargs)
-        with pytest.raises(CSPException):
+        with pytest.raises(HostException):
             csp.start()
         assert csp.mark_credential_checked
         assert csp.mark_key_pair_created
@@ -366,7 +363,7 @@ def test_cspgenericclass_start():
         raises_on_stop_instance = True
         raises_on_create_instance = True
         csp = DummyClass(**dummy_kwargs)
-        with pytest.raises(CSPException) as exc_info:
+        with pytest.raises(HostException) as exc_info:
             csp.start()
             assert csp.DOC_URL in exc_info
         assert not csp.mark_instance_created
@@ -378,7 +375,7 @@ def test_cspgenericclass_start():
         # Test: Fail on start instance
         raises_on_start_instance = True
         csp = DummyClass(**dummy_kwargs)
-        with pytest.raises(CSPException) as exc_info:
+        with pytest.raises(HostException) as exc_info:
             csp.start()
             assert csp.DOC_URL in exc_info
         assert csp.mark_credential_checked
@@ -392,7 +389,7 @@ def test_cspgenericclass_start():
         # Test: Fail on instance provisioning
         csp = DummyClass(**dummy_kwargs)
         csp.STATUS_RUNNING = 'bad_status'
-        with pytest.raises(CSPException) as exc_info:
+        with pytest.raises(HostException) as exc_info:
             csp.start()
             assert csp.DOC_URL in exc_info
         assert csp.mark_credential_checked
@@ -404,7 +401,7 @@ def test_cspgenericclass_start():
         # Test: Fail on boot instance
         raises_on_boot = True
         csp = DummyClass(**dummy_kwargs)
-        with pytest.raises(CSPException):
+        with pytest.raises(HostException):
             csp.start()
         assert csp.mark_credential_checked
         assert csp.mark_key_pair_created
@@ -432,7 +429,7 @@ def test_cspgenericclass_start():
 
         # Test: Start with already existing URL but not reachable
         raises_on_boot = True
-        with pytest.raises(CSPException):
+        with pytest.raises(HostException):
             csp.start()
 
         raises_on_boot = False
@@ -442,9 +439,9 @@ def test_cspgenericclass_start():
         utl.check_url = utl_check_url
 
 
-def test_cspgenericclass_stop():
-    """Tests CSPGeneric.stop"""
-    from apyfal.csp import CSPGeneric
+def test_csphost_stop():
+    """Tests Host.stop"""
+    from apyfal.host import Host
 
     # Mock variables
     instance = "dummy_instance"
@@ -452,7 +449,7 @@ def test_cspgenericclass_stop():
     # Mock CSP class
     dummy_csp_class = get_dummy_csp_class()
 
-    class DummyCSP(dummy_csp_class):
+    class DummyHost(dummy_csp_class):
         """Dummy CSP"""
         stopped_mode = 'keep'
         class_stopped_mode = 'keep'
@@ -471,12 +468,12 @@ def test_cspgenericclass_stop():
         def _terminate_instance(self):
             """Marks as executed"""
             self.stopped_mode = 'term'
-            DummyCSP.class_stopped_mode = 'term'
+            DummyHost.class_stopped_mode = 'term'
 
         def _pause_instance(self):
             """Marks as executed"""
             self.stopped_mode = 'stop'
-            DummyCSP.class_stopped_mode = 'stop'
+            DummyHost.class_stopped_mode = 'stop'
 
         def _get_instance(self):
             """Returns Fake result"""
@@ -484,53 +481,53 @@ def test_cspgenericclass_stop():
 
     # Test: Stop mode passed on instantiation
     for stop_mode in ('term', 'stop'):
-        csp = DummyCSP(stop_mode=stop_mode)
+        csp = DummyHost(stop_mode=stop_mode)
         csp.stop()
         assert csp.stopped_mode == stop_mode
 
     # Test: Stop mode passed on stop
     for stop_mode in ('term', 'stop'):
-        csp = DummyCSP()
+        csp = DummyHost()
         csp.stop(stop_mode)
         assert not csp._instance
         assert csp.stopped_mode == stop_mode
 
     # Test: Keep stop mode, don't stop
-    csp = DummyCSP(stop_mode='keep')
+    csp = DummyHost(stop_mode='keep')
     csp.stop()
     assert csp._instance
 
-    csp = DummyCSP()
+    csp = DummyHost()
     csp.stop(stop_mode='keep')
     assert csp._instance
 
     # Test: Stop with no instance started
     instance = None
-    csp = DummyCSP(stop_mode='term')
+    csp = DummyHost(stop_mode='term')
     csp.stop()
     assert csp.stopped_mode == 'keep'
     instance = 'dummy_instance'
 
     # Test: Auto-stops with context manager
-    DummyCSP.class_stopped_mode = 'keep'
-    with DummyCSP(stop_mode='term') as csp:
+    DummyHost.class_stopped_mode = 'keep'
+    with DummyHost(stop_mode='term') as csp:
         # Checks __enter__ returned object
-        assert isinstance(csp, CSPGeneric)
-    assert DummyCSP.class_stopped_mode == 'term'
+        assert isinstance(csp, Host)
+    assert DummyHost.class_stopped_mode == 'term'
 
     # Test: Auto-stops on garbage collection
-    DummyCSP.class_stopped_mode = 'keep'
-    DummyCSP(stop_mode='term')
+    DummyHost.class_stopped_mode = 'keep'
+    DummyHost(stop_mode='term')
     gc.collect()
-    assert DummyCSP.class_stopped_mode == 'term'
+    assert DummyHost.class_stopped_mode == 'term'
 
 
-def test_cspgenericclass_set_accelerator_requirements():
-    """Tests CSPGeneric._set_accelerator_requirements"""
-    from apyfal.exceptions import CSPConfigurationException
+def test_csphost_set_accelerator_requirements():
+    """Tests Host._set_accelerator_requirements"""
+    from apyfal.exceptions import HostConfigurationException
 
     # Mock variables
-    dummy_provider = 'dummy_provider'
+    dummy_host_type = 'dummy_host_type'
     region = "dummy_region"
     image_id = "dummy_image_id"
     instance_type = "dummy_instance_type"
@@ -545,10 +542,10 @@ def test_cspgenericclass_set_accelerator_requirements():
         """Dummy accelerator client"""
 
         @staticmethod
-        def get_csp_requirements(provider):
+        def get_host_requirements(host_type):
             """Checks argument and returns fake result"""
             # Checks arguments
-            assert provider == dummy_provider
+            assert host_type == dummy_host_type
 
             # Returns fake value
             return accel_parameters
@@ -566,7 +563,7 @@ def test_cspgenericclass_set_accelerator_requirements():
 
     # Test: Pass client
     csp = get_dummy_csp_class()(
-        provider=dummy_provider, region=region, client_id='dummy_client_id')
+        host_type=dummy_host_type, region=region, client_id='dummy_client_id')
     csp._config_env = config_env
     csp._set_accelerator_requirements(accel_client=DummyClient())
     assert csp._image_id == image_id
@@ -577,32 +574,32 @@ def test_cspgenericclass_set_accelerator_requirements():
 
     # Test: Region not found
     accel_parameters = {'another_region': region_parameters, 'accelerator': accelerator}
-    with pytest.raises(CSPConfigurationException):
+    with pytest.raises(HostConfigurationException):
         csp._set_accelerator_requirements(accel_parameters=accel_parameters)
 
 
-def import_from_generic_test(provider, **kwargs):
+def import_from_generic_test(host_type, **kwargs):
     """
     Test to import a class from generic.
 
     Args:
-        provider( str): CSP provider
+        host_type( str): CSP host_type
         kwargs: Other args required
     """
-    from apyfal.csp import CSPGeneric
-    CSPGeneric(
-        provider=provider, region='dummy_region',
+    from apyfal.host import Host
+    Host(
+        host_type=host_type, region='dummy_region',
         client_id='dummy_client_id', secret_id='dummy_secret_id',
         **kwargs)
 
 
-def run_full_real_test_sequence(provider, environment,
+def run_full_real_test_sequence(host_type, environment,
                                 use_full_images=False,
                                 support_stop_restart=True):
     """Run common real tests for all CSP.
 
     Args:
-        provider (str): CSP provider.
+        host_type (str): CSP host_type.
         environment (dict): Environment to use
         use_full_images (bool): If True, uses full
             images with host application that provides
@@ -612,24 +609,24 @@ def run_full_real_test_sequence(provider, environment,
     """
     from apyfal.configuration import Configuration
 
-    # Skip if no correct configuration with this provider
+    # Skip if no correct configuration with this host_type
     config = Configuration()
-    if not config.has_csp_credential():
+    if not config.has_host_credential():
         pytest.skip('No CSP credentials')
 
-    if config.get_default('csp', 'provider') != provider:
-        pytest.skip('No configuration for %s.' % provider)
+    if config.get_default('host', 'host_type') != host_type:
+        pytest.skip('No configuration for %s.' % host_type)
 
-    elif config.get_default('csp', 'region') not in environment:
+    elif config.get_default('host', 'region') not in environment:
         pytest.skip("No configuration for '%s' region on %s." %
-                    (config.get_default('csp', 'region'), provider))
+                    (config.get_default('host', 'region'), host_type))
 
     # Enable logger
     from apyfal import get_logger
     get_logger(stdout=True)
 
     # Add accelerator to environment
-    environment['accelerator'] = 'acceleratorAPI_testing'
+    environment['accelerator'] = 'apyfal_testing'
 
     # Mock instance URL check
     # Since used basic image don't provide HTTP access
@@ -646,39 +643,39 @@ def run_full_real_test_sequence(provider, environment,
         apyfal._utilities.check_url = dummy_check_url
 
     # Tests:
-    from apyfal.csp import CSPGeneric
+    from apyfal.host import Host
 
     try:
         # Start and terminate
         print('Test: Start and terminate')
-        with CSPGeneric(config=config, stop_mode='term') as csp:
+        with Host(config=config, stop_mode='term') as csp:
             csp.start(accel_parameters=environment)
 
         # Start and stop, then terminate
         # Also check getting instance handle with ID
         if support_stop_restart:
             print('Test: Start and stop')
-            with CSPGeneric(config=config, stop_mode='stop') as csp:
+            with Host(config=config, stop_mode='stop') as csp:
                 csp.start(accel_parameters=environment)
                 instance_id = csp.instance_id
 
             gc.collect()
 
             print('Test: Start from stopped and terminate')
-            with CSPGeneric(config=config, instance_id=instance_id,
-                                 stop_mode='term') as csp:
+            with Host(config=config, instance_id=instance_id,
+                      stop_mode='term') as csp:
                 csp.start()
 
         # Start and keep, then
         # Also check getting instance handle with URL
         print('Test: Start and keep')
-        with CSPGeneric(config=config, stop_mode='keep') as csp:
+        with Host(config=config, stop_mode='keep') as csp:
             csp.start(accel_parameters=environment)
             instance_id = csp.instance_id
 
         print('Test: Reuse with instance ID and terminate')
-        with CSPGeneric(config=config, instance_id=instance_id,
-                             stop_mode='term') as csp:
+        with Host(config=config, instance_id=instance_id,
+                  stop_mode='term') as csp:
             csp.start()
 
     # Restore check_url

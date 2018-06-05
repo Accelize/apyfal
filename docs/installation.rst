@@ -23,7 +23,7 @@ On Linux, some extra packages are required:
 -  *Pip* is required (Package is named ``python-pip`` for Python 2 and
    ``python3-pip`` for Python 3).
 
--  Depending on the Python version, CSP targeted and wheel format
+-  Depending on the Python version, host targeted and wheel format
    availability, a C/C++ compiler may also be required for install
    dependencies. In this case, *GCC* (Or another compatible compiler) &
    *Python-dev* are required.
@@ -69,7 +69,7 @@ Python 3:
 Windows
 ~~~~~~~
 
-Depending on the Python version, CSP targeted and wheel format
+Depending on the Python version, host targeted and wheel format
 availability, a C/C++ compiler may also be required for install
 dependencies.
 

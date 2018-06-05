@@ -21,7 +21,7 @@ Browse our web site `AccelStore <https://accelstore.accelize.com>`_, to discover
 
 **Basic Python code example**
 
-Accelerator API is easy to use and only need few lines of codes for instantiate accelerator and CSP instance and then
+Accelerator API is easy to use and only need few lines of codes for instantiate accelerator and its host and then
 process files:
 
 .. code-block:: python
@@ -41,7 +41,7 @@ process files:
 Feature
 -------
 
-+ Configuration of CSP environment for AWS, OVH 
++ Configuration of cloud host environment for AWS, OVH
 + Remote or local execution facility
 + Simplified API
 

@@ -8,18 +8,18 @@ import time as _time
 import boto3 as _boto3
 import botocore.exceptions as _boto_exceptions
 
-from apyfal.csp import CSPGeneric as _CSPGeneric
+from apyfal.host.generic_csp import CSPHost as _CSPHost
 import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
 from apyfal._utilities import get_logger as _get_logger
 
 
-class AWSCSP(_CSPGeneric):
+class AWSHost(_CSPHost):
     """AWS CSP Class
 
     Args:
-        provider (str): Cloud service provider name. Default to "AWS".
+        host_type (str): Cloud service provider name. Default to "AWS".
         config (str or apyfal.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
@@ -38,7 +38,7 @@ class AWSCSP(_CSPGeneric):
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing instance.
             See "stop_mode" property for more information and possible values.
-        exit_instance_on_signal (bool): If True, exit instance
+        exit_host_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
             if Python interpreter is not exited properly. Note: this is provided for
             convenience and does not cover all exit case like process kill and
@@ -54,16 +54,16 @@ class AWSCSP(_CSPGeneric):
     STATUS_STOPPED = 'stopped'
     STATUS_STOPPING = 'stopping'
 
-    _INFO_NAMES = _CSPGeneric._INFO_NAMES.copy()
+    _INFO_NAMES = _CSPHost._INFO_NAMES.copy()
     _INFO_NAMES.add('_role')
 
     def __init__(self, config=None,  role=None, **kwargs):
         config = _cfg.create_configuration(config)
-        _CSPGeneric.__init__(self, config=config, **kwargs)
+        _CSPHost.__init__(self, config=config, **kwargs)
 
         # Get AWS specific arguments
         self._role = config.get_default(
-            'csp', 'role', overwrite=role,
+            'host', 'role', overwrite=role,
             default=self._default_parameter_value('Role'))
 
         # Load session
@@ -86,7 +86,7 @@ class AWSCSP(_CSPGeneric):
                 code not in filter
 
         Raises:
-            apyfal.exceptions.CSPInstanceException:
+            apyfal.exceptions.HostInstanceException:
                 error code not in filter_error_codes
         """
         # Try to get error code and message
@@ -94,7 +94,7 @@ class AWSCSP(_CSPGeneric):
             error_dict = exception.response['Error']
             error_code = error_dict['Code']
         except (AttributeError, KeyError):
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 exception_msg, exc=exception)
 
         # Converts single str to tuple
@@ -105,7 +105,7 @@ class AWSCSP(_CSPGeneric):
 
         # Raises if not in filter
         if error_code not in filter_error_codes:
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 exception_msg, exc=error_dict['Message'])
 
     def _check_credential(self):
@@ -113,14 +113,14 @@ class AWSCSP(_CSPGeneric):
         Check CSP credentials.
 
         Raises:
-            apyfal.exceptions.CSPAuthenticationException:
+            apyfal.exceptions.HostAuthenticationException:
                 Authentication failed.
         """
         ec2_client = self._session.client('ec2')
         try:
             ec2_client.describe_key_pairs()
         except ec2_client.exceptions.ClientError as exception:
-            raise _exc.CSPAuthenticationException(exc=exception)
+            raise _exc.HostAuthenticationException(exc=exception)
 
     def _init_key_pair(self):
         """
@@ -204,7 +204,7 @@ class AWSCSP(_CSPGeneric):
             if policy_item['PolicyName'] == policy:
                 return policy_item['Arn']
 
-        raise _exc.CSPConfigurationException(
+        raise _exc.HostConfigurationException(
             gen_msg=('created_failed_named', 'policy', policy))
 
     def _init_role(self):
@@ -382,7 +382,7 @@ class AWSCSP(_CSPGeneric):
         try:
             return self._session.resource('ec2').Instance(self._instance_id)
         except _boto_exceptions.ClientError as exception:
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 gen_msg=('no_instance_id', self._instance_id),
                 exc=exception)
 
@@ -396,7 +396,7 @@ class AWSCSP(_CSPGeneric):
         try:
             return self._instance.public_ip_address
         except _boto_exceptions.ClientError as exception:
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 gen_msg='no_instance_ip', exc=exception)
 
     def _get_private_ip(self):
@@ -409,7 +409,7 @@ class AWSCSP(_CSPGeneric):
         try:
             return self._instance.private_ip_address
         except _boto_exceptions.ClientError as exception:
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 gen_msg='no_instance_ip', exc=exception)
 
     def _get_status(self):
@@ -422,7 +422,7 @@ class AWSCSP(_CSPGeneric):
         try:
             instance_state = self._instance.state
         except _boto_exceptions.ClientError as exception:
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 gen_msg=('no_instance_id', self._instance_id),
                 exc=exception)
         return instance_state["Name"]
@@ -518,7 +518,7 @@ class AWSCSP(_CSPGeneric):
                     if status != self.STATUS_STOPPING:
                         break
                     elif timeout.reached():
-                        raise _exc.CSPInstanceException(
+                        raise _exc.HostInstanceException(
                             gen_msg=('timeout_status', 'stop', status))
 
         # If instance stopped, starts it
@@ -527,7 +527,7 @@ class AWSCSP(_CSPGeneric):
 
         # If another status, raises error
         elif status != self.STATUS_RUNNING:
-            raise _exc.CSPInstanceException(
+            raise _exc.HostInstanceException(
                 gen_msg=('unable_to_status', 'start', status))
 
     def _terminate_instance(self):

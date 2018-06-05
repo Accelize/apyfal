@@ -1,14 +1,14 @@
 # coding=utf-8
 """OVH"""
 
-from apyfal.csp.generic_openstack import OpenStackCSP as _OpenStackCSP
+from apyfal.host.generic_openstack import OpenStackHost as _OpenStackHost
 
 
-class OVHCSP(_OpenStackCSP):
+class OVHHost(_OpenStackHost):
     """OVH CSP Class
 
     Args:
-        provider (str): Cloud service provider name. Default to "OVH".
+        host_type (str): Cloud service provider name. Default to "OVH".
         config (str or apyfal.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
@@ -28,7 +28,7 @@ class OVHCSP(_OpenStackCSP):
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing instance.
             See "stop_mode" property for more information and possible values.
-        exit_instance_on_signal (bool): If True, exit instance
+        exit_host_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
             if Python interpreter is not exited properly. Note: this is provided for
             convenience and does not cover all exit case like process kill and

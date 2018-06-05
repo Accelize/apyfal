@@ -4,7 +4,7 @@
 from apyfal._utilities import gen_msg as _get_msg
 
 
-class AcceleratorApiBaseException(Exception):
+class AcceleratorException(Exception):
     """Base exception for apyfal exceptions
 
     Args:
@@ -30,36 +30,37 @@ class AcceleratorApiBaseException(Exception):
         Exception.__init__(self, msg, *args, **kwargs)
 
 
-class AcceleratorException(AcceleratorApiBaseException):
+class ClientException(AcceleratorException):
     """Generic AcceleratorClient related exception."""
     DEFAULT_MESSAGE = "Accelerator Client Error"
 
 
-class AcceleratorAuthenticationException(AcceleratorException):
+class ClientAuthenticationException(ClientException):
     """Error while trying to authenticate user on Accelize server."""
+    DEFAULT_MESSAGE = "Accelize authentication failed"
 
 
-class AcceleratorConfigurationException(AcceleratorException):
+class ClientConfigurationException(ClientException):
     """Error with AcceleratorClient configuration."""
 
 
-class AcceleratorRuntimeException(AcceleratorException):
+class ClientRuntimeException(ClientException):
     """Error with AcceleratorClient running."""
 
 
-class CSPException(AcceleratorApiBaseException):
-    """Generic CSP related exception"""
+class HostException(ClientException):
+    """Generic host related exception"""
 
 
-class CSPInstanceException(CSPException):
-    """Error with CSP instance"""
-    DEFAULT_MESSAGE = "CSP Exception"
+class HostInstanceException(HostException):
+    """Error with host instance"""
+    DEFAULT_MESSAGE = "Host Exception"
 
 
-class CSPAuthenticationException(CSPException):
-    """Error while trying to authenticate user on CSP."""
-    DEFAULT_MESSAGE = "Failed to authenticate with your CSP access key."
+class HostAuthenticationException(HostException):
+    """Error while trying to authenticate user on host."""
+    DEFAULT_MESSAGE = "Failed to authenticate to host."
 
 
-class CSPConfigurationException(CSPException):
-    """Error with CSP configuration"""
+class HostConfigurationException(HostException):
+    """Error with host configuration"""

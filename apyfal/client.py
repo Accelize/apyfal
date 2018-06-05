@@ -13,10 +13,10 @@ try:
 
     try:
         # Python 2
-        from StringIO import StringIO as _StringIO
+        from StringIO import StringIO as _BytesIO
     except ImportError:
         # Python 3
-        from io import StringIO as _StringIO
+        from io import BytesIO as _BytesIO
 
 except ImportError:
     _USE_PYCURL = False
@@ -51,7 +51,7 @@ class AcceleratorClient(object):
             Client ID is part of the access key you can generate on
             "https:/accelstore.accelize.com/user/applications".
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with client_id.
-        instance_ip (str): IP or URL address of the CSP instance that host the accelerator.
+        host_ip (str): IP or URL address of the accelerator host.
         config (str or apyfal.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values
@@ -69,11 +69,12 @@ class AcceleratorClient(object):
         "specific": {}}}
 
     def __init__(self, accelerator, accelize_client_id=None, accelize_secret_id=None,
-                 instance_ip=None, config=None):
+                 host_ip=None, config=None):
         self._name = accelerator
         self._access_token = None
         self._configuration_url = None
         self._url = None
+        self._stopped = False
 
         # Read configuration
         config = _cfg.create_configuration(config)
@@ -95,8 +96,8 @@ class AcceleratorClient(object):
         self._api_client = _api.ApiClient()
 
         # Sets URL and configures
-        if instance_ip:
-            self.url = instance_ip
+        if host_ip:
+            self.url = host_ip
 
     def __enter__(self):
         return self
@@ -115,13 +116,13 @@ class AcceleratorClient(object):
             str: Access token.
 
         Raises:
-            AcceleratorAuthenticationException: User credential are not valid.
+            ClientAuthenticationException: User credential are not valid.
         """
         if self._access_token is None:
             # Checks Client ID and secret ID presence
             if self._client_id is None or self._secret_id is None:
-                raise _exc.AcceleratorConfigurationException(
-                    "Accelize client ID and secret ID are mandatory.")
+                raise _exc.ClientConfigurationException(
+                    exc="Accelize client ID and secret ID are mandatory.")
 
             # Check access and get token from server
             response = _utl.http_session().post(
@@ -129,8 +130,7 @@ class AcceleratorClient(object):
                 data={"grant_type": "client_credentials"}, auth=(self._client_id, self._secret_id))
 
             if response.status_code != 200:
-                raise _exc.AcceleratorAuthenticationException(
-                    "Accelize authentication failed", exc=response.text)
+                raise _exc.ClientAuthenticationException(exc=response.text)
 
             response.raise_for_status()
 
@@ -151,7 +151,7 @@ class AcceleratorClient(object):
     @property
     def url(self):
         """
-        URL of the CSP instance that host the accelerator.
+        URL of the accelerator host.
 
         Returns:
             str: URL
@@ -163,8 +163,8 @@ class AcceleratorClient(object):
 
         # Check URL
         if not url:
-            raise _exc.AcceleratorConfigurationException(
-                "An accelerator URL is required .")
+            raise _exc.ClientConfigurationException(
+                "An host URL is required.")
 
         self._url = _utl.format_url(url)
 
@@ -179,23 +179,23 @@ class AcceleratorClient(object):
         Check if accelerator URL exists.
 
         Raises:
-            AcceleratorRuntimeException: If URL not alive
+            ClientRuntimeException: If URL not alive
         """
         if self.url is None:
-            raise _exc.AcceleratorRuntimeException("No accelerator running")
+            raise _exc.ClientRuntimeException("No accelerator running")
         if not _utl.check_url(self.url, max_retries=2):
-            raise _exc.AcceleratorRuntimeException(
+            raise _exc.ClientRuntimeException(
                 gen_msg=('unable_reach_url', self._url))
 
-    def get_csp_requirements(self, provider):
+    def get_host_requirements(self, host_type):
         """
-        Gets accelerators requirements to use with CSP.
+        Gets accelerators requirements to use with host.
 
         Args:
-            provider (str): CSP provider name.
+            host_type (str): Host type.
 
         Returns:
-            dict: AcceleratorClient requirements for CSP.
+            dict: AcceleratorClient requirements for host.
         """
         access_token = self._check_accelize_credential()
 
@@ -208,20 +208,20 @@ class AcceleratorClient(object):
         response.raise_for_status()
         response_config = _json.loads(response.text)
 
-        # Get provider configuration
+        # Get host_type configuration
         try:
-            provider_config = response_config[provider]
+            provider_config = response_config[host_type]
         except KeyError:
-            raise _exc.AcceleratorConfigurationException(
-                "CSP '%s' is not supported. Available CSP are: %s" % (
-                    provider, ', '.join(response_config.keys())))
+            raise _exc.ClientConfigurationException(
+                "Host '%s' is not supported. Available hosts are: %s" % (
+                    host_type, ', '.join(response_config.keys())))
 
         # Get accelerator configuration
         try:
             accelerator_config = provider_config[self.name]
         except KeyError:
-            raise _exc.AcceleratorConfigurationException(
-                "AcceleratorClient '%s' is not supported on '%s'." % (self.name, provider))
+            raise _exc.ClientConfigurationException(
+                "AcceleratorClient '%s' is not supported on '%s'." % (self.name, host_type))
 
         accelerator_config['accelerator'] = self.name
         return accelerator_config
@@ -246,7 +246,7 @@ class AcceleratorClient(object):
         # The last configuration URL should be keep in order to not request it to user.
         self._configuration_url = last_config.url
 
-    def start(self, datafile=None, info_dict=False, csp_env=None, **parameters):
+    def start(self, datafile=None, info_dict=False, host_env=None, **parameters):
         """
         Create an AcceleratorClient configuration.
 
@@ -271,14 +271,14 @@ class AcceleratorClient(object):
         # TODO: Detail response dict in docstring
 
         # Skips configuration if already configured
-        if not (self._configuration_url is None or datafile or parameters or csp_env):
+        if not (self._configuration_url is None or datafile or parameters or host_env):
             return
 
         # Checks parameters
         parameters = self._get_parameters(parameters, self._configuration_parameters)
         parameters.update({
             "env": {"client_id": self._client_id, "client_secret": self._secret_id}})
-        parameters['env'].update(csp_env or dict())
+        parameters['env'].update(host_env or dict())
 
         if datafile is None:
             datafile = ""
@@ -294,7 +294,7 @@ class AcceleratorClient(object):
 
         api_response_read = api_instance.configuration_read(api_response.id)
         if api_response_read.inerror:
-            raise _exc.AcceleratorRuntimeException(
+            raise _exc.ClientRuntimeException(
                 "Cannot start the configuration %s" % api_response_read.url)
 
         # Memorizes configuration
@@ -354,7 +354,7 @@ class AcceleratorClient(object):
         retries_max = 3
         retries_done = 1
         while True:
-            write_buffer = _StringIO()
+            write_buffer = _BytesIO()
             curl.setopt(_pycurl.WRITEFUNCTION, write_buffer.write)
 
             try:
@@ -363,7 +363,7 @@ class AcceleratorClient(object):
 
             except _pycurl.error as exception:
                 if retries_done > retries_max:
-                    raise _exc.AcceleratorRuntimeException(
+                    raise _exc.ClientRuntimeException(
                         'Failed to post process request', exc=exception)
                 retries_done += 1
 
@@ -375,11 +375,11 @@ class AcceleratorClient(object):
         try:
             api_response = _json.loads(content)
         except ValueError:
-            raise _exc.AcceleratorRuntimeException(
+            raise _exc.ClientRuntimeException(
                 "Response not valid", exc=content)
 
         if 'id' not in api_response:
-            raise _exc.AcceleratorRuntimeException(
+            raise _exc.ClientRuntimeException(
                 "Processing failed with no message (host application did not run): %s" % content)
 
         return api_response['id'], api_response['processed']
@@ -409,7 +409,7 @@ class AcceleratorClient(object):
         # TODO: Detail response dict in docstring
         # Check if configuration was done
         if self._configuration_url is None:
-            raise _exc.AcceleratorConfigurationException(
+            raise _exc.ClientConfigurationException(
                 "AcceleratorClient has not been configured. Use 'start' function.")
 
         # Checks input file presence
@@ -439,7 +439,7 @@ class AcceleratorClient(object):
 
             # Checks for success
             if api_response.inerror:
-                raise _exc.AcceleratorRuntimeException(
+                raise _exc.ClientRuntimeException(
                     "Failed to process data: %s" %
                     _utl.pretty_dict(api_response.parametersresult))
 
@@ -482,9 +482,15 @@ class AcceleratorClient(object):
                 Take a look to accelerator documentation for more information.
         """
         # TODO: Detail response dict in docstring
+
+        if self._stopped:
+            # Avoid double call with __exit__ + __del__
+            return
+        self._stopped = True
+
         try:
             self._is_alive()
-        except _exc.AcceleratorRuntimeException:
+        except _exc.ClientRuntimeException:
             # No AcceleratorClient to stop
             return None
         try:
@@ -504,14 +510,14 @@ class AcceleratorClient(object):
             message (str): Optional exception message to add before REST API message.
 
         Raises:
-            apyfal.exceptions.AcceleratorRuntimeException: Exception from arguments.
+            apyfal.exceptions.ClientRuntimeException: Exception from arguments.
         """
         try:
             status = api_result['app']['status']
         except KeyError:
-            raise _exc.AcceleratorRuntimeException('%sNo result returned' % message)
+            raise _exc.ClientRuntimeException('%sNo result returned' % message)
         if status:
-            raise _exc.AcceleratorRuntimeException(message + api_result['app']['msg'])
+            raise _exc.ClientRuntimeException(message + api_result['app']['msg'])
 
     def _init_rest_api_class(self, api):
         """
@@ -521,7 +527,7 @@ class AcceleratorClient(object):
             api: API class from apyfal.rest_api.swagger_client
 
         Returns:
-            Configured instance of api class.
+            Configured instance of API class.
         """
         api_instance = api(api_client=self._api_client)
         api_instance.api_client.rest_client.pool_manager.connection_pool_kw['retries'] = 3

@@ -1,6 +1,7 @@
 [![Linux Build Status](https://travis-ci.org/Accelize/apyfal.svg?branch=master)](https://travis-ci.org/Accelize/apyfal)
 [![Windows Build status](https://ci.appveyor.com/api/projects/status/bcqp6qgm59dubnv0/branch/master?svg=true)](https://ci.appveyor.com/project/xlz-jgoutin/apyfal/branch/master)
 [![Coverage Status](https://coveralls.io/repos/github/Accelize/apyfal/badge.svg?branch=master)](https://coveralls.io/github/Accelize/apyfal?branch=master)
+[![Code Quality](https://api.codacy.com/project/badge/Grade/9403fc82423c4d87a46db1c76a14af8c)](https://www.codacy.com/app/xlz-jgoutin/apyfal?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Accelize/apyfal&amp;utm_campaign=Badge_Grade)
 [![Documentation Status](https://readthedocs.org/projects/apyfal/badge/?version=latest)](https://apyfal.readthedocs.io/en/latest/?badge=latest)
 
 # Overview
@@ -22,7 +23,7 @@ Browse our web site [AccelStore](https://accelstore.accelize.com), to discover t
 
 ## Basic Python code example
 
-Accelerator API is easy to use and only need few lines of codes for instantiate accelerator and CSP instance and then
+Accelerator API is easy to use and only need few lines of codes for instantiate accelerator and its host and then
  process files:
 
 ```python
@@ -45,7 +46,7 @@ For more information apyfal, please read the [documentation](https://apyfal.read
 
 # Installation
 
-Installation is made with PIP. Some installation options are available depending the CSP you want to use (See 
+Installation is made with PIP. Some installation options are available depending the host you want to use (See 
 documentation for more information).
 
 You can install the full package with all options using:

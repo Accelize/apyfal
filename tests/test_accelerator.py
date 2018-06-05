@@ -6,9 +6,13 @@ import gc
 def test_accelerator():
     """Tests Accelerator"""
     from apyfal import Accelerator
+    from apyfal.exceptions import HostException, ClientException
     import apyfal
 
     # Mocks variables
+    raises_on_get_url = False
+    raises_on_client_stop = False
+    raises_on_host_stop = False
     dummy_url = 'dummy_url'
     dummy_config_url = 'dummy_config_url'
     dummy_start_result = 'dummy_start_result'
@@ -16,12 +20,11 @@ def test_accelerator():
     dummy_process_result = 'dummy_process_result'
     dummy_stop_mode = 'dummy_stop_mode'
     dummy_accelerator = 'dummy_accelerator'
-    dummy_provider = 'dummy_provider'
+    dummy_host_type = 'dummy_host_type'
     dummy_datafile = 'dummy_datafile'
     dummy_accelerator_parameters = {'dummy_accelerator_parameters': None}
     dummy_file_in = 'dummy_file_in'
     dummy_file_out = 'dummy_file_out'
-    dummy_id = 'dummy_id'
 
     # Mocks client
     class DummyClient(apyfal.client.AcceleratorClient):
@@ -37,7 +40,7 @@ def test_accelerator():
         def __del__(self):
             """Don nothing"""
 
-        def start(self, datafile=None, csp_env=None, info_dict=True, **parameters):
+        def start(self, datafile=None, host_env=None, info_dict=True, **parameters):
             """Checks arguments and returns fake result"""
             assert datafile == dummy_datafile
             assert parameters == {'parameters': dummy_accelerator_parameters}
@@ -46,6 +49,11 @@ def test_accelerator():
         def stop(self, info_dict=True):
             """Returns fake result"""
             DummyClient.running = False
+
+            if raises_on_client_stop:
+                # Raises exception
+                raise ClientException
+
             return dummy_stop_result
 
         def process(self, file_in, file_out, info_dict=True, **parameters):
@@ -58,21 +66,26 @@ def test_accelerator():
     accelerator_client_class = apyfal.client.AcceleratorClient
     apyfal.client.AcceleratorClient = DummyClient
 
-    # Mocks CSP
-    class DummyCSP:
-        """Dummy apyfal.csp.CSPGeneric"""
-        url = dummy_url
+    # Mocks Host
+    class DummyHost:
+        """Dummy apyfal.host.Host"""
+        _url = dummy_url
         running = True
 
         def __init__(self, **kwargs):
             """Checks arguments"""
-            assert dummy_provider in kwargs.values()
+            assert dummy_host_type in kwargs.values()
 
         def __del__(self):
             """Don nothing"""
 
-        def instance_status(self):
-            """Do nothing"""
+        @property
+        def url(self):
+            """Raises or returns result normally"""
+            if raises_on_get_url:
+                # Raises exception
+                raise HostException
+            return self._url
 
         @staticmethod
         def start(accel_client, stop_mode):
@@ -80,27 +93,34 @@ def test_accelerator():
             assert isinstance(accel_client, DummyClient)
             assert stop_mode == dummy_stop_mode
 
+            if raises_on_host_stop:
+                # Raises exception
+                raise HostException
+
         @staticmethod
         def stop(stop_mode):
             """Checks arguments"""
-            if DummyCSP.running:
+            if DummyHost.running:
                 assert stop_mode == dummy_stop_mode
-            DummyCSP.running = False
+            DummyHost.running = False
+
+            if raises_on_host_stop:
+                raise HostException
 
         def get_configuration_env(*_, **__):
             """Do nothing"""
 
-    csp_class = apyfal.csp.CSPGeneric
-    apyfal.csp.CSPGeneric = DummyCSP
+    host_class = apyfal.host.Host
+    apyfal.host.Host = DummyHost
 
     # Tests
     try:
-        # Creating New instance
-        accelerator = Accelerator(dummy_accelerator, provider=dummy_provider)
-        assert isinstance(accelerator.csp, DummyCSP)
+        # Creating New host
+        accelerator = Accelerator(dummy_accelerator, host_type=dummy_host_type)
+        assert isinstance(accelerator.host, DummyHost)
         assert isinstance(accelerator.client, DummyClient)
         assert DummyClient.running
-        assert DummyCSP.running
+        assert DummyHost.running
         assert accelerator.start(
             datafile=dummy_datafile, stop_mode=dummy_stop_mode, info_dict=True,
             parameters=dummy_accelerator_parameters) == dummy_start_result
@@ -110,37 +130,50 @@ def test_accelerator():
             parameters=dummy_accelerator_parameters) == dummy_process_result
         assert accelerator.stop(stop_mode=dummy_stop_mode, info_dict=True) == dummy_stop_result
         assert not DummyClient.running
-        assert not DummyCSP.running
+        assert not DummyHost.running
 
         # Using existing IP
         accelerator = Accelerator(
-            dummy_accelerator, provider=dummy_provider, instance_ip=dummy_url)
+            dummy_accelerator, host_type=dummy_host_type, host_ip=dummy_url)
         assert accelerator.client.url == dummy_url
 
-        # Using existing instance ID
+        # Using existing IP that not exists
+        raises_on_get_url = True
         accelerator = Accelerator(
-            dummy_accelerator, provider=dummy_provider, instance_id=dummy_id)
-        assert accelerator.client.url == dummy_url
+            dummy_accelerator, host_type=dummy_host_type, host_ip=dummy_url)
+        assert accelerator.client.url is None
+        raises_on_get_url = False
 
         # Auto-stops with context manager
         dummy_stop_mode = None
         DummyClient.running = True
-        DummyCSP.running = True
+        DummyHost.running = True
         with Accelerator(
-                dummy_accelerator, provider=dummy_provider) as accelerator:
+                dummy_accelerator, host_type=dummy_host_type) as accelerator:
             assert isinstance(accelerator, Accelerator)
         assert not DummyClient.running
-        assert not DummyCSP.running
+        assert not DummyHost.running
 
         # Auto-stops on garbage collection
         DummyClient.running = True
-        DummyCSP.running = True
-        Accelerator(dummy_accelerator, provider=dummy_provider)
+        DummyHost.running = True
+        Accelerator(dummy_accelerator, host_type=dummy_host_type)
         gc.collect()
         assert not DummyClient.running
-        assert not DummyCSP.running
+        assert not DummyHost.running
+
+        # Clean stop even if error in client or host
+        accelerator = Accelerator(dummy_accelerator, host_type=dummy_host_type)
+        raises_on_client_stop = True
+        accelerator.stop()
+        raises_on_client_stop = False
+
+        accelerator = Accelerator(dummy_accelerator, host_type=dummy_host_type)
+        raises_on_host_stop = True
+        accelerator.stop()
+        raises_on_host_stop = False
 
     # Restore classes
     finally:
         apyfal.client.AcceleratorClient = accelerator_client_class
-        apyfal.csp.CSPGeneric = csp_class
+        apyfal.host.Host = host_class
