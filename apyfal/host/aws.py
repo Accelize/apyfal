@@ -124,10 +124,10 @@ class AWSHost(_CSPHost):
 
     def _init_key_pair(self):
         """
-        Initialize key pair.
+        Initializes key pair.
 
         Returns:
-            bool: True if reuse existing key
+            bool: True if reuses existing key
         """
         ec2_client = self._session.client('ec2')
 

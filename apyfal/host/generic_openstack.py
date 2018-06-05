@@ -97,10 +97,10 @@ class OpenStackHost(_CSPHost):
 
     def _init_key_pair(self):
         """
-        Initialize key pair.
+        Initializes key pair.
 
         Returns:
-            bool: True if reuse existing key
+            bool: True if reuses existing key
         """
         # Get key pair from CSP
         try:

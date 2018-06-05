@@ -224,7 +224,7 @@ class CSPHost(_Host):
     @_abstractmethod
     def _init_key_pair(self):
         """
-        Initialize key pair.
+        Initializes key pair.
 
         Returns:
             bool: True if reuses existing key
