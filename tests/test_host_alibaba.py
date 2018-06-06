@@ -98,7 +98,7 @@ def test_alibibaclass_request():
                 'DummyCode', 'AnotherCode'), **parameters)
 
         # Test "_instance_request"
-        raises_exception.clear()
+        raises_exception = []
         assert csp._instance_request(action, **parameters) == response
 
         # Tests "_instance_request" timeout if instance with incorrect status
