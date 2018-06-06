@@ -155,20 +155,6 @@ class CSPHost(_Host):
         """
         return self._instance_id
 
-    @property
-    def url(self):
-        """
-        URL of the current instance.
-
-        Returns:
-            str: URL
-        """
-        # Check if status OK
-        self._status()
-
-        # Returns URL
-        return self._url
-
     @_abstractmethod
     def _check_credential(self):
         """
