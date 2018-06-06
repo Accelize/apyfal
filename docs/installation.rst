@@ -11,6 +11,7 @@ Required Python Packages:
 -  ``Request``, ``urllib3``, ``six``, ``certifi``, ``python-dateutil``,
    ``ipgetter``, ``pycosio``
 -  ``pip`` and ``setuptools``: For package installation
+-  ``aliyun-python-sdk-core`` (Optional): Required for Alibaba.
 -  ``boto3`` (Optional): Required for AWS.
 -  ``python-novaclient`` and ``python-neutronclient`` (Optional):
    Required for OpenStack and OVH.
@@ -119,6 +120,7 @@ All mandatory dependencies are automatically installed.
 You can also install these optional extras:
 
 -  ``all``: Install all extras.
+-  ``Alibaba``: Requirements for Alibaba.
 -  ``AWS``: Requirements for AWS.
 -  ``OpenStack``: Requirements for OpenStack.
 -  ``OVH``: Requirements for OVH.
