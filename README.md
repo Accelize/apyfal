@@ -1,7 +1,7 @@
 [![Linux Build Status](https://travis-ci.org/Accelize/apyfal.svg?branch=master)](https://travis-ci.org/Accelize/apyfal)
-[![Windows Build status](https://ci.appveyor.com/api/projects/status/bcqp6qgm59dubnv0/branch/master?svg=true)](https://ci.appveyor.com/project/xlz-jgoutin/apyfal/branch/master)
+[![WIndows Build status](https://ci.appveyor.com/api/projects/status/87jgroaoo2iddlco?svg=true)](https://ci.appveyor.com/project/accelize-application/apyfal)
 [![Coverage Status](https://coveralls.io/repos/github/Accelize/apyfal/badge.svg?branch=master)](https://coveralls.io/github/Accelize/apyfal?branch=master)
-[![Code Quality](https://api.codacy.com/project/badge/Grade/9403fc82423c4d87a46db1c76a14af8c)](https://www.codacy.com/app/xlz-jgoutin/apyfal?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Accelize/apyfal&amp;utm_campaign=Badge_Grade)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/b67c9a1cf17e443290b0191a7970c3d1)](https://www.codacy.com/app/accelize-application/apyfal?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Accelize/apyfal&amp;utm_campaign=Badge_Grade)
 [![Documentation Status](https://readthedocs.org/projects/apyfal/badge/?version=latest)](https://apyfal.readthedocs.io/en/latest/?badge=latest)
 
 # Overview
