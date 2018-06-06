@@ -48,7 +48,7 @@ class ClientRuntimeException(ClientException):
     """Error with AcceleratorClient running."""
 
 
-class HostException(ClientException):
+class HostException(AcceleratorException):
     """Generic host related exception"""
 
 
