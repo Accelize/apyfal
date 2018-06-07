@@ -230,6 +230,10 @@ class CSPHost(_Host):
         # Updates stop mode
         self.stop_mode = stop_mode
 
+        # Get parameters from accelerator
+        self._set_accelerator_requirements(
+            accel_client, accel_parameters)
+
         # Starts instance only if not already started
         if self._url is None:
 
@@ -238,10 +242,6 @@ class CSPHost(_Host):
 
             # Creates and starts instance if not exists
             if self.instance_id is None:
-
-                # Get parameters from accelerator
-                self._set_accelerator_requirements(
-                    accel_client, accel_parameters)
 
                 # Configure and create instance
                 reuse_key = self._init_key_pair()
