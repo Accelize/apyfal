@@ -75,14 +75,15 @@ See your CSP documentation to know how obtains theses values.
     # the previously created host will be deleted and all its content lost.
 
 Keeping host running
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
 
 Starting host take long time, so it may be a good idea to keeping it
 running for reusing it later.
 
 This is done with the ``stop_mode`` parameter.
 
-Depending your CSP, note that you will pay until your host is alive.
+*Depending the used CSP, additional fees may apply based on host running time.*
+*Don't forget to terminate cloud instance after use*
 
 .. code-block:: python
 
@@ -308,11 +309,61 @@ to ``start`` and ``process`` methods.
 
 See :doc:`configuration` for more information.
 
+Using low-level Accelerator command
+-----------------------------------
+
+On its host, accelerator uses a low-level command to communicate with FPGA. It is possible to use this command
+directly.
+
+Requirements
+~~~~~~~~~~~~
+
+An already configured host is required to use this feature.
+
+It is possible to easily create a cloud instance using *Apyfal* and keeping the host running
+(Using ``stop_mode='keep'``, See above for more information).
+
+And then connect to it with SSH :
+
+.. code-block:: bash
+
+    # "ssh_key" value can be defined in host configuration
+    # "host_ip" can be get with "myaccel.host.public_ip"
+
+    ssh -Yt -i ${ssh_key} centos@${host_ip}
+
+*Don't forget to terminate cloud instance after use to avoid additional fees*
+
+The accelerator command
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The accelerator command path is: ``/opt/accelize/accelerator/accelerator``.
+
+It needs to be run as ``root`` (or with ``sudo``)
+
+It support following arguments:
+
+* ``-m``: Accelerator mode. Possibles values are:
+``0`` for configuration/start mode, ``1`` for process mode, ``2`` for stop mode.
+This is equivalent to ``apyfal.Accelerator`` ``start``, ``process`` and stop ``methods``.
+* ``-i``: Input file path, used to pass ``datafile`` in configuration mode and ``file_in`` in process mode.
+* ``-o``: Output file path, used to pass ``file_out`` in process mode.
+* ``-j``: JSON parameter file path, used to pass a JSON parameters files like described previously.
+* ``-p``: JSON output file path, used to get some results in JSON format.
+* ``-v``: Verbosity level. Possible values: from ``0`` (Full verbosity) to ``4`` (Less verbosity).
+
+.. code-block:: bash
+
+    # Configures accelerator with datafile and JSON parameters
+    sudo /opt/accelize/accelerator/accelerator -m 0 -i ${datafile} -j ${parameters}
+
+    # Processes file_in and save result to file_out
+    sudo /opt/accelize/accelerator/accelerator -m 1 -i ${file_in} -o ${file_out}
 
 Metering information
 --------------------
 
-Using Accelerators consume "Coins" based on amount of processed data.
+Using Accelerators consumes "Coins" based on amount of processed data.
 
 You can access to your metering information on your
 `AccelStore account<https://accelstore.accelize.com/user/applications>`_.
