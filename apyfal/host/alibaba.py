@@ -13,7 +13,7 @@ import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
 from apyfal._utilities import get_logger as _get_logger
 
-# Set HTTPS by default for requests
+# Set HTTPS by default for requests, require "pyopenssl" package
 _acs_request.set_default_protocol_type("https")
 
 #: Alibaba Cloud API version (Key is subdomain name, value is API version)
@@ -95,10 +95,10 @@ class AlibabaCSP(_CSPHost):
             version=API_VERSION[domain],
             action_name=action_name)
 
-        # Ensures HTTPS
+        # Ensures HTTPS use in requests
         request.set_protocol_type("https")
 
-        # Ensures idempotence
+        # Ensures idempotence of the request
         parameters.setdefault('ClientToken', self._client_token)
 
         # Adds parameters to request
@@ -106,6 +106,7 @@ class AlibabaCSP(_CSPHost):
             # Formats parameter value to proper string representation
             value = parameters[parameter]
             if not isinstance(value, str):
+                # Non string values needs their JSON equivalent
                 value = _json.dumps(value)
 
             # Adds parameter
@@ -124,7 +125,7 @@ class AlibabaCSP(_CSPHost):
 
             # Filters error codes to re-raise as it.
             if error_code_filter:
-                # Forces as tuple
+                # Forces filter as tuple object
                 if isinstance(error_code_filter, str):
                     error_code_filter = (error_code_filter,)
 
@@ -155,24 +156,30 @@ class AlibabaCSP(_CSPHost):
         to have the correct status when performing action.
 
         Getting status information seem to not always return an up to
-        date status information.
+        date information and is not reliable to perform requests without error.
+
+        see "AlibabaCSP._request" for more information on requests and parameters.
 
         Args:
             action_name (str): Action name.
             status_desc (str): Status name for description (starting, stopping, ...)
             parameters: Request extra parameters.
+
+        Returns:
+            dict: Request response.
         """
         instance_id = parameters.pop('InstanceId', self._instance_id)
         with _utl.Timeout(self.TIMEOUT) as timeout:
             while True:
+                # Tries to execute requests
                 try:
                     return self._request(
                         action_name, error_code_filter='IncorrectInstanceStatus',
                         InstanceId=instance_id,
                         **parameters)
+
+                # If incorrect instance status, waits and retries
                 except _acs_exceptions.ServerException:
-                    # Ignore IncorrectInstanceStatus errors
-                    # Just retry after some time
                     if timeout.reached():
                         raise _exc.HostRuntimeException(gen_msg=('timeout', status_desc))
 
@@ -184,7 +191,7 @@ class AlibabaCSP(_CSPHost):
             str: IP address
         """
         try:
-            return self._get_instance()['PrivateIpAddress']['IpAddress'][0]
+            return self._get_instance()['PublicIpAddress']['IpAddress'][0]
         except (KeyError, IndexError):
             raise _exc.HostRuntimeException(gen_msg='no_instance_ip')
 
@@ -196,7 +203,7 @@ class AlibabaCSP(_CSPHost):
             str: IP address
         """
         try:
-            return self._get_instance()['PublicIpAddress']['IpAddress'][0]
+            return self._get_instance()['PrivateIpAddress']['IpAddress'][0]
         except (KeyError, IndexError):
             raise _exc.HostRuntimeException(gen_msg='no_instance_ip')
 
@@ -222,7 +229,11 @@ class AlibabaCSP(_CSPHost):
         Returns:
             str: Status
         """
-        return self._get_instance()['Status']
+        try:
+            return self._get_instance()['Status']
+        except KeyError:
+            raise _exc.HostRuntimeException(
+                gen_msg=('no_instance_id', self._instance_id))
 
     def _get_instance(self):
         """
@@ -292,7 +303,7 @@ class AlibabaCSP(_CSPHost):
             _get_logger().info(_utl.gen_msg(
                 'created_named', 'security group', self._security_group_id))
 
-        # Add host IP to security group if not already done
+        # Adds host IP to security group if not already done
         public_ip = _utl.get_host_public_ip()
         rules = list()
         for port_range in ('22/22', '80/80'):
@@ -326,12 +337,12 @@ class AlibabaCSP(_CSPHost):
             dict: Instance
             str: Instance ID
         """
-        # Get maximum Internet bandwidth
+        # Gets maximum Internet bandwidth
         response = self._request('DescribeBandwidthLimitation',
                                  InstanceType=self._instance_type)
         max_bandwidth = response['Bandwidths']['Bandwidth'][0]['Max']
 
-        # Create instance
+        # Creates instance
         response = self._request(
             'CreateInstance', ImageId=self._image_id,
             InstanceType=self._instance_type,
@@ -341,16 +352,16 @@ class AlibabaCSP(_CSPHost):
             InternetMaxBandwidthOut=max_bandwidth)
         instance_id = response['InstanceId']
 
-        # Allocate public IP address
+        # Allocates public IP address
         self._instance_request(
             'AllocatePublicIpAddress', status_desc='allocating IP address',
             InstanceId=instance_id)
 
-        # Start instance
+        # Starts instance
         self._instance_request(
             'StartInstance', status_desc='starting', InstanceId=instance_id)
 
-        # Return basic instance description as instance
+        # Return basic instance description as instance and instance ID
         return {'InstanceId': instance_id}, instance_id
 
     def _start_existing_instance(self, status):
@@ -360,31 +371,23 @@ class AlibabaCSP(_CSPHost):
         Args:
             status (str): Status of the instance.
         """
-        # Already started
-        if status == self.STATUS_RUNNING:
-            return
-
-        # Start instance
-        self._instance_request('StartInstance', status_desc='starting')
+        if status != self.STATUS_RUNNING:
+            self._instance_request('StartInstance', status_desc='starting')
 
     def _terminate_instance(self):
         """
         Terminates and deletes instance.
         """
-        # Need to stop before delete, force stop to make it faster
-        if self._status() != self.STATUS_STOPPED:
-            self._instance_request('StopInstance', status_desc='stopping', ForceStop='true')
+        # Needs to stop before delete, forces stop to make it faster
+        self._pause_instance(force_stop=True)
 
         # Deletes instance
         self._instance_request('DeleteInstance', status_desc='deleting')
 
-    def _pause_instance(self):
+    def _pause_instance(self, force_stop=False):
         """
         Pauses instance.
         """
-        # Already stopped
-        if self._status() == self.STATUS_STOPPED:
-            return
-
-        # Stop instance
-        self._instance_request('StopInstance', status_desc='stopping')
+        if self._status() != self.STATUS_STOPPED:
+            self._instance_request(
+                'StopInstance', status_desc='stopping', ForceStop=force_stop)

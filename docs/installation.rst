@@ -12,6 +12,7 @@ Required Python Packages:
    ``ipgetter``, ``pycosio``
 -  ``pip`` and ``setuptools``: For package installation
 -  ``aliyun-python-sdk-core`` (Optional): Required for Alibaba.
+-  ``pyopenssl`` (Optional): Required for Alibaba.
 -  ``boto3`` (Optional): Required for AWS.
 -  ``python-novaclient`` and ``python-neutronclient`` (Optional):
    Required for OpenStack and OVH.
