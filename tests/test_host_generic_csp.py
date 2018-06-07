@@ -445,6 +445,7 @@ def test_csphost_stop():
 
     # Mock variables
     instance = "dummy_instance"
+    url = 'http://127.0.0.1'
 
     # Mock CSP class
     dummy_csp_class = get_dummy_csp_class()
@@ -462,7 +463,7 @@ def test_csphost_stop():
 
             # Value like already started instance
             self._instance = instance
-            self._url = 'http://127.0.0.1'
+            self._url = url
             self._instance_id = 'dummy_id'
 
         def _terminate_instance(self):
@@ -505,6 +506,7 @@ def test_csphost_stop():
     instance = None
     csp = DummyHost(stop_mode='term')
     csp.stop()
+    assert csp.url == url
     assert csp.stopped_mode == 'keep'
     instance = 'dummy_instance'
 
@@ -659,8 +661,6 @@ def run_full_real_test_sequence(host_type, environment,
                 csp.start(accel_parameters=environment)
                 instance_id = csp.instance_id
 
-            gc.collect()
-
             print('Test: Start from stopped and terminate')
             with Host(config=config, instance_id=instance_id,
                       stop_mode='term') as csp:
@@ -672,6 +672,11 @@ def run_full_real_test_sequence(host_type, environment,
         with Host(config=config, stop_mode='keep') as csp:
             csp.start(accel_parameters=environment)
             instance_id = csp.instance_id
+            host_ip = csp.url
+
+        print('Test: Reuse with instance IP/URL')
+        with Host(config=config, host_ip=host_ip) as csp:
+            csp.start()
 
         print('Test: Reuse with instance ID and terminate')
         with Host(config=config, instance_id=instance_id,
