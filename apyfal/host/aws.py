@@ -462,7 +462,7 @@ class AWSHost(_CSPHost):
             import warnings
             warnings.warn(
                 "Overwrite AGFI factory requirements with custom configuration:\n%s",
-                _utl.pretty_dict(kwargs['AGFI']))
+                _utl.pretty_dict(currenv))
         return currenv
 
     def _create_instance(self):
