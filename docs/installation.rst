@@ -11,6 +11,7 @@ Required Python Packages:
 -  ``Request``, ``urllib3``, ``six``, ``certifi``, ``python-dateutil``
 -  ``pip`` and ``setuptools``: For package installation
 -  ``aliyun-python-sdk-core`` (Optional): Required for Alibaba.
+-  ``pyopenssl`` (Optional): Required for Alibaba.
 -  ``boto3`` (Optional): Required for AWS.
 -  ``openstack`` (Optional): Required for OVH.
 -  ``pycurl`` (Optional): Improve upload performance and file size
