@@ -345,7 +345,7 @@ It support following arguments:
 
 - ``-m``: Accelerator mode. Possibles values are:
   ``0`` for configuration/start mode, ``1`` for process mode, ``2`` for stop mode.
-  This is equivalent to ``apyfal.Accelerator`` ``start``, ``process`` and stop ``methods``.
+  This is equivalent to ``apyfal.Accelerator`` ``start``, ``process`` and ``stop`` methods.
 - ``-i``: Input file path, used to pass ``datafile`` in configuration mode and ``file_in`` in process mode.
 - ``-o``: Output file path, used to pass ``file_out`` in process mode.
 - ``-j``: JSON parameter file path, used to pass a JSON parameters files like described previously.
