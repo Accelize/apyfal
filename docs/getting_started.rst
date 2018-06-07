@@ -366,4 +366,4 @@ Metering information
 Using Accelerators consumes "Coins" based on amount of processed data.
 
 You can access to your metering information on your
-`AccelStore account<https://accelstore.accelize.com/user/applications>`_.
+`AccelStore account <https://accelstore.accelize.com/user/applications>`_.
