@@ -1,50 +1,36 @@
-# Compiled Software sources #
-#############################
-*.com
-*.class
-*.dll
-*.exe
-*.o
-*.so
-*.pyc
-*.pyd
+# Repository specific: Generated files
+apyfal/_swagger_client/
+docs/configuration_file.rst
 
-# Packages #
-############
-# it's better to unpack these files and commit the raw source
-# git has its own built in compression methods
-*.7z
-*.dmg
-*.gz
-*.iso
-*.jar
-*.rar
-*.tar
-*.zip
-*.deb
-*.rpm
+# Tests generated files
+.cache/
+.coverage
+.pytest_cache/
 
-# Logs and databases #
-######################
-*.log
-*.sql
-*.sqlite
+# Build generated files
+docs/_build/
+build/
+dist/
+.eggs/
+*.egg-info/
 
-# OS generated files #
-######################
+# Python compiled files
+__pycache__/
+*.py[cod]
+
+# OS generated files
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Desktop.ini
+[Dd]esktop.ini
 Thumbs.db
 *~
 *.bak
 
-# IDE generated files #
-#######################
+# IDE generated files
 .project
 .pydevproject
 .spyproject
@@ -52,22 +38,3 @@ Thumbs.db
 .settings/
 .idea/
 .vscode/
-
-# Tests generated files #
-#########################
-.cache/
-.coverage
-.pytest_cache/
-
-# Build generated files #
-#########################
-apyfal/_swagger_client/
-build/
-dist/
-.eggs/
-*.egg-info/
-
-# Sphinx generated files #
-##########################
-docs/_build/
-docs/configuration_file.rst
