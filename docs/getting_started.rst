@@ -307,3 +307,12 @@ default values and will be overridden by any parameter passed directly
 to ``start`` and ``process`` methods.
 
 See :doc:`configuration` for more information.
+
+
+Metering information
+--------------------
+
+Using Accelerators consume "Coins" based on amount of processed data.
+
+You can access to your metering information on your
+`AccelStore account<https://accelstore.accelize.com/user/applications>`_.

@@ -17,7 +17,7 @@ accelerator:
 
 -  `Accelize credential`_
 
-Your user account provides also to you metering information on your
+Your user account provides also to your metering information on your
 accelerator use `AccelStore account`_.
 
 Host configuration
