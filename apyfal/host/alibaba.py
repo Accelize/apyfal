@@ -35,7 +35,7 @@ class AlibabaCSP(_CSPHost):
         secret_id (str): Alibaba Secret Access Key.
         region (str): Alibaba region. Needs a region supporting instances with FPGA devices.
         instance_type (str): Alibaba instance type. Default defined by accelerator.
-        ssh_key (str): Alibaba Key pair. Default to 'AccelizeAlibabaKeyPair'.
+        key_pair (str): Alibaba Key pair. Default to 'AccelizeAlibabaKeyPair'.
         security_group: Alibaba Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing Alibaba ECS instance to use.
             If not specified, create a new instance.
@@ -258,22 +258,22 @@ class AlibabaCSP(_CSPHost):
             bool: True if reuses existing key
         """
         response = self._request(
-            'DescribeKeyPairs', KeyPairName=self._ssh_key)
+            'DescribeKeyPairs', KeyPairName=self._key_pair)
 
         # Checks if key pair exists
-        lower_name = self._ssh_key.lower()
+        lower_name = self._key_pair.lower()
         for key_pair in response['KeyPairs']['KeyPair']:
             key_pair_name = key_pair['KeyPairName']
             if key_pair_name.lower() == lower_name:
                 # Update key pair name
-                self._ssh_key = key_pair_name
+                self._key_pair = key_pair_name
                 return True
 
         # Key pair don't exists, creates it
         response = self._request(
-            'CreateKeyPair', KeyPairName=self._ssh_key)
+            'CreateKeyPair', KeyPairName=self._key_pair)
 
-        _utl.create_ssh_key_file(self._ssh_key, response['PrivateKeyBody'])
+        _utl.create_key_pair_file(self._key_pair, response['PrivateKeyBody'])
         return False
 
     def _init_security_group(self):
