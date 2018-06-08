@@ -7,7 +7,7 @@ run "./setup.py --help-commands" for help.
 from datetime import datetime
 from os import makedirs, chdir, environ
 from os.path import dirname, abspath, join, isfile, isdir
-from sys import argv
+from sys import argv, version_info
 
 from setuptools import setup, find_packages, Command
 
@@ -53,6 +53,8 @@ PACKAGE_INFO = dict(
         'optional': ['pycurl'],
 
         # CSP specific requirements
+        'Alibaba': ['pyopenssl', 'aliyun-python-sdk-core%s' % (
+            '-v3' if version_info[0] > 2 else '')],
         'AWS': ['boto3', 'pycosio[s3]'],
         'OpenStack': ['python-novaclient', 'python-neutronclient',
                       'pycosio[swift]', 'pyOpenSSL']},
