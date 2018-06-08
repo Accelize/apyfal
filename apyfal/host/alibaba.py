@@ -7,7 +7,7 @@ from aliyunsdkcore.client import AcsClient as _AcsClient
 import aliyunsdkcore.acs_exception.exceptions as _acs_exceptions
 import aliyunsdkcore.request as _acs_request
 
-from apyfal.host.generic_csp import CSPHost as _CSPHost
+from apyfal.host._csp import CSPHost as _CSPHost
 import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
