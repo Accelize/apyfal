@@ -8,6 +8,7 @@ import aliyunsdkcore.acs_exception.exceptions as _acs_exceptions
 import aliyunsdkcore.request as _acs_request
 
 from apyfal.host._csp import CSPHost as _CSPHost
+import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
 from apyfal._utilities import get_logger as _get_logger
@@ -27,15 +28,14 @@ class AlibabaCSP(_CSPHost):
 
     Args:
         host_type (str): Cloud service provider name. (Default to "Alibaba").
-        config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
+        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
         client_id (str): Alibaba Access Key ID.
         secret_id (str): Alibaba Secret Access Key.
         region (str): Alibaba region. Needs a region supporting instances with FPGA devices.
         instance_type (str): Alibaba instance type. Default defined by accelerator.
-        key_pair (str): Alibaba Key pair. Default to 'AccelizeAlibabaKeyPair'.
+        ssh_key (str): Alibaba Key pair. Default to 'AccelizeAlibabaKeyPair'.
         security_group: Alibaba Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing Alibaba ECS instance to use.
             If not specified, create a new instance.
@@ -59,8 +59,9 @@ class AlibabaCSP(_CSPHost):
     STATUS_RUNNING = 'Running'
     STATUS_STOPPED = 'Stopped'
 
-    def __init__(self, **kwargs):
-        _CSPHost.__init__(self, **kwargs)
+    def __init__(self, config=None, **kwargs):
+        config = _cfg.create_configuration(config)
+        _CSPHost.__init__(self, config=config, **kwargs)
 
         # Default some attributes
         self._security_group_id = None
@@ -257,22 +258,22 @@ class AlibabaCSP(_CSPHost):
             bool: True if reuses existing key
         """
         response = self._request(
-            'DescribeKeyPairs', KeyPairName=self._key_pair)
+            'DescribeKeyPairs', KeyPairName=self._ssh_key)
 
         # Checks if key pair exists
-        lower_name = self._key_pair.lower()
+        lower_name = self._ssh_key.lower()
         for key_pair in response['KeyPairs']['KeyPair']:
             key_pair_name = key_pair['KeyPairName']
             if key_pair_name.lower() == lower_name:
                 # Update key pair name
-                self._key_pair = key_pair_name
+                self._ssh_key = key_pair_name
                 return True
 
         # Key pair don't exists, creates it
         response = self._request(
-            'CreateKeyPair', KeyPairName=self._key_pair)
+            'CreateKeyPair', KeyPairName=self._ssh_key)
 
-        _utl.create_key_pair_file(self._key_pair, response['PrivateKeyBody'])
+        _utl.create_ssh_key_file(self._ssh_key, response['PrivateKeyBody'])
         return False
 
     def _init_security_group(self):
@@ -305,11 +306,11 @@ class AlibabaCSP(_CSPHost):
         # Adds host IP to security group if not already done
         public_ip = _utl.get_host_public_ip()
         rules = list()
-        for port in self.ALLOW_PORTS:
+        for port_range in ('22/22', '80/80'):
             rules.append(dict(
                 Priority=1,
                 IpProtocol='tcp',
-                PortRange='%s/%s' % (port, port),
+                PortRange=port_range,
                 SourceCidrIp=public_ip
             ))
 
