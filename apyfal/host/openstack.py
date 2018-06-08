@@ -26,7 +26,7 @@ class OpenStackHost(_CSPHost):
         secret_id (str): OpenStack Secret Access Key.
         region (str): OpenStack region. Needs a region supporting instances with FPGA devices.
         instance_type (str): OpenStack Flavor. Default defined by accelerator.
-        ssh_key (str): OpenStack Key pair. Default to 'Accelize<HostName>KeyPair'.
+        key_pair (str): OpenStack Key pair. Default to 'Accelize<HostName>KeyPair'.
         security_group: OpenStack Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing OpenStack nova instance to use.
             If not specified, create a new instance.
@@ -109,7 +109,7 @@ class OpenStackHost(_CSPHost):
         """
         # Get key pair from CSP
         try:
-            key_pair = self._session.compute.find_keypair(self._ssh_key, ignore_missing=True)
+            key_pair = self._session.compute.find_keypair(self._key_pair, ignore_missing=True)
         except _openstack.exceptions.SDKException as exception:
             raise _exc.HostRuntimeException(
                 gen_msg=('no_find', "key pair"), exc=exception)
@@ -120,12 +120,12 @@ class OpenStackHost(_CSPHost):
 
         # Create key pair if not exists
         try:
-            key_pair = self._session.compute.create_keypair(name=self._ssh_key)
+            key_pair = self._session.compute.create_keypair(name=self._key_pair)
         except _openstack.exceptions.SDKException as exception:
             raise _exc.HostRuntimeException(
                 gen_msg=('created_failed', "key pair"), exc=exception)
 
-        _utl.create_ssh_key_file(self._ssh_key, key_pair.private_key)
+        _utl.create_key_pair_file(self._key_pair, key_pair.private_key)
 
         return False
 
@@ -307,7 +307,7 @@ class OpenStackHost(_CSPHost):
             instance = self._session.compute.create_server(
                 name=self._get_instance_name(),
                 image_id=self._image_id, flavor_id=self._instance_type,
-                key_name=self._ssh_key,
+                key_name=self._key_pair,
                 security_groups=[{"name": self._security_group}])
         except _openstack.exceptions.SDKException as exception:
             raise _exc.HostRuntimeException(

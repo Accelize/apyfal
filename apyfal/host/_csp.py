@@ -23,7 +23,7 @@ class CSPHost(_Host):
         secret_id (str): CSP Secret Access Key.
         region (str): CSP region. Needs a region supporting instances with FPGA devices.
         instance_type (str): CSP instance type. Default defined by accelerator.
-        ssh_key (str): CSP Key pair. Default to 'Accelize<HostName>KeyPair'.
+        key_pair (str): CSP Key pair. Default to 'Accelize<HostName>KeyPair'.
         security_group: CSP Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing CSP instance to use.
             If not specified, create a new instance.
@@ -48,10 +48,10 @@ class CSPHost(_Host):
     _INFO_NAMES = _Host._INFO_NAMES.copy()
     _INFO_NAMES.update({
         'public_ip', 'private_ip', '_region', '_instance_type',
-        '_ssh_key', '_security_group', '_instance_id', '_instance_type_name'})
+        '_key_pair', '_security_group', '_instance_id', '_instance_type_name'})
 
     def __init__(self, config=None, client_id=None, secret_id=None, region=None,
-                 instance_type=None, ssh_key=None, security_group=None, instance_id=None, **kwargs):
+                 instance_type=None, key_pair=None, security_group=None, instance_id=None, **kwargs):
         config = _cfg.create_configuration(config)
         _Host.__init__(self, config=config, **kwargs)
 
@@ -74,8 +74,8 @@ class CSPHost(_Host):
             'host', 'region', overwrite=region)
         self._instance_type = config.get_default(
             'host', 'instance_type', overwrite=instance_type)
-        self._ssh_key = config.get_default(
-            'host', 'ssh_key', overwrite=ssh_key,
+        self._key_pair = config.get_default(
+            'host', 'key_pair', overwrite=key_pair,
             default=self._default_parameter_value('KeyPair', include_host=True))
         self._security_group = config.get_default(
             'host', 'security_group', overwrite=security_group,
@@ -119,6 +119,16 @@ class CSPHost(_Host):
         Returns:
             str: IP address
         """
+
+    @property
+    def key_pair(self):
+        """
+        SSH Key pair linked to this instance.
+
+        Returns:
+            str: Name of key pair.
+        """
+        return self._key_pair
 
     @property
     def private_ip(self):
@@ -247,7 +257,7 @@ class CSPHost(_Host):
                 reuse_key = self._init_key_pair()
                 if not reuse_key:
                     _get_logger().info(_utl.gen_msg(
-                        "created_named", self._ssh_key))
+                        "created_named", self._key_pair))
 
                 try:
                     self._create_instance()

@@ -27,7 +27,7 @@ class AWSHost(_CSPHost):
         secret_id (str): AWS Secret Access Key.
         region (str): AWS region. Needs a EC2 region supporting instances with FPGA devices.
         instance_type (str): AWS EC2 Instance type. Default defined by accelerator.
-        ssh_key (str): AWS Key pair. Default to 'AccelizeAWSKeyPair'.
+        key_pair (str): AWS Key pair. Default to 'AccelizeAWSKeyPair'.
         security_group: AWS Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing AWS EC2 instance to use.
             If not specified, create a new instance.
@@ -140,22 +140,22 @@ class AWSHost(_CSPHost):
             self._handle_boto_exception(exception)
             return
 
-        name_lower = self._ssh_key.lower()
+        name_lower = self._key_pair.lower()
         for key_pair in key_pairs['KeyPairs']:
             key_pair_name = key_pair['KeyName']
             if key_pair_name.lower() == name_lower:
-                self._ssh_key = key_pair_name
+                self._key_pair = key_pair_name
                 return True
 
         # Key does not exist on the CSP, create it
         ec2_resource = self._session.resource('ec2')
         try:
-            key_pair = ec2_resource.create_key_pair(KeyName=self._ssh_key)
+            key_pair = ec2_resource.create_key_pair(KeyName=self._key_pair)
         except _boto_exceptions.ClientError as exception:
             self._handle_boto_exception(exception)
             return
 
-        _utl.create_ssh_key_file(self._ssh_key, key_pair.key_material)
+        _utl.create_key_pair_file(self._key_pair, key_pair.key_material)
 
         return False
 
@@ -486,7 +486,7 @@ class AWSHost(_CSPHost):
         instance = self._session.resource('ec2').create_instances(
             ImageId=self._image_id,
             InstanceType=self._instance_type,
-            KeyName=self._ssh_key,
+            KeyName=self._key_pair,
             SecurityGroups=[self._security_group],
             IamInstanceProfile={'Name': 'AccelizeLoadFPGA'},
             InstanceInitiatedShutdownBehavior='stop',

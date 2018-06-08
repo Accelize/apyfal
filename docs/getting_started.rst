@@ -327,10 +327,10 @@ And then connect to it with SSH :
 
 .. code-block:: bash
 
-    # "ssh_key" value can be defined in host configuration
+    # "key_pair" can be get with "myaccel.host.key_pair"
     # "host_ip" can be get with "myaccel.host.public_ip"
 
-    ssh -Yt -i ${ssh_key} centos@${host_ip}
+    ssh -Yt -i ${key_pair} centos@${host_ip}
 
 *Don't forget to terminate cloud instance after use to avoid additional fees*
 

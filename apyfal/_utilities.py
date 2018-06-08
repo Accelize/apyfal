@@ -196,12 +196,12 @@ def pretty_dict(obj):
     return json.dumps(ast.literal_eval(str(obj)), indent=4)
 
 
-def create_ssh_key_file(ssh_key, key_content):
+def create_key_pair_file(key_pair, key_content):
     """
     Create SSH key file.
 
     Args:
-        ssh_key (str): key name
+        key_pair (str): key name
         key_content (str): key content
     """
     # Path to SSH keys dir
@@ -219,12 +219,12 @@ def create_ssh_key_file(ssh_key, key_content):
     index = 1
     while True:
         # File name
-        ssh_key_file = "%s%s.pem" % (
-            ssh_key, ('_%d' % index) if index > 1 else '')
-        key_filename = os.path.join(ssh_dir, ssh_key_file)
+        key_pair_file = "%s%s.pem" % (
+            key_pair, ('_%d' % index) if index > 1 else '')
+        key_filename = os.path.join(ssh_dir, key_pair_file)
 
         # File with same name exists
-        if ssh_key_file in ssh_files:
+        if key_pair_file in ssh_files:
             # File already exist, returns
             with open(key_filename, 'rt') as key_file:
                 if key_file.read() == key_content:

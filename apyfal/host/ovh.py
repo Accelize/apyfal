@@ -16,7 +16,7 @@ class OVHHost(_OpenStackHost):
         secret_id (str): OVH Secret Access Key.
         region (str): OVH region. Needs a region supporting instances with FPGA devices.
         instance_type (str): OVH Flavor. Default defined by accelerator.
-        ssh_key (str): OVH Key pair. Default to 'AccelizeOVHKeyPair'.
+        key_pair (str): OVH Key pair. Default to 'AccelizeOVHKeyPair'.
         security_group: OVH Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing OVH nova instance to use.
             If not specified, create a new instance.

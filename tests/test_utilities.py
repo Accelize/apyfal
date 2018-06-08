@@ -49,13 +49,13 @@ def test_get_host_public_ip():
     assert get_host_public_ip()[-3:] == '/32'
 
 
-def test_create_ssh_key_file(tmpdir):
-    """Tests create_ssh_key_file"""
-    from apyfal._utilities import create_ssh_key_file
+def test_create_key_pair_file(tmpdir):
+    """Tests create_key_pair_file"""
+    from apyfal._utilities import create_key_pair_file
 
     tmp_dir = tmpdir.dirpath()
     ssh_dir = tmp_dir.join('.ssh')
-    ssh_key = 'ssh_key'
+    key_pair = 'key_pair'
     key_content = 'key_content'
 
     # Mock os.path.expanduser
@@ -72,20 +72,20 @@ def test_create_ssh_key_file(tmpdir):
         assert not ssh_dir.check(dir=True)
 
         # Not existing file
-        create_ssh_key_file(ssh_key, key_content)
+        create_key_pair_file(key_pair, key_content)
         assert ssh_dir.check(dir=True)
-        assert ssh_dir.join(ssh_key + '.pem').check(file=True)
-        assert ssh_dir.join(ssh_key + '.pem').read('rt') == key_content
+        assert ssh_dir.join(key_pair + '.pem').check(file=True)
+        assert ssh_dir.join(key_pair + '.pem').read('rt') == key_content
 
         # File with same content exists
-        create_ssh_key_file(ssh_key, key_content)
-        assert not ssh_dir.join(ssh_key + '_2.pem').check(file=True)
+        create_key_pair_file(key_pair, key_content)
+        assert not ssh_dir.join(key_pair + '_2.pem').check(file=True)
 
         # File with different content exists
         key_content = 'another_key_content'
-        create_ssh_key_file(ssh_key, key_content)
-        assert ssh_dir.join(ssh_key + '_2.pem').check(file=True)
-        assert ssh_dir.join(ssh_key + '_2.pem').read('rt') == key_content
+        create_key_pair_file(key_pair, key_content)
+        assert ssh_dir.join(key_pair + '_2.pem').check(file=True)
+        assert ssh_dir.join(key_pair + '_2.pem').read('rt') == key_content
 
     # Restore os.path.expanduser
     finally:
