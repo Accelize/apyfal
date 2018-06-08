@@ -11,7 +11,7 @@ Required Python Packages:
 -  ``Request``, ``urllib3``, ``six``, ``certifi``, ``python-dateutil``
 -  ``pip`` and ``setuptools``: For package installation
 -  ``boto3`` (Optional): Required for AWS.
--  ``openstack`` (Optional): Required for OVH.
+-  ``openstack`` (Optional): Required for OpenStack and OVH.
 -  ``pycurl`` (Optional): Improve upload performance and file size
    limit.
 
@@ -90,6 +90,7 @@ extras:
 
 -  ``all``: Install all extras.
 -  ``AWS``: Requirements for AWS.
+-  ``OpenStack``: Requirements for OpenStack.
 -  ``OVH``: Requirements for OVH.
 -  ``optional``: other optional requirements (ex ``pycurl``).
 
@@ -99,10 +100,10 @@ Example for installing the ``all`` extra:
 
     pip install apyfal[all]
 
-Example for installing the ``AWS`` + ``optional`` extras:
+Example for installing the ``OpenStack`` + ``optional`` extras:
 
 .. code-block:: bash
 
-    pip install apyfal[AWS,optional]
+    pip install apyfal[OpenStack,optional]
 
 .. _Windows Compilers on Python documentation: https://wiki.python.org/moin/WindowsCompilers

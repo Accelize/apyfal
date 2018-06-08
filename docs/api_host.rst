@@ -9,6 +9,5 @@ apyfal.host
    :maxdepth: 2
 
    api_host_aws
+   api_host_openstack
    api_host_ovh
-   api_host_generic_csp
-   api_host_generic_openstack

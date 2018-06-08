@@ -1,5 +1,5 @@
 # coding=utf-8
-"""apyfal.host.generic_csp tests"""
+"""apyfal.host._csp tests"""
 import gc
 import time
 import warnings
@@ -11,7 +11,7 @@ def test_csphost_new_init():
     """Tests Host.__new__ and Host.__init__"""
     from apyfal.configuration import Configuration
     from apyfal.host import Host
-    from apyfal.host.generic_csp import CSPHost
+    from apyfal.host._csp import CSPHost
     from apyfal.host.ovh import OVHHost
     from apyfal.exceptions import HostConfigurationException
 
@@ -31,7 +31,7 @@ def test_csphost_new_init():
 
     # Test: Existing CSP module, with no valid class
     with pytest.raises(HostConfigurationException):
-        Host(host_type="generic_openstack")
+        Host(host_type="openstack")
 
     # Test: direct instantiation of subclass without specify host_type
     OVHHost(**kwargs)
@@ -58,9 +58,9 @@ def get_dummy_csp_class():
     Returns a base dummy subclass of Host
 
     Returns:
-        apyfal.host.generic_csp.CSPHost subclass
+        apyfal.host._csp.CSPHost subclass
     """
-    from apyfal.host.generic_csp import CSPHost
+    from apyfal.host._csp import CSPHost
 
     class BaseDummyClass(CSPHost):
         """Base dummy class"""

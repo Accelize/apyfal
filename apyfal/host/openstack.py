@@ -1,10 +1,13 @@
 # coding=utf-8
 """OpenStack based CSP"""
+# Absoluteimport required on Python 2 to avoid collision
+# of this module with openstack-sdk package
+from __future__ import absolute_import as _absolute_import
 
 import keystoneauth1.exceptions.http as _keystoneauth_exceptions
 import openstack as _openstack
 
-from apyfal.host.generic_csp import CSPHost as _CSPHost
+from apyfal.host._csp import CSPHost as _CSPHost
 import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
@@ -12,10 +15,10 @@ from apyfal._utilities import get_logger as _get_logger
 
 
 class OpenStackHost(_CSPHost):
-    """Generic class for OpenStack based CSP
+    """OpenStack based CSP
 
     Args:
-        host_type (str): Cloud service provider name.
+        host_type (str): Cloud service provider name. Default to "OpenStack".
         config (str or apyfal.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
@@ -41,11 +44,13 @@ class OpenStackHost(_CSPHost):
             convenience and does not cover all exit case like process kill and
             may not work on all OS.
     """
+    #: Provider name to use
+    NAME = 'OpenStack'
 
-    #: Default OpenStack auth-URL to use (str)
+    # Default OpenStack auth-URL to use (str)
     OPENSTACK_AUTH_URL = None
 
-    #: Default Interface to use (str)
+    # Default Interface to use (str)
     OPENSTACK_INTERFACE = None
 
     _INFO_NAMES = _CSPHost._INFO_NAMES.copy()

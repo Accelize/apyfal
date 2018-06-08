@@ -1,11 +1,11 @@
 # coding=utf-8
 """OVH"""
 
-from apyfal.host.generic_openstack import OpenStackHost as _OpenStackHost
+from apyfal.host.openstack import OpenStackHost as _OpenStackHost
 
 
 class OVHHost(_OpenStackHost):
-    """OVH CSP Class
+    """OVH CSP
 
     Args:
         host_type (str): Cloud service provider name. Default to "OVH".
@@ -23,8 +23,6 @@ class OVHHost(_OpenStackHost):
         instance_ip (str): IP or URL address of an already existing OVH nova instance to use.
             If not specified, create a new instance.
         project_id (str): OVH Project
-        auth_url (str): OVH auth-URL (default to 'https://horizon.cloud.ovh.net')
-        interface (str): OVH interface (default to 'public')
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing instance.
             See "stop_mode" property for more information and possible values.

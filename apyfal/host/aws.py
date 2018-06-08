@@ -8,7 +8,7 @@ import time as _time
 import boto3 as _boto3
 import botocore.exceptions as _boto_exceptions
 
-from apyfal.host.generic_csp import CSPHost as _CSPHost
+from apyfal.host._csp import CSPHost as _CSPHost
 import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
@@ -16,7 +16,7 @@ from apyfal._utilities import get_logger as _get_logger
 
 
 class AWSHost(_CSPHost):
-    """AWS CSP Class
+    """AWS CSP
 
     Args:
         host_type (str): Cloud service provider name. Default to "AWS".

@@ -12,7 +12,7 @@ from apyfal._utilities import get_logger as _get_logger
 
 
 class CSPHost(_Host):
-    """This is base abstract class for all Cloud instances classes.
+    """This is base abstract class for all CSP classes.
 
     Args:
         host_type (str): Cloud service provider name.

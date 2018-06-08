@@ -52,6 +52,7 @@ PACKAGE_INFO = dict(
 
         # CSP specific requirements
         'AWS': ['boto3'],
+        'OpenStack': ['openstacksdk'],
         'OVH': ['openstacksdk']},
     setup_requires=['setuptools'],
     tests_require=['pytest'],
