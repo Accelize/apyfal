@@ -164,7 +164,7 @@ class AcceleratorClient(object):
         # Check URL
         if not url:
             raise _exc.ClientConfigurationException(
-                "An host URL is required.")
+                "No configured host found.")
 
         self._url = _utl.format_url(url)
 

@@ -252,6 +252,7 @@ class CSPHost(_Host):
 
             # Creates and starts instance if not exists
             if self.instance_id is None:
+                _get_logger().info("Configuring %s instance...", self._host_type)
 
                 # Configure and create instance
                 reuse_key = self._init_key_pair()

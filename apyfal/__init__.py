@@ -175,7 +175,7 @@ class Accelerator(object):
         process_result = self._client.process(
             file_in=file_in, file_out=file_out, info_dict=info_dict, **parameters)
 
-        self._log_profiling_info(process_result[1])
+        self._log_profiling_info(process_result)
         return process_result
 
     def stop(self, stop_mode=None, info_dict=False):
@@ -224,7 +224,7 @@ class Accelerator(object):
             return None
 
         try:
-            app = process_result['app']
+            app = process_result[1]['app']
         except KeyError:
             return None
 
@@ -253,21 +253,18 @@ class Accelerator(object):
             fpga_time = values.get('fpga-elapsed-time', 0.0)
 
             if global_time > 0.0:
-                logger.info('- Total processing time: %.3fs' % global_time)
+                logger.info('- Wall clock time: %.3fs' % global_time)
+
+            if global_time > 0.0:
+                logger.info('- FPGA elapsed time: %.3fs' % fpga_time)
 
             if total_bytes > 0.0 and global_time > 0.0:
-                bw = total_bytes / global_time / 1024.0 / 1024.0
-                fps = 1.0 / global_time
-                logger.info(
-                    "- Server processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
-                    self._host.host_type, bw, fps)
+                logger.info("- Server processing bandwidths: %.1f MB/s",
+                            total_bytes / global_time / 1024.0 / 1024.0)
 
             if total_bytes > 0.0 and fpga_time > 0.0:
-                bw = total_bytes / fpga_time / 1024.0 / 1024.0
-                fps = 1.0 / fpga_time
-                logger.info(
-                    "- FPGA processing bandwidths on %s: round-trip = %0.1f MB/s, frame rate = %0.1f fps",
-                    self._host.host_type, bw, fps)
+                logger.info("- FPGA processing bandwidths: %.1f MB/s",
+                            total_bytes / fpga_time / 1024.0 / 1024.0)
 
         # Handle Specific result
         try:
