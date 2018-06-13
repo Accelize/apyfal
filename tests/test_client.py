@@ -113,7 +113,13 @@ def test_acceleratorclient_check_accelize_credential_real():
     # Test: Valid credentials
     # Assuming Accelize credentials in configuration file are valid, should pass
     # Called Through AcceleratorClient.__init__
-    AcceleratorClient('dummy', config=config)
+    try:
+        AcceleratorClient('dummy', config=config)
+    except ClientAuthenticationException as exception:
+        if 'invalid_client' in str(exception):
+            pytest.xfail("No valid Accelize credential")
+        else:
+            raise
 
     # Test: Keep same client_id but use bad secret_id
     with pytest.raises(ClientAuthenticationException):
@@ -269,16 +275,21 @@ def test_acceleratorclient_get_requirements_real():
 
     # Import modules
     from apyfal.client import AcceleratorClient
-    from apyfal.exceptions import ClientConfigurationException
+    import apyfal.exceptions as exc
 
     # Test: Invalid AcceleratorClient name
-    accelerator = AcceleratorClient('accelerator_not_exists', config=config)
-    with pytest.raises(ClientConfigurationException):
+    try:
+        accelerator = AcceleratorClient('accelerator_not_exists', config=config)
+    except exc.ClientAuthenticationException:
+        pytest.skip("No valid Accelize credential")
+        return
+
+    with pytest.raises(exc.ClientConfigurationException):
         accelerator.get_host_requirements('OVH')
 
     # Test: Provider not exists
     accelerator = AcceleratorClient('axonerve_hyperfire', config=config)
-    with pytest.raises(ClientConfigurationException):
+    with pytest.raises(exc.ClientConfigurationException):
         accelerator.get_host_requirements('no_exist_host')
 
     # Test: Everything OK

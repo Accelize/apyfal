@@ -3,6 +3,7 @@
 
 import abc
 import ast
+import collections
 import json
 import os
 import re
@@ -194,6 +195,25 @@ def pretty_dict(obj):
         str: formatted dict
     """
     return json.dumps(ast.literal_eval(str(obj)), indent=4)
+
+
+def recursive_update(to_update, update):
+    """
+    Recursively updates nested directories.
+
+    Args:
+        to_update (dict): dict to update.
+        update (dict): dict containing new values.
+
+    Returns:
+        dict: to_update
+        """
+    for key, value in update.items():
+        if isinstance(value, collections.Mapping):
+            value = recursive_update(
+                to_update.get(key, {}), value)
+        to_update[key] = value
+    return to_update
 
 
 def create_key_pair_file(key_pair, key_content):

@@ -78,16 +78,24 @@ class AcceleratorClient(object):
 
         # Read configuration
         config = _cfg.create_configuration(config)
-        self._client_id = config.get_default('accelize', 'client_id', overwrite=accelize_client_id)
-        self._secret_id = config.get_default('accelize', 'secret_id', overwrite=accelize_secret_id)
+        self._client_id = config.get_default(
+            'accelize', 'client_id', overwrite=accelize_client_id)
+        self._secret_id = config.get_default(
+            'accelize', 'secret_id', overwrite=accelize_secret_id)
 
-        self._configuration_parameters = _deepcopy(self.DEFAULT_CONFIGURATION_PARAMETERS)
-        self._configuration_parameters.update(config.get_default(
-            'configuration', 'parameters', is_literal=True, default=dict()))
+        self._configuration_parameters = _deepcopy(
+            self.DEFAULT_CONFIGURATION_PARAMETERS)
+        _utl.recursive_update(
+            self._configuration_parameters,
+            config.get_default(
+                'configuration', 'parameters', is_literal=True, default=dict()))
 
-        self._process_parameters = _deepcopy(self.DEFAULT_PROCESS_PARAMETERS)
-        self._process_parameters.update(config.get_default(
-            'process', 'parameters', is_literal=True, default=dict()))
+        self._process_parameters = _deepcopy(
+            self.DEFAULT_PROCESS_PARAMETERS)
+        _utl.recursive_update(
+            self._process_parameters,
+            config.get_default(
+                'process', 'parameters', is_literal=True, default=dict()))
 
         # Checks if Accelize credentials are valid
         self._check_accelize_credential()
