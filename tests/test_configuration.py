@@ -115,16 +115,9 @@ def test_legacy_backward_compatibility(tmpdir):
     # Check not overwrite existing with legacy
     key_pair = 'key_pair'
     legacy_conf = {
-        'csp': {
-            'ssh_key': legacy_ssh_key,
-            'provider': 'legacy_provider',
-            'instance_ip': 'legacy_instance_ip'},
-        'host': {
-            'key_pair': key_pair,
-        }
+        'csp': {'ssh_key': legacy_ssh_key},
+        'host': {'key_pair': key_pair}
     }
     dumps_config(legacy_conf)
     config = create_configuration(config_path)
     assert config.get('host', 'key_pair') == key_pair
-    assert config.get('host', 'host_type') == legacy_provider
-    assert config.get('host', 'host_ip') == legacy_instance_ip
