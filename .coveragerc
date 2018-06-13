@@ -6,10 +6,11 @@ omit=
     */_swagger_client/*
 
 [report]
-# Exclude logging functions
+# Exclude logging functions and some non production error cases
 exclude_lines =
     _get_logger()
     def _log_profiling_info
     def get_logger
     if _enable_logger:
     _enable_logger =
+    except ImportError:  # Swagger_codegen need to be run first

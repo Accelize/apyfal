@@ -114,6 +114,7 @@ def test_csphost_properties():
     instance_id = 'dummy_instance_id'
     stop_mode = 'keep'
     region = 'dummy_region'
+    key_pair = 'dummy_key_pair'
 
     # Mock CSP class
     class DummyClass(get_dummy_csp_class()):
@@ -133,7 +134,7 @@ def test_csphost_properties():
     csp = DummyClass(
         host_type=host_type,
         instance_id=instance_id, stop_mode=stop_mode,
-        region=region)
+        region=region, key_pair=key_pair)
     csp._instance = 'dummy_instance'
     csp._url = 'http://127.0.0.1'
 
@@ -144,6 +145,7 @@ def test_csphost_properties():
     assert csp.url == url
     assert csp.instance_id == instance_id
     assert csp.stop_mode == stop_mode
+    assert csp.key_pair == key_pair
 
     # Test: Information property
     # 'not_exists' tests case where a value is not defined on class

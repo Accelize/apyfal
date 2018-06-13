@@ -90,3 +90,15 @@ def test_create_key_pair_file(tmpdir):
     # Restore os.path.expanduser
     finally:
         os.path.expanduser = os_path_expanduser
+
+
+def test_recursive_update():
+    """Tests test_recursive_update"""
+    from apyfal._utilities import recursive_update
+
+    to_update = {'root1': {'key1': 1, 'key2': 2}, 'key3': 3}
+    update = {'root1': {'key1': 1.0, 'key4': 4.0}, 'key5': 5.0}
+    expected = {'root1': {'key1': 1.0, 'key2': 2, 'key4': 4.0},
+                'key3': 3, 'key5': 5.0}
+
+    assert recursive_update(to_update, update) == expected

@@ -28,10 +28,7 @@ import apyfal.configuration as _cfg
 
 try:
     import apyfal._swagger_client as _api
-except ImportError:
-    # swagger_client is dynamically generated with Swagger-codegen and
-    # not provided in repository, so it is possible
-    # to try to import with without have generated it first.
+except ImportError:  # Swagger_codegen need to be run first
     if not _os.path.isfile(_os.path.join(
             _os.path.dirname(__file__), '_swagger_client/__init__.py')):
         raise ImportError(
