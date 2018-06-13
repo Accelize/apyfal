@@ -214,7 +214,8 @@ class Accelerator(object):
 
         return stop_result
 
-    def _log_profiling_info(self, process_result):
+    @staticmethod
+    def _log_profiling_info(process_result):
         """
         Shows profiling and specific information in logger.
 
