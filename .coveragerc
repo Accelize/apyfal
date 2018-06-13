@@ -11,3 +11,5 @@ exclude_lines =
     _get_logger()
     def _log_profiling_info
     def get_logger
+    if _enable_logger:
+    _enable_logger =

@@ -169,13 +169,17 @@ class Accelerator(object):
                 AcceleratorClient contain output information from  process operation.
                 Take a look to accelerator documentation for more information.
         """
-        info_dict = True if _get_logger().isEnabledFor(20) else info_dict
+        _enable_logger = _get_logger().isEnabledFor(20)
 
         # Process file with accelerator
         process_result = self._client.process(
-            file_in=file_in, file_out=file_out, info_dict=info_dict, **parameters)
+            file_in=file_in, file_out=file_out,
+            info_dict=info_dict or _enable_logger, **parameters)
 
-        self._log_profiling_info(process_result)
+        if _enable_logger:
+            # Logger case
+            self._log_profiling_info(process_result)
+            return process_result if info_dict else process_result[0]
         return process_result
 
     def stop(self, stop_mode=None, info_dict=False):
@@ -218,10 +222,6 @@ class Accelerator(object):
             process_result (dict): result from AcceleratorClient.process
         """
         logger = _get_logger()
-
-        # Skips method if logger not at least on INFO Level
-        if not logger.isEnabledFor(20):
-            return None
 
         try:
             app = process_result[1]['app']
