@@ -258,7 +258,7 @@ class CSPHost(_Host):
                 reuse_key = self._init_key_pair()
                 if not reuse_key:
                     _get_logger().info(_utl.gen_msg(
-                        "created_named", self._key_pair))
+                        "created_named", "key pair",self._key_pair))
 
                 try:
                     self._create_instance()
