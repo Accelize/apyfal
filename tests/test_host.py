@@ -24,4 +24,10 @@ def test_host_init():
     # Test: Passing host_ip
     url = 'http://127.0.0.1'
     host = Host(config=config, host_ip=url)
+    host.start()
     assert host.url == url
+
+    # Test: Passing nothing
+    host = Host(config=config)
+    with pytest.raises(HostConfigurationException):
+        host.start()

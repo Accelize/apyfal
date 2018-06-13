@@ -73,6 +73,9 @@ class Configuration(_configparser.ConfigParser):
         if configuration_file:
             self.read(configuration_file)
 
+            # AcceleratorAPI backward compatibility
+            self._legacy_backward_compatibility()
+
     def get_default(self, section, option, overwrite=None, default=None, is_literal=False):
         """Returns values from configuration or default value.
 
@@ -119,3 +122,72 @@ class Configuration(_configparser.ConfigParser):
         """
         return (self.get_default('host', 'client_id') and
                 self.get_default('host', 'secret_id'))
+
+    def _legacy_backward_compatibility(self):
+        """
+        Convert sections and options from legacy
+        configuration files to current ones.
+        """
+        sections_changes = {'csp': 'host'}
+        options_changes = {
+            'csp': {
+                'ssh_key': 'key_pair',
+                'provider': 'host_type',
+                'instance_ip': 'host_ip'
+            }
+        }
+        # Fix sections
+        for old, new in sections_changes.items():
+            # Section to fix not exists
+            if not self.has_section(old):
+                continue
+
+            # Warn user
+            self._deprecation_warning(old)
+
+            # Create new section
+            try:
+                self.add_section(new)
+            except _configparser.DuplicateSectionError:
+                pass
+
+            # Copy section
+            for option, value in self.items(old):
+                if not self.has_option(new, option):
+                    self.set(new, option, value)
+
+            # Remove old section
+            self.remove_section(old)
+
+        # Fix options
+        for section, options in options_changes.items():
+            new_section = sections_changes.get(section, section)
+            if not self.has_section(new_section):
+                continue
+
+            for old, new in options.items():
+                # Option to fix not exists
+                if not self.has_option(new_section, old):
+                    continue
+
+                # Warn user
+                self._deprecation_warning(section, old)
+
+                # Copy option
+                if not self.has_option(new_section, new):
+                    self.set(new_section, new, self.get(new_section, old))
+
+                # remove old option
+                self.remove_option(new_section, old)
+
+    @staticmethod
+    def _deprecation_warning(section, option=''):
+        """
+        Warn user about deprecated section or
+        option in configuration file.
+        """
+        import warnings
+        warnings.warn(
+            '"%s%s" is deprecated in "accelerator.conf"' %
+            (section, ':%s' % option if option else ''),
+            DeprecationWarning)

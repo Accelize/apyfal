@@ -258,7 +258,7 @@ class CSPHost(_Host):
                 reuse_key = self._init_key_pair()
                 if not reuse_key:
                     _get_logger().info(_utl.gen_msg(
-                        "created_named", "key pair",self._key_pair))
+                        "created_named", "key pair", self._key_pair))
 
                 try:
                     self._create_instance()
@@ -471,7 +471,8 @@ class CSPHost(_Host):
         self._instance_type = self._get_instance_type_from_region(region_parameters)
         self._config_env = self._get_config_env_from_region(region_parameters)
 
-    def _get_image_id_from_region(self, accel_parameters_in_region):
+    @staticmethod
+    def _get_image_id_from_region(accel_parameters_in_region):
         """
         Read accelerator parameters and get image id.
 
@@ -484,7 +485,8 @@ class CSPHost(_Host):
         """
         return accel_parameters_in_region['image']
 
-    def _get_instance_type_from_region(self, accel_parameters_in_region):
+    @staticmethod
+    def _get_instance_type_from_region(accel_parameters_in_region):
         """
         Read accelerator parameters and instance type.
 

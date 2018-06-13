@@ -165,11 +165,9 @@ class AcceleratorClient(object):
 
     @url.setter
     def url(self, url):
-
         # Check URL
         if not url:
-            raise _exc.ClientConfigurationException(
-                "No configured host found.")
+            raise _exc.ClientConfigurationException("Host URL is not valid.")
 
         self._url = _utl.format_url(url)
 

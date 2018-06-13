@@ -201,6 +201,13 @@ class Host(_utl.ABC):
             accel_parameters (dict): Can override parameters from accelerator client.
             stop_mode (str or int): See "stop_mode" property for more information.
         """
+        # Check configuration
+        if not self._url:
+            raise _exc.HostConfigurationException(
+                'No host found. Please check your configuration.')
+
+        # Update stop mode
+        self.stop_mode = stop_mode
 
     @property
     def info(self):

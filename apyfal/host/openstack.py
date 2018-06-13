@@ -232,7 +232,7 @@ class OpenStackHost(_CSPHost):
         """
         # Gets image
         image_id = _CSPHost._get_image_id_from_region(
-            self, accel_parameters_in_region)
+            accel_parameters_in_region)
 
         # Checks if image exists and get its name
         try:
@@ -262,7 +262,7 @@ class OpenStackHost(_CSPHost):
         """
         # Get instance type (flavor)
         self._instance_type_name = _CSPHost._get_instance_type_from_region(
-            self, accel_parameters_in_region)
+            accel_parameters_in_region)
         try:
             instance_type = self._session.compute.find_flavor(
                 self._instance_type_name).id

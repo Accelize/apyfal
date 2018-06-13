@@ -74,3 +74,57 @@ def test_create_configuration():
 
     # Test: Returns entry parameter if Configuration
     assert create_configuration(config) is config
+
+
+def test_legacy_backward_compatibility(tmpdir):
+    """Test Configuration._legacy_backward_compatibility"""
+    from apyfal.configuration import Configuration, create_configuration
+
+    # Temporary configuration file
+    config_file = tmpdir.join(
+        Configuration.DEFAULT_CONFIG_FILE)
+    config_path = str(config_file)
+
+    # Save dict as configuration
+    def dumps_config(config_dict):
+        """Save config_dict in file"""
+        content = []
+        for section, options in config_dict.items():
+            content.append('[%s]' % section)
+            for option, value in options.items():
+                content.append('%s=%s' % (option, value))
+
+        config_file.write('\n'.join(content))
+
+    # Compatibility with acceleratorAPI
+    legacy_ssh_key = 'legacy_ssh_key'
+    legacy_provider = 'legacy_provider'
+    legacy_instance_ip = 'legacy_instance_ip'
+    legacy_conf = {
+        'csp': {
+            'ssh_key': legacy_ssh_key,
+            'provider': 'legacy_provider',
+            'instance_ip': 'legacy_instance_ip'
+        }}
+    dumps_config(legacy_conf)
+    config = create_configuration(config_path)
+    assert config.get('host', 'key_pair') == legacy_ssh_key
+    assert config.get('host', 'host_type') == legacy_provider
+    assert config.get('host', 'host_ip') == legacy_instance_ip
+
+    # Check not overwrite existing with legacy
+    key_pair = 'key_pair'
+    legacy_conf = {
+        'csp': {
+            'ssh_key': legacy_ssh_key,
+            'provider': 'legacy_provider',
+            'instance_ip': 'legacy_instance_ip'},
+        'host': {
+            'key_pair': key_pair,
+        }
+    }
+    dumps_config(legacy_conf)
+    config = create_configuration(config_path)
+    assert config.get('host', 'key_pair') == key_pair
+    assert config.get('host', 'host_type') == legacy_provider
+    assert config.get('host', 'host_ip') == legacy_instance_ip

@@ -172,16 +172,32 @@ def format_url(url_or_ip):
     return url_or_ip
 
 
-def get_host_public_ip():
+def get_host_public_ip(max_tries=10, validation_sample=3):
     """
     Find current host IP address.
+
+    Args:
+        max_tries (int): Number of tries.
+        validation_sample (int): Number of service to
+            request that must return same result to
+            validate IP address.
 
     Returns:
         str: IP address in "XXX.XXX.XXX.XXX/32" format.
     """
     # Lazy import since not always used
-    import ipgetter
-    return "%s/32" % ipgetter.myip()
+    from ipgetter import myip
+
+    # Gets IP address from multiple sources and
+    # checks result consistency before returning one
+    for _ in range(max_tries):
+        ip_addresses = set(
+            myip() for _ in range(validation_sample))
+        if len(ip_addresses) == 1:
+            ip_address = ip_addresses.pop()
+            if ip_address:
+                return "%s/32" % ip_address
+    raise OSError('Unable to get public IP address')
 
 
 def pretty_dict(obj):

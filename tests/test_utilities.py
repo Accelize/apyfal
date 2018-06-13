@@ -3,6 +3,8 @@
 import os
 import time
 
+import pytest
+
 
 def test_timeout():
     """Tests Timeout"""
@@ -26,10 +28,20 @@ def test_get_host_public_ip():
     """Tests get_host_public_ip"""
     from apyfal._utilities import get_host_public_ip
     import ipgetter
+    from random import randint
+
+    random = False
 
     # Mock ipgetter.myip
     def dummy_myip():
         """Return fake IP"""
+        if random:
+            return '%d.%d.%d.%d' % (
+                randint(0, 255),
+                randint(0, 255),
+                randint(0, 255),
+                randint(0, 255)
+            )
         return '127.0.0.1'
 
     ipgetter_myip = ipgetter.myip
@@ -39,6 +51,11 @@ def test_get_host_public_ip():
     try:
         # Check format
         assert get_host_public_ip() == '127.0.0.1/32'
+
+        # Raise errors if no returns
+        random = True
+        with pytest.raises(OSError):
+            get_host_public_ip()
 
     # Restore ipgetter.myip
     finally:
