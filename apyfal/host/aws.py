@@ -235,7 +235,7 @@ class AWSHost(_CSPHost):
             pass
         else:
             _get_logger().info(
-                _utl.gen_msg('created_object', 'IAM role', role))
+                _utl.gen_msg('created_name', 'IAM role', role))
 
         iam_client = self._session.client('iam')
         arn = iam_client.get_role(RoleName=self._role)['Role']['Arn']
