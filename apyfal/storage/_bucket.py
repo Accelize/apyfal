@@ -55,7 +55,8 @@ class BucketStorage(_Storage):
 
         Returns:
             str: _Storage ID."""
-        return '%s.%s' % (self.NAME, self._bucket_name)
+        return ('%s.%s' % (
+            self.NAME, self._bucket_name)).lower()
 
     @_abstractmethod
     def copy_to_local(self, source, local_path):
