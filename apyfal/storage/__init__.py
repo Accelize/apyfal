@@ -55,7 +55,7 @@ def _parse_host_url(url):
     split_url = url.split('://', 1)
     try:
         # Path with scheme
-        scheme = split_url[0]
+        scheme = split_url[0].lower()
         path = split_url[1]
     except IndexError:
         # Path without scheme are "file://"
@@ -137,7 +137,7 @@ class Storage(_utl.ABC):
         if cls is not Storage:
             return object.__new__(cls)
 
-        storage_type = kwargs.get('storage_type')
+        storage_type = kwargs.get('storage_type').lower()
 
         # If host type is not defined, return basic class
         # TODO: Factorize with host as common function
@@ -161,7 +161,7 @@ class Storage(_utl.ABC):
         for name in dir(host_module):
             member = getattr(host_module, name)
             try:
-                if getattr(member, 'NAME') == storage_type:
+                if getattr(member, 'NAME').lower() == storage_type.lower():
                     break
             except AttributeError:
                 continue
@@ -181,7 +181,7 @@ class Storage(_utl.ABC):
 
         Returns:
             str: Storage ID."""
-        return self.NAME
+        return self.NAME.lower()
 
     @_abstractmethod
     def copy_to_local(self, source, local_path):
