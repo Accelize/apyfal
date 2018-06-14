@@ -10,5 +10,6 @@ apyfal
 
    api_client
    api_host
+   api_storage
    api_configuration
    api_exceptions

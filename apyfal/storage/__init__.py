@@ -1,21 +1,6 @@
 # coding=utf-8
 """Data storage management"""
 
-# TODO:
-# URL scheme
-# - "path" or "file://path" Client local file (Download/upload)
-# - "host://path" Host local file (Download/upload)
-# - "AWS.bucket://path" File in "bucket" on AWS S3 (Download/upload)
-# - "http://path" "https://path" File on internet (Download)
-# - "ftp://path" "ftps://path" File on FTP (Download/upload)
-# - ...
-# All operations done on host, not on client.
-# => REST api client needs to checks URL scheme and
-#    guess if pass URL to host or up/download file
-#    (Only with "file") scheme to host.
-# Everything just call the "copy" function.
-# Possibility to register multiple storage
-
 from abc import abstractmethod as _abstractmethod
 from importlib import import_module as _import_module
 from shutil import copy as _copy
@@ -26,15 +11,26 @@ import apyfal._utilities as _utl
 
 
 # Registered storage
+# TODO: Replace dict with mapping with lazy registration on __getitem__
 _STORAGE = {}
+
+# Storage name aliases
+_ALIASES = {
+    # "host" only available on call from REST client
+    'host': 'file',
+    # Schemes variants
+    'https': 'http',
+    'ftps': 'ftp'
+}
 
 
 def register_storage(storage_type, **parameters):
-    """Register a new storage.
+    """Register a new storage to be used with "copy".
 
     Args:
         storage_type (str): storage type
         parameters: storage parameters
+            (see targeted storage class for more information)
     """
     storage = Storage(storage_type, **parameters)
     _STORAGE[storage.storage_id] = storage
@@ -65,16 +61,38 @@ def _parse_host_url(url):
         # Path without scheme are "file://"
         scheme = 'file'
         path = url
-    return scheme if scheme != 'host' else 'file', path
+    return _ALIASES.get(scheme, scheme), path
 
 
 def copy(source, destination):
     """
-    Copy a file from source to destination.
+    Copy a file from source to destination. Support copy
+    over different kind of storage that must be first
+    registered with "register_storage" function.
+
+    Work with URL with format "scheme://path"
+
+    Common schemes are (Registered by default):
+
+    - "file://" or no scheme: Client local file.
+    - "host://": Host local file (Available only on client
+        if client is not host).
+    - "http://" or "https://": File access over HTTP.
+    - "ftp://" or "ftps://": File access over FTP.
+
+    Some storage use advanced same, basic form is
+    "StorageType://path" with StorageType the storage type
+    defining this storage.
+
+    Some storage use sub levels, this is separated from
+    storage type with dot ".":
+    "StorageType.SubLevel://path"
+
+    See target storage class documentation for more information.
 
     Args:
-        source (str): Source path or URL.
-        destination (str): Destination path or URL.
+        source (str): Source URL.
+        destination (str): Destination URL.
     """
     # Analyses URLs
     src_scheme, src_path = _parse_host_url(source)
@@ -102,8 +120,11 @@ def copy(source, destination):
 class Storage(_utl.ABC):
     """Base storage class
 
+    This is also a factory which instantiate host subclass related to
+    specified cases.
+
     Args:
-        parameters: Storage parameters.
+        storage_type (str): Type of storage.
     """
     #: Storage type name (str), must be the same as expected "storage_type" argument value
     NAME = None
@@ -148,11 +169,11 @@ class Storage(_utl.ABC):
             raise _exc.StorageConfigurationException(
                 "No class found in '%s' for '%s' storage_type" % (module_name, storage_type))
 
-        # Instantiates host class
+        # Instantiates storage class
         return object.__new__(member)
 
-    def __init__(self, storage_type, **_):
-        self._storage_type = storage_type
+    def __init__(self, storage_type=None, **_):
+        self._storage_type = storage_type or self.NAME
 
     @property
     def storage_id(self):
@@ -213,7 +234,8 @@ class Storage(_utl.ABC):
         """
         # Tries to use a storage specific method
         try:
-            copy_from_storage = getattr(self, '_copy_from_%s' % storage.NAME)
+            copy_from_storage = getattr(
+                self, '_copy_from_%s' % storage.NAME.lower())
 
         # Uses spooled temporary file copy
         except AttributeError:
@@ -232,7 +254,7 @@ class Storage(_utl.ABC):
             source (str): Source path
             destination (str): Destination path
         """
-        # TODO: Compute max_size to use instead of fix value (psutil)
+        # TODO: Compute max_size to use instead to use fixed 1GB value (psutil)
         with _tempfile.SpooledTemporaryFile(max_size=1e9) as stream:
             storage.copy_to_stream(source, stream)
             self.copy_from_stream(stream, destination)
