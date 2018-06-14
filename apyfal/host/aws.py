@@ -419,13 +419,18 @@ class AWSHost(_CSPHost):
         Returns:
             str: Status
         """
-        try:
-            instance_state = self._instance.state
-        except _boto_exceptions.ClientError as exception:
-            raise _exc.HostRuntimeException(
-                gen_msg=('no_instance_id', self._instance_id),
-                exc=exception)
-        return instance_state["Name"]
+        with _utl.Timeout(1, sleep=0.01) as timeout:
+            while True:
+                try:
+                    return self._instance.state["Name"]
+                except _boto_exceptions.ClientError as exception:
+                    self._handle_boto_exception(
+                        exception,
+                        filter_error_codes='InvalidInstanceID.NotFound')
+                if timeout.reached():
+                    raise _exc.HostRuntimeException(
+                        gen_msg=('no_instance_id', self._instance_id),
+                        exc=exception)
 
     def _get_config_env_from_region(self, accel_parameters_in_region):
         """
