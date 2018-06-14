@@ -6,7 +6,7 @@ from contextlib import contextmanager as _contextmanager
 import boto3 as _boto3
 import botocore.exceptions as _boto_exceptions
 
-from apyfal.storage import Storage
+from apyfal.storage._bucket import BucketStorage as _BucketStorage
 import apyfal.exceptions as _exc
 
 
@@ -21,7 +21,7 @@ def _handle_s3_exception(bucket_key=None):
         apyfal.exceptions.StorageResourceNotExistsException:
             404 error, key not found on bucket.
         apyfal.exceptions.StorageRuntimeException:
-            Storage runtime exception.
+            _Storage runtime exception.
     """
     try:
         yield
@@ -34,26 +34,35 @@ def _handle_s3_exception(bucket_key=None):
                 exc=exception)
 
 
-class AWSStorage(Storage):
+class AWSStorage(_BucketStorage):
     """AWS S3 Bucket
 
+    apyfal.storage.copy URL: "AWS.BucketName://KeyToObject"
+
     Args:
-        """
-    #: Provider name to use
+        host_type (str): Cloud service provider name. Default to "AWS".
+        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
+            If not set, will search it in current working directory, in current
+            user "home" folder. If none found, will use default configuration values.
+        client_id (str): AWS Access Key ID.
+        secret_id (str): AWS Secret Access Key.
+        region (str): AWS region.
+        bucket_name (str): Name on the bucket on AWS S3.
+    """
+    #: Provider name
     NAME = 'AWS'
 
     #: AWS Website
     DOC_URL = "https://aws.amazon.com"
 
-    def __init__(self, storage_type, client_id, secret_id, region, bucket_name):
-        Storage.__init__(self, storage_type)
-        self._bucket_name = bucket_name
+    def __init__(self, **kwargs):
+        _BucketStorage.__init__(self, **kwargs)
 
         # Load session
         self._session = _boto3.session.Session(
-            aws_access_key_id=client_id,
-            aws_secret_access_key=secret_id,
-            region_name=region
+            aws_access_key_id=self._client_id,
+            aws_secret_access_key=self._secret_id,
+            region_name=self._region
         )
 
     def _get_bucket(self):
@@ -64,27 +73,13 @@ class AWSStorage(Storage):
         s3_resource = self._session.resource('s3')
         return s3_resource.Bucket(self._bucket_name)
 
-    def bucket(self):
-        """Bucket name
-
-        Returns:
-            str: bucket name."""
-        return self._bucket_name
-
-    def client(self):
-        """AWS client
-
-        Returns:
-            str: bucket name."""
-        return self._bucket_name
-
     @property
-    def storage_id(self):
-        """Storage ID representing this storage.
+    def client(self):
+        """AWS client managing bucket.
 
         Returns:
-            str: Storage ID."""
-        return '%s.%s' % (self.NAME, self._bucket_name)
+            object: Boto3 client."""
+        return self._session
 
     def copy_to_local(self, source, local_path):
         """
@@ -142,4 +137,4 @@ class AWSStorage(Storage):
         with _handle_s3_exception(source):
             self._get_bucket().copy(
                 {'Bucket': storage.bucket, 'Key': source},
-                destination)
+                destination, SourceClient=storage.client)
