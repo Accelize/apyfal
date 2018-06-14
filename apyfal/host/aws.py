@@ -1,5 +1,5 @@
 # coding=utf-8
-"""Amazon Web Services"""
+"""Amazon Web Services EC2"""
 
 from copy import deepcopy as _deepcopy
 from json import dumps as _json_dumps
@@ -15,7 +15,7 @@ from apyfal._utilities import get_logger as _get_logger
 
 
 class AWSHost(_CSPHost):
-    """AWS CSP
+    """AWS EC2 CSP
 
     Args:
         host_type (str): Cloud service provider name. Default to "AWS".

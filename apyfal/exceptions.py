@@ -64,3 +64,20 @@ class HostAuthenticationException(HostException):
 
 class HostConfigurationException(HostException):
     """Error with host configuration"""
+
+
+class StorageException(AcceleratorException):
+    """Generic storage related exception"""
+
+
+class StorageResourceNotExistsException(StorageException):
+    """Exception when trying to access an non existing resource"""
+    DEFAULT_MESSAGE = "Resource do not exists"
+
+
+class StorageRuntimeException(StorageException):
+    """Error when running storage"""
+
+
+class StorageConfigurationException(StorageException):
+    """Error when configuring storage"""
