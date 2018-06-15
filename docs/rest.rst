@@ -25,7 +25,7 @@ Swagger-Codegen can be used to generate client for almost any language
 
 .. code-block:: bash
 
-    java -jar $SWAGGER\ *CODEGEN*\ CLI generate -i rest\ *api/input*\ spec.json -o rest_api/output -l $LANGUAGE
+    java -jar $SWAGGER_CODEGEN_CLI generate -i rest_api/input_spec.json -o rest_api/output -l $LANGUAGE
 
 -  The generated API in the target language can be found in
    ``rest_api/output`` sub-directory inside the repository folder.
