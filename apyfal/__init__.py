@@ -18,7 +18,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 
-__version__ = "2.1.0"
+__version__ = "1.0.0rc1"
 __copyright__ = "Copyright 2018 Accelize"
 __licence__ = "Apache 2.0"
 
