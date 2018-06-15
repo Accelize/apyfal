@@ -6,6 +6,7 @@ docs/configuration_file.rst
 .cache/
 .coverage
 .pytest_cache/
+.tox/
 
 # Build generated files
 docs/_build/

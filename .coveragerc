@@ -4,6 +4,7 @@
 # Ignore generated Swagger REST API code since we don't use it completely and don't change it
 omit=
     */_swagger_client/*
+    .tox/*
 
 [report]
 # Exclude logging functions and some non production error cases
