@@ -111,7 +111,7 @@ Reusing existing host
 ~~~~~~~~~~~~~~~~~~~~~
 
 With host instance ID and full host access
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 With ``instance_id``, depending your CSP, your can reuse an already
 existing host without providing ``client_id`` and ``secret_id``.
@@ -139,7 +139,7 @@ host an can stop it.
 
 
 With host IP with accelerator only access
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 With ``host_ip``, your can reuse an already existing host
 without providing any other host information.

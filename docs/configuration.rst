@@ -21,7 +21,7 @@ Your user account provides also to your metering information on your
 accelerator use `AccelStore account`_.
 
 Host configuration
-~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 
 Accelerator needs an host with FPGA device that needs to be configured to
 run.
@@ -57,7 +57,7 @@ be passed as argument to the API.
 :download:`accelerator.conf example file <../apyfal/accelerator.conf>`.
 
 Passing as parameters to apyfal
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The use of the configuration file is not mandatory, all parameters can
 be passed directly to the API as arguments. Please read API
