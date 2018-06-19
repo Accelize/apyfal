@@ -4,7 +4,7 @@ Installation
 Requirements
 ------------
 
-Supported Python versions: 2.7, 3.4, 3.5, 3.6
+Supported Python versions: 2.7, 3.4, 3.5, 3.6, 3.7
 
 Required Python Packages:
 
