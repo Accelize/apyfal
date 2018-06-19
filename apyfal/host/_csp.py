@@ -457,10 +457,12 @@ class CSPHost(_Host):
             parameters.update(accel_parameters)
 
         # Check if region is valid
+        print(parameters)
         if self._region not in parameters.keys():
             raise _exc.HostConfigurationException(
                 "Region '%s' is not supported. Available regions are: %s" % (
-                    self._region, ', '.join(parameters)))
+                    self._region, ', '.join(
+                        region for region in parameters if region != 'accelerator')))
 
         # Get accelerator name
         self._accelerator = parameters['accelerator']
