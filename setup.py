@@ -191,14 +191,19 @@ class SwaggerCommand(Command):
                     ('getattr(swagger_client.', 'getattr(apyfal._swagger_client.'),
                 ]
 
-                # Fix Swagger bug:
-                # https://github.com/swagger-api/swagger-codegen/pull/7684
+                # Fix Swagger issues:
                 # TODO: Remove once fixed in released Swagger-Codegen version
+
+                # https://github.com/swagger-api/swagger-codegen/pull/7684
                 for value in ('1', '2', '3', '4', ''):
                     replacements.append((
                         'swagger_client.models.inline_response200%s' % value,
                         'swagger_client.models.inline_response_200%s' %
                         (('_%s' % value) if value else '')))
+
+                # https://github.com/swagger-api/swagger-codegen/issues/8328
+                replacements += [
+                    ('async', 'asynch'), ('asynchh', 'asynch')]
 
                 # Replace in file
                 for before, after in replacements:
