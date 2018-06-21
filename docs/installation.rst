@@ -41,7 +41,7 @@ Python 2:
 
 .. code-block:: bash
 
-    bash sudo yum install gcc python-pip python-devel curl
+    sudo yum install gcc python-pip python-devel curl
 
 Python 3:
 
@@ -75,6 +75,9 @@ dependencies.
 
 -  see `Windows Compilers on Python documentation`_
 
+Some modules, like ``PycURL``, can be found as precompiled wheels here if not available directly from Pip:
+`Unofficial Windows Binaries for Python Extension Packages`_
+
 Setup
 -----
 
@@ -107,3 +110,4 @@ Example for installing the ``OpenStack`` + ``optional`` extras:
     pip install apyfal[OpenStack,optional]
 
 .. _Windows Compilers on Python documentation: https://wiki.python.org/moin/WindowsCompilers
+.. _Unofficial Windows Binaries for Python Extension Packages: https://www.lfd.uci.edu/~gohlke/pythonlibs
