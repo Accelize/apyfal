@@ -5,7 +5,6 @@ from abc import abstractmethod as _abstractmethod
 from datetime import datetime as _datetime
 
 from apyfal.host import Host as _Host
-import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
 from apyfal._utilities import get_logger as _get_logger
@@ -50,10 +49,9 @@ class CSPHost(_Host):
         'public_ip', 'private_ip', '_region', '_instance_type',
         '_key_pair', '_security_group', '_instance_id', '_instance_type_name'})
 
-    def __init__(self, config=None, client_id=None, secret_id=None, region=None,
+    def __init__(self, client_id=None, secret_id=None, region=None,
                  instance_type=None, key_pair=None, security_group=None, instance_id=None, **kwargs):
-        config = _cfg.create_configuration(config)
-        _Host.__init__(self, config=config, **kwargs)
+        _Host.__init__(self, **kwargs)
 
         # Default some attributes
         self._session = None
@@ -66,25 +64,24 @@ class CSPHost(_Host):
         self._instance_type_name = None
 
         # Read configuration from file
-        self._client_id = config.get_default(
-            'host', 'client_id', overwrite=client_id)
-        self._secret_id = config.get_default(
-            'host', 'secret_id', overwrite=secret_id)
-        self._region = config.get_default(
-            'host', 'region', overwrite=region)
-        self._instance_type = config.get_default(
-            'host', 'instance_type', overwrite=instance_type)
-        self._key_pair = config.get_default(
-            'host', 'key_pair', overwrite=key_pair,
-            default=self._default_parameter_value('KeyPair', include_host=True))
-        self._security_group = config.get_default(
-            'host', 'security_group', overwrite=security_group,
-            default=self._default_parameter_value('SecurityGroup'))
-        self._instance_id = config.get_default(
-            'host', 'instance_id', overwrite=instance_id)
-        self.stop_mode = config.get_default(
-            "host", "stop_mode", overwrite=kwargs.get('stop_mode'),
-            default='keep' if instance_id or kwargs.get('host_ip') else 'term')
+        section = self._config[self._config_section]
+        self._client_id = client_id or section['client_id']
+        self._secret_id = secret_id or section['secret_id']
+        self._region = region or section['region']
+        self._instance_type = instance_type or section['instance_type']
+        self._instance_id = instance_id or section['instance_id']
+
+        self._key_pair = (
+            key_pair or section['key_pair'] or
+            self._default_parameter_value('KeyPair', include_host=True))
+
+        self._security_group = (
+            security_group or section['security_group'] or
+            self._default_parameter_value('SecurityGroup'))
+
+        self.stop_mode = (
+            kwargs.get('stop_mode') or section['stop_mode'] or
+            ('keep' if instance_id or kwargs.get('host_ip') else 'term'))
 
         # Checks mandatory configuration values
         self._check_arguments('region')
@@ -226,14 +223,14 @@ class CSPHost(_Host):
             bool: True if reuses existing key
         """
 
-    def start(self, accel_client=None, accel_parameters=None, stop_mode=None):
+    def start(self, accelerator=None, accel_parameters=None, stop_mode=None):
         """
         Start instance if not already started. Create instance if necessary.
 
         Needs "accel_client" or "accel_parameters".
 
         Args:
-            accel_client (apyfal.client.AcceleratorClient): Accelerator client.
+            accelerator (str): Name of the accelerator.
             accel_parameters (dict): Can override parameters from accelerator client.
             stop_mode (str or int): See "stop_mode" property for more information.
         """
@@ -242,7 +239,7 @@ class CSPHost(_Host):
 
         # Get parameters from accelerator
         self._set_accelerator_requirements(
-            accel_client, accel_parameters)
+            accelerator, accel_parameters)
 
         # Starts instance only if not already started
         if self._url is None:
@@ -434,14 +431,14 @@ class CSPHost(_Host):
         except _exc.HostException:
             pass
 
-    def _set_accelerator_requirements(self, accel_client=None, accel_parameters=None):
+    def _set_accelerator_requirements(self, accelerator=None, accel_parameters=None):
         """
         Configures instance with accelerator client parameters.
 
         Needs "accel_client" or "accel_parameters".
 
         Args:
-            accel_client (apyfal.client.AcceleratorClient): Accelerator client.
+            accelerator (str): Name of the accelerator
             accel_parameters (dict): Can override parameters from accelerator client.
 
         Raises:
@@ -450,14 +447,14 @@ class CSPHost(_Host):
         """
         # Get parameters
         parameters = dict()
-        if accel_client is not None:
-            parameters.update(accel_client.get_host_requirements(self._host_type))
+        if accelerator is not None:
+            parameters.update(self._config.get_host_requirements(
+                self._host_type, accelerator))
 
         if accel_parameters is not None:
             parameters.update(accel_parameters)
 
         # Check if region is valid
-        print(parameters)
         if self._region not in parameters.keys():
             raise _exc.HostConfigurationException(
                 "Region '%s' is not supported. Available regions are: %s" % (

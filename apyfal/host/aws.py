@@ -9,7 +9,6 @@ import boto3 as _boto3
 import botocore.exceptions as _boto_exceptions
 
 from apyfal.host._csp import CSPHost as _CSPHost
-import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
 from apyfal._utilities import get_logger as _get_logger
@@ -57,14 +56,13 @@ class AWSHost(_CSPHost):
     _INFO_NAMES = _CSPHost._INFO_NAMES.copy()
     _INFO_NAMES.add('_role')
 
-    def __init__(self, config=None,  role=None, **kwargs):
-        config = _cfg.create_configuration(config)
-        _CSPHost.__init__(self, config=config, **kwargs)
+    def __init__(self, role=None, **kwargs):
+        _CSPHost.__init__(self, **kwargs)
 
         # Get AWS specific arguments
-        self._role = config.get_default(
-            'host', 'role', overwrite=role,
-            default=self._default_parameter_value('Role'))
+        self._role = (
+            role or self._config[self._config_section]['role'] or
+            self._default_parameter_value('Role'))
 
         # Load session
         self._session = _boto3.session.Session(

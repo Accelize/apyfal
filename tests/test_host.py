@@ -12,7 +12,7 @@ def test_host_init():
     # Mock arguments and configuration
     # Note that host_type is not specified here
     config = Configuration()
-    config.remove_section('host')
+    del config._sections['host']
 
     # Test: Not existing host module
     with pytest.raises(HostConfigurationException):

@@ -1,6 +1,10 @@
 # coding=utf-8
 """apyfal.client tests"""
+import json
 import os
+
+import pytest
+import requests
 
 
 def test_configuration(tmpdir):
@@ -21,26 +25,10 @@ def test_configuration(tmpdir):
     config = DummyConfiguration()
 
     # Test: has_* methods
-    assert not config.has_section('accelize')
+    assert 'accelize' not in config
     assert not config.has_accelize_credential()
-    assert not config.has_section('host')
+    assert 'host' not in config
     assert not config.has_host_credential()
-
-    # Test: get_default
-    assert config.get_default('accelize', 'dummy') is None
-    assert config.get_default('accelize', 'dummy', overwrite='1') == '1'
-    assert config.get_default('accelize', 'dummy', default='1') == '1'
-
-    config.add_section('accelize')
-    config.set('accelize', 'dummy', '2')
-    assert config.get_default('accelize', 'dummy') == '2'
-    assert config.get_default('accelize', 'dummy', is_literal=True) == 2
-    assert config.get_default('accelize', 'dummy', overwrite='1') == '1'
-    assert config.get_default('accelize', 'dummy', default='1') == '2'
-
-    config.set('accelize', 'dummy', '')
-    assert config.get_default('accelize', 'dummy') is None
-    assert config.get_default('accelize', 'dummy', default='2') == '2'
 
     # Test: Use linked configuration file
     config_file = tmpdir.join(dummy_configuration)
@@ -76,6 +64,252 @@ def test_create_configuration():
     assert create_configuration(config) is config
 
 
+def accelize_credentials_available():
+    """
+    Checks in Accelize credentials are available.
+    Skips test if not, else, returns configuration.
+
+    Returns:
+        apyfal.configuration.Configuration
+    """
+    from apyfal.configuration import Configuration
+    config = Configuration()
+    if not config.has_accelize_credential():
+        pytest.skip('Accelize Credentials required')
+    return config
+
+
+@pytest.mark.need_accelize
+def test_configuration_access_token():
+    """Tests Configuration._access_token
+
+    without Accelize server"""
+    from apyfal.configuration import Configuration, METERING_SERVER
+    import apyfal.exceptions as exc
+
+    # Mocks some variables
+    access_token = 'dummy_token'
+    client_id = 'dummy_client_id',
+    secret_id = 'dummy_secret_id'
+
+    # Mocks requests in utilities
+
+    class Response:
+        """Fake requests.Response"""
+        status_code = 200
+        text = json.dumps({'access_token': access_token})
+
+        @staticmethod
+        def raise_for_status():
+            """Do nothing"""
+
+    class DummySession(requests.Session):
+        """Fake requests.Session"""
+
+        @staticmethod
+        def post(url, data, auth, **_):
+            """Checks input arguments and returns fake response"""
+            # Checks input arguments
+            assert METERING_SERVER in url
+            assert client_id in auth
+            assert secret_id in auth
+
+            # Returns fake response
+            return Response()
+
+    # Monkey patch requests in utilities
+    requests_session = requests.Session
+    requests.Session = DummySession
+
+    # Tests
+    try:
+        # Test: No credential provided
+        config = Configuration()
+        del config._sections['accelize']
+        with pytest.raises(exc.ClientAuthenticationException):
+            assert config._access_token
+
+        # Test: Everything OK
+        config = Configuration()
+        config._sections['accelize']['client_id'] = client_id
+        config._sections['accelize']['secret_id'] = secret_id
+        assert config._access_token == access_token
+
+        # Test: Check dict features
+        assert len(config) == len(config._sections)
+        for section in config:
+            assert section in config._sections
+            assert section in config
+
+        config._sections['accelize']['test_value'] = '1,2,3'
+        assert config['accelize'].get_literal('test_value') == (1, 2, 3)
+
+        # Test cached value
+        del config._sections['accelize']
+        assert config._access_token == access_token
+
+        # Test: Authentication failed
+        config = Configuration()
+        del config._sections['accelize']
+        Response.status_code = 400
+        with pytest.raises(exc.ClientAuthenticationException):
+            assert config._access_token
+
+    # Restore requests
+    finally:
+        requests.Session = requests_session
+
+
+@pytest.mark.need_accelize
+def test_configuration_access_token_real():
+    """Tests Configuration._access_token
+
+    with Accelize server
+    Test parts that needs credentials"""
+    # Skip test if Accelize credentials not available
+    config = accelize_credentials_available()
+
+    # Import modules
+    from apyfal.exceptions import ClientAuthenticationException
+
+    # Test: Valid credentials
+    # Assuming Accelize credentials in configuration file are valid, should pass
+    try:
+        assert config._access_token
+    except ClientAuthenticationException as exception:
+        if 'invalid_client' in str(exception):
+            pytest.xfail("No valid Accelize credential")
+        else:
+            raise
+
+    # Test: Keep same client_id but use bad secret_id
+    config['accelize']['secret_id'] = 'bad_secret_id'
+    config._cache = {}
+    with pytest.raises(ClientAuthenticationException):
+        assert config._access_token
+
+
+@pytest.mark.need_accelize
+def test_configuration_access_token_real_no_cred():
+    """Tests AcceleratorClient._access_token
+
+    with Accelize server
+    Test parts that don't needs credentials"""
+    from apyfal.exceptions import ClientAuthenticationException
+    from apyfal.configuration import Configuration
+
+    config = Configuration()
+    del config._sections['accelize']
+    config['accelize']['client_id'] = 'bad_client_id'
+    config['accelize']['secret_id'] = 'bad_secret_id'
+
+    # Test: Bad client_id
+    with pytest.raises(ClientAuthenticationException):
+        assert config._access_token
+
+
+def test_configuration_get_host_requirements():
+    """Tests Configuration.get_host_requirements
+
+    without Accelize server"""
+    from apyfal.configuration import METERING_SERVER, Configuration
+    from apyfal.exceptions import ClientConfigurationException
+
+    # Mocks some variables
+    access_token = 'dummy_token'
+    host_type = 'dummy_host_type'
+    accelerator = 'dummy_accelerator'
+    config = {'dummy_config': None}
+
+    # Mock some accelerators parts
+    class DummyConfiguration(Configuration):
+        """Dummy Configuration"""
+
+        @property
+        def _access_token(self):
+            """Don't check credential"""
+            return access_token
+
+    # Mocks requests in utilities
+    class Response:
+        """Fake requests.Response"""
+        text = json.dumps({host_type: {accelerator: config}})
+
+        @staticmethod
+        def raise_for_status():
+            """Do nothing"""
+
+    class DummySession(requests.Session):
+        """Fake requests.Session"""
+
+        @staticmethod
+        def get(url, headers, **_):
+            """Checks input arguments and returns fake response"""
+            # Checks input arguments
+            assert METERING_SERVER in url
+            assert access_token in headers['Authorization']
+
+            # Returns fake response
+            return Response()
+
+    # Monkey patch requests in utilities
+    requests_session = requests.Session
+    requests.Session = DummySession
+
+    # Tests
+    try:
+        # Test: Invalid AcceleratorClient name
+        configuration = DummyConfiguration()
+        with pytest.raises(ClientConfigurationException):
+            configuration.get_host_requirements(
+                host_type, 'accelerator_not_exists')
+
+        # Test: Provider not exists
+        configuration = DummyConfiguration()
+        with pytest.raises(ClientConfigurationException):
+            configuration.get_host_requirements(
+                'host_not_exists', accelerator)
+
+        # Test: Everything OK
+        configuration = DummyConfiguration()
+        response = configuration.get_host_requirements(host_type, accelerator)
+        config['accelerator'] = accelerator
+        assert response == config
+
+    # Restore requests
+    finally:
+        requests.Session = requests_session
+
+
+@pytest.mark.need_accelize
+def test_configuration_get_requirements_real():
+    """Tests Configuration.get_host_requirements
+
+    with Accelize server"""
+    # Skip test if Accelize credentials not available
+    config = accelize_credentials_available()
+
+    # Import modules
+    import apyfal.exceptions as exc
+
+    # Test: Invalid AcceleratorClient name
+    with pytest.raises(exc.ClientConfigurationException):
+        try:
+            config.get_host_requirements('OVH', 'accelerator_not_exists')
+        except exc.ClientAuthenticationException:
+            pytest.skip("No valid Accelize credential")
+            return
+
+    # Test: Provider not exists
+    with pytest.raises(exc.ClientConfigurationException):
+        config.get_host_requirements('no_exist_host', 'axonerve_hyperfire')
+
+    # Test: Everything OK
+    name = 'axonerve_hyperfire'
+    response = config.get_host_requirements('OVH', 'axonerve_hyperfire')
+    assert response['accelerator'] == name
+
+
 def test_legacy_backward_compatibility(tmpdir):
     """Test Configuration._legacy_backward_compatibility"""
     from apyfal.configuration import Configuration, create_configuration
@@ -108,9 +342,9 @@ def test_legacy_backward_compatibility(tmpdir):
         }}
     dumps_config(legacy_conf)
     config = create_configuration(config_path)
-    assert config.get('host', 'key_pair') == legacy_ssh_key
-    assert config.get('host', 'host_type') == legacy_provider
-    assert config.get('host', 'host_ip') == legacy_instance_ip
+    assert config['host']['key_pair'] == legacy_ssh_key
+    assert config['host']['host_type'] == legacy_provider
+    assert config['host']['host_ip'] == legacy_instance_ip
 
     # Check not overwrite existing with legacy
     key_pair = 'key_pair'
@@ -120,4 +354,4 @@ def test_legacy_backward_compatibility(tmpdir):
     }
     dumps_config(legacy_conf)
     config = create_configuration(config_path)
-    assert config.get('host', 'key_pair') == key_pair
+    assert config['host']['key_pair'] == key_pair

@@ -18,7 +18,7 @@ def test_csphost_new_init():
     # Mock arguments and configuration
     # Note that host_type is not specified here
     config = Configuration()
-    config.remove_section('host')
+    del config._sections['host']
     kwargs = {'region': 'region', 'project_id': 'project_id', 'client_id': 'client_id',
               'auth_url': 'auth_url', 'interface': 'interface', 'config': config}
 
@@ -529,6 +529,7 @@ def test_csphost_stop():
 def test_csphost_set_accelerator_requirements():
     """Tests Host._set_accelerator_requirements"""
     from apyfal.exceptions import HostConfigurationException
+    from apyfal.configuration import Configuration
 
     # Mock variables
     dummy_host_type = 'dummy_host_type'
@@ -537,49 +538,54 @@ def test_csphost_set_accelerator_requirements():
     instance_type = "dummy_instance_type"
     config_env = "dummy_config_env"
     region_parameters = {'image': image_id, 'instancetype': instance_type}
-    accelerator = "dummy_accelerator"
-    accel_parameters = {region: region_parameters, 'accelerator': accelerator}
+    dummy_accelerator = "dummy_accelerator"
+    accel_parameters = {region: region_parameters, 'accelerator': dummy_accelerator}
 
     # Mock Accelerator client
 
-    class DummyClient:
-        """Dummy accelerator client"""
+    def get_host_requirements(_, host_type, accelerator):
+        """Checks argument and returns fake result"""
+        # Checks arguments
+        assert host_type == dummy_host_type
+        assert accelerator == dummy_accelerator
 
-        @staticmethod
-        def get_host_requirements(host_type):
-            """Checks argument and returns fake result"""
-            # Checks arguments
-            assert host_type == dummy_host_type
+        # Returns fake value
+        return accel_parameters
 
-            # Returns fake value
-            return accel_parameters
+    configuration_get_host_requirements = Configuration.get_host_requirements
+    Configuration.get_host_requirements = get_host_requirements
 
-    # Test: Everything is OK
-    csp = get_dummy_csp_class()(
-        region=region, client_id='dummy_client_id')
-    csp._config_env = config_env
-    csp._set_accelerator_requirements(accel_parameters=accel_parameters)
-    assert csp._image_id == image_id
-    assert csp._instance_type == instance_type
-    assert csp.get_configuration_env() == config_env
-    assert csp._accelerator == accelerator
-    assert accelerator in csp._get_instance_name()
-
-    # Test: Pass client
-    csp = get_dummy_csp_class()(
-        host_type=dummy_host_type, region=region, client_id='dummy_client_id')
-    csp._config_env = config_env
-    csp._set_accelerator_requirements(accel_client=DummyClient())
-    assert csp._image_id == image_id
-    assert csp._instance_type == instance_type
-    assert csp.get_configuration_env() == config_env
-    assert csp._accelerator == accelerator
-    assert accelerator in csp._get_instance_name()
-
-    # Test: Region not found
-    accel_parameters = {'another_region': region_parameters, 'accelerator': accelerator}
-    with pytest.raises(HostConfigurationException):
+    try:
+        # Test: Everything is OK
+        csp = get_dummy_csp_class()(
+            region=region, client_id='dummy_client_id')
+        csp._config_env = config_env
         csp._set_accelerator_requirements(accel_parameters=accel_parameters)
+        assert csp._image_id == image_id
+        assert csp._instance_type == instance_type
+        assert csp.get_configuration_env() == config_env
+        assert csp._accelerator == dummy_accelerator
+        assert dummy_accelerator in csp._get_instance_name()
+
+        # Test: Pass accelerator
+        csp = get_dummy_csp_class()(
+            host_type=dummy_host_type, region=region, client_id='dummy_client_id')
+        csp._config_env = config_env
+        csp._set_accelerator_requirements(accelerator=dummy_accelerator)
+        assert csp._image_id == image_id
+        assert csp._instance_type == instance_type
+        assert csp.get_configuration_env() == config_env
+        assert csp._accelerator == dummy_accelerator
+        assert dummy_accelerator in csp._get_instance_name()
+
+        # Test: Region not found
+        accel_parameters = {'another_region': region_parameters, 'accelerator': dummy_accelerator}
+        with pytest.raises(HostConfigurationException):
+            csp._set_accelerator_requirements(accel_parameters=accel_parameters)
+
+    # Revert configuration method
+    finally:
+        Configuration.get_host_requirements = configuration_get_host_requirements
 
 
 def import_from_generic_test(host_type, **kwargs):
@@ -618,12 +624,12 @@ def run_full_real_test_sequence(host_type, environment,
     if not config.has_host_credential():
         pytest.skip('No CSP credentials')
 
-    if config.get_default('host', 'host_type') != host_type:
+    if config['host']['host_type'] != host_type:
         pytest.skip('No configuration for %s.' % host_type)
 
-    elif config.get_default('host', 'region') not in environment:
+    elif config['host']['region'] not in environment:
         pytest.skip("No configuration for '%s' region on %s." %
-                    (config.get_default('host', 'region'), host_type))
+                    (config['host']['region'], host_type))
 
     # Enable logger
     from apyfal import get_logger

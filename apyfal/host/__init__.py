@@ -94,17 +94,19 @@ class Host(_utl.ABC):
         # Default some attributes
         self._accelerator = None
         self._stop_mode = None
+        self._config_section = 'host.%s' % self.NAME if self.NAME else 'host'
 
         # Read configuration from file
-        config = _cfg.create_configuration(config)
+        self._config = _cfg.create_configuration(config)
+        section = self._config[self._config_section]
 
-        self._host_type = self._host_type_from_config(host_type, config)
+        self._host_type = self._host_type_from_config(host_type, self._config)
 
-        self._url = _utl.format_url(config.get_default(
-            'host', 'host_ip', overwrite=host_ip))
-        self.stop_mode = config.get_default(
-            "host", "stop_mode", overwrite=stop_mode,
-            default='keep' if host_ip else 'term')
+        self._url = _utl.format_url(host_ip or section['host_ip'])
+
+        self.stop_mode = (
+            stop_mode or section['stop_mode'] or
+            ('keep' if host_ip else 'term'))
 
         # Enable optional Signal handler
         self._set_signals(exit_host_on_signal)
@@ -190,14 +192,14 @@ class Host(_utl.ABC):
 
         self._stop_mode = stop_mode
 
-    def start(self, accel_client=None, accel_parameters=None, stop_mode=None):
+    def start(self, accelerator=None, accel_parameters=None, stop_mode=None):
         """
         Start host if not already started.
 
         Needs "accel_client" or "accel_parameters".
 
         Args:
-            accel_client (apyfal.client.AcceleratorClient): Accelerator client.
+            accelerator (str): Name of the accelerator.
             accel_parameters (dict): Can override parameters from accelerator client.
             stop_mode (str or int): See "stop_mode" property for more information.
         """
@@ -261,7 +263,7 @@ class Host(_utl.ABC):
         Raises:
             apyfal.exceptions.HostConfigurationException: No host_type found.
         """
-        host_type = config.get_default("host", "host_type", overwrite=host_type)
+        host_type = host_type or config['host']['host_type']
         if not host_type:
             # Use default value if any
             host_type = cls.NAME

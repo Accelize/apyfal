@@ -136,7 +136,7 @@ class Accelerator(object):
                   Take a look to accelerator documentation for more information.
         """
         # Start host if needed (Do nothing if already started)
-        self._host.start(accel_client=self._client, stop_mode=stop_mode)
+        self._host.start(accelerator=self._client.name, stop_mode=stop_mode)
 
         # Set accelerator URL to host URL
         self._client.url = self._host.url

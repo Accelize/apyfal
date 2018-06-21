@@ -11,136 +11,6 @@ import pytest
 import requests
 
 
-def accelize_credentials_available():
-    """
-    Checks in Accelize credentials are available.
-    Skips test if not, else, returns configuration.
-
-    Returns:
-        apyfal.configuration.Configuration
-    """
-    from apyfal.configuration import Configuration
-    config = Configuration()
-    if not config.has_accelize_credential():
-        pytest.skip('Accelize Credentials required')
-    return config
-
-
-@pytest.mark.need_accelize
-def test_acceleratorclient_check_accelize_credential():
-    """Tests AcceleratorClient._check_accelize_credential
-
-    without Accelize server"""
-    from apyfal.client import AcceleratorClient
-    from apyfal.configuration import Configuration, METERING_SERVER
-    import apyfal.exceptions as exc
-
-    # Load user configuration but remove any accelize credential
-    # information from it
-    config = Configuration()
-    config.remove_section('accelize')
-
-    # Mocks some variables
-    access_token = 'dummy_token'
-    client_id = 'dummy_client_id',
-    secret_id = 'dummy_secret_id'
-
-    # Mocks requests in utilities
-
-    class Response:
-        """Fake requests.Response"""
-        status_code = 200
-        text = json.dumps({'access_token': access_token})
-
-        @staticmethod
-        def raise_for_status():
-            """Do nothing"""
-
-    class DummySession(requests.Session):
-        """Fake requests.Session"""
-
-        @staticmethod
-        def post(url, data, auth, **_):
-            """Checks input arguments and returns fake response"""
-            # Checks input arguments
-            assert METERING_SERVER in url
-            assert client_id in auth
-            assert secret_id in auth
-
-            # Returns fake response
-            return Response()
-
-    # Monkey patch requests in utilities
-    requests_session = requests.Session
-    requests.Session = DummySession
-
-    # Tests
-    try:
-        # Test: No credential provided
-        with pytest.raises(exc.ClientConfigurationException):
-            AcceleratorClient('dummy', config=config)
-
-        # Test: Everything OK
-        accelerator = AcceleratorClient(
-            'dummy', accelize_client_id=client_id, accelize_secret_id=secret_id)
-        assert accelerator._access_token == access_token
-        assert accelerator._client_id == client_id
-        assert accelerator._secret_id == secret_id
-
-        # Test: Authentication failed
-        Response.status_code = 400
-        with pytest.raises(exc.ClientAuthenticationException):
-            AcceleratorClient('dummy', accelize_client_id=client_id, accelize_secret_id=secret_id)
-
-    # Restore requests
-    finally:
-        requests.Session = requests_session
-
-
-@pytest.mark.need_accelize
-def test_acceleratorclient_check_accelize_credential_real():
-    """Tests AcceleratorClient._check_accelize_credential
-
-    with Accelize server
-    Test parts that needs credentials"""
-    # Skip test if Accelize credentials not available
-    config = accelize_credentials_available()
-
-    # Import modules
-    from apyfal.client import AcceleratorClient
-    from apyfal.exceptions import ClientAuthenticationException
-
-    # Test: Valid credentials
-    # Assuming Accelize credentials in configuration file are valid, should pass
-    # Called Through AcceleratorClient.__init__
-    try:
-        AcceleratorClient('dummy', config=config)
-    except ClientAuthenticationException as exception:
-        if 'invalid_client' in str(exception):
-            pytest.xfail("No valid Accelize credential")
-        else:
-            raise
-
-    # Test: Keep same client_id but use bad secret_id
-    with pytest.raises(ClientAuthenticationException):
-        AcceleratorClient('dummy', config=config, accelize_secret_id='bad_secret_id')
-
-
-@pytest.mark.need_accelize
-def test_acceleratorclient_check_accelize_credential_real_no_cred():
-    """Tests AcceleratorClient._check_accelize_credential
-
-    with Accelize server
-    Test parts that don't needs credentials"""
-    from apyfal.client import AcceleratorClient
-    from apyfal.exceptions import ClientAuthenticationException
-
-    # Test: Bad client_id
-    with pytest.raises(ClientAuthenticationException):
-        AcceleratorClient('dummy', accelize_client_id='bad_client_id',
-                          accelize_secret_id='bad_secret_id')
-
-
 def test_acceleratorclient_is_alive():
     """Tests AcceleratorClient._raise_for_status"""
     from apyfal.client import AcceleratorClient
@@ -189,116 +59,6 @@ def test_acceleratorclient_raise_for_status():
         AcceleratorClient._raise_for_status({'app': {'status': 1, 'msg': 'error'}})
 
 
-def test_acceleratorclient_get_host_requirements():
-    """Tests AcceleratorClient.get_host_requirements
-
-    without Accelize server"""
-    from apyfal.client import AcceleratorClient
-    from apyfal.configuration import METERING_SERVER
-    from apyfal.exceptions import ClientConfigurationException
-
-    # Mocks some variables
-    access_token = 'dummy_token'
-    provider = 'dummy_provider'
-    accelerator_name = 'dummy_accelerator'
-    config = {'dummy_config': None}
-
-    # Mock some accelerators parts
-    class DummyAccelerator(AcceleratorClient):
-        """Dummy AcceleratorClient"""
-        use_last_configuration_called = False
-
-        def __del__(self):
-            """Do nothing"""
-
-        def _check_accelize_credential(self):
-            """Don't check credential"""
-            return access_token
-
-    # Mocks requests in utilities
-    class Response:
-        """Fake requests.Response"""
-        text = json.dumps({provider: {accelerator_name: config}})
-
-        @staticmethod
-        def raise_for_status():
-            """Do nothing"""
-
-    class DummySession(requests.Session):
-        """Fake requests.Session"""
-
-        @staticmethod
-        def get(url, headers, **_):
-            """Checks input arguments and returns fake response"""
-            # Checks input arguments
-            assert METERING_SERVER in url
-            assert access_token in headers['Authorization']
-
-            # Returns fake response
-            return Response()
-
-    # Monkey patch requests in utilities
-    requests_session = requests.Session
-    requests.Session = DummySession
-
-    # Tests
-    try:
-        # Test: Invalid AcceleratorClient name
-        accelerator = DummyAccelerator('accelerator_not_exists')
-        with pytest.raises(ClientConfigurationException):
-            accelerator.get_host_requirements(provider)
-
-        # Test: Provider not exists
-        accelerator = DummyAccelerator(accelerator_name)
-        with pytest.raises(ClientConfigurationException):
-            accelerator.get_host_requirements('no_exist_host')
-
-        # Test: Everything OK
-        accelerator = DummyAccelerator(accelerator_name)
-        assert accelerator.name == accelerator_name
-        response = accelerator.get_host_requirements(provider)
-        config['accelerator'] = accelerator_name
-        assert response == config
-
-    # Restore requests
-    finally:
-        requests.Session = requests_session
-
-
-@pytest.mark.need_accelize
-def test_acceleratorclient_get_requirements_real():
-    """Tests AcceleratorClient.get_host_requirements
-
-    with Accelize server"""
-    # Skip test if Accelize credentials not available
-    config = accelize_credentials_available()
-
-    # Import modules
-    from apyfal.client import AcceleratorClient
-    import apyfal.exceptions as exc
-
-    # Test: Invalid AcceleratorClient name
-    try:
-        accelerator = AcceleratorClient('accelerator_not_exists', config=config)
-    except exc.ClientAuthenticationException:
-        pytest.skip("No valid Accelize credential")
-        return
-
-    with pytest.raises(exc.ClientConfigurationException):
-        accelerator.get_host_requirements('OVH')
-
-    # Test: Provider not exists
-    accelerator = AcceleratorClient('axonerve_hyperfire', config=config)
-    with pytest.raises(exc.ClientConfigurationException):
-        accelerator.get_host_requirements('no_exist_host')
-
-    # Test: Everything OK
-    name = 'axonerve_hyperfire'
-    accelerator = AcceleratorClient(name, config=config)
-    response = accelerator.get_host_requirements('OVH')
-    assert response['accelerator'] == name
-
-
 def test_acceleratorclient_url():
     """Tests AcceleratorClient.url"""
     from apyfal.client import AcceleratorClient
@@ -311,9 +71,6 @@ def test_acceleratorclient_url():
 
         def __del__(self):
             """Do nothing"""
-
-        def _check_accelize_credential(self):
-            """Don't check credential"""
 
         def _use_last_configuration(self):
             """Checks if called"""
@@ -403,9 +160,6 @@ def test_acceleratorclient_start():
 
         def __del__(self):
             """Do nothing"""
-
-        def _check_accelize_credential(self):
-            """Don't check credential"""
 
         @property
         def url(self):
@@ -500,9 +254,6 @@ def test_acceleratorclient_use_last_configuration():
         def __del__(self):
             """Do nothing"""
 
-        def _check_accelize_credential(self):
-            """Don't check credential"""
-
     # Monkey patch Swagger client with mocked API
     swagger_client_configure_api = swagger_client.ConfigurationApi
     swagger_client.ConfigurationApi = ConfigurationApi
@@ -575,9 +326,6 @@ def test_acceleratorclient_stop():
     class DummyAccelerator(AcceleratorClient):
         """Dummy AcceleratorClient"""
 
-        def _check_accelize_credential(self):
-            """Don't check credential"""
-
         def _is_alive(self):
             """Raise on demand"""
             if not is_alive:
@@ -644,9 +392,6 @@ def test_acceleratorclient_process_curl():
     # Mock some accelerators parts
     class DummyAccelerator(AcceleratorClient):
         """Dummy AcceleratorClient"""
-
-        def _check_accelize_credential(self):
-            """Don't check credential"""
 
         def __del__(self):
             """Does nothing"""
@@ -776,9 +521,6 @@ def test_acceleratorclient_process_swagger():
         class DummyAccelerator(AcceleratorClient):
             """Dummy AcceleratorClient"""
 
-            def _check_accelize_credential(self):
-                """Don't check credential"""
-
             def __del__(self):
                 """Does nothing"""
 
@@ -883,9 +625,6 @@ def test_acceleratorclient_process(tmpdir):
 
         _process_curl = _process_swagger
 
-        def _check_accelize_credential(self):
-            """Don't check credential"""
-
         def __del__(self):
             """Does nothing"""
 
@@ -975,9 +714,6 @@ def test_acceleratorclient_get_parameters(tmpdir):
         def function(self, **parameters):
             """Passe parameters to _get_parameters and return result"""
             return self._get_parameters(parameters, default_parameters)
-
-        def _check_accelize_credential(self):
-            """Don't check credential"""
 
     client = DummyClient('Dummy')
 

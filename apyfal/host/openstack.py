@@ -8,7 +8,6 @@ import keystoneauth1.exceptions.http as _keystoneauth_exceptions
 import openstack as _openstack
 
 from apyfal.host._csp import CSPHost as _CSPHost
-import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
 from apyfal._utilities import get_logger as _get_logger
@@ -56,19 +55,20 @@ class OpenStackHost(_CSPHost):
     _INFO_NAMES = _CSPHost._INFO_NAMES.copy()
     _INFO_NAMES.update({'_project_id', '_auth_url', '_interface'})
 
-    def __init__(self, config=None, project_id=None, auth_url=None, interface=None, **kwargs):
-        config = _cfg.create_configuration(config)
-        _CSPHost.__init__(self, config=config, **kwargs)
+    def __init__(self, project_id=None, auth_url=None, interface=None, **kwargs):
+        _CSPHost.__init__(self, **kwargs)
 
         # OpenStack specific arguments
-        self._project_id = config.get_default(
-            'host', 'project_id', overwrite=project_id)
-        self._auth_url = config.get_default(
-            'host', 'auth_url', overwrite=auth_url,
-            default=self.OPENSTACK_AUTH_URL)
-        self._interface = config.get_default(
-            'host', 'interface', overwrite=interface,
-            default=self.OPENSTACK_INTERFACE)
+        section = self._config[self._config_section]
+        self._project_id = project_id or section['project_id']
+
+        self._auth_url = (
+            auth_url or section['auth_url'] or
+            self.OPENSTACK_AUTH_URL)
+
+        self._interface = (
+            interface or section['interface'] or
+            self.OPENSTACK_INTERFACE)
 
         # Checks mandatory configuration values
         self._check_arguments('project_id', 'auth_url', 'interface')

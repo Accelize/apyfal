@@ -68,34 +68,30 @@ class AcceleratorClient(object):
     def __init__(self, accelerator, accelize_client_id=None, accelize_secret_id=None,
                  host_ip=None, config=None):
         self._name = accelerator
-        self._access_token = None
         self._configuration_url = None
         self._url = None
         self._stopped = False
 
         # Read configuration
-        config = _cfg.create_configuration(config)
-        self._client_id = config.get_default(
-            'accelize', 'client_id', overwrite=accelize_client_id)
-        self._secret_id = config.get_default(
-            'accelize', 'secret_id', overwrite=accelize_secret_id)
+        self._config = config = _cfg.create_configuration(config)
+        self._client_id = config['accelize'].set('client_id', accelize_client_id)
+        self._secret_id = config['accelize'].set('secret_id', accelize_secret_id)
 
         self._configuration_parameters = _deepcopy(
             self.DEFAULT_CONFIGURATION_PARAMETERS)
-        _utl.recursive_update(
-            self._configuration_parameters,
-            config.get_default(
-                'configuration', 'parameters', is_literal=True, default=dict()))
+        config_section = config['configuration.%s' % accelerator]
+        if config_section['parameters']:
+            _utl.recursive_update(
+                self._configuration_parameters,
+                config_section.get_literal('parameters'))
 
         self._process_parameters = _deepcopy(
             self.DEFAULT_PROCESS_PARAMETERS)
-        _utl.recursive_update(
-            self._process_parameters,
-            config.get_default(
-                'process', 'parameters', is_literal=True, default=dict()))
-
-        # Checks if Accelize credentials are valid
-        self._check_accelize_credential()
+        process_section = config['process.%s' % accelerator]
+        if process_section['parameters']:
+            _utl.recursive_update(
+                self._process_parameters,
+                process_section.get_literal('parameters'))
 
         # Initializes Swagger REST API Client
         self._api_client = _api.ApiClient()
@@ -112,36 +108,6 @@ class AcceleratorClient(object):
 
     def __del__(self):
         self.stop()
-
-    def _check_accelize_credential(self):
-        """
-        Check user AcceleratorClient credential
-
-        Returns:
-            str: Access token.
-
-        Raises:
-            ClientAuthenticationException: User credential are not valid.
-        """
-        if self._access_token is None:
-            # Checks Client ID and secret ID presence
-            if self._client_id is None or self._secret_id is None:
-                raise _exc.ClientConfigurationException(
-                    exc="Accelize client ID and secret ID are mandatory.")
-
-            # Check access and get token from server
-            response = _utl.http_session().post(
-                _cfg.METERING_SERVER + '/o/token/',
-                data={"grant_type": "client_credentials"}, auth=(self._client_id, self._secret_id))
-
-            if response.status_code != 200:
-                raise _exc.ClientAuthenticationException(exc=response.text)
-
-            response.raise_for_status()
-
-            self._access_token = _json.loads(response.text)['access_token']
-
-        return self._access_token
 
     @property
     def name(self):
@@ -189,45 +155,6 @@ class AcceleratorClient(object):
         if not _utl.check_url(self.url, max_retries=2):
             raise _exc.ClientRuntimeException(
                 gen_msg=('unable_reach_url', self._url))
-
-    def get_host_requirements(self, host_type):
-        """
-        Gets accelerators requirements to use with host.
-
-        Args:
-            host_type (str): Host type.
-
-        Returns:
-            dict: AcceleratorClient requirements for host.
-        """
-        access_token = self._check_accelize_credential()
-
-        # call WS
-        headers = {"Authorization": "Bearer %s" % access_token,
-                   "Content-Type": "application/json", "Accept": "application/vnd.accelize.v1+json"}
-
-        response = _utl.http_session().get(
-            _cfg.METERING_SERVER + '/auth/getlastcspconfiguration/', headers=headers)
-        response.raise_for_status()
-        response_config = _json.loads(response.text)
-
-        # Get host_type configuration
-        try:
-            provider_config = response_config[host_type]
-        except KeyError:
-            raise _exc.ClientConfigurationException(
-                "Host '%s' is not supported. Available hosts are: %s" % (
-                    host_type, ', '.join(response_config.keys())))
-
-        # Get accelerator configuration
-        try:
-            accelerator_config = provider_config[self.name]
-        except KeyError:
-            raise _exc.ClientConfigurationException(
-                "AcceleratorClient '%s' is not supported on '%s'." % (self.name, host_type))
-
-        accelerator_config['accelerator'] = self.name
-        return accelerator_config
 
     def _use_last_configuration(self):
         """
@@ -283,13 +210,10 @@ class AcceleratorClient(object):
             "env": {"client_id": self._client_id, "client_secret": self._secret_id}})
         parameters['env'].update(host_env or dict())
 
-        if datafile is None:
-            datafile = ""
-
         # Configures  accelerator
         api_instance = self._rest_api_configuration()
         api_response = api_instance.configuration_create(
-            parameters=_json.dumps(parameters), datafile=datafile)
+            parameters=_json.dumps(parameters), datafile=datafile or '')
 
         # Checks operation success
         config_result = _literal_eval(api_response.parametersresult)

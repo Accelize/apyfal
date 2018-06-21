@@ -33,9 +33,10 @@ def test_accelerator():
         configuration_url = dummy_config_url
         running = True
 
-        def __init__(self, *args, **_):
+        def __init__(self, accelerator, *_, **__):
             """Checks arguments"""
-            assert dummy_accelerator in args
+            assert accelerator == dummy_accelerator
+            self._name = accelerator
 
         def __del__(self):
             """Don nothing"""
@@ -88,9 +89,9 @@ def test_accelerator():
             return self._url
 
         @staticmethod
-        def start(accel_client, stop_mode):
+        def start(accelerator, stop_mode):
             """Checks arguments"""
-            assert isinstance(accel_client, DummyClient)
+            assert accelerator == dummy_accelerator
             assert stop_mode == dummy_stop_mode
 
             if raises_on_host_stop:
@@ -116,32 +117,32 @@ def test_accelerator():
     # Tests
     try:
         # Creating New host
-        accelerator = Accelerator(dummy_accelerator, host_type=dummy_host_type)
-        assert isinstance(accelerator.host, DummyHost)
-        assert isinstance(accelerator.client, DummyClient)
+        accel = Accelerator(dummy_accelerator, host_type=dummy_host_type)
+        assert isinstance(accel.host, DummyHost)
+        assert isinstance(accel.client, DummyClient)
         assert DummyClient.running
         assert DummyHost.running
-        assert accelerator.start(
+        assert accel.start(
             datafile=dummy_datafile, stop_mode=dummy_stop_mode, info_dict=True,
             parameters=dummy_accelerator_parameters) == dummy_start_result
-        assert accelerator.client.url == dummy_url
-        assert accelerator.process(
+        assert accel.client.url == dummy_url
+        assert accel.process(
             file_in=dummy_file_in, file_out=dummy_file_out, info_dict=True,
             parameters=dummy_accelerator_parameters) == dummy_process_result
-        assert accelerator.stop(stop_mode=dummy_stop_mode, info_dict=True) == dummy_stop_result
+        assert accel.stop(stop_mode=dummy_stop_mode, info_dict=True) == dummy_stop_result
         assert not DummyClient.running
         assert not DummyHost.running
 
         # Using existing IP
-        accelerator = Accelerator(
+        accel = Accelerator(
             dummy_accelerator, host_type=dummy_host_type, host_ip=dummy_url)
-        assert accelerator.client.url == dummy_url
+        assert accel.client.url == dummy_url
 
         # Using existing IP that not exists
         raises_on_get_url = True
-        accelerator = Accelerator(
+        accel = Accelerator(
             dummy_accelerator, host_type=dummy_host_type, host_ip=dummy_url)
-        assert accelerator.client.url is None
+        assert accel.client.url is None
         raises_on_get_url = False
 
         # Auto-stops with context manager
@@ -149,8 +150,8 @@ def test_accelerator():
         DummyClient.running = True
         DummyHost.running = True
         with Accelerator(
-                dummy_accelerator, host_type=dummy_host_type) as accelerator:
-            assert isinstance(accelerator, Accelerator)
+                dummy_accelerator, host_type=dummy_host_type) as accel:
+            assert isinstance(accel, Accelerator)
         assert not DummyClient.running
         assert not DummyHost.running
 
@@ -163,14 +164,14 @@ def test_accelerator():
         assert not DummyHost.running
 
         # Clean stop even if error in client or host
-        accelerator = Accelerator(dummy_accelerator, host_type=dummy_host_type)
+        accel = Accelerator(dummy_accelerator, host_type=dummy_host_type)
         raises_on_client_stop = True
-        accelerator.stop()
+        accel.stop()
         raises_on_client_stop = False
 
-        accelerator = Accelerator(dummy_accelerator, host_type=dummy_host_type)
+        accel = Accelerator(dummy_accelerator, host_type=dummy_host_type)
         raises_on_host_stop = True
-        accelerator.stop()
+        accel.stop()
         raises_on_host_stop = False
 
     # Restore classes

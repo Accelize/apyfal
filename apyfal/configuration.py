@@ -14,45 +14,127 @@ Notes:
     to classes.
 """
 
-import os.path as _os_path
 from ast import literal_eval as _literal_eval
 try:
     # Python 3
-    import configparser as _configparser
+    from collections.abc import Mapping as _Mapping
 except ImportError:
     # Python 2
-    import ConfigParser as _configparser
+    from collections import Mapping as _Mapping
 
-# Constants
+import json as _json
+import os.path as _os_path
+
+from apyfal import exceptions as _exc
+from apyfal import _utilities as _utl
+
+#: Metering server URL
 METERING_SERVER = 'https://master.metering.accelize.com'
 
 
-def create_configuration(configuration_file, **kwargs):
+def create_configuration(configuration_file):
     """Create a configuration instance
 
     Args:
         configuration_file (str or Configuration or None):
-            Configuration file path or instance.
-        kwargs: "configparser.ConfigParser" keyword arguments.
-                Ignored if configuration_file is already a Configuration instance"""
+            Configuration file path or instance."""
     if isinstance(configuration_file, Configuration):
         # configuration_file is already a Configuration instance
         return configuration_file
-    return Configuration(configuration_file, **kwargs)
+    return Configuration(configuration_file)
 
 
-class Configuration(_configparser.ConfigParser):
+class _Section(dict):
+    """Configuration section
+
+    Section that:
+    - Returns None as default value if option not found
+      (Don't raise KeyError).
+    - Sets value only with non None value.
+
+    If a configuration section name contain dot (ex: "host.csp"),
+    getting value performs the follow:
+    - Tries to get value from this section ("host.csp")
+    - Retrieves value is None, tries to get value from
+      default section ("host")
+
+    Args:
+        section_name (str): Section name in parent configuration file.
+        section_parent (Configuration): Parent configuration file."""
+
+    def __init__(self, section_name, section_parent, *args, **kwargs):
+        dict.__init__(self, *args, **kwargs)
+        if '.' in section_name:
+
+            self._default_section = section_name.split('.', 1)[0]
+        else:
+            self._default_section = None
+        self._section_parent = section_parent
+
+    def __missing__(self, section):
+        # Always return None as default value
+        return None
+
+    def __setitem__(self, option, value):
+        # Set new value only if not None
+        if value is None:
+            return
+        dict.__setitem__(self, option, value)
+
+    def __getitem__(self, option):
+        # Try to get value directly in this section
+        value = dict.__getitem__(self, option)
+
+        # Try to get value in default section
+        if value is None and self._default_section:
+            return self._section_parent[
+                self._default_section][option]
+        return value
+
+    def set(self, option, value=None):
+        """Set value to option and return
+        value.
+
+        Args:
+            option(str): Option to set.
+            value(object): Value to set
+
+        Returns:
+            Return value if not None else
+            already existing value in section."""
+        self[option] = value
+        return self[option]
+
+    def get_literal(self, option):
+        """
+        Evaluate option str value to Python object
+        and return it.
+
+        Args:
+            option (str): Option to get
+
+        Returns:
+            object: evaluated option
+        """
+        return _literal_eval(self[option])
+
+
+class Configuration(_Mapping):
     """Accelerator configuration
 
     Args:
-        configuration_file (str): Configuration file path.
-        kwargs: "configparser.ConfigParser" keyword arguments"""
+        configuration_file (str or None): Configuration file path.
+            If None, use default values.
+    """
+    #: Default name for configuration file (Used for file detection)
     DEFAULT_CONFIG_FILE = "accelerator.conf"
 
-    def __init__(self, configuration_file=None, **kwargs):
-        # Initializes parent class but force allow_no_value
-        kwargs['allow_no_value'] = True
-        _configparser.ConfigParser.__init__(self, **kwargs)
+    def __init__(self, configuration_file=None):
+        _Mapping.__init__(self)
+
+        # Initialize values Dictionaries
+        self._sections = dict()
+        self._cache = dict()
 
         # Finds configuration file
         if configuration_file is None:
@@ -71,37 +153,116 @@ class Configuration(_configparser.ConfigParser):
         # If not, return empty Configuration file, this will force
         # host and accelerator classes to uses defaults values
         if configuration_file:
-            self.read(configuration_file)
+            # Lazy import since not used if no configuration file
+            try:
+                # Python 3
+                from configparser import ConfigParser
+            except ImportError:
+                # Python 2
+                from ConfigParser import ConfigParser
+
+            # Read file and get configuration as dict
+            ini_file = ConfigParser(allow_no_value=True)
+            ini_file.read(configuration_file)
+            self._sections = {
+                section: _Section(section, self, ini_file.items(section))
+                for section in ini_file.sections()}
 
             # AcceleratorAPI backward compatibility
             self._legacy_backward_compatibility()
 
-    def get_default(self, section, option, overwrite=None, default=None, is_literal=False):
-        """Returns values from configuration or default value.
+    def __getitem__(self, section):
+        try:
+            return self._sections.__getitem__(section)
+
+        # Create missing empty section on first call
+        except KeyError:
+            self._sections[section] = _Section(section, self)
+            return self._sections[section]
+
+    def __contains__(self, section):
+        return self._sections.__contains__(section)
+
+    def __iter__(self):
+        return self._sections.__iter__()
+
+    def __len__(self):
+        return self._sections.__len__()
+
+    @property
+    def _access_token(self):
+        """
+        Check user Accelize credential
+
+        Returns:
+            str: Access token.
+
+        Raises:
+            apyfal.exceptions.ConfigurationException:
+                User credential are not valid.
+        """
+        try:
+            return self._cache['metering_access_token']
+        except KeyError:
+            # Checks Client ID and secret ID presence
+            client_id = self['accelize']['client_id']
+            secret_id = self['accelize']['secret_id']
+            if client_id is None or secret_id is None:
+                raise _exc.ClientAuthenticationException(
+                    exc="Accelize client ID and secret ID are mandatory.")
+
+            # Check access and get token from server
+            response = _utl.http_session().post(
+                METERING_SERVER + '/o/token/',
+                data={"grant_type": "client_credentials"},
+                auth=(client_id, secret_id))
+
+            if response.status_code != 200:
+                raise _exc.ClientAuthenticationException(exc=response.text)
+
+            self._cache['metering_access_token'] = _json.loads(
+                response.text)['access_token']
+
+        return self._cache['metering_access_token']
+
+    def get_host_requirements(self, host_type, accelerator):
+        """
+        Gets accelerators requirements to use with host.
 
         Args:
-            section (str): Configuration section
-            option (str): Key in selected section
-            overwrite: If None not, forces return of this value
-            default: If section or key not found, return this value.
-            is_literal (bool): If True evaluated as literal.
+            host_type (str): Host type.
+            accelerator (str): Name of the accelerator
+
         Returns:
-            value (object)
-            """
-        if overwrite is not None:
-            return overwrite
+            dict: AcceleratorClient requirements for host.
+        """
+        headers = {"Authorization": "Bearer %s" % self._access_token,
+                   "Content-Type": "application/json",
+                   "Accept": "application/vnd.accelize.v1+json"}
 
+        response = _utl.http_session().get(
+            METERING_SERVER + '/auth/getlastcspconfiguration/',
+            headers=headers)
+        response.raise_for_status()
+        response_config = _json.loads(response.text)
+
+        # Get host_type configuration
         try:
-            new_val = self.get(section, option)
-        except (_configparser.NoSectionError, _configparser.NoOptionError):
-            return default
+            provider_config = response_config[host_type]
+        except KeyError:
+            raise _exc.ClientConfigurationException(
+                "Host '%s' is not supported. Available hosts are: %s" % (
+                    host_type, ', '.join(response_config.keys())))
 
-        if not new_val:
-            return default
+        # Get accelerator configuration
+        try:
+            accelerator_config = provider_config[accelerator]
+        except KeyError:
+            raise _exc.ClientConfigurationException(
+                "AcceleratorClient '%s' is not supported on '%s'." % (accelerator, host_type))
 
-        elif is_literal:
-            return _literal_eval(new_val)
-        return new_val
+        accelerator_config['accelerator'] = accelerator
+        return accelerator_config
 
     def has_accelize_credential(self):
         """
@@ -110,8 +271,8 @@ class Configuration(_configparser.ConfigParser):
         Returns:
             bool: True if credentials founds in file.
         """
-        return (self.get_default('accelize', 'client_id') and
-                self.get_default('accelize', 'secret_id'))
+        return (self['accelize']['client_id'] and
+                self['accelize']['secret_id'])
 
     def has_host_credential(self):
         """
@@ -120,8 +281,8 @@ class Configuration(_configparser.ConfigParser):
         Returns:
             bool: True if credentials founds in file.
         """
-        return (self.get_default('host', 'client_id') and
-                self.get_default('host', 'secret_id'))
+        return (self['host']['client_id'] and
+                self['host']['secret_id'])
 
     def _legacy_backward_compatibility(self):
         """
@@ -139,46 +300,40 @@ class Configuration(_configparser.ConfigParser):
         # Fix sections
         for old, new in sections_changes.items():
             # Section to fix not exists
-            if not self.has_section(old):
+            if old not in self:
                 continue
 
             # Warn user
             self._deprecation_warning(old)
 
-            # Create new section
-            try:
-                self.add_section(new)
-            except _configparser.DuplicateSectionError:
-                pass
-
             # Copy section
-            for option, value in self.items(old):
-                if not self.has_option(new, option):
-                    self.set(new, option, value)
+            for option, value in self[old].items():
+                if option not in self[new]:
+                    self[new][option] = value
 
             # Remove old section
-            self.remove_section(old)
+            del self._sections[old]
 
         # Fix options
         for section, options in options_changes.items():
             new_section = sections_changes.get(section, section)
-            if not self.has_section(new_section):
+            if new_section not in self:
                 continue
 
             for old, new in options.items():
                 # Option to fix not exists
-                if not self.has_option(new_section, old):
+                if old not in self[new_section]:
                     continue
 
                 # Warn user
                 self._deprecation_warning(section, old)
 
                 # Copy option
-                if not self.has_option(new_section, new):
-                    self.set(new_section, new, self.get(new_section, old))
+                if new not in self._sections[new_section]:
+                    self[new_section][new] = self[new_section][old]
 
                 # remove old option
-                self.remove_option(new_section, old)
+                del self[new_section][old]
 
     @staticmethod
     def _deprecation_warning(section, option=''):
