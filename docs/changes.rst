@@ -1,6 +1,14 @@
 Changelog
 =========
 
+1.1.0 (In development)
+----------------------
+
+Configuration improvements:
+
+- Add subsection support in configuration file (ex: *[host.host_type]*)
+- Configuration class is now a Mapping instead of ConfigParser subclass.
+
 1.0.0 (2018/06)
 ---------------
 
