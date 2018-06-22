@@ -8,7 +8,6 @@ import aliyunsdkcore.acs_exception.exceptions as _acs_exceptions
 import aliyunsdkcore.request as _acs_request
 
 from apyfal.host._csp import CSPHost as _CSPHost
-import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
 from apyfal._utilities import get_logger as _get_logger
@@ -59,9 +58,8 @@ class AlibabaCSP(_CSPHost):
     STATUS_RUNNING = 'Running'
     STATUS_STOPPED = 'Stopped'
 
-    def __init__(self, config=None, **kwargs):
-        config = _cfg.create_configuration(config)
-        _CSPHost.__init__(self, config=config, **kwargs)
+    def __init__(self, **kwargs):
+        _CSPHost.__init__(self, **kwargs)
 
         # Default some attributes
         self._security_group_id = None
