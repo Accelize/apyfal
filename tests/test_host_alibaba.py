@@ -4,7 +4,7 @@
 import json
 
 import pytest
-from tests.test_host_generic_csp import run_full_real_test_sequence, import_from_generic_test
+from tests.test_host_csp import run_full_real_test_sequence, import_from_generic_test
 
 
 def test_alibibaclass_import():
