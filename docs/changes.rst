@@ -4,10 +4,18 @@ Changelog
 1.1.0 (In development)
 ----------------------
 
+General improvements:
+
+- Importing Apyfal from an unsupported Python version now raise ImportError.
+
 Configuration improvements:
 
 - Add subsection support in configuration file (ex: *[host.host_type]*)
 - Configuration class is now a Mapping instead of ConfigParser subclass.
+
+Fixes:
+
+- Fix exception message when trying to use a non existing region.
 
 1.0.0 (2018/06)
 ---------------

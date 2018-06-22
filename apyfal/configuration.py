@@ -110,7 +110,11 @@ class _Section(dict):
         Returns:
             object: evaluated parameter
         """
-        return _literal_eval(self[parameter])
+        value = self[parameter]
+        try:
+            return _literal_eval(value)
+        except (ValueError, TypeError):
+            return value
 
 
 class Configuration(_Mapping):

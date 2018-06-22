@@ -77,21 +77,10 @@ class AcceleratorClient(object):
         self._client_id = config['accelize'].set('client_id', accelize_client_id)
         self._secret_id = config['accelize'].set('secret_id', accelize_secret_id)
 
-        self._configuration_parameters = _deepcopy(
-            self.DEFAULT_CONFIGURATION_PARAMETERS)
-        config_section = config['configuration.%s' % accelerator]
-        if config_section['parameters']:
-            _utl.recursive_update(
-                self._configuration_parameters,
-                config_section.get_literal('parameters'))
-
-        self._process_parameters = _deepcopy(
-            self.DEFAULT_PROCESS_PARAMETERS)
-        process_section = config['process.%s' % accelerator]
-        if process_section['parameters']:
-            _utl.recursive_update(
-                self._process_parameters,
-                process_section.get_literal('parameters'))
+        self._configuration_parameters = self._load_configuration(
+            self.DEFAULT_CONFIGURATION_PARAMETERS, 'configuration')
+        self._process_parameters = self._load_configuration(
+            self.DEFAULT_PROCESS_PARAMETERS, 'process')
 
         # Initializes Swagger REST API Client
         self._api_client = _api.ApiClient()
@@ -538,3 +527,18 @@ class AcceleratorClient(object):
         specific.update(parameters)
 
         return result
+
+    def _load_configuration(self, default_parameters, section):
+        """Load parameters from configuration.
+
+        Args:
+            default_parameters (dict): default parameters
+            section (str): Section in configuration."""
+        # Load default parameters
+        parameters = _deepcopy(default_parameters)
+
+        # Update with configuration
+        config = self._config['%s.%s' % (section, self._name)]
+        _utl.recursive_update(
+            parameters, config.get_literal('parameters') or {})
+        return parameters
