@@ -18,7 +18,10 @@ def test_csphost_new_init():
     # Mock arguments and configuration
     # Note that host_type is not specified here
     config = Configuration()
-    del config._sections['host']
+    try:
+        del config._sections['host']
+    except KeyError:
+        pass
     kwargs = {'region': 'region', 'project_id': 'project_id', 'client_id': 'client_id',
               'auth_url': 'auth_url', 'interface': 'interface', 'config': config}
 

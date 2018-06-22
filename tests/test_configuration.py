@@ -125,12 +125,16 @@ def test_configuration_access_token():
     try:
         # Test: No credential provided
         config = Configuration()
-        del config._sections['accelize']
+        try:
+            del config._sections['accelize']
+        except KeyError:
+            pass
         with pytest.raises(exc.ClientAuthenticationException):
             assert config._access_token
 
         # Test: Everything OK
         config = Configuration()
+        config['accelize']  # Creates section if not exists
         config._sections['accelize']['client_id'] = client_id
         config._sections['accelize']['secret_id'] = secret_id
         assert config._access_token == access_token
@@ -150,7 +154,10 @@ def test_configuration_access_token():
 
         # Test: Authentication failed
         config = Configuration()
-        del config._sections['accelize']
+        try:
+            del config._sections['accelize']
+        except KeyError:
+            pass
         Response.status_code = 400
         with pytest.raises(exc.ClientAuthenticationException):
             assert config._access_token
@@ -199,7 +206,10 @@ def test_configuration_access_token_real_no_cred():
     from apyfal.configuration import Configuration
 
     config = Configuration()
-    del config._sections['accelize']
+    try:
+        del config._sections['accelize']
+    except KeyError:
+        pass
     config['accelize']['client_id'] = 'bad_client_id'
     config['accelize']['secret_id'] = 'bad_secret_id'
 

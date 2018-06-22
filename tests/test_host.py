@@ -12,8 +12,10 @@ def test_host_init():
     # Mock arguments and configuration
     # Note that host_type is not specified here
     config = Configuration()
-    del config._sections['host']
-
+    try:
+        del config._sections['host']
+    except KeyError:
+        pass
     # Test: Not existing host module
     with pytest.raises(HostConfigurationException):
         Host(host_type="no_existing_csp")
