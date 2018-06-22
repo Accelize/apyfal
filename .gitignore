@@ -1,5 +1,5 @@
 # Repository specific: Generated files
-apyfal/_swagger_client/
+apyfal/client/rest/_openapi
 docs/configuration_file.rst
 
 # Tests generated files

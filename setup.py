@@ -76,19 +76,20 @@ with open(join(SETUP_DIR, 'apyfal', '__init__.py')) as source_file:
 with open(join(SETUP_DIR, 'README.md')) as source_file:
     PACKAGE_INFO['long_description'] = source_file.read()
 
-# Add command to generate REST API with Swagger-Codegen
+# Add command to generate REST API OpenApi
 REST_API_BUILD_DIR = join(SETUP_DIR, 'build', 'rest_api')
 REST_API_GENERATED_DIR = join(REST_API_BUILD_DIR, 'output')
 REST_API_SETUP = join(REST_API_GENERATED_DIR, 'setup.py')
-REST_API_DST = join(SETUP_DIR, 'apyfal', '_swagger_client')
+REST_API_PACKAGE = 'apyfal.client.rest._openapi'
+REST_API_DST = join(SETUP_DIR, *(REST_API_PACKAGE.split('.')))
 REST_API_SRC = join(REST_API_GENERATED_DIR, 'swagger_client')
 
 
 class SwaggerCommand(Command):
     """
-    Generate Python REST API client using Swagger-Codegen
+    Generate Python REST API client using OpenApi
     """
-    description = "Generate REST API client (apyfal/_swagger_client)"
+    description = "Generate REST API client"
     user_options = [
         ('swagger-version=', None, 'Force use of a specific Swagger-Codegen version'),
     ]
@@ -101,7 +102,7 @@ class SwaggerCommand(Command):
         """Validate options values"""
 
     def run(self):
-        """Run Swagger command"""
+        """Run OpenApi generation command"""
         # Lazzy import since required only here
         import json
         from shutil import copytree, rmtree
@@ -168,7 +169,7 @@ class SwaggerCommand(Command):
         print('Clearing %s' % REST_API_GENERATED_DIR)
         rmtree(REST_API_GENERATED_DIR, ignore_errors=True)
 
-        # Run Swagger-codegen
+        # Generate OpenApi client
         command = ' '.join([
                 "java", "-jar", jar_path, "generate",
                 "-i", input_spec_path,
@@ -186,10 +187,11 @@ class SwaggerCommand(Command):
                     content = file_handle.read()
 
                 # Fix imports
+                src_package = 'swagger_client'
                 replacements = [
-                    ('from swagger_client', 'from apyfal._swagger_client'),
-                    ('import swagger_client', 'import apyfal._swagger_client'),
-                    ('getattr(swagger_client.', 'getattr(apyfal._swagger_client.'),
+                    ('from %s' % src_package, 'from %s' % REST_API_PACKAGE),
+                    ('import %s' % src_package, 'import %s' % REST_API_PACKAGE),
+                    ('getattr(%s.' % src_package, 'getattr(%s.' % REST_API_PACKAGE),
                 ]
 
                 # Fix Swagger issues:
@@ -198,8 +200,8 @@ class SwaggerCommand(Command):
                 # https://github.com/swagger-api/swagger-codegen/pull/7684
                 for value in ('1', '2', '3', '4', ''):
                     replacements.append((
-                        'swagger_client.models.inline_response200%s' % value,
-                        'swagger_client.models.inline_response_200%s' %
+                        '.models.inline_response200%s' % value,
+                        '.models.inline_response_200%s' %
                         (('_%s' % value) if value else '')))
 
                 # https://github.com/swagger-api/swagger-codegen/issues/8328
@@ -223,7 +225,7 @@ class SwaggerCommand(Command):
 
 PACKAGE_INFO['cmdclass']['swagger_codegen'] = SwaggerCommand
 
-# Gets requirements from Swagger generated REST API
+# Gets requirements from OpenApi generated client
 if 'swagger_codegen' not in argv:
     if isfile(REST_API_SETUP):
         from ast import literal_eval

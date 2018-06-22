@@ -30,7 +30,7 @@ if os.environ.get('READTHEDOCS'):
     finally:
         os.chdir(current_dir)
 
-    # Mock _swagger_client since Java not available on ReadTheDocs
+    # Mock apyfal.client.rest._openapi since Java not available on ReadTheDocs
     try:
         os.makedirs(REST_API_DST)
     except OSError:

@@ -10,7 +10,7 @@ install:
     # Python environment
     - "python -m pip install --upgrade setuptools pip wheel pytest coverage pytest-cov coveralls[yaml]"
 
-    # Builds Swagger client
+    # Builds OpenApi client
     - "python ./setup.py swagger_codegen"
 
     # Installs all package dependencies

@@ -24,11 +24,11 @@ git clone:
 
     git clone https://github.com/Accelize/apyfal.git
 
-Generating REST API client with Swagger-Codegen
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Generating REST API client with OpenApi
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-apyfal REST API client code (``apyfal._swagger_client``)
-is not stored in repository but generated with *Swagger-Codegen*.
+apyfal REST API client code (``apyfal.client.rest._openapi``)
+is not stored in repository but generated from OpenApi.
 
 This code need to be generated before run apyfal in your
 development environment.

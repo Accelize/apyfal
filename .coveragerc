@@ -1,9 +1,9 @@
 # Coverage.py configuration (Used pytest-cov)
 
 [run]
-# Ignore generated Swagger REST API code since we don't use it completely and don't change it
+# Ignore generated OpenApi code since we don't use it completely and don't change it
 omit=
-    */_swagger_client/*
+    */_openapi/*
     .tox/*
 
 [report]
@@ -14,4 +14,4 @@ exclude_lines =
     def get_logger
     if _enable_logger:
     _enable_logger =
-    except ImportError:  # Swagger_codegen need to be run first
+    except ImportError:  # OpenAPI client need to be generated first

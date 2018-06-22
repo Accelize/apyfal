@@ -34,7 +34,7 @@ def test_csphost_new_init():
 
     # Test: Existing CSP module, with no valid class
     with pytest.raises(HostConfigurationException):
-        Host(host_type="openstack")
+        Host(host_type="_csp")
 
     # Test: direct instantiation of subclass without specify host_type
     OVHHost(**kwargs)
@@ -444,9 +444,10 @@ def test_csphost_start():
         utl.check_url = utl_check_url
 
 
-def test_csphost_stop():
+def test_csphost_stop(tmpdir):
     """Tests Host.stop"""
     from apyfal.host import Host
+    from apyfal.exceptions import HostRuntimeException
 
     # Mock variables
     instance = "dummy_instance"
@@ -454,6 +455,7 @@ def test_csphost_stop():
 
     # Mock CSP class
     dummy_csp_class = get_dummy_csp_class()
+    raise_on_status = False
 
     class DummyHost(dummy_csp_class):
         """Dummy CSP"""
@@ -485,6 +487,11 @@ def test_csphost_stop():
             """Returns Fake result"""
             return instance
 
+        def _status(self):
+            """Raises exception"""
+            if raise_on_status:
+                raise HostRuntimeException
+
     # Test: Stop mode passed on instantiation
     for stop_mode in ('term', 'stop'):
         csp = DummyHost(stop_mode=stop_mode)
@@ -507,6 +514,12 @@ def test_csphost_stop():
     csp.stop(stop_mode='keep')
     assert csp._instance
 
+    config = tmpdir.join('dummy_accelerator.conf')
+    config.write('[host]\nstop_mode=keep')
+    csp = DummyHost(config=str(config))
+    csp.stop()
+    assert csp._instance
+
     # Test: Stop with no instance started
     instance = None
     csp = DummyHost(stop_mode='term')
@@ -514,6 +527,13 @@ def test_csphost_stop():
     assert csp.url == url
     assert csp.stopped_mode == 'keep'
     instance = 'dummy_instance'
+
+    raise_on_status = True
+    csp = DummyHost(stop_mode='term')
+    csp.stop()
+    assert csp.url == url
+    assert csp.stopped_mode == 'keep'
+    raise_on_status = False
 
     # Test: Auto-stops with context manager
     DummyHost.class_stopped_mode = 'keep'

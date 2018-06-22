@@ -15,7 +15,8 @@ Configuration improvements:
 
 Fixes:
 
-- Fix exception message when trying to use a non existing region.
+- Host "stop_mode" not correctly loaded from configuration file.
+- "accelerator" in exception message when trying to use a non existing region.
 
 1.0.0 (2018/06)
 ---------------

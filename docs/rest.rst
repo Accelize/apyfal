@@ -4,11 +4,11 @@ Accelerator REST API
 It is possible to use accelerators using the REST API instead of Python
 Apyfal. But, note that in this case, host configuration is not supported.
 
-Generating REST API client in any language using Swagger-Codegen
-----------------------------------------------------------------
+Generating REST API client in any language using OpenApi
+--------------------------------------------------------
 
-Swagger-Codegen can be used to generate client for almost any language
-(Java, Javascript, ...)
+Accelerator REST API follow OpenApi specification and client can be generated
+for almost any language (Java, Javascript, ...)
 
 -  Download and install `Swagger-Codegen`_.
 -  Download the Apyfal repository:

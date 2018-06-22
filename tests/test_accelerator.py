@@ -43,7 +43,7 @@ def test_accelerator():
     raises_on_get_url = False
     raises_on_client_stop = False
     raises_on_host_stop = False
-    dummy_url = 'dummy_url'
+    dummy_url = 'http://accelize.com'
     dummy_config_url = 'dummy_config_url'
     dummy_start_result = 'dummy_start_result'
     dummy_stop_result = 'dummy_stop_result'
@@ -57,16 +57,21 @@ def test_accelerator():
     dummy_file_out = 'dummy_file_out'
 
     # Mocks client
-    class DummyClient(apyfal.client.AcceleratorClient):
+    accelerator_client_class = apyfal.client.AcceleratorClient
+
+    class DummyClient(accelerator_client_class):
         """Dummy apyfal.client.AcceleratorClient"""
         url = None
         configuration_url = dummy_config_url
         running = True
 
-        def __init__(self, accelerator, *_, **__):
+        def __new__(cls, *args, **kwargs):
+            return object.__new__(cls)
+
+        def __init__(self, accelerator, **kwargs):
             """Checks arguments"""
+            accelerator_client_class.__init__(self, accelerator, **kwargs)
             assert accelerator == dummy_accelerator
-            self._name = accelerator
 
         def __del__(self):
             """Don nothing"""
@@ -87,14 +92,13 @@ def test_accelerator():
 
             return dummy_stop_result
 
-        def process(self, file_in, file_out, info_dict=True, **parameters):
+        def process(self, file_in=None, file_out=None, info_dict=True, **parameters):
             """Checks arguments and returns fake result"""
             assert parameters == {'parameters': dummy_accelerator_parameters}
             assert file_in == dummy_file_in
             assert file_out == dummy_file_out
             return dummy_process_result
 
-    accelerator_client_class = apyfal.client.AcceleratorClient
     apyfal.client.AcceleratorClient = DummyClient
 
     # Mocks Host

@@ -1,7 +1,5 @@
 # coding=utf-8
-"""Accelerators"""
-
-from copy import deepcopy as _deepcopy
+"""Accelerator REST client"""
 import json as _json
 import os as _os
 import shutil as _shutil
@@ -24,20 +22,20 @@ except ImportError:
 
 import apyfal._utilities as _utl
 import apyfal.exceptions as _exc
-import apyfal.configuration as _cfg
+from apyfal.client import AcceleratorClient as _Client
 
 try:
-    import apyfal._swagger_client as _api
-except ImportError:  # Swagger_codegen need to be run first
+    from apyfal.client.rest import _openapi as _api
+except ImportError:  # OpenAPI client need to be generated first
     if not _os.path.isfile(_os.path.join(
-            _os.path.dirname(__file__), '_swagger_client/__init__.py')):
+            _os.path.dirname(__file__), '_openapi/__init__.py')):
         raise ImportError(
-            'Swagger client not found, please generate it '
+            'OpenAPI client not found, please generate it '
             'with "setup.py swagger_codegen"')
     raise
 
 
-class AcceleratorClient(object):
+class RESTClient(_Client):
     """
     End user API based on the openAPI Accelize accelerator
 
@@ -53,60 +51,14 @@ class AcceleratorClient(object):
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values
     """
-    DEFAULT_CONFIGURATION_PARAMETERS = {"app": {
-        "reset": 0,
-        "enable-sw-comparison": 0,
-        "logging": {"format": 1, "verbosity": 2},
-        "specific": {}}}
 
-    DEFAULT_PROCESS_PARAMETERS = {"app": {
-        "reset": 0,
-        "enable-sw-comparison": 0,
-        "logging": {"format": 1, "verbosity": 2},
-        "specific": {}}}
-
-    def __init__(self, accelerator, accelize_client_id=None, accelize_secret_id=None,
-                 host_ip=None, config=None):
-        self._name = accelerator
+    def __init__(self, accelerator, *args, **kwargs):
+        # Initializes OpenApi client
         self._configuration_url = None
-        self._url = None
-        self._stopped = False
-
-        # Read configuration
-        self._config = config = _cfg.create_configuration(config)
-        self._client_id = config['accelize'].set('client_id', accelize_client_id)
-        self._secret_id = config['accelize'].set('secret_id', accelize_secret_id)
-
-        self._configuration_parameters = self._load_configuration(
-            self.DEFAULT_CONFIGURATION_PARAMETERS, 'configuration')
-        self._process_parameters = self._load_configuration(
-            self.DEFAULT_PROCESS_PARAMETERS, 'process')
-
-        # Initializes Swagger REST API Client
         self._api_client = _api.ApiClient()
 
-        # Sets URL and configures
-        if host_ip:
-            self.url = host_ip
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.stop()
-
-    def __del__(self):
-        self.stop()
-
-    @property
-    def name(self):
-        """
-        Accelerator name
-
-        Returns:
-            str: name
-        """
-        return self._name
+        # Initialize client
+        _Client.__init__(self, accelerator, *args, **kwargs)
 
     @property
     def url(self):
@@ -222,9 +174,9 @@ class AcceleratorClient(object):
             config_result['url_instance'] = self.url
             return config_result
 
-    def _process_swagger(self, json_parameters, datafile):
+    def _process_openapi(self, json_parameters, datafile):
         """
-        Process using Swagger REST API.
+        Process using OpenApi REST API.
 
         Args:
             json_parameters (str): AcceleratorClient parameter as JSON
@@ -341,7 +293,7 @@ class AcceleratorClient(object):
 
         # Use cURL to improve performance and avoid issue with big file (https://bugs.python.org/issue8450)
         # If not available, use REST API (with limitations)
-        process_function = self._process_curl if _USE_PYCURL else self._process_swagger
+        process_function = self._process_curl if _USE_PYCURL else self._process_openapi
         api_resp_id, processed = process_function(_json.dumps(parameters), file_in)
 
         # Get result
@@ -416,31 +368,12 @@ class AcceleratorClient(object):
         except _api.rest.ApiException:
             pass
 
-    @staticmethod
-    def _raise_for_status(api_result, message=""):
-        """
-        Check REST API results and raise exception in case of error.
-
-        Args:
-            api_result (dict): Result from REST API.
-            message (str): Optional exception message to add before REST API message.
-
-        Raises:
-            apyfal.exceptions.ClientRuntimeException: Exception from arguments.
-        """
-        try:
-            status = api_result['app']['status']
-        except KeyError:
-            raise _exc.ClientRuntimeException('%sNo result returned' % message)
-        if status:
-            raise _exc.ClientRuntimeException(message + api_result['app']['msg'])
-
     def _init_rest_api_class(self, api):
         """
         Instantiate and configure REST API class.
 
         Args:
-            api: API class from apyfal.rest_api.swagger_client
+            api: API class from apyfal.client.rest._openapi
 
         Returns:
             Configured instance of API class.
@@ -454,7 +387,7 @@ class AcceleratorClient(object):
         Instantiate Process REST API
 
         Returns:
-            apyfal.rest_api.swagger_client.ProcessApi: class instance
+            apyfal.client.rest._openapi.ProcessApi: class instance
         """
         return self._init_rest_api_class(_api.ProcessApi)
 
@@ -463,7 +396,7 @@ class AcceleratorClient(object):
         Instantiate Configuration REST API
 
         Returns:
-            apyfal.rest_api.swagger_client.ConfigurationApi: class instance
+            apyfal.client.rest._openapi.ConfigurationApi: class instance
         """
         # /v1.0/configuration/
         return self._init_rest_api_class(_api.ConfigurationApi)
@@ -473,72 +406,7 @@ class AcceleratorClient(object):
         Instantiate Stop REST API
 
         Returns:
-            apyfal.rest_api.swagger_client.StopApi: class instance
+            apyfal.client.rest._openapi.StopApi: class instance
         """
         # /v1.0/stop
         return self._init_rest_api_class(_api.StopApi)
-
-    @staticmethod
-    def _get_parameters(parameters, default_parameters):
-        """
-        Gets parameters from different sources, and merge them together.
-
-        If 'parameters' contain a key named 'parameters', it will be
-        read as a full parameter dict, or JSON literal or JSON file.
-
-        Other keys from 'parameters' will be merged to the 'specific'
-        section of the result dict.
-
-        Args:
-            parameters (dict): parameters
-            default_parameters (dict): default parameters
-
-        Returns:
-            dict : parameters.
-        """
-        # Takes default parameters as basis
-        result = _deepcopy(default_parameters)
-
-        # Gets parameters from included JSON file
-        try:
-            json_parameters = parameters.pop('parameters')
-        except KeyError:
-            pass
-        else:
-            # Reads JSON parameter from file or literal
-            if isinstance(json_parameters, str):
-                # JSON literal
-                if json_parameters.startswith('{'):
-                    json_parameters = _json.loads(json_parameters)
-
-                # JSON file
-                else:
-                    with open(json_parameters, 'rt') as json_file:
-                        json_parameters = _json.load(json_file)
-
-            # Merges to result
-            result.update(json_parameters)
-
-        # Merges other parameters to specific section of parameters
-        try:
-            specific = result['app']['specific']
-        except KeyError:
-            specific = result['app']['specific'] = dict()
-        specific.update(parameters)
-
-        return result
-
-    def _load_configuration(self, default_parameters, section):
-        """Load parameters from configuration.
-
-        Args:
-            default_parameters (dict): default parameters
-            section (str): Section in configuration."""
-        # Load default parameters
-        parameters = _deepcopy(default_parameters)
-
-        # Update with configuration
-        config = self._config['%s.%s' % (section, self._name)]
-        _utl.recursive_update(
-            parameters, config.get_literal('parameters') or {})
-        return parameters
