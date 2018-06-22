@@ -360,6 +360,27 @@ It support following arguments:
     # Processes file_in and save result to file_out
     sudo /opt/accelize/accelerator/accelerator -m 1 -i ${file_in} -o ${file_out}
 
+Metering services
+^^^^^^^^^^^^^^^^^
+
+For use accelerator command, metering services needs to be started.
+
+Theses commands starts services:
+
+.. code-block:: bash
+
+    sudo systemctl start meteringsession
+    sudo systemctl start meteringclient
+
+Theses commands stops services:
+
+.. code-block:: bash
+
+    sudo systemctl stop meteringclient
+    sudo systemctl stop meteringsession
+
+In two cases, run order of commands is important.
+
 Metering information
 --------------------
 
