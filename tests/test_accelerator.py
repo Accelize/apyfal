@@ -1,6 +1,36 @@
 # coding=utf-8
 """apyfal tests"""
+from collections import namedtuple
 import gc
+import sys
+
+import pytest
+
+
+def tests_version_check():
+    """Test version check presence and format"""
+    # Ensure Apyfal not imported
+    try:
+        del sys.modules['apyfal']
+    except KeyError:
+        pass
+    gc.collect()
+
+    # Mock version info
+    sys_version_info = sys.version_info
+    version_info = namedtuple(
+        'Version_Info',
+        ['major', 'minor', 'micro', 'releaselevel', 'serial'])
+    sys.version_info = version_info(3, 3, 0, 'final', 0)
+
+    # Test
+    try:
+        with pytest.raises(ImportError):
+            import apyfal
+
+    # Cleaning
+    finally:
+        sys.version_info = sys_version_info
 
 
 def test_accelerator():

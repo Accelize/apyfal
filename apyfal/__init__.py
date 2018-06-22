@@ -17,10 +17,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from __future__ import absolute_import
-
 __version__ = "1.0.0"
 __copyright__ = "Copyright 2018 Accelize"
 __licence__ = "Apache 2.0"
+
+from sys import version_info as _py
+if (_py[0] == 2 and _py[1] < 7) or (_py[0] == 3 and _py[1] < 4):
+    from sys import version
+    raise ImportError('Python %s is not supported by Apyfal' % version)
 
 import apyfal.host as _hst
 import apyfal.client as _clt
