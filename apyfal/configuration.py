@@ -5,7 +5,7 @@ Notes:
     The "accelerator.conf" file provided with this package can
     be used as sample for creation of your own configuration files.
 
-    Use of this file is optional. All parameters can also be
+    Use of this file is parameteral. All parameters can also be
     passed to API class. Non specified ones will use default values.
 
     API search automatically search for "accelerator.conf" in
@@ -48,15 +48,9 @@ class _Section(dict):
     """Configuration section
 
     Section that:
-    - Returns None as default value if option not found
+    - Returns None as default value if parameter not found
       (Don't raise KeyError).
     - Sets value only with non None value.
-
-    If a configuration section name contain dot (ex: "host.csp"),
-    getting value performs the follow:
-    - Tries to get value from this section ("host.csp")
-    - Retrieves value is None, tries to get value from
-      default section ("host")
 
     Args:
         section_name (str): Section name in parent configuration file.
@@ -75,52 +69,70 @@ class _Section(dict):
         # Always return None as default value
         return None
 
-    def __setitem__(self, option, value):
+    def __setitem__(self, parameter, value):
         # Set new value only if not None
         if value is None:
             return
-        dict.__setitem__(self, option, value)
+        dict.__setitem__(self, parameter, value)
 
-    def __getitem__(self, option):
+    def __getitem__(self, parameter):
         # Try to get value directly in this section
-        value = dict.__getitem__(self, option)
+        value = dict.__getitem__(self, parameter)
 
         # Try to get value in default section
         if value is None and self._default_section:
             return self._section_parent[
-                self._default_section][option]
+                self._default_section][parameter]
         return value
 
-    def set(self, option, value=None):
-        """Set value to option and return
+    def set(self, parameter, value=None):
+        """Set value to parameter and return
         value.
 
         Args:
-            option(str): Option to set.
+            parameter(str): Parameter to set.
             value(object): Value to set
 
         Returns:
             Return value if not None else
             already existing value in section."""
-        self[option] = value
-        return self[option]
+        self[parameter] = value
+        return self[parameter]
 
-    def get_literal(self, option):
+    def get_literal(self, parameter):
         """
-        Evaluate option str value to Python object
+        Evaluate parameter str value to Python object
         and return it.
 
         Args:
-            option (str): Option to get
+            parameter (str): Parameter to get
 
         Returns:
-            object: evaluated option
+            object: evaluated parameter
         """
-        return _literal_eval(self[option])
+        return _literal_eval(self[parameter])
 
 
 class Configuration(_Mapping):
-    """Accelerator configuration
+    """Accelerator configuration.
+
+    Mapping of configuration sections.
+    On section access, never raises KeyError but returns at least
+    an empty section.
+
+    Sections are mapping of parameters. On parameter access, never raises
+    KeyError but returns a default value of None.
+
+    If a configuration section name contain dot (ex: "host.csp"),
+    it is a subsection and accessing parameter performs
+    the follow:
+    - Tries to get parameter from this section ("host.csp")
+    - If parameter value is None, tries to get value from
+      parent section ("host")
+
+    Trying to setting an parameter to None does nothing and keep
+    previous value. Use "del" to delete an parameter to set a reset
+    an parameter value.
 
     Args:
         configuration_file (str or None): Configuration file path.
@@ -286,11 +298,11 @@ class Configuration(_Mapping):
 
     def _legacy_backward_compatibility(self):
         """
-        Convert sections and options from legacy
+        Convert sections and parameters from legacy
         configuration files to current ones.
         """
         sections_changes = {'csp': 'host'}
-        options_changes = {
+        parameters_changes = {
             'csp': {
                 'ssh_key': 'key_pair',
                 'provider': 'host_type',
@@ -307,42 +319,42 @@ class Configuration(_Mapping):
             self._deprecation_warning(old)
 
             # Copy section
-            for option, value in self[old].items():
-                if option not in self[new]:
-                    self[new][option] = value
+            for parameter, value in self[old].items():
+                if parameter not in self[new]:
+                    self[new][parameter] = value
 
             # Remove old section
             del self._sections[old]
 
-        # Fix options
-        for section, options in options_changes.items():
+        # Fix parameters
+        for section, parameters in parameters_changes.items():
             new_section = sections_changes.get(section, section)
             if new_section not in self:
                 continue
 
-            for old, new in options.items():
-                # Option to fix not exists
+            for old, new in parameters.items():
+                # Parameter to fix not exists
                 if old not in self[new_section]:
                     continue
 
                 # Warn user
                 self._deprecation_warning(section, old)
 
-                # Copy option
+                # Copy parameter
                 if new not in self._sections[new_section]:
                     self[new_section][new] = self[new_section][old]
 
-                # remove old option
+                # remove old parameter
                 del self[new_section][old]
 
     @staticmethod
-    def _deprecation_warning(section, option=''):
+    def _deprecation_warning(section, parameter=''):
         """
         Warn user about deprecated section or
-        option in configuration file.
+        parameter in configuration file.
         """
         import warnings
         warnings.warn(
             '"%s%s" is deprecated in "accelerator.conf"' %
-            (section, ':%s' % option if option else ''),
+            (section, ':%s' % parameter if parameter else ''),
             DeprecationWarning)
