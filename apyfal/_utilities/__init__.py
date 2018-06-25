@@ -4,6 +4,8 @@
 import abc
 import ast
 import collections
+from contextlib import contextmanager
+from importlib import import_module
 import json
 import os
 import re
@@ -50,6 +52,80 @@ else:
 
     # Back port of "abc.ABC" base abstract class
     ABC = abc.ABCMeta('ABC', (object,), {})
+
+
+def factory(cls, cls_type, parameter_name, exc_type):
+    """Find and instantiate target subclass by its name.
+
+    Target subclass must follow rules:
+    - module containing subclass must be in a submodule of the
+      one containing the parent class.
+    - module containing subclass name must be cls_type.lower()
+    - Class must have a class attribute NAME matching cls_type.
+
+    Args:
+        cls (class): Parent class.
+        cls_type (str): Target subclass.
+        parameter_name (str): cls_type parameter name.
+        exc_type (apyfal.exceptions.AcceleratorException subclass):
+            Exception to raise if not found.
+
+    Returns:
+        cls subclass: Subclass of cls
+    """
+    # Not target subclass, instantiate parent class
+    if cls_type is None:
+        return object.__new__(cls)
+
+    cls_type_low = cls_type.lower()
+
+    # Finds module containing target subclass
+    module_name = '%s.%s' % (cls.__module__, cls_type_low)
+    try:
+        module = import_module(module_name)
+    except ImportError as exception:
+        if cls_type_low in str(exception):
+            # If ImportError for current module name, may be
+            # a configuration error.
+            raise exc_type(
+                "No module '%s' for '%s' %s" % (
+                    module_name, cls_type, parameter_name))
+        # ImportError of another module, raised as it
+        raise
+
+    # Finds target subclass
+    for name in dir(module):
+        member = getattr(module, name)
+        try:
+            if getattr(member, 'NAME').lower() == cls_type_low:
+                break
+        except AttributeError:
+            continue
+    else:
+        raise exc_type(
+            "No class found in '%s' for '%s' %s" % (
+                module_name, cls_type, parameter_name))
+
+    # Instantiates target subclass
+    return object.__new__(member)
+
+
+def get_first_arg(args, kwargs, name):
+    """Returns named argument assuming it is in first position.
+    Returns None if not found.
+    
+    Args:
+        args (tuple or list): args from function.
+        kwargs (dict): kwargs from function.
+        name (str): argument name
+    """
+    try:
+        return kwargs[name]
+    except KeyError:
+        try:
+            return args[0]
+        except IndexError:
+            return None
 
 
 class Timeout:
@@ -104,6 +180,20 @@ def http_session(max_retries=2, https=True):
     if https:
         session.mount('https://', adapter)
     return session
+
+
+@contextmanager
+def handle_request_exceptions(exc_type):
+    """Handle Request exceptions and raise specific exception.
+
+    Args:
+        exc_type (apyfal.exceptions.AcceleratorException subclass):
+            Exception type to raise.
+    """
+    try:
+        yield
+    except requests.RequestException as exception:
+        raise exc_type(exc=exception)
 
 
 def check_url(url, timeout=0.0, max_retries=0, sleep=0.5):

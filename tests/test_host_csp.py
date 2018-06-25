@@ -19,7 +19,9 @@ def test_csphost_new_init():
     # Note that host_type is not specified here
     config = Configuration()
     try:
-        del config._sections['host']
+        for section in list(config._sections):
+            if section.startswith('host'):
+                del config._sections[section]
     except KeyError:
         pass
     kwargs = {'region': 'region', 'project_id': 'project_id', 'client_id': 'client_id',

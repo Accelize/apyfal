@@ -4,7 +4,6 @@
 from abc import abstractmethod as _abstractmethod
 
 from apyfal.storage import Storage as _Storage
-import apyfal.configuration as _cfg
 
 
 class BucketStorage(_Storage):
@@ -23,25 +22,28 @@ class BucketStorage(_Storage):
         bucket_name (str): Name on the bucket on CSP.
     """
 
-    def __init__(self, config=None,
+    def __init__(self,
                  client_id=None, secret_id=None,
                  region=None, bucket_name=None, **kwargs):
-        config = _cfg.create_configuration(config)
-        _Storage.__init__(self, config=config, **kwargs)
+        _Storage.__init__(self, **kwargs)
+
+        # Get bucket name from storage_type
+        try:
+            self._storage_type, self._bucket_name = self._storage_type.split('.', 1)
+        except ValueError:
+            self._bucket_name = None
+        self._bucket_name = bucket_name or self._bucket_name
 
         # Default some attributes
-        self._bucket_name = bucket_name
         self._session = None
 
         # Read configuration from file
-        section = self.storage_id
-        self._client_id = config.get_default(
-            section, 'client_id', overwrite=client_id)
-        self._secret_id = config.get_default(
-            section, 'secret_id', overwrite=secret_id)
-        self._region = config.get_default(
-            section, 'region', overwrite=region)
+        section = 'storage.%s' % self.storage_id
+        self._client_id = client_id or self._config[section]['client_id']
+        self._secret_id = secret_id or self._config[section]['secret_id']
+        self._region = region or self._config[section]['region']
 
+    @property
     def bucket(self):
         """Bucket name
 
@@ -57,26 +59,6 @@ class BucketStorage(_Storage):
             str: _Storage ID."""
         return ('%s.%s' % (
             self.NAME, self._bucket_name)).lower()
-
-    @_abstractmethod
-    def copy_to_local(self, source, local_path):
-        """
-        Copy a file from storage to local.
-
-        Args:
-            source (str): Source URL.
-            local_path (str): Local destination path.
-        """
-
-    @_abstractmethod
-    def copy_from_local(self, local_path, destination):
-        """
-        Copy a file to storage from local.
-
-        Args:
-            local_path (str): Local source path.
-            destination (str): Destination URL
-        """
 
     @_abstractmethod
     def copy_to_stream(self, source, stream):

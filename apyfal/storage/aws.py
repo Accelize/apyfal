@@ -73,14 +73,6 @@ class AWSStorage(_BucketStorage):
         s3_resource = self._session.resource('s3')
         return s3_resource.Bucket(self._bucket_name)
 
-    @property
-    def client(self):
-        """AWS client managing bucket.
-
-        Returns:
-            object: Boto3 client."""
-        return self._session
-
     def copy_to_local(self, source, local_path):
         """
         Copy a file from storage to local.
@@ -136,5 +128,4 @@ class AWSStorage(_BucketStorage):
         """
         with _handle_s3_exception(source):
             self._get_bucket().copy(
-                {'Bucket': storage.bucket, 'Key': source},
-                destination, SourceClient=storage.client)
+                {'Bucket': storage.bucket, 'Key': source}, destination)

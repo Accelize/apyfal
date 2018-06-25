@@ -2,29 +2,49 @@
 """Data storage management"""
 
 from abc import abstractmethod as _abstractmethod
-from importlib import import_module as _import_module
 from shutil import copy as _copy
 import tempfile as _tempfile
 
+import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
-
-
-# Registered storage
-# TODO: Replace dict with mapping with lazy registration on __getitem__
-_STORAGE = {}
 
 # Storage name aliases
 _ALIASES = {
     # "host" only available on call from REST client
     'host': 'file',
+
     # Schemes variants
     'https': 'http',
-    'ftps': 'ftp'
 }
 
 
-def register_storage(storage_type, **parameters):
+# Registered storage
+class _StorageHook(dict):
+    """Hook of available storage
+
+    Storage are by default lazy instantiated on needs"""
+
+    def __missing__(self, storage_type):
+        # Try to register if not already exists
+        return self.register(storage_type)
+
+    def register(self, storage_type, **parameters):
+        """Register a new storage.
+
+        Args:
+            storage_type (str): storage type
+            parameters: storage parameters
+        """
+        storage = Storage(storage_type=storage_type, **parameters)
+        self[storage.storage_id] = storage
+        return storage
+
+
+_STORAGE = _StorageHook()
+
+
+def register(storage_type, **parameters):
     """Register a new storage to be used with "copy".
 
     Args:
@@ -32,8 +52,7 @@ def register_storage(storage_type, **parameters):
         parameters: storage parameters
             (see targeted storage class for more information)
     """
-    storage = Storage(storage_type, **parameters)
-    _STORAGE[storage.storage_id] = storage
+    _STORAGE.register(storage_type, **parameters)
 
 
 def _parse_host_url(url):
@@ -59,9 +78,14 @@ def _parse_host_url(url):
         path = split_url[1]
     except IndexError:
         # Path without scheme are "file://"
-        scheme = 'file'
-        path = url
-    return _ALIASES.get(scheme, scheme), path
+        return 'file', url
+
+    # Get scheme from alias
+    scheme = _ALIASES.get(scheme, scheme)
+
+    # Returns result
+    # Some storage needs full URL as path
+    return scheme, url if scheme in ('http', ) else path
 
 
 def copy(source, destination):
@@ -132,48 +156,21 @@ class Storage(_utl.ABC):
     #: Link to Storage documentation or website
     DOC_URL = ''
 
-    def __new__(cls, **kwargs):
+    def __new__(cls, *args, **kwargs):
         # If call from a subclass, instantiate this subclass directly
         if cls is not Storage:
             return object.__new__(cls)
 
-        storage_type = kwargs.get('storage_type').lower()
+        storage_type = (_utl.get_first_arg(
+            args, kwargs, 'storage_type') or '').split('.', 1)[0].lower()
 
-        # If host type is not defined, return basic class
-        # TODO: Factorize with host as common function
-        if storage_type is None:
-            return object.__new__(cls)
+        # Get Storage subclass
+        return _utl.factory(
+            cls, storage_type, 'storage_type', _exc.StorageConfigurationException)
 
-        # Finds module containing host class
-        module_name = '%s.%s' % (cls.__module__, storage_type.lower())
-        try:
-            host_module = _import_module(module_name)
-        except ImportError as exception:
-            if storage_type.lower() in str(exception):
-                # If ImportError for current module name, may be
-                # a configuration error.
-                raise _exc.StorageConfigurationException(
-                    "No module '%s' for '%s' storage_type" % (module_name, storage_type))
-            # ImportError of another module, raised as it
-            raise
-
-        # Finds storage class
-        for name in dir(host_module):
-            member = getattr(host_module, name)
-            try:
-                if getattr(member, 'NAME').lower() == storage_type.lower():
-                    break
-            except AttributeError:
-                continue
-        else:
-            raise _exc.StorageConfigurationException(
-                "No class found in '%s' for '%s' storage_type" % (module_name, storage_type))
-
-        # Instantiates storage class
-        return object.__new__(member)
-
-    def __init__(self, storage_type=None, **_):
+    def __init__(self, storage_type=None, config=None, **_):
         self._storage_type = storage_type or self.NAME
+        self._config = _cfg.create_configuration(config)
 
     @property
     def storage_id(self):
@@ -183,7 +180,6 @@ class Storage(_utl.ABC):
             str: Storage ID."""
         return self.NAME.lower()
 
-    @_abstractmethod
     def copy_to_local(self, source, local_path):
         """
         Copy a file from storage to local.
@@ -192,8 +188,9 @@ class Storage(_utl.ABC):
             source (str): Source URL.
             local_path (str): Local destination path.
         """
+        with open(local_path, 'wb') as file:
+            self.copy_to_stream(source, file)
 
-    @_abstractmethod
     def copy_from_local(self, local_path, destination):
         """
         Copy a file to storage from local.
@@ -202,6 +199,8 @@ class Storage(_utl.ABC):
             local_path (str): Local source path.
             destination (str): Destination URL
         """
+        with open(local_path, 'rb') as file:
+            self.copy_from_stream(file, destination)
 
     @_abstractmethod
     def copy_to_stream(self, source, stream):
@@ -257,4 +256,5 @@ class Storage(_utl.ABC):
         # TODO: Compute max_size to use instead to use fixed 1GB value (psutil)
         with _tempfile.SpooledTemporaryFile(max_size=1e9) as stream:
             storage.copy_to_stream(source, stream)
+            stream.seek(0)
             self.copy_from_stream(stream, destination)

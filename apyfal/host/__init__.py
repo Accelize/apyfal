@@ -1,8 +1,6 @@
 # coding=utf-8
 """FPGA Host"""
 
-from importlib import import_module as _import_module
-
 import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
@@ -47,46 +45,19 @@ class Host(_utl.ABC):
     # Attributes returned as dict by "info" property
     _INFO_NAMES = {'_host_type', '_stop_mode', '_url'}
 
-    def __new__(cls, **kwargs):
+    def __new__(cls, *args, **kwargs):
         # If call from a subclass, instantiate this subclass directly
         if cls is not Host:
             return object.__new__(cls)
 
         # Get host_type from configuration or argument
         config = _cfg.create_configuration(kwargs.get('config'))
-        host_type = cls._host_type_from_config(kwargs.get('host_type'), config)
+        host_type = cls._host_type_from_config(
+            _utl.get_first_arg(args, kwargs, 'host_type'), config)
 
-        # If host type is not defined, return basic class
-        if host_type is None:
-            return object.__new__(cls)
-
-        # Finds module containing host class
-        module_name = '%s.%s' % (cls.__module__, host_type.lower())
-        try:
-            host_module = _import_module(module_name)
-        except ImportError as exception:
-            if host_type.lower() in str(exception):
-                # If ImportError for current module name, may be
-                # a configuration error.
-                raise _exc.HostConfigurationException(
-                    "No module '%s' for '%s' host_type" % (module_name, host_type))
-            # ImportError of another module, raised as it
-            raise
-
-        # Finds host class
-        for name in dir(host_module):
-            member = getattr(host_module, name)
-            try:
-                if getattr(member, 'NAME') == host_type:
-                    break
-            except AttributeError:
-                continue
-        else:
-            raise _exc.HostConfigurationException(
-                "No class found in '%s' for '%s' host_type" % (module_name, host_type))
-
-        # Instantiates host class
-        return object.__new__(member)
+        # Get host subclass
+        return _utl.factory(
+            cls, host_type, 'host_type', _exc.HostConfigurationException)
 
     def __init__(self, host_type=None, config=None, host_ip=None,
                  stop_mode=None, exit_host_on_signal=False, **_):
