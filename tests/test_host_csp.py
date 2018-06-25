@@ -642,6 +642,7 @@ def run_full_real_test_sequence(host_type, environment,
         support_stop_restart (bool): If True support pause instance
             and restart.
     """
+    # TODO: Update to use 'host.host_type' in config
     from apyfal.configuration import Configuration
 
     # Skip if no correct configuration with this host_type
@@ -720,3 +721,5 @@ def run_full_real_test_sequence(host_type, environment,
     finally:
         if not use_full_images:
             apyfal._utilities.check_url = utilities_check_url
+
+        # TODO: CSP clean up...

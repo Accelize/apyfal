@@ -15,6 +15,9 @@ class HTTPStorage(_Storage):
 
     Args:
         storage_type (str): Type of storage. Default to "HTTP".
+        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
+            If not set, will search it in current working directory, in current
+            user "home" folder. If none found, will use default configuration values.
     """
     #: Storage type
     NAME = 'HTTP'

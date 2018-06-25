@@ -52,7 +52,7 @@ def register(storage_type, **parameters):
         parameters: storage parameters
             (see targeted storage class for more information)
     """
-    _STORAGE.register(storage_type, **parameters)
+    return _STORAGE.register(storage_type, **parameters)
 
 
 def _parse_host_url(url):
@@ -118,6 +118,7 @@ def copy(source, destination):
         source (str): Source URL.
         destination (str): Destination URL.
     """
+
     # Analyses URLs
     src_scheme, src_path = _parse_host_url(source)
     dst_scheme, dst_path = _parse_host_url(destination)
@@ -149,6 +150,9 @@ class Storage(_utl.ABC):
 
     Args:
         storage_type (str): Type of storage.
+        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
+            If not set, will search it in current working directory, in current
+            user "home" folder. If none found, will use default configuration values.
     """
     #: Storage type name (str), must be the same as expected "storage_type" argument value
     NAME = None
