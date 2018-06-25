@@ -113,7 +113,7 @@ class _Section(dict):
         value = self[parameter]
         try:
             return _literal_eval(value)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, SyntaxError):
             return value
 
 

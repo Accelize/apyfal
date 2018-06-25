@@ -320,6 +320,20 @@ def test_configuration_get_requirements_real():
     assert response['accelerator'] == name
 
 
+def dumps_config(config_dict, config_file):
+    """Save config_dict in file
+
+    Args:
+        config_dict (dict): Configuration file content
+        config_file: File handler."""
+    content = []
+    for section, options in config_dict.items():
+        content.append('[%s]' % section)
+        for option, value in options.items():
+            content.append('%s=%s' % (option, value))
+    config_file.write('\n'.join(content))
+
+
 def test_legacy_backward_compatibility(tmpdir):
     """Test Configuration._legacy_backward_compatibility"""
     from apyfal.configuration import Configuration, create_configuration
@@ -328,17 +342,6 @@ def test_legacy_backward_compatibility(tmpdir):
     config_file = tmpdir.join(
         Configuration.DEFAULT_CONFIG_FILE)
     config_path = str(config_file)
-
-    # Save dict as configuration
-    def dumps_config(config_dict):
-        """Save config_dict in file"""
-        content = []
-        for section, options in config_dict.items():
-            content.append('[%s]' % section)
-            for option, value in options.items():
-                content.append('%s=%s' % (option, value))
-
-        config_file.write('\n'.join(content))
 
     # Compatibility with acceleratorAPI
     legacy_ssh_key = 'legacy_ssh_key'
@@ -350,7 +353,7 @@ def test_legacy_backward_compatibility(tmpdir):
             'provider': 'legacy_provider',
             'instance_ip': 'legacy_instance_ip'
         }}
-    dumps_config(legacy_conf)
+    dumps_config(legacy_conf, config_file)
     config = create_configuration(config_path)
     assert config['host']['key_pair'] == legacy_ssh_key
     assert config['host']['host_type'] == legacy_provider
@@ -362,6 +365,66 @@ def test_legacy_backward_compatibility(tmpdir):
         'csp': {'ssh_key': legacy_ssh_key},
         'host': {'key_pair': key_pair}
     }
-    dumps_config(legacy_conf)
+    dumps_config(legacy_conf, config_file)
     config = create_configuration(config_path)
     assert config['host']['key_pair'] == key_pair
+
+
+def test_subsections(tmpdir):
+    """Test Configuration subsection"""
+    from apyfal.configuration import Configuration, create_configuration
+
+    # Temporary configuration file
+    config_file = tmpdir.join(
+        Configuration.DEFAULT_CONFIG_FILE)
+    config_path = str(config_file)
+
+    # Compatibility with acceleratorAPI
+    conf = {
+        'section': {
+            'key1': '1',
+            'key2': '2',
+        },
+        'section.subsection': {
+            'key1': '1.1',
+            'key3': '1.3'
+        },
+        'section.subsection.subsubsection': {
+            'key1': '1.1.1',
+        }
+    }
+    dumps_config(conf, config_file)
+    config = create_configuration(config_path)
+
+    # Test: reading
+    assert config['section']['key1'] == '1'
+    assert config['section']['key2'] == '2'
+    assert config['section']['key3'] is None
+
+    assert config['section.subsection']['key1'] == '1.1'
+    assert config['section.subsection']['key2'] == '2'
+    assert config['section.subsection']['key3'] == '1.3'
+
+    assert config['section.subsection.subsubsection'
+                  ]['key1'] == '1.1.1'
+
+    assert config['section'].get_literal('key1') == 1
+    assert config['section.subsection.subsubsection'
+                  ].get_literal('key1') == '1.1.1'
+
+    # Test: writing
+    config['section']['key1'] = None
+    assert config['section']['key1'] == '1'
+
+    config['section']['key1'] = '0'
+    assert config['section']['key1'] == '0'
+
+    assert config['section'].set('key1', '1') == '1'
+    assert config['section'].set('key1', None) == '1'
+
+    # Test: Presence
+    assert 'section' in config
+    assert 'section_not_exists' not in config
+
+    assert 'key1' in config['section']
+    assert 'key10' not in config['section']
