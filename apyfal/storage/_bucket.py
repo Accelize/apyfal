@@ -9,7 +9,7 @@ from apyfal.storage import Storage as _Storage
 class BucketStorage(_Storage):
     """Cloud storage Bucket
 
-    apyfal.storage.copy URL: "CSPName.BucketName://KeyToObject"
+    apyfal.storage URL: "CSPName.BucketName://KeyToObject"
 
     Args:
         storage_type (str): Cloud service provider name.
@@ -38,10 +38,10 @@ class BucketStorage(_Storage):
         self._session = None
 
         # Read configuration from file
-        section = 'storage.%s' % self.storage_id
-        self._client_id = client_id or self._config[section]['client_id']
-        self._secret_id = secret_id or self._config[section]['secret_id']
-        self._region = region or self._config[section]['region']
+        section = self._config['storage.%s' % self.storage_id]
+        self._client_id = client_id or section['client_id']
+        self._secret_id = secret_id or section['secret_id']
+        self._region = region or section['region']
 
     @property
     def bucket(self):

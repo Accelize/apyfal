@@ -37,10 +37,10 @@ def _handle_s3_exception(bucket_key=None):
 class AWSStorage(_BucketStorage):
     """AWS S3 Bucket
 
-    apyfal.storage.copy URL: "AWS.BucketName://KeyToObject"
+    apyfal.storage URL: "AWS.BucketName://ObjectKey"
 
     Args:
-        host_type (str): Cloud service provider name. Default to "AWS".
+        storage_type (str): Cloud service provider name. Default to "AWS".
         config (str or apyfal.configuration.Configuration): Configuration file path or instance.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.

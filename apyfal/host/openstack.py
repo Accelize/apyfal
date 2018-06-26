@@ -1,5 +1,5 @@
 # coding=utf-8
-"""OpenStack based CSP"""
+"""OpenStack Nova"""
 # Absoluteimport required on Python 2 to avoid collision
 # of this module with openstack-sdk package
 from __future__ import absolute_import as _absolute_import

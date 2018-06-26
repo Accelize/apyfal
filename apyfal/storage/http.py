@@ -11,7 +11,7 @@ import apyfal._utilities as _utl
 class HTTPStorage(_Storage):
     """Files access over HTTP
 
-    apyfal.storage.copy URL: "http://path"
+    apyfal.storage URL: "http://path"
 
     Args:
         storage_type (str): Type of storage. Default to "HTTP".
