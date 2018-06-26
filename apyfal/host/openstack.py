@@ -1,16 +1,22 @@
 # coding=utf-8
 """OpenStack Nova"""
-# Absoluteimport required on Python 2 to avoid collision
+# Absolute import required on Python 2 to avoid collision
 # of this module with openstack-sdk package
 from __future__ import absolute_import as _absolute_import
 
-import keystoneauth1.exceptions.http as _keystoneauth_exceptions
 import openstack as _openstack
 
 from apyfal.host._csp import CSPHost as _CSPHost
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
+import apyfal._utilities.openstack
 from apyfal._utilities import get_logger as _get_logger
+
+
+class _ExceptionHandler(_utl.openstack.ExceptionHandler):
+    """Host OpenStack exception handler"""
+    RUNTIME = _exc.HostRuntimeException
+    AUTHENTICATION = _exc.HostAuthenticationException
 
 
 class OpenStackHost(_CSPHost):
@@ -94,11 +100,9 @@ class OpenStackHost(_CSPHost):
             apyfal.exceptions.HostAuthenticationException:
                 Authentication failed.
         """
-        try:
+        with _ExceptionHandler.catch(
+                exc_type=_exc.HostAuthenticationException):
             list(self._session.network.networks())
-        except (_keystoneauth_exceptions.Unauthorized,
-                _openstack.exceptions.SDKException) as exception:
-            raise _exc.HostAuthenticationException(exc=exception)
 
     def _init_key_pair(self):
         """
@@ -108,22 +112,17 @@ class OpenStackHost(_CSPHost):
             bool: True if reuses existing key
         """
         # Get key pair from CSP
-        try:
-            key_pair = self._session.compute.find_keypair(self._key_pair, ignore_missing=True)
-        except _openstack.exceptions.SDKException as exception:
-            raise _exc.HostRuntimeException(
-                gen_msg=('no_find', "key pair"), exc=exception)
+        with _ExceptionHandler.catch(gen_msg=('no_find', "key pair")):
+            key_pair = self._session.compute.find_keypair(
+                self._key_pair, ignore_missing=True)
 
         # Use existing key
         if key_pair:
             return True
 
         # Create key pair if not exists
-        try:
+        with _ExceptionHandler.catch(gen_msg=('created_failed', "key pair")):
             key_pair = self._session.compute.create_keypair(name=self._key_pair)
-        except _openstack.exceptions.SDKException as exception:
-            raise _exc.HostRuntimeException(
-                gen_msg=('created_failed', "key pair"), exc=exception)
 
         _utl.create_key_pair_file(self._key_pair, key_pair.private_key)
 
@@ -145,23 +144,13 @@ class OpenStackHost(_CSPHost):
         # Verify rules associated to security group for host IP address
         public_ip = _utl.get_host_public_ip()
 
-        # Create rule on SSH
-        try:
-            self._session.create_security_group_rule(
-                security_group.id, port_range_min=22, port_range_max=22,
-                protocol="tcp", remote_ip_prefix=public_ip,
-                project_id=self._project_id)
-        except _openstack.exceptions.SDKException:
-            pass
-
-        # Create rule on HTTP
-        try:
-            self._session.create_security_group_rule(
-                security_group.id, port_range_min=80, port_range_max=80,
-                protocol="tcp", remote_ip_prefix=public_ip,
-                project_id=self._project_id)
-        except _openstack.exceptions.SDKException:
-            pass
+        # Create rule on SSH and HTTP
+        for port in (22, 80):
+            with _ExceptionHandler.catch(ignore=True):
+                self._session.create_security_group_rule(
+                    security_group.id, port_range_min=port, port_range_max=port,
+                    protocol="tcp", remote_ip_prefix=public_ip,
+                    project_id=self._project_id)
 
         _get_logger().info(
             _utl.gen_msg('authorized_ip', public_ip, self._security_group))
@@ -174,14 +163,9 @@ class OpenStackHost(_CSPHost):
             object: Instance
         """
         # Try to find instance
-        try:
+        with _ExceptionHandler.catch(
+                gen_msg=('no_instance_id', self._instance_id)):
             return self._session.get_server(self._instance_id)
-
-        # Instance not found
-        except _openstack.exceptions.SDKException as exception:
-            raise _exc.HostRuntimeException(
-                gen_msg=('no_instance_id', self._instance_id),
-                exc=exception)
 
     def _get_public_ip(self):
         """
@@ -235,17 +219,15 @@ class OpenStackHost(_CSPHost):
             accel_parameters_in_region)
 
         # Checks if image exists and get its name
-        try:
+        with _ExceptionHandler.catch(
+                catch_exc=_openstack.exceptions.ResourceNotFound,
+                gen_msg=('unable_find_from', 'image', image_id, 'Accelize')):
             image = self._session.compute.find_image(image_id)
-        except _openstack.exceptions.ResourceNotFound:
+        try:
+            self._image_name = image.name
+        except AttributeError:
             raise _exc.HostConfigurationException(gen_msg=(
                 'unable_find_from', 'image', image_id, 'Accelize'))
-        else:
-            try:
-                self._image_name = image.name
-            except AttributeError:
-                raise _exc.HostConfigurationException(gen_msg=(
-                    'unable_find_from', 'image', image_id, 'Accelize'))
 
         return image_id
 
@@ -263,13 +245,13 @@ class OpenStackHost(_CSPHost):
         # Get instance type (flavor)
         self._instance_type_name = _CSPHost._get_instance_type_from_region(
             accel_parameters_in_region)
-        try:
+        with _ExceptionHandler.catch(
+                catch_exc=_openstack.exceptions.ResourceNotFound,
+                exc_type=_exc.HostConfigurationException,
+                gen_msg=('unable_find_from', 'flavor',
+                         self._instance_type_name, self._host_type)):
             instance_type = self._session.compute.find_flavor(
                 self._instance_type_name).id
-        except _openstack.exceptions.ResourceNotFound:
-            raise _exc.HostConfigurationException(gen_msg=(
-                'unable_find_from', 'flavor',
-                self._instance_type_name, self._host_type))
 
         return instance_type
 
@@ -303,15 +285,12 @@ class OpenStackHost(_CSPHost):
             object: Instance
             str: Instance ID
         """
-        try:
+        with _ExceptionHandler.catch(gen_msg=('unable_to', "start")):
             instance = self._session.compute.create_server(
                 name=self._get_instance_name(),
                 image_id=self._image_id, flavor_id=self._instance_type,
                 key_name=self._key_pair,
                 security_groups=[{"name": self._security_group}])
-        except _openstack.exceptions.SDKException as exception:
-            raise _exc.HostRuntimeException(
-                gen_msg=('unable_to', "start"), exc=exception)
 
         return instance, instance.id
 
@@ -323,22 +302,17 @@ class OpenStackHost(_CSPHost):
             status (str): Status of the instance.
         """
         if status.lower() != "active":
-            try:
+            with _ExceptionHandler.catch(
+                    gen_msg=('unable_to', "start")):
                 self._session.start_server(self._instance)
-            except _openstack.exceptions.SDKException as exception:
-                raise _exc.HostRuntimeException(
-                    gen_msg=('unable_to', "start"), exc=exception)
 
     def _terminate_instance(self):
         """
         Terminate and delete instance.
         """
-        try:
+        with _ExceptionHandler.catch(gen_msg=('unable_to', "delete")):
             if not self._session.delete_server(self._instance, wait=True):
                 raise _exc.HostRuntimeException(_utl.gen_msg('unable_to', "delete"))
-        except _openstack.exceptions.SDKException as exception:
-            raise _exc.HostRuntimeException(
-                gen_msg=('unable_to', "delete"), exc=exception)
 
     def _pause_instance(self):
         """

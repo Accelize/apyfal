@@ -70,6 +70,11 @@ class StorageException(AcceleratorException):
     """Generic storage related exception"""
 
 
+class StorageAuthenticationException(StorageException):
+    """Error while trying to authenticate user on storage."""
+    DEFAULT_MESSAGE = "Failed to authenticate to storage."
+
+
 class StorageResourceNotExistsException(StorageException):
     """Exception when trying to access an non existing resource"""
     DEFAULT_MESSAGE = "Resource do not exists"

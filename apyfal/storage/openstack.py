@@ -1,12 +1,21 @@
 # coding=utf-8
 """OpenStack Swift"""
-# Absoluteimport required on Python 2 to avoid collision
+# Absolute import required on Python 2 to avoid collision
 # of this module with openstack-sdk package
 from __future__ import absolute_import as _absolute_import
 
 import openstack as _openstack
 
 from apyfal.storage._bucket import BucketStorage as _BucketStorage
+import apyfal.exceptions as _exc
+import apyfal._utilities as _utl
+import apyfal._utilities.openstack
+
+
+class _ExceptionHandler(_utl.openstack.ExceptionHandler):
+    """Host OpenStack exception handler"""
+    RUNTIME = _exc.StorageRuntimeException
+    AUTHENTICATION = _exc.StorageAuthenticationException
 
 
 class OpenStackStorage(_BucketStorage):
@@ -72,9 +81,12 @@ class OpenStackStorage(_BucketStorage):
             source (str): Source URL.
             stream (file-like object): Destination binary stream.
         """
-        content = self._session.object_store.download_object(
-            source, container=self._bucket_name)
-        stream.write(content)
+        with _ExceptionHandler.catch(
+                catch_exc=_openstack.exceptions.NotFoundException,
+                exc_type=_exc.StorageResourceNotExistsException):
+            data = self._session.object_store.download_object(
+                source, container=self._bucket_name)
+        stream.write(data)
 
     def copy_from_stream(self, stream, destination):
         """
@@ -84,6 +96,8 @@ class OpenStackStorage(_BucketStorage):
             stream (file-like object): Source binary stream.
             destination (str): Destination URL.
         """
-        self._session.object_store.create_object(
-            container=self._bucket_name, name=destination,
-            data=stream.read())
+        data = stream.read()
+        with _ExceptionHandler.catch():
+            self._session.object_store.create_object(
+                container=self._bucket_name, name=destination,
+                data=data)
