@@ -78,7 +78,7 @@ _STORAGE = _StorageHook()
 
 
 def register(storage_type, **parameters):
-    """Register a new storage to be used with "copy".
+    """Register a new storage.
 
     Args:
         storage_type (str): storage type
@@ -128,7 +128,23 @@ def _parse_host_url(url):
 
 @_contextmanager
 def _io_wrapper(stream, mode, encoding=None, errors=None, newline=None):
-    """"""
+    """Yield text or binary stream wrapper depending mode.
+
+    Args:
+        stream (file-like object): Stream to wrap.
+        mode (str): Mode in which the file is opened
+            (Works like standard library open mode).
+            Support at least 'r' (read), 'w' (write), 'b' (binary),
+            't' (text) modes, eventually more depending on source file.
+        encoding (str): with text  mode,
+            encoding used to decode or encode the file.
+        errors (str): with text mode, specifies how encoding and
+            decoding errors are to be handled
+        newline (str): Controls how universal newlines mode works.
+
+    Yields:
+        file-like object: Wrapped stream.
+    """
     if "t" in mode:
         text_stream = _TextIOWrapper(
             stream, encoding=encoding, errors=errors, newline=newline)
