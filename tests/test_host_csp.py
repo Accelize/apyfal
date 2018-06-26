@@ -647,15 +647,18 @@ def run_full_real_test_sequence(host_type, environment,
 
     # Skip if no correct configuration with this host_type
     config = Configuration()
-    if not config.has_host_credential():
-        pytest.skip('No CSP credentials')
 
-    if config['host']['host_type'] != host_type:
+    if config['host']['host_type'] == host_type:
+        del config['host']['client_id']
+        del config['host']['secret_id']
+
+    section = config['host.%s' % host_type]
+    if not section['client_id'] or not section['secret_id']:
         pytest.skip('No configuration for %s.' % host_type)
 
-    elif config['host']['region'] not in environment:
+    elif section['region'] not in environment:
         pytest.skip("No configuration for '%s' region on %s." %
-                    (config['host']['region'], host_type))
+                    (section['region'], host_type))
 
     # Enable logger
     from apyfal import get_logger

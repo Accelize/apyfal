@@ -291,26 +291,6 @@ class Configuration(_Mapping):
         accelerator_config['accelerator'] = accelerator
         return accelerator_config
 
-    def has_accelize_credential(self):
-        """
-        Check if Accelize credentials are present in configuration file.
-
-        Returns:
-            bool: True if credentials founds in file.
-        """
-        return (self['accelize']['client_id'] and
-                self['accelize']['secret_id'])
-
-    def has_host_credential(self):
-        """
-        Check if host credentials are present in configuration file.
-
-        Returns:
-            bool: True if credentials founds in file.
-        """
-        return (self['host']['client_id'] and
-                self['host']['secret_id'])
-
     def _legacy_backward_compatibility(self):
         """
         Convert sections and parameters from legacy

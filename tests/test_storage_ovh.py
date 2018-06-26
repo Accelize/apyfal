@@ -13,6 +13,6 @@ def test_ovhclass_import():
 
 @pytest.mark.need_csp
 @pytest.mark.need_csp_ovh
-def test_awsclass_real(tmpdir):
+def test_ovhclass_real(tmpdir):
     """OVHStorage in real case"""
     run_full_real_test_sequence('OVH', tmpdir)

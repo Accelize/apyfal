@@ -69,7 +69,8 @@ def run_full_real_test_sequence(storage_type, tmpdir):
     config = Configuration()
     full_storage_type = ''
     for section in config:
-        if section.startswith('storage.%s.' % storage_type.lower()):
+        if section.lower().startswith(
+                'storage.%s.' % storage_type.lower()):
             full_storage_type = section.split('.', 1)[1]
 
     if not full_storage_type:

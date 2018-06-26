@@ -7,6 +7,21 @@ import pytest
 import requests
 
 
+def has_accelize_credential(config):
+    """
+    Check if Accelize credentials are present in
+    configuration file.
+
+    Args:
+        config: Configuration file.
+
+    Returns:
+        bool: True if credentials founds in file.
+    """
+    return (config['accelize']['client_id'] and
+            config['accelize']['secret_id'])
+
+
 def test_configuration(tmpdir):
     """Tests Configuration"""
     from apyfal.configuration import Configuration
@@ -22,19 +37,13 @@ def test_configuration(tmpdir):
         DEFAULT_CONFIG_FILE = dummy_configuration
 
     # Test: No configuration file
-    config = DummyConfiguration()
-
-    # Test: has_* methods
-    assert 'accelize' not in config
-    assert not config.has_accelize_credential()
-    assert 'host' not in config
-    assert not config.has_host_credential()
+    DummyConfiguration()
 
     # Test: Use linked configuration file
     config_file = tmpdir.join(dummy_configuration)
     config_file.write(content)
     config = DummyConfiguration(str(config_file))
-    assert config.has_accelize_credential()
+    assert has_accelize_credential(config)
 
     # Test: Use file from home
     config_file = os.path.join(
@@ -44,7 +53,7 @@ def test_configuration(tmpdir):
 
     try:
         config = DummyConfiguration()
-        assert config.has_accelize_credential()
+        assert has_accelize_credential(config)
 
     finally:
         # Remove file from home
@@ -74,7 +83,7 @@ def accelize_credentials_available():
     """
     from apyfal.configuration import Configuration
     config = Configuration()
-    if not config.has_accelize_credential():
+    if not has_accelize_credential(config):
         pytest.skip('Accelize Credentials required')
     return config
 
