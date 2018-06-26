@@ -15,10 +15,8 @@ Storage URL format:
     Common schemes are (Registered by default):
 
     - "file://" or no scheme: Client local file.
-    - "host://": Host local file (Available only on client
-        if client is not host).
+    - "host://": Host local file (Available only on REST client).
     - "http://" or "https://": File access over HTTP.
-    - "ftp://" or "ftps://": File access over FTP.
 
     Some storage use advanced same, basic form is
     "StorageType://path" with StorageType the storage type
@@ -165,7 +163,7 @@ def open(url, mode="rb", encoding=None, errors=None, newline=None):
 
     Args:
         url (str or file-like object): URL or file object to open.
-            Can be storage URL, paths, file-like object.
+            Can be apyfal.storage URL, paths, file-like object.
         mode (str): Mode in which the file is opened
             (Works like standard library open mode).
             Support at least 'r' (read), 'w' (write), 'b' (binary),
@@ -219,9 +217,9 @@ def copy(source, destination):
 
     Args:
         source (str or file-like object): Source URL.
-            Can be storage URL, paths, file-like object.
+            Can be apyfal.storage URL, paths, file-like object.
         destination (str or file-like object): Destination URL.
-            Can be storage URL, paths, file-like object.
+            Can be apyfal.storage URL, paths, file-like object.
     """
 
     # Parses URLs

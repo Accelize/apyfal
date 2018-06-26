@@ -36,8 +36,10 @@ def create_configuration(configuration_file):
     """Create a configuration instance
 
     Args:
-        configuration_file (str or Configuration or None):
-            Configuration file path or instance."""
+        configuration_file (str or Configuration or file-like object or None):
+            Configuration file path or instance.
+            Can Configuration instance or apyfal.storage URL,
+            paths, file-like object"""
     if isinstance(configuration_file, Configuration):
         # configuration_file is already a Configuration instance
         return configuration_file
@@ -139,7 +141,9 @@ class Configuration(_Mapping):
     an parameter value.
 
     Args:
-        configuration_file (str or None): Configuration file path.
+        configuration_file (str or file-like object or None):
+            Configuration file path.
+            Can be apyfal.storage URL, paths, file-like object.
             If None, use default values.
     """
     #: Default name for configuration file (Used for file detection)
@@ -169,17 +173,24 @@ class Configuration(_Mapping):
         # If not, return empty Configuration file, this will force
         # host and accelerator classes to uses defaults values
         if configuration_file:
+            # Initialize configuration parser
             # Lazy import since not used if no configuration file
             try:
                 # Python 3
                 from configparser import ConfigParser
+                read_method = 'read_file'
             except ImportError:
                 # Python 2
                 from ConfigParser import ConfigParser
-
-            # Read file and get configuration as dict
+                read_method = 'readfp'
             ini_file = ConfigParser(allow_no_value=True)
-            ini_file.read(configuration_file)
+
+            # Read from file with apyfal.storage support
+            from apyfal.storage import open as srg_open
+            with srg_open(configuration_file, 'rt') as file:
+                getattr(ini_file, read_method)(file)
+
+            # Retrieve parameters from configuration parser
             self._sections = {
                 section: _Section(section, self, ini_file.items(section))
                 for section in ini_file.sections()}
