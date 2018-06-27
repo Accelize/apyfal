@@ -398,6 +398,7 @@ def gen_msg(message_id, *args):
         timeout="Timed out while waiting instance %s",
         timeout_status="Timed out while waiting instance %s, last status: %s",
         unable_to="Unable to %s instance",
+        unable_to_named="Unable to %s %s",
         unable_to_status="Unable to %s instance, last status: %s",
         unable_find_from="Unable to find %s '%s', please contact %s.",
         unable_reach_url="Unable to reach URL '%s'"
