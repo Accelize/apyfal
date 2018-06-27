@@ -7,7 +7,7 @@ run "./setup.py --help-commands" for help.
 from datetime import datetime
 from os import makedirs, chdir, environ
 from os.path import dirname, abspath, join, isfile, isdir
-from sys import argv
+from sys import argv, version_info
 
 from setuptools import setup, find_packages, Command
 
@@ -22,7 +22,7 @@ PACKAGE_INFO = dict(
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
-        'Topic :: System :: Distributed Computing',
+        'Topic :: Other/Nonlisted Topic',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
@@ -32,7 +32,7 @@ PACKAGE_INFO = dict(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Operating System :: OS Independent'
-    ],
+        ],
     keywords='cloud accelerator fpga hpc',
     author='Accelize',
     author_email='info@accelize.com',
@@ -44,33 +44,28 @@ PACKAGE_INFO = dict(
         'Accelize Website': 'https://www.accelize.com',
         'Contact': 'https://www.accelize.com/contact',
     },
-    license='Apache License, Version 2.0',
+    license='Apache',
     python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',
-    install_requires=['setuptools', 'requests', 'ipgetter', 'pycosio',
-                      'futures; python_version == "2.7"'],
+    install_requires=['setuptools', 'requests', 'ipgetter'],
     extras_require={
         # Optional speedup
         'optional': ['pycurl'],
 
-        # CSP specific requirements
-        'AWS': ['boto3', 'pycosio[s3]'],
-        'OpenStack': ['python-novaclient', 'python-neutronclient',
-                      'pycosio[swift]', 'pyOpenSSL']},
+        # Host specific requirements
+        'Alibaba' : [
+            'pyopenssl', 'oss2', 'aliyun-python-sdk-core%s' % (
+            '-v3' if version_info[0] > 2 else '')],
+        'AWS': ['boto3'],
+        'OpenStack': ['openstacksdk'],
+        'OVH': ['openstacksdk']},
     setup_requires=['setuptools'],
     tests_require=['pytest'],
     packages=find_packages(exclude=['docs', 'tests', 'rest_api']),
     include_package_data=True,
     zip_safe=True,
     command_options={},
-    cmdclass={},
-    entry_points={
-        'console_scripts':
-            ['apyfal=apyfal.__main__:_run_command']}
+    cmdclass={}
     )
-
-# Add OpenStack sub extra:
-PACKAGE_INFO['extras_require']['OVH'] = PACKAGE_INFO[
-    'extras_require']['OpenStack']
 
 # Gets package __version__ from package
 SETUP_DIR = abspath(dirname(__file__))
@@ -99,8 +94,7 @@ class SwaggerCommand(Command):
     """
     description = "Generate REST API client"
     user_options = [
-        ('swagger-version=', None,
-         'Force use of a specific Swagger-Codegen version'),
+        ('swagger-version=', None, 'Force use of a specific Swagger-Codegen version'),
     ]
 
     def initialize_options(self):
@@ -172,8 +166,7 @@ class SwaggerCommand(Command):
         # Download Swagger-codegen Jar if needed
         if not isfile(jar_path):
             print('Downloading %s' % jar_name)
-            urlretrieve('/'.join((repository, self.swagger_version, jar_name)),
-                        jar_path)
+            urlretrieve('/'.join((repository, self.swagger_version, jar_name)), jar_path)
 
         # Clear output directory
         print('Clearing %s' % REST_API_GENERATED_DIR)
@@ -181,10 +174,10 @@ class SwaggerCommand(Command):
 
         # Generate OpenApi client
         command = ' '.join([
-            "java", "-jar", jar_path, "generate",
-            "-i", input_spec_path,
-            "-o", REST_API_GENERATED_DIR,
-            "-l", "python"])
+                "java", "-jar", jar_path, "generate",
+                "-i", input_spec_path,
+                "-o", REST_API_GENERATED_DIR,
+                "-l", "python"])
         print('Running command "%s"' % command)
         Popen(command, shell=True).communicate()
 
@@ -200,10 +193,8 @@ class SwaggerCommand(Command):
                 src_package = 'swagger_client'
                 replacements = [
                     ('from %s' % src_package, 'from %s' % REST_API_PACKAGE),
-                    ('import %s' % src_package, 'import %s' %
-                     REST_API_PACKAGE),
-                    ('getattr(%s.' % src_package, 'getattr(%s.' %
-                     REST_API_PACKAGE),
+                    ('import %s' % src_package, 'import %s' % REST_API_PACKAGE),
+                    ('getattr(%s.' % src_package, 'getattr(%s.' % REST_API_PACKAGE),
                 ]
 
                 # Fix Swagger-codegen issue:
@@ -240,7 +231,6 @@ PACKAGE_INFO['cmdclass']['swagger_codegen'] = SwaggerCommand
 if 'swagger_codegen' not in argv:
     if isfile(REST_API_SETUP):
         from ast import literal_eval
-
         with open(REST_API_SETUP) as source_file:
             for line in source_file:
                 if line.rstrip().startswith('REQUIRES = ['):
@@ -249,7 +239,6 @@ if 'swagger_codegen' not in argv:
                     break
     else:
         import warnings
-
         warnings.warn(
             "REST API not generated, "
             "please run 'setup.py swagger_codegen' first", Warning)
@@ -265,12 +254,8 @@ elif 'build_sphinx' in argv:
 # Generates wildcard "all" extras_require
 PACKAGE_INFO['extras_require']['all'] = list(set(
     requirement for extra in PACKAGE_INFO['extras_require']
-    for requirement in PACKAGE_INFO['extras_require'][extra]))
-for key in tuple(PACKAGE_INFO['extras_require']['all']):
-    # Force pycosio[all]
-    if key.startswith('pycosio'):
-        PACKAGE_INFO['extras_require']['all'].remove(key)
-PACKAGE_INFO['extras_require']['all'].append('pycosio[all]')
+    for requirement in PACKAGE_INFO['extras_require'][extra]
+    ))
 
 # Gets Sphinx configuration
 PACKAGE_INFO['command_options']['build_sphinx'] = {
@@ -278,7 +263,8 @@ PACKAGE_INFO['command_options']['build_sphinx'] = {
     'version': ('setup.py', PACKAGE_INFO['version']),
     'release': ('setup.py', PACKAGE_INFO['version']),
     'copyright': ('setup.py', '2017-%s, %s' % (
-        datetime.now().year, PACKAGE_INFO['author']))}
+        datetime.now().year, PACKAGE_INFO['author'])),
+    }
 
 # Unable to install PyURL on ReadTheDocs
 if environ.get('READTHEDOCS'):
