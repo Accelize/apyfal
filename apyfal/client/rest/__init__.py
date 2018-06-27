@@ -47,9 +47,10 @@ class RESTClient(_Client):
             "https:/accelstore.accelize.com/user/applications".
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with client_id.
         host_ip (str): IP or URL address of the accelerator host.
-        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration or file-like object):
+            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
             If not set, will search it in current working directory, in current
-            user "home" folder. If none found, will use default configuration values
+            user "home" folder. If none found, will use default configuration values.
     """
 
     def __init__(self, accelerator, *args, **kwargs):
@@ -139,8 +140,6 @@ class RESTClient(_Client):
                 AcceleratorClient contain output information from  configuration operation.
                 Take a look accelerator documentation for more information.
         """
-        # TODO: Detail response dict in docstring
-
         # Skips configuration if already configured
         if not (self._configuration_url is None or datafile or parameters or host_env):
             return
@@ -274,7 +273,6 @@ class RESTClient(_Client):
                 AcceleratorClient contain output information from  process operation.
                 Take a look accelerator documentation for more information.
         """
-        # TODO: Detail response dict in docstring
         # Check if configuration was done
         if self._configuration_url is None:
             raise _exc.ClientConfigurationException(
@@ -349,8 +347,6 @@ class RESTClient(_Client):
                 AcceleratorClient contain output information from  stop operation.
                 Take a look to accelerator documentation for more information.
         """
-        # TODO: Detail response dict in docstring
-
         if self._stopped:
             # Avoid double call with __exit__ + __del__
             return

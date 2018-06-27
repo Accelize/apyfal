@@ -44,7 +44,8 @@ class Accelerator(object):
     Args:
         accelerator (str): Name of the accelerator you want to initialize,
             to know the accelerator list please visit "https://accelstore.accelize.com".
-        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration or file-like object):
+            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
         accelize_client_id (str): Accelize Client ID.

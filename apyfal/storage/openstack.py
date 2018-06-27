@@ -24,7 +24,8 @@ class OpenStackStorage(_BucketStorage):
 
     Args:
         storage_type (str): Cloud service provider name. Default to "OpenStack".
-        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration or file-like object):
+            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
         client_id (str): OpenStack Access Key ID.
@@ -35,7 +36,6 @@ class OpenStackStorage(_BucketStorage):
         auth_url (str): OpenStack auth-URL
         interface (str): OpenStack interface
     """
-    # TODO: Update all "config" docstring with apyfal.storage
     #: Provider name
     NAME = 'OpenStack'
 

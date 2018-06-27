@@ -46,5 +46,3 @@ class ExceptionHandler:
             # Raises Apyfal exception
             if not ignore:
                 raise (to_raise or cls.RUNTIME)(exc=exception, **exc_kwargs)
-
-        # TODO: Improve error message handling.

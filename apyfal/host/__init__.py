@@ -14,7 +14,8 @@ class Host(_utl.ABC):
 
     Args:
         host_type (str): Host type.
-        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration or file-like object):
+            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
         host_ip (str): IP or URL address of an already existing host to use.

@@ -30,7 +30,8 @@ class AWSHost(_CSPHost):
 
     Args:
         host_type (str): Cloud service provider name. Default to "AWS".
-        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration or file-like object):
+            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
         client_id (str): AWS Access Key ID.
@@ -158,7 +159,6 @@ class AWSHost(_CSPHost):
                 PolicyName=policy, PolicyDocument=policy_document)
 
         except iam_client.exceptions.EntityAlreadyExistsException:
-            # TODO: check if cached properly
             pass
         else:
             _get_logger().info(
@@ -198,7 +198,6 @@ class AWSHost(_CSPHost):
             )
 
         except _boto_exceptions.ClientError:
-            # TODO: to catch properly
             pass
         else:
             _get_logger().info(
@@ -223,7 +222,6 @@ class AWSHost(_CSPHost):
                 PolicyArn=policy_arn, RoleName=self._role)
 
         except iam_client.exceptions.EntityAlreadyExistsException:
-            # TODO: check if cached properly
             return
         _get_logger().info(
             _utl.gen_msg('attached_to', 'policy',
@@ -243,9 +241,6 @@ class AWSHost(_CSPHost):
                 InstanceProfileName=instance_profile)
 
         except iam_client.exceptions.EntityAlreadyExistsException:
-            # TODO: check if cached properly
-
-            # TODO: Get already existing instance_profile and then attach role in both cases
             pass
 
         else:

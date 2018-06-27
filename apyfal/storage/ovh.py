@@ -11,7 +11,8 @@ class OVHStorage(_OpenStackStorage):
 
     Args:
         storage_type (str): Cloud service provider name. Default to "OVH".
-        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration or file-like object):
+            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
         client_id (str): OVH Access Key ID.
@@ -20,7 +21,7 @@ class OVHStorage(_OpenStackStorage):
         bucket_name (str): Name on the container on OVH.
         project_id (str): OVH Project
     """
-    #: Provider name to use
+    #: Provider name
     NAME = 'OVH'
 
     #: OVH Website

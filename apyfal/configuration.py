@@ -31,6 +31,8 @@ from apyfal import _utilities as _utl
 #: Metering server URL
 METERING_SERVER = 'https://master.metering.accelize.com'
 
+__all__ = ['create_configuration', 'Configuration', 'METERING_SERVER']
+
 
 def create_configuration(configuration_file):
     """Create a configuration instance

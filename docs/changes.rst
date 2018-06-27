@@ -4,6 +4,10 @@ Changelog
 1.1.0 (In development)
 ----------------------
 
+New features
+
+- Add support for cloud storage and more using apyfal.storage URL.
+
 General improvements:
 
 - Importing Apyfal from an unsupported Python version now raise ImportError.
@@ -11,6 +15,7 @@ General improvements:
 Configuration improvements:
 
 - Add subsection support in configuration file (ex: *[host.host_type]*)
+- Configuration file can be loaded from apyfal.storage URL.
 - Configuration class is now a Mapping instead of ConfigParser subclass.
 
 Fixes:
