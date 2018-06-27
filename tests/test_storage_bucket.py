@@ -60,7 +60,7 @@ def run_full_real_test_sequence(storage_type, tmpdir):
     """Run common real tests for all buckets.
 
     Args:
-        host_type (str): Bucket storage_type.
+        storage_type (str): Bucket storage_type.
         tmpdir (object): tmpdir Pytest fixture
     """
     from apyfal.configuration import Configuration

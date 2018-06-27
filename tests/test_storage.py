@@ -113,39 +113,39 @@ def test_open(tmpdir):
         # Local file
         local_file = tmpdir.join('file.txt')
         local_file.write(content)
-        with srg.open(str(local_file), 'rb') as stream:
-            assert stream.read() == content
+        with srg.open(str(local_file), 'rb') as data:
+            assert data.read() == content
 
-        with srg.open(str(local_file), 'rt') as stream:
-            assert stream.read() == content.decode()
+        with srg.open(str(local_file), 'rt') as data:
+            assert data.read() == content.decode()
 
         # Stream:
         stream_file = BytesIO(content)
-        with srg.open(stream_file, 'rb') as stream:
-            assert stream.read() == content
+        with srg.open(stream_file, 'rb') as data:
+            assert data.read() == content
 
         stream_file = BytesIO(content)
-        with srg.open(stream_file, 'rt') as stream:
-            assert stream.read() == content.decode()
+        with srg.open(stream_file, 'rt') as data:
+            assert data.read() == content.decode()
 
         # Storage
-        with srg.open('dummy://path', 'wb') as stream:
-            stream.write(content)
+        with srg.open('dummy://path', 'wb') as data:
+            data.write(content)
         assert storage.stream.read() == content
 
         storage.stream = BytesIO()
-        with srg.open('dummy://path', 'wt') as stream:
-            stream.write(content.decode())
+        with srg.open('dummy://path', 'wt') as data:
+            data.write(content.decode())
         storage.stream.seek(0)
         assert storage.stream.read() == content
 
         storage.stream.seek(0)
-        with srg.open('dummy://path', 'rb') as stream:
-            assert stream.read() == content
+        with srg.open('dummy://path', 'rb') as data:
+            assert data.read() == content
 
         storage.stream.seek(0)
-        with srg.open('dummy://path', 'rt') as stream:
-            assert stream.read() == content.decode()
+        with srg.open('dummy://path', 'rt') as data:
+            assert data.read() == content.decode()
 
     # Clear registered storage
     finally:

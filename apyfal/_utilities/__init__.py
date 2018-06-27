@@ -362,8 +362,10 @@ def recursive_update(to_update, update):
     Recursively updates nested directories.
 
     Args:
-        to_update (dict): dict to update.
-        update (dict): dict containing new values.
+        to_update (dict or collections.Mapping):
+            dict to update.
+        update (dict or collections.Mapping):
+            dict containing new values.
 
     Returns:
         dict: to_update
