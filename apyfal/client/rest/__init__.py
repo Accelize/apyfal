@@ -1,5 +1,7 @@
 # coding=utf-8
-"""Accelerator REST client"""
+"""Accelerator REST client.
+
+This client allow remote accelerator control."""
 import json as _json
 import os as _os
 import shutil as _shutil
@@ -37,7 +39,7 @@ except ImportError:  # OpenAPI client need to be generated first
 
 class RESTClient(_Client):
     """
-    End user API based on the openAPI Accelize accelerator
+    Remote Accelerator OpenAPI REST client.
 
     Args:
         accelerator (str): Name of the accelerator you want to initialize,
@@ -120,7 +122,7 @@ class RESTClient(_Client):
 
     def start(self, datafile=None, info_dict=False, host_env=None, **parameters):
         """
-        Create an AcceleratorClient configuration.
+        Configures accelerator.
 
         Args:
             datafile (str): Depending on the accelerator,
@@ -175,7 +177,7 @@ class RESTClient(_Client):
 
     def _process_openapi(self, json_parameters, datafile):
         """
-        Process using OpenApi REST API.
+        Processes using OpenApi REST API.
 
         Args:
             json_parameters (str): AcceleratorClient parameter as JSON
@@ -253,7 +255,7 @@ class RESTClient(_Client):
 
     def process(self, file_in=None, file_out=None, info_dict=False, **parameters):
         """
-        Process a file with accelerator.
+        Process with accelerator.
 
         Args:
             file_in (str): Path to the file you want to process.
@@ -336,7 +338,7 @@ class RESTClient(_Client):
 
     def stop(self, info_dict=False):
         """
-        Stop your accelerator session.
+        Stop accelerator.
 
         Args:
             info_dict (bool): If True, returns a dict containing information on

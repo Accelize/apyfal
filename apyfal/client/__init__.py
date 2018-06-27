@@ -108,7 +108,7 @@ class AcceleratorClient(_utl.ABC):
     @_abstractmethod
     def start(self, datafile=None, info_dict=False, host_env=None, **parameters):
         """
-        Create an AcceleratorClient configuration.
+        Configures accelerator.
 
         Args:
             datafile (str): Depending on the accelerator,
@@ -132,7 +132,7 @@ class AcceleratorClient(_utl.ABC):
     @_abstractmethod
     def process(self, file_in=None, file_out=None, info_dict=False, **parameters):
         """
-        Process a file with accelerator.
+        Processes using OpenApi REST API.
 
         Args:
             file_in (str): Path to the file you want to process.
@@ -156,7 +156,7 @@ class AcceleratorClient(_utl.ABC):
     @_abstractmethod
     def stop(self, info_dict=False):
         """
-        Stop your accelerator session.
+        Stop accelerator.
 
         Args:
             info_dict (bool): If True, returns a dict containing information on

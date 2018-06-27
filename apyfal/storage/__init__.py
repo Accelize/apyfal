@@ -33,7 +33,8 @@ from abc import abstractmethod as _abstractmethod
 from contextlib import contextmanager as _contextmanager
 from io import TextIOWrapper as _TextIOWrapper, open as _io_open
 from shutil import copy as _copy, copyfileobj as _copyfileobj
-from tempfile import SpooledTemporaryFile as _SpooledTemporaryFile
+import tempfile as _tempfile
+
 import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
@@ -154,6 +155,59 @@ def _io_wrapper(stream, mode, encoding=None, errors=None, newline=None):
         yield stream
 
 
+class _SpooledTemporaryFile(_tempfile.SpooledTemporaryFile):
+    """Temporary file wrapper, specialized to switch from BytesIO
+    or StringIO to a real file when it exceeds a certain size or
+    when a fileno is needed.
+    """
+    # SpooledTemporaryFile with all io.IOBase abstract methods support
+
+    def readable(self):
+        """
+        Returns True if the stream can be read from.
+        If False, read() will raise OSError.
+
+        Returns:
+            bool: readable.
+        """
+        try:
+            return self._file.readable()
+        except AttributeError:
+            # Python 2 Compatibility:
+            # Assume its True as this is OK in our use case.
+            return True
+
+    def seekable(self):
+        """
+        Return True if the stream supports random access.
+        If False, seek(), tell() and truncate() will raise OSError.
+
+        Returns:
+            bool: Seekable
+        """
+        try:
+            return self._file.seekable()
+        except AttributeError:
+            # Python 2 Compatibility:
+            # Assume its True as this is OK in our use case.
+            return True
+
+    def writable(self):
+        """
+        Return True if the stream supports writing.
+        If False, write() and truncate() will raise OSError.
+
+        Returns:
+            bool: Writable
+        """
+        try:
+            return self._file.writable()
+        except AttributeError:
+            # Python 2 Compatibility:
+            # Assume its True as this is OK in our use case.
+            return True
+
+
 # Create apyfal.storage.open function, but keep reference to builtin open
 _stdlib_open = open
 
@@ -199,7 +253,7 @@ def open(url, mode="rb", encoding=None, errors=None, newline=None):
 
     # Open storage as stream
     else:
-        with _utl.SpooledTemporaryFile(max_size=1e9) as stream:
+        with _SpooledTemporaryFile(max_size=1e9) as stream:
             if 'r' in mode:
                 storage.copy_to_stream(path, stream)
                 stream.seek(0)

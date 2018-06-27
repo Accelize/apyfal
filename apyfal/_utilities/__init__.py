@@ -10,7 +10,6 @@ import json
 import os
 import re
 import sys
-import tempfile
 import time
 
 import requests
@@ -53,59 +52,6 @@ else:
 
     # Back port of "abc.ABC" base abstract class
     ABC = abc.ABCMeta('ABC', (object,), {})
-
-
-class SpooledTemporaryFile(tempfile.SpooledTemporaryFile):
-    """Temporary file wrapper, specialized to switch from BytesIO
-    or StringIO to a real file when it exceeds a certain size or
-    when a fileno is needed.
-    """
-    # SpooledTemporaryFile with all IOBase abstract methods support
-
-    def readable(self):
-        """
-        Returns True if the stream can be read from.
-        If False, read() will raise OSError.
-
-        Returns:
-            bool: readable.
-        """
-        try:
-            return self._file.readable()
-        except AttributeError:
-            # Python 2 Compatibility:
-            # Assume its True as this is OK in our use case.
-            return True
-
-    def seekable(self):
-        """
-        Return True if the stream supports random access.
-        If False, seek(), tell() and truncate() will raise OSError.
-
-        Returns:
-            bool: Seekable
-        """
-        try:
-            return self._file.seekable()
-        except AttributeError:
-            # Python 2 Compatibility:
-            # Assume its True as this is OK in our use case.
-            return True
-
-    def writable(self):
-        """
-        Return True if the stream supports writing.
-        If False, write() and truncate() will raise OSError.
-
-        Returns:
-            bool: Writable
-        """
-        try:
-            return self._file.writable()
-        except AttributeError:
-            # Python 2 Compatibility:
-            # Assume its True as this is OK in our use case.
-            return True
 
 
 def factory(cls, cls_type, parameter_name, exc_type):
