@@ -24,7 +24,8 @@ class OpenStackHost(_CSPHost):
 
     Args:
         host_type (str): Cloud service provider name. Default to "OpenStack".
-        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration or file-like object):
+            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
         client_id (str): OpenStack Access Key ID.
@@ -318,5 +319,4 @@ class OpenStackHost(_CSPHost):
         """
         Pause instance.
         """
-        # TODO: Implement pause instance support, actually terminates. shutdown ?
         self._terminate_instance()

@@ -194,9 +194,7 @@ class SwaggerCommand(Command):
                     ('getattr(%s.' % src_package, 'getattr(%s.' % REST_API_PACKAGE),
                 ]
 
-                # Fix Swagger issues:
-                # TODO: Remove once fixed in released Swagger-Codegen version
-
+                # Fix Swagger-codegen issue:
                 # https://github.com/swagger-api/swagger-codegen/pull/7684
                 for value in ('1', '2', '3', '4', ''):
                     replacements.append((
@@ -204,6 +202,7 @@ class SwaggerCommand(Command):
                         '.models.inline_response_200%s' %
                         (('_%s' % value) if value else '')))
 
+                # Fix Swagger-codegen issue:
                 # https://github.com/swagger-api/swagger-codegen/issues/8328
                 replacements += [
                     ('async', 'asynch'), ('asynchh', 'asynch')]

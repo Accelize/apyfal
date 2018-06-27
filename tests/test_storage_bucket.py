@@ -149,5 +149,3 @@ def run_full_real_test_sequence(storage_type, tmpdir):
     # Clear storage
     finally:
         _STORAGE.clear()
-
-        # TODO: Bucket clean up...

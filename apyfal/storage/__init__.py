@@ -38,6 +38,8 @@ import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
 
+__all__ = ['open', 'copy', 'Storage']
+
 # Storage name aliases
 _ALIASES = {
     # "host" only available on call from REST client
@@ -275,7 +277,8 @@ class Storage(_utl.ABC):
 
     Args:
         storage_type (str): Type of storage.
-        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration or file-like object):
+            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
     """

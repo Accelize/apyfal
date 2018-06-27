@@ -20,16 +20,20 @@ class AcceleratorClient(_utl.ABC):
             "https:/accelstore.accelize.com/user/applications".
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with client_id.
         host_ip (str): IP or URL address of the accelerator host.
-        config (str or apyfal.configuration.Configuration): Configuration file path or instance.
+        config (str or apyfal.configuration.Configuration or file-like object):
+            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
             If not set, will search it in current working directory, in current
-            user "home" folder. If none found, will use default configuration values
+            user "home" folder. If none found, will use default configuration values.
     """
+
+    #: Default parameters JSON for configuration/start stage
     DEFAULT_CONFIGURATION_PARAMETERS = {"app": {
         "reset": 0,
         "enable-sw-comparison": 0,
         "logging": {"format": 1, "verbosity": 2},
         "specific": {}}}
 
+    #: Default parameters JSON for process stage
     DEFAULT_PROCESS_PARAMETERS = {"app": {
         "reset": 0,
         "enable-sw-comparison": 0,
