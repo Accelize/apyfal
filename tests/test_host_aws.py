@@ -5,6 +5,39 @@ import pytest
 from tests.test_host_csp import run_full_real_test_sequence, import_from_generic_test
 
 
+def test_exception_handler():
+    """Tests ExceptionHandler"""
+    from botocore.exceptions import ClientError
+    from apyfal.host.aws import _ExceptionHandler
+    import apyfal.exceptions as exc
+
+    response = {'Error': {'Code': 'ErrorCode', 'Message': 'Error'}}
+
+    # Tests no exception
+    with _ExceptionHandler.catch():
+        assert 1
+
+    # Tests catch specified exception
+    with pytest.raises(exc.HostRuntimeException):
+        with _ExceptionHandler.catch(to_catch=ValueError):
+            raise ValueError
+
+    # Tests raises specified exception
+    with pytest.raises(exc.HostConfigurationException):
+        with _ExceptionHandler.catch(
+                to_raise=exc.HostConfigurationException):
+            raise ClientError(response, 'testing')
+
+    # Tests ignore error code
+    with _ExceptionHandler.catch(filter_error_codes='ErrorCode'):
+        raise ClientError(response, 'testing')
+
+    # Tests other error code
+    with pytest.raises(exc.HostRuntimeException):
+        with _ExceptionHandler.catch():
+            raise ClientError(response, 'testing')
+
+
 def test_awsclass_import():
     """AWSHost import"""
     # Test: Import by factory without errors

@@ -1,21 +1,15 @@
 # coding=utf-8
 """Amazon Web Services S3"""
 
-from contextlib import contextmanager as _contextmanager
-
 import boto3 as _boto3
-import botocore.exceptions as _boto_exceptions
 
 from apyfal.storage._bucket import BucketStorage as _BucketStorage
 import apyfal.exceptions as _exc
+import apyfal._utilities.aws as _utl_aws
 
 
-@_contextmanager
-def _handle_s3_exception(bucket_key=None):
-    """Handle Boto exceptions and raise Apyfal exception
-
-    Args:
-        bucket_key (str): Bucket key accessed
+class _ExceptionHandler(_utl_aws.ExceptionHandler):
+    """Handle AWS S3 Exceptions.
 
     Raises:
         apyfal.exceptions.StorageResourceNotExistsException:
@@ -23,15 +17,8 @@ def _handle_s3_exception(bucket_key=None):
         apyfal.exceptions.StorageRuntimeException:
             _Storage runtime exception.
     """
-    try:
-        yield
-    except _boto_exceptions.ClientError as exception:
-        if exception.response['Error']['Code'] == "404":
-            raise _exc.StorageResourceNotExistsException(
-                exc=bucket_key)
-        else:
-            raise _exc.StorageRuntimeException(
-                exc=exception)
+    RUNTIME = _exc.StorageRuntimeException
+    ERROR_CODE = {'404': _exc.StorageResourceNotExistsException}
 
 
 class AWSStorage(_BucketStorage):
@@ -81,7 +68,7 @@ class AWSStorage(_BucketStorage):
             source (str): Source URL.
             local_path (str): Local destination path.
         """
-        with _handle_s3_exception(source):
+        with _ExceptionHandler.catch():
             self._get_bucket().download_file(source, local_path)
 
     def copy_from_local(self, local_path, destination):
@@ -92,7 +79,7 @@ class AWSStorage(_BucketStorage):
             local_path (str): Local source path.
             destination (str): Destination URL
         """
-        with _handle_s3_exception():
+        with _ExceptionHandler.catch():
             self._get_bucket().upload_file(local_path, destination)
 
     def copy_to_stream(self, source, stream):
@@ -103,7 +90,7 @@ class AWSStorage(_BucketStorage):
             source (str): Source URL.
             stream (file-like object): Destination binary stream.
         """
-        with _handle_s3_exception(source):
+        with _ExceptionHandler.catch():
             self._get_bucket().download_fileobj(source, stream)
 
     def copy_from_stream(self, stream, destination):
@@ -114,7 +101,7 @@ class AWSStorage(_BucketStorage):
             stream (file-like object): Source binary stream.
             destination (str): Destination URL.
         """
-        with _handle_s3_exception():
+        with _ExceptionHandler.catch():
             self._get_bucket().upload_fileobj(stream, destination)
 
     def _copy_from_aws(self, storage, source, destination):
@@ -126,6 +113,6 @@ class AWSStorage(_BucketStorage):
             source (str): Source key in other bucket.
             destination (str): Destination key in this bucket.
         """
-        with _handle_s3_exception(source):
+        with _ExceptionHandler.catch():
             self._get_bucket().copy(
                 {'Bucket': storage.bucket, 'Key': source}, destination)

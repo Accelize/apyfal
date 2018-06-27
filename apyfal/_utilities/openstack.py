@@ -9,26 +9,31 @@ from contextlib import contextmanager
 import keystoneauth1.exceptions.http as _keystoneauth_exceptions
 from openstack.exceptions import SDKException
 
+from apyfal.exceptions import AcceleratorException
+
 
 class ExceptionHandler:
     """Handler for OpenStack exceptions."""
     # Needs to be overridden with exceptions to re-raises
-    RUNTIME = None
-    AUTHENTICATION = None
+    RUNTIME = AcceleratorException
+    AUTHENTICATION = AcceleratorException
 
     @classmethod
     @contextmanager
-    def catch(cls, catch_exc=SDKException, exc_type=None, ignore=False, **kwargs):
-        """Context manager that catch OpenStack exceptions and raises
+    def catch(cls, to_catch=SDKException, to_raise=None, ignore=False, **exc_kwargs):
+        """
+        Context manager that catch OpenStack exceptions and raises
         Apyfal exceptions.
 
         Args:
-            catch_exc (Exception): Exception to catch.
+            to_catch (Exception or tuple of Exception): Exception to catch.
                 SDKException if not specified.
-            exc_type (apyfal.exception.AcceleratorException subclass):
+            to_raise (apyfal.exception.AcceleratorException subclass):
                 Exception to raise. self.RUNTIME if not specified.
-            ignore (bool): If True, don't raises exception."""
-        # Performs operation in with
+            ignore (bool): If True, don't raises exception.
+            exc_kwargs: Exception to raise arguments.
+        """
+        # Performs operation
         try:
             yield
 
@@ -37,9 +42,9 @@ class ExceptionHandler:
             raise cls.AUTHENTICATION(exc=exception)
 
         # Catch specified exceptions
-        except catch_exc as exception:
+        except to_catch as exception:
             # Raises Apyfal exception
             if not ignore:
-                raise (exc_type or cls.RUNTIME)(exc=exception, **kwargs)
+                raise (to_raise or cls.RUNTIME)(exc=exception, **exc_kwargs)
 
         # TODO: Improve error message handling.

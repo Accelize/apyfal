@@ -8,11 +8,10 @@ import openstack as _openstack
 
 from apyfal.storage._bucket import BucketStorage as _BucketStorage
 import apyfal.exceptions as _exc
-import apyfal._utilities as _utl
-import apyfal._utilities.openstack
+import apyfal._utilities.openstack as _utl_openstack
 
 
-class _ExceptionHandler(_utl.openstack.ExceptionHandler):
+class _ExceptionHandler(_utl_openstack.ExceptionHandler):
     """Host OpenStack exception handler"""
     RUNTIME = _exc.StorageRuntimeException
     AUTHENTICATION = _exc.StorageAuthenticationException
@@ -82,8 +81,8 @@ class OpenStackStorage(_BucketStorage):
             stream (file-like object): Destination binary stream.
         """
         with _ExceptionHandler.catch(
-                catch_exc=_openstack.exceptions.NotFoundException,
-                exc_type=_exc.StorageResourceNotExistsException):
+                to_catch=_openstack.exceptions.NotFoundException,
+                to_raise=_exc.StorageResourceNotExistsException):
             data = self._session.object_store.download_object(
                 source, container=self._bucket_name)
         stream.write(data)

@@ -10,3 +10,5 @@ apyfal.storage
 
    api_storage_aws
    api_storage_http
+   api_storage_openstack
+   api_storage_ovh

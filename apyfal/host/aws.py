@@ -11,7 +11,18 @@ import botocore.exceptions as _boto_exceptions
 from apyfal.host._csp import CSPHost as _CSPHost
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
+import apyfal._utilities.aws as _utl_aws
 from apyfal._utilities import get_logger as _get_logger
+
+
+class _ExceptionHandler(_utl_aws.ExceptionHandler):
+    """Handle AWS EC2 Exceptions.
+
+    Raises:
+        apyfal.exceptions.HostRuntimeException:
+            _Storage runtime exception.
+    """
+    RUNTIME = _exc.HostRuntimeException
 
 
 class AWSHost(_CSPHost):
@@ -71,41 +82,6 @@ class AWSHost(_CSPHost):
             region_name=self._region
         )
 
-    @staticmethod
-    def _handle_boto_exception(exception, filter_error_codes=None,
-                               exception_msg=None):
-        """
-        Handle Boto exceptions.
-
-        Args:
-            exception (botocore.exceptions.ClientError): exception to handle
-            filter_error_codes (list of str or str): AWS error code to filter.
-            exception_msg (str): Message of the exception to raise in error
-                code not in filter
-
-        Raises:
-            apyfal.exceptions.HostRuntimeException:
-                error code not in filter_error_codes
-        """
-        # Try to get error code and message
-        try:
-            error_dict = exception.response['Error']
-            error_code = error_dict['Code']
-        except (AttributeError, KeyError):
-            raise _exc.HostRuntimeException(
-                exception_msg, exc=exception)
-
-        # Converts single str to tuple
-        if filter_error_codes is None:
-            filter_error_codes = ()
-        elif isinstance(filter_error_codes, str):
-            filter_error_codes = (filter_error_codes,)
-
-        # Raises if not in filter
-        if error_code not in filter_error_codes:
-            raise _exc.HostRuntimeException(
-                exception_msg, exc=error_dict['Message'])
-
     def _check_credential(self):
         """
         Check CSP credentials.
@@ -115,10 +91,9 @@ class AWSHost(_CSPHost):
                 Authentication failed.
         """
         ec2_client = self._session.client('ec2')
-        try:
+        with _ExceptionHandler.catch(
+                to_raise=_exc.HostAuthenticationException):
             ec2_client.describe_key_pairs()
-        except ec2_client.exceptions.ClientError as exception:
-            raise _exc.HostAuthenticationException(exc=exception)
 
     def _init_key_pair(self):
         """
@@ -132,11 +107,8 @@ class AWSHost(_CSPHost):
         # Checks if Key pairs exists, needs to get the full pairs list
         # and compare in lower case because Boto perform its checks case sensitive
         # and AWS use case insensitive names.
-        try:
+        with _ExceptionHandler.catch():
             key_pairs = ec2_client.describe_key_pairs()
-        except ec2_client.exceptions.ClientError as exception:
-            self._handle_boto_exception(exception)
-            return
 
         name_lower = self._key_pair.lower()
         for key_pair in key_pairs['KeyPairs']:
@@ -147,11 +119,8 @@ class AWSHost(_CSPHost):
 
         # Key does not exist on the CSP, create it
         ec2_resource = self._session.resource('ec2')
-        try:
+        with _ExceptionHandler.catch():
             key_pair = ec2_resource.create_key_pair(KeyName=self._key_pair)
-        except _boto_exceptions.ClientError as exception:
-            self._handle_boto_exception(exception)
-            return
 
         _utl.create_key_pair_file(self._key_pair, key_pair.key_material)
 
@@ -299,11 +268,8 @@ class AWSHost(_CSPHost):
         # Checks if Key pairs exists, like for key pairs
         # needs  case insensitive names check
         ec2_client = self._session.client('ec2')
-        try:
+        with _ExceptionHandler.catch():
             security_groups = ec2_client.describe_security_groups()
-        except ec2_client.exceptions.ClientError as exception:
-            self._handle_boto_exception(exception)
-            return
 
         name_lower = self._security_group.lower()
         group_exists = False
@@ -324,21 +290,15 @@ class AWSHost(_CSPHost):
         # Try to create security group if not exist
         if not group_exists:
             # Get VPC
-            try:
+            with _ExceptionHandler.catch():
                 vpc_id = ec2_client.describe_vpcs().get(
                     'Vpcs', [{}])[0].get('VpcId', '')
-            except ec2_client.exceptions.ClientError as exception:
-                self._handle_boto_exception(exception)
-                return
 
-            try:
+            with _ExceptionHandler.catch():
                 response = ec2_client.create_security_group(
                     GroupName=self._security_group,
                     Description=_utl.gen_msg('accelize_generated'),
                     VpcId=vpc_id)
-            except ec2_client.exceptions.ClientError as exception:
-                self._handle_boto_exception(exception)
-                return
 
             # Get group ID
             security_group_id = response['GroupId']
@@ -349,7 +309,8 @@ class AWSHost(_CSPHost):
         # Add host IP to security group if not already done
         public_ip = _utl.get_host_public_ip()
 
-        try:
+        with _ExceptionHandler.catch(
+                filter_error_codes='InvalidPermission.Duplicate'):
             ec2_client.authorize_security_group_ingress(
                 GroupId=security_group_id,
                 IpPermissions=[
@@ -364,8 +325,6 @@ class AWSHost(_CSPHost):
                      'IpRanges': [{'CidrIp': public_ip}]
                      }
                 ])
-        except ec2_client.exceptions.ClientError as exception:
-            self._handle_boto_exception(exception, 'InvalidPermission.Duplicate')
 
         _get_logger().info(
             _utl.gen_msg('authorized_ip', public_ip, self._security_group))
@@ -377,12 +336,9 @@ class AWSHost(_CSPHost):
         Returns:
             object: Instance
         """
-        try:
+        with _ExceptionHandler.catch(
+                gen_msg=('no_instance_id', self._instance_id)):
             return self._session.resource('ec2').Instance(self._instance_id)
-        except _boto_exceptions.ClientError as exception:
-            raise _exc.HostRuntimeException(
-                gen_msg=('no_instance_id', self._instance_id),
-                exc=exception)
 
     def _get_public_ip(self):
         """
@@ -391,11 +347,8 @@ class AWSHost(_CSPHost):
         Returns:
             str: IP address
         """
-        try:
+        with _ExceptionHandler.catch(gen_msg='no_instance_ip'):
             return self._instance.public_ip_address
-        except _boto_exceptions.ClientError as exception:
-            raise _exc.HostRuntimeException(
-                gen_msg='no_instance_ip', exc=exception)
 
     def _get_private_ip(self):
         """
@@ -404,11 +357,8 @@ class AWSHost(_CSPHost):
         Returns:
             str: IP address
         """
-        try:
+        with _ExceptionHandler.catch(gen_msg='no_instance_ip'):
             return self._instance.private_ip_address
-        except _boto_exceptions.ClientError as exception:
-            raise _exc.HostRuntimeException(
-                gen_msg='no_instance_ip', exc=exception)
 
     def _get_status(self):
         """
@@ -419,12 +369,9 @@ class AWSHost(_CSPHost):
         """
         with _utl.Timeout(1, sleep=0.01) as timeout:
             while True:
-                try:
+                with _ExceptionHandler.catch(
+                        filter_error_codes='InvalidInstanceID.NotFound'):
                     return self._instance.state["Name"]
-                except _boto_exceptions.ClientError as exception:
-                    self._handle_boto_exception(
-                        exception,
-                        filter_error_codes='InvalidInstanceID.NotFound')
                 if timeout.reached():
                     raise _exc.HostRuntimeException(
                         gen_msg=('no_instance_id', self._instance_id),

@@ -3,6 +3,8 @@
 import os
 import time
 
+import requests
+
 import pytest
 
 
@@ -119,3 +121,18 @@ def test_recursive_update():
                 'key3': 3, 'key5': 5.0}
 
     assert recursive_update(to_update, update) == expected
+
+
+def test_handle_request_exceptions():
+    """Tests handle_request_exceptions"""
+    from apyfal._utilities import handle_request_exceptions
+    import apyfal.exceptions as exc
+
+    # Tests no exception
+    with handle_request_exceptions(exc.AcceleratorException):
+        assert 1
+
+    # Catch exception
+    with pytest.raises(exc.AcceleratorException):
+        with handle_request_exceptions(exc.AcceleratorException):
+            raise requests.RequestException

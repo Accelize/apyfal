@@ -11,27 +11,27 @@ def test_awsclass_import():
     import_from_generic_test('AWS')
 
 
-def test_handle_s3_exception():
-    """Tests _handle_s3_exception"""
+def test_exception_handler():
+    """Tests ExceptionHandler"""
     from botocore.exceptions import ClientError
-    from apyfal.storage.aws import _handle_s3_exception
+    from apyfal.storage.aws import _ExceptionHandler
     import apyfal.exceptions as exc
 
     # Tests no exception
-    with _handle_s3_exception():
+    with _ExceptionHandler.catch():
         assert 1
 
     # Tests 404 error code
-    response = {'Error': {'Code': '404'}}
+    response = {'Error': {'Code': '404', 'Message': 'Error'}}
 
     with pytest.raises(exc.StorageResourceNotExistsException):
-        with _handle_s3_exception():
+        with _ExceptionHandler.catch():
             raise ClientError(response, 'testing')
 
     # Tests other error code
     response['Error']['Code'] = '300'
     with pytest.raises(exc.StorageRuntimeException):
-        with _handle_s3_exception():
+        with _ExceptionHandler.catch():
             raise ClientError(response, 'testing')
 
 

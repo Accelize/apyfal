@@ -101,7 +101,7 @@ class OpenStackHost(_CSPHost):
                 Authentication failed.
         """
         with _ExceptionHandler.catch(
-                exc_type=_exc.HostAuthenticationException):
+                to_raise=_exc.HostAuthenticationException):
             list(self._session.network.networks())
 
     def _init_key_pair(self):
@@ -220,7 +220,7 @@ class OpenStackHost(_CSPHost):
 
         # Checks if image exists and get its name
         with _ExceptionHandler.catch(
-                catch_exc=_openstack.exceptions.ResourceNotFound,
+                to_catch=_openstack.exceptions.ResourceNotFound,
                 gen_msg=('unable_find_from', 'image', image_id, 'Accelize')):
             image = self._session.compute.find_image(image_id)
         try:
@@ -246,8 +246,8 @@ class OpenStackHost(_CSPHost):
         self._instance_type_name = _CSPHost._get_instance_type_from_region(
             accel_parameters_in_region)
         with _ExceptionHandler.catch(
-                catch_exc=_openstack.exceptions.ResourceNotFound,
-                exc_type=_exc.HostConfigurationException,
+                to_catch=_openstack.exceptions.ResourceNotFound,
+                to_raise=_exc.HostConfigurationException,
                 gen_msg=('unable_find_from', 'flavor',
                          self._instance_type_name, self._host_type)):
             instance_type = self._session.compute.find_flavor(
