@@ -28,16 +28,25 @@ import os.path as _os_path
 from apyfal import exceptions as _exc
 from apyfal import _utilities as _utl
 
+#: Accelerator Executable path
+ACCELERATOR_EXECUTABLE = '/opt/accelize/accelerator/accelerator'
+
 #: Metering server URL
 METERING_SERVER = 'https://master.metering.accelize.com'
 
-#: Accelerator Executable path
-ACCELERATOR_EXECUTABLE = '/opt/accelize/accelerator/accelerator'
+#: Metering Credentials JSON file
+CREDENTIALS_JSON = '/etc/accelize/credentials.json'
+
+#: Metering Server temporary directory
+METERING_TMP_DIR = '/tmp/meteringServer'
+
+#: Metering Client configuration
+METERING_CLIENT_CONFIG = '/etc/sysconfig/meteringclient'
 
 __all__ = ['create_configuration', 'Configuration',
            'ACCELERATOR_EXECUTABLE',
            'accelerator_executable_available',
-           'METERING_SERVER']
+           'METERING_SERVER', 'CREDENTIALS_JSON']
 
 
 def create_configuration(configuration_file):
@@ -61,7 +70,6 @@ def accelerator_executable_available():
     Returns:
         bool: Accelerator executable found.
     """
-
     return _os_path.isfile(ACCELERATOR_EXECUTABLE)
 
 

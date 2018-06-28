@@ -25,10 +25,15 @@ def _call(command, **exc_args):
         apyfal.exceptions.ClientRuntimeException:
             Error while calling command.
     """
-    process = _Popen(
-        command, stdout=_PIPE, stderr=_PIPE, universal_newlines=True)
-    outputs = process.communicate()
-    if process.returncode:
+    try:
+        process = _Popen(
+            command, stdout=_PIPE, stderr=_PIPE, universal_newlines=True)
+        outputs = process.communicate()
+        in_error = process.returncode
+    except OSError as exception:
+        in_error = True
+        outputs = [str(exception)]
+    if in_error:
         raise _exc.ClientRuntimeException(exc='\n'.join(
             [command if isinstance(command, str) else ' '.join(command)] +
             [output for output in outputs if output]), **exc_args)
@@ -67,6 +72,11 @@ class SysCallClient(_Client):
     #: Client type
     NAME = 'SysCall'
 
+    # Temporary dir for JSON files
+    _JSON_DIR = (
+        '/dev/shm/apyfal_cache/%s' if _os_path.isdir('/dev/shm') else
+        '/tmp/apyfal_cache/%s')
+
     def __init__(self, *args, **kwargs):
         if not _cfg.accelerator_executable_available():
             # Need accelerator executable to run
@@ -77,10 +87,7 @@ class SysCallClient(_Client):
         _Client.__init__(self, *args, **kwargs)
 
         # Initialize JSON temporary dir
-        self._json_dir = (
-            '/dev/shm/apyfal_cache/%s' if _os_path.isdir('/dev/shm') else
-            '/tmp/apyfal_cache/%s')
-        _utl.makedirs(self._json_dir[:-2])
+        _utl.makedirs(self._JSON_DIR[:-2], exist_ok=True)
 
     def _start(self, datafile, info_dict, parameters):
         """
@@ -138,6 +145,10 @@ class SysCallClient(_Client):
         Returns:
             dict or None: response.
         """
+        if not _cfg.accelerator_executable_available():
+            # Don't try to stop accelerator if not present
+            return
+
         response = self._run_executable(
             mode='2',
             output_json='stop_output.json' if info_dict else None
@@ -150,8 +161,9 @@ class SysCallClient(_Client):
         # Get optional information
         return response
 
+    @classmethod
     def _run_executable(
-            self, mode, input_file=None, output_file=None, input_json=None,
+            cls, mode, input_file=None, output_file=None, input_json=None,
             output_json=None, parameters=None, extra_args=None):
         """
         Run accelerator executable.
@@ -185,14 +197,14 @@ class SysCallClient(_Client):
 
         # Input JSON file
         if input_json and parameters:
-            input_json = self._json_dir % input_json
-            with open(input_json, 'wb') as json_input_file:
+            input_json = cls._JSON_DIR % input_json
+            with open(input_json, 'wt') as json_input_file:
                 _json.dump(parameters, json_input_file)
             command += ['-j', input_json]
 
         # Output JSON file
         if output_json:
-            output_json = self._json_dir % output_json
+            output_json = cls._JSON_DIR % output_json
             command += ['-p', output_json]
 
         # Run command
@@ -200,7 +212,7 @@ class SysCallClient(_Client):
 
         # Get result from output JSON file
         if output_json:
-            with open(output_json, 'rb') as json_output_file:
+            with open(output_json, 'rt') as json_output_file:
                 return _json.load(json_output_file)
 
     @staticmethod
@@ -215,7 +227,7 @@ class SysCallClient(_Client):
             'stop', 'accelerator', 'meteringsession', 'meteringclient')
 
         # Clear cache
-        _call(['sudo', 'rm', '/tmp/meteringServer'])
+        _call(['sudo', 'rm', _cfg.METERING_TMP_DIR])
 
         # Legacy metering: Generate metering configuration file
         first_call = True
@@ -226,15 +238,14 @@ class SysCallClient(_Client):
                 continue
             _call(['sudo', 'echo', '"%s=%s"' % (key, value),
                    '>' if first_call else '>>',
-                   '/etc/sysconfig/meteringclient'])
+                   _cfg.METERING_CLIENT_CONFIG])
             first_call = False
 
         # New metering: Generate metering configuration file
         if 'client_id' in parameters['env']:
-            credentials = '/etc/accelize/credentials.json'
             # Set right
-            _call(['sudo', 'chmod', 'a+wr', credentials])
-            with open(credentials, 'wb') as credential_file:
+            _call(['sudo', 'chmod', 'a+wr', _cfg.CREDENTIALS_JSON])
+            with open(_cfg.CREDENTIALS_JSON, 'wb') as credential_file:
                 _json.dump(
                     {key: parameters['env'][key]
                      for key in ('client_id', 'client_secret')},
