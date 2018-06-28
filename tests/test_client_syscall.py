@@ -143,7 +143,10 @@ def test_syscall_client_init():
 
         # Default for Accelerator if no host specified
         config = cfg.Configuration()
-        del config._sections['host']
+        try:
+            del config._sections['host']
+        except KeyError:
+            pass
         client = Accelerator('accelerator', config=config).client
         client._stop = DummySysCallClient._stop  # Disable __del__
         assert isinstance(client, SysCallClient)
