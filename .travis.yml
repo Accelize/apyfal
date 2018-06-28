@@ -8,7 +8,7 @@ python:
 
 install:
     # Python environment
-    - "python -m pip install --upgrade setuptools pip wheel pytest coverage pytest-cov coveralls[yaml]"
+    - "python -m pip install --upgrade setuptools pip wheel pytest coverage pytest-cov codecov"
 
     # Builds OpenApi client
     - "python ./setup.py swagger_codegen"
@@ -21,5 +21,5 @@ script:
     - "py.test -v --cov=apyfal --cov-report=term-missing"
 
 after_success:
-    # Sends coverage to coveralls.io
-    - "coveralls"
+    # Sends coverage to codecov.io
+    - "codecov"

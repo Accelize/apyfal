@@ -12,7 +12,7 @@ build: off
 install:
     # Python environment
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
-    - "python -m pip install --upgrade setuptools pip wheel pytest coverage pytest-cov coveralls[yaml]"
+    - "python -m pip install --upgrade setuptools pip wheel pytest coverage pytest-cov codecov"
 
     # Builds OpenApi client
     - "python ./setup.py swagger_codegen"
@@ -28,5 +28,5 @@ test_script:
     - "py.test -v --cov=apyfal --cov-report=term-missing"
 
 after_test:
-    # Sends coverage to coveralls.io
-    - "coveralls"
+    # Sends coverage to codecov.io
+    - "codecov"
