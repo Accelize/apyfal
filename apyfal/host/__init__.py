@@ -177,8 +177,7 @@ class Host(_utl.ABC):
         """
         # Check configuration
         if not self._url:
-            raise _exc.HostConfigurationException(
-                'No host found. Please check your configuration.')
+            raise _exc.HostConfigurationException(gen_msg='no_host_found')
 
         # Update stop mode
         self.stop_mode = stop_mode

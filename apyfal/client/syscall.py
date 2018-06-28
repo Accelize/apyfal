@@ -80,9 +80,8 @@ class SysCallClient(_Client):
     def __init__(self, *args, **kwargs):
         if not _cfg.accelerator_executable_available():
             # Need accelerator executable to run
-            raise _exc.ClientConfigurationException(
-                'Accelerator executable not found: %s' %
-                _cfg.ACCELERATOR_EXECUTABLE)
+            raise _exc.HostConfigurationException(
+                gen_msg='no_host_found')
 
         _Client.__init__(self, *args, **kwargs)
 

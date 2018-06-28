@@ -107,6 +107,7 @@ def test_systemctl():
 def test_syscall_client_init():
     """Tests SysCallClient.__init__"""
     from apyfal.client.syscall import SysCallClient
+    from apyfal import Accelerator
     import apyfal.configuration as cfg
     import apyfal.exceptions as exc
     import apyfal._utilities as utl
@@ -140,9 +141,16 @@ def test_syscall_client_init():
         # Accelerator not available
         DummySysCallClient('accelerator')
 
+        # Default for Accelerator if no host specified
+        config = cfg.Configuration()
+        del config._sections['host']
+        client = Accelerator('accelerator', config=config).client
+        client._stop = DummySysCallClient._stop  # Disable __del__
+        assert isinstance(client, SysCallClient)
+
         # Accelerator not available
         accelerator_available = False
-        with pytest.raises(exc.ClientConfigurationException):
+        with pytest.raises(exc.HostConfigurationException):
             SysCallClient('accelerator')
 
     # Restores functions
