@@ -113,7 +113,7 @@ def factory(cls, cls_type, parameter_name, exc_type):
 def get_first_arg(args, kwargs, name):
     """Returns named argument assuming it is in first position.
     Returns None if not found.
-    
+
     Args:
         args (tuple or list): args from function.
         kwargs (dict): kwargs from function.

@@ -9,11 +9,11 @@ import openstack as _openstack
 from apyfal.host._csp import CSPHost as _CSPHost
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
-import apyfal._utilities.openstack
+import apyfal._utilities.openstack as _utl_openstack
 from apyfal._utilities import get_logger as _get_logger
 
 
-class _ExceptionHandler(_utl.openstack.ExceptionHandler):
+class _ExceptionHandler(_utl_openstack.ExceptionHandler):
     """Host OpenStack exception handler"""
     RUNTIME = _exc.HostRuntimeException
     AUTHENTICATION = _exc.HostAuthenticationException

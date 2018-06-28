@@ -3,6 +3,7 @@
 
 from contextlib import contextmanager
 import json
+import os
 
 try:
     # Python 2
@@ -110,7 +111,6 @@ def test_syscall_client_init():
     from apyfal import Accelerator
     import apyfal.configuration as cfg
     import apyfal.exceptions as exc
-    import apyfal._utilities as utl
 
     # Mocks some functions
     accelerator_available = True
@@ -126,15 +126,10 @@ def test_syscall_client_init():
         """Return fake result"""
         return accelerator_available
 
-    def dummy_makedirs(*_, **__):
-        """Do nothing"""
-
     cfg_accelerator_executable_available = (
         cfg.accelerator_executable_available)
     cfg.accelerator_executable_available = (
         dummy_accelerator_executable_available)
-    utl_makedirs = utl.makedirs
-    utl.makedirs = dummy_makedirs
 
     # Tests
     try:
@@ -158,7 +153,6 @@ def test_syscall_client_init():
 
     # Restores functions
     finally:
-        utl.makedirs = utl_makedirs
         cfg.accelerator_executable_available = (
             cfg_accelerator_executable_available)
 
@@ -172,7 +166,8 @@ def test_syscall_client_run_executable():
     exec_arg = 'sudo %s' % cfg.ACCELERATOR_EXECUTABLE
     expected_args = []
     dummy_file = 'file'
-    expected_path = SysCallClient._JSON_DIR % dummy_file
+    dummy_tmp = 'tmp_dir'
+    expected_path = os.path.join(dummy_tmp, dummy_file)
     dummy_params = {
         'test': 'dummy'
     }
@@ -202,6 +197,11 @@ def test_syscall_client_run_executable():
             stream.seek(0)
             assert json.load(stream) == dummy_params
 
+    class DummyClient(SysCallClient):
+
+        def __init__(self, *_, **__):
+            self._tmp_dir = dummy_tmp
+
     syscall_call = syscall._call
     syscall._call = dummy_call
     syscall.open = dummy_open
@@ -209,38 +209,40 @@ def test_syscall_client_run_executable():
     # Tests
     try:
 
+        client = DummyClient()
+
         # Mode
         expected_args = [exec_arg, '-m 3']
-        SysCallClient._run_executable(mode='3')
+        client._run_executable(mode='3')
 
         # Input file
         expected_args = ['-i %s' % dummy_file]
-        SysCallClient._run_executable(mode='1', input_file=dummy_file)
+        client._run_executable(mode='1', input_file=dummy_file)
 
         # Output file
         expected_args = ['-o %s' % dummy_file]
-        SysCallClient._run_executable(mode='1', output_file=dummy_file)
+        client._run_executable(mode='1', output_file=dummy_file)
 
         # JSON input
         expected_args = ['-j %s' % expected_path]
-        SysCallClient._run_executable(
+        client._run_executable(
             mode='1', input_json=dummy_file, parameters=dummy_params)
 
         # JSON output
         expected_args = ['-p %s' % expected_path]
-        assert SysCallClient._run_executable(
+        assert client._run_executable(
             mode='1', output_json=dummy_file) == dummy_params
 
         # Extra args
         expected_args = ['arg0', 'arg1']
-        SysCallClient._run_executable(mode='1', extra_args=expected_args)
+        client._run_executable(mode='1', extra_args=expected_args)
 
         # Run _init_metering
         expected_args = []
         expected_path = cfg.CREDENTIALS_JSON
         dummy_params = {'client_id': 'dummy_client_id',
                         'client_secret': 'dummy_client_secret'}
-        SysCallClient._init_metering({'env': dummy_params})
+        client._init_metering({'env': dummy_params})
 
     # Restores functions
     finally:
@@ -264,6 +266,7 @@ def test_syscall_client_start_process_stop():
 
         def __init__(self, *_, **__):
             """Do nothing"""
+            self._tmp_dir = None
 
         def __del__(self):
             """Do nothing"""

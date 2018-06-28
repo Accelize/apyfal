@@ -2,14 +2,15 @@
 """Accelerator system call client."""
 
 import json as _json
-import os.path as _os_path
+from os.path import join as _join
+from shutil import rmtree as _rmtree
 from subprocess import Popen as _Popen, PIPE as _PIPE
+from tempfile import mkdtemp as _mkdtemp
 from uuid import uuid4 as _uuid
 
 import apyfal.exceptions as _exc
 from apyfal.client import AcceleratorClient as _Client
 import apyfal.configuration as _cfg
-import apyfal._utilities as _utl
 
 
 def _call(command, **exc_args):
@@ -27,7 +28,8 @@ def _call(command, **exc_args):
     """
     try:
         process = _Popen(
-            command, stdout=_PIPE, stderr=_PIPE, universal_newlines=True)
+            command, stdout=_PIPE, stderr=_PIPE, universal_newlines=True,
+            shell=False)
         outputs = process.communicate()
         in_error = process.returncode
     except OSError as exception:
@@ -72,11 +74,6 @@ class SysCallClient(_Client):
     #: Client type
     NAME = 'SysCall'
 
-    # Temporary dir for JSON files
-    _JSON_DIR = (
-        '/dev/shm/apyfal_cache/%s' if _os_path.isdir('/dev/shm') else
-        '/tmp/apyfal_cache/%s')
-
     def __init__(self, *args, **kwargs):
         if not _cfg.accelerator_executable_available():
             # Need accelerator executable to run
@@ -84,9 +81,6 @@ class SysCallClient(_Client):
                 gen_msg='no_host_found')
 
         _Client.__init__(self, *args, **kwargs)
-
-        # Initialize JSON temporary dir
-        _utl.makedirs(self._JSON_DIR[:-2], exist_ok=True)
 
     def _start(self, datafile, info_dict, parameters):
         """
@@ -100,6 +94,10 @@ class SysCallClient(_Client):
         Returns:
             dict or None: response.
         """
+        # Initialize temporary dir if needed
+        if not self._tmp_dir:
+            self._tmp_dir = _mkdtemp()
+
         # Initialize metering
         self._init_metering(parameters)
 
@@ -153,16 +151,20 @@ class SysCallClient(_Client):
             output_json='stop_output.json' if info_dict else None
         )
 
-        # Stop services
+        # Stops services
         # TODO: Better to not stop services ?
         _systemctl('stop', 'meteringclient', 'meteringsession')
 
-        # Get optional information
+        # Clears temporary dir
+        if self._tmp_dir:
+            _rmtree(self._tmp_dir)
+            self._tmp_dir = None
+
+        # Gets optional information
         return response
 
-    @classmethod
     def _run_executable(
-            cls, mode, input_file=None, output_file=None, input_json=None,
+            self, mode, input_file=None, output_file=None, input_json=None,
             output_json=None, parameters=None, extra_args=None):
         """
         Run accelerator executable.
@@ -182,7 +184,7 @@ class SysCallClient(_Client):
         # Command base
         command = ['sudo', _cfg.ACCELERATOR_EXECUTABLE, '-m', mode]
 
-        # Add extra command line arguments
+        # Adds extra command line arguments
         if extra_args:
             command.extend(extra_args)
 
@@ -196,20 +198,20 @@ class SysCallClient(_Client):
 
         # Input JSON file
         if input_json and parameters:
-            input_json = cls._JSON_DIR % input_json
+            input_json = _join(self._tmp_dir, input_json)
             with open(input_json, 'wt') as json_input_file:
                 _json.dump(parameters, json_input_file)
             command += ['-j', input_json]
 
         # Output JSON file
         if output_json:
-            output_json = cls._JSON_DIR % output_json
+            output_json = _join(self._tmp_dir, output_json)
             command += ['-p', output_json]
 
-        # Run command
+        # Runs command
         _call(command)
 
-        # Get result from output JSON file
+        # Gets result from output JSON file
         if output_json:
             with open(output_json, 'rt') as json_output_file:
                 return _json.load(json_output_file)
