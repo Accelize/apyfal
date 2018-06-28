@@ -15,58 +15,69 @@ class AcceleratorClient(_utl.ABC):
     Args:
         accelerator (str): Name of the accelerator to initialize,
             to know the accelerator list please visit "https://accelstore.accelize.com".
+        client_type (str): Type of client.
         accelize_client_id (str): Accelize Client ID.
             Client ID is part of the access key generate from
             "https:/accelstore.accelize.com/user/applications".
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with client_id.
-        host_ip (str): IP or URL address of the accelerator host.
         config (str or apyfal.configuration.Configuration or file-like object):
             Can be Configuration instance, apyfal.storage URL, paths, file-like object.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
     """
 
+    #: Client type name (str), must be the same as expected "client_type" argument value
+    NAME = None
+
     #: Default parameters JSON for configuration/start stage
-    DEFAULT_CONFIGURATION_PARAMETERS = {"app": {
-        "reset": 0,
-        "enable-sw-comparison": 0,
-        "logging": {"format": 1, "verbosity": 2},
-        "specific": {}}}
+    DEFAULT_CONFIGURATION_PARAMETERS = {
+        "app": {
+            "reset": 0,
+            "enable-sw-comparison": 0,
+            "logging": {"format": 1, "verbosity": 2},
+            "specific": {}},
+        "env": {}}
 
     #: Default parameters JSON for process stage
-    DEFAULT_PROCESS_PARAMETERS = {"app": {
-        "reset": 0,
-        "enable-sw-comparison": 0,
-        "logging": {"format": 1, "verbosity": 2},
-        "specific": {}}}
+    DEFAULT_PROCESS_PARAMETERS = {
+        "app": {
+            "reset": 0,
+            "enable-sw-comparison": 0,
+            "logging": {"format": 1, "verbosity": 2},
+            "specific": {}}}
 
     def __new__(cls, *args, **kwargs):
+        # If call from a subclass, instantiate this subclass directly
         if cls is not AcceleratorClient:
             return object.__new__(cls)
 
-        # TODO: Select Client subclass base on configuration
-        from apyfal.client.rest import RESTClient
-        return object.__new__(RESTClient)
+        # Get client_type from configuration or argument
+        client_type = kwargs.get('client_type') or 'SysCall'
 
-    def __init__(self, accelerator, accelize_client_id=None,
-                 accelize_secret_id=None, host_ip=None, config=None):
+        # Get client subclass
+        return _utl.factory(
+            cls, client_type, 'client_type', _exc.ClientConfigurationException)
+
+    def __init__(self, accelerator, client_type=None, accelize_client_id=None,
+                 accelize_secret_id=None, config=None, **_):
         self._name = accelerator
+        self._client_type = client_type
         self._url = None
         self._stopped = False
 
         # Read configuration
         self._config = config = _cfg.create_configuration(config)
-        self._client_id = config['accelize'].set('client_id', accelize_client_id)
-        self._secret_id = config['accelize'].set('secret_id', accelize_secret_id)
 
         self._configuration_parameters = self._load_configuration(
             self.DEFAULT_CONFIGURATION_PARAMETERS, 'configuration')
+        self._configuration_parameters['env'].update({
+            "client_id":
+                config['accelize'].set('client_id', accelize_client_id),
+            "client_secret":
+                config['accelize'].set('secret_id', accelize_secret_id)})
+
         self._process_parameters = self._load_configuration(
             self.DEFAULT_PROCESS_PARAMETERS, 'process')
-
-        # Sets URL and configures
-        if host_ip:
-            self.url = host_ip
 
     def __enter__(self):
         return self
@@ -87,25 +98,6 @@ class AcceleratorClient(_utl.ABC):
         """
         return self._name
 
-    @property
-    def url(self):
-        """
-        URL of the accelerator host.
-
-        Returns:
-            str: URL
-        """
-        return self._url
-
-    @url.setter
-    def url(self, url):
-        # Check URL
-        if not url:
-            raise _exc.ClientConfigurationException("Host URL is not valid.")
-
-        self._url = _utl.format_url(url)
-
-    @_abstractmethod
     def start(self, datafile=None, info_dict=False, host_env=None, **parameters):
         """
         Configures accelerator.
@@ -128,15 +120,38 @@ class AcceleratorClient(_utl.ABC):
                 AcceleratorClient contain output information from  configuration operation.
                 Take a look accelerator documentation for more information.
         """
+        # Configure start
+        parameters = self._get_parameters(parameters, self._configuration_parameters)
+        parameters['env'].update(host_env or dict())
+
+        # Starts
+        response = self._start(datafile, info_dict, parameters)
+
+        # Returns optional response
+        if info_dict:
+            return response
 
     @_abstractmethod
-    def process(self, file_in=None, file_out=None, info_dict=False, **parameters):
+    def _start(self, datafile, info_dict, parameters):
         """
-        Processes using OpenApi REST API.
+        Client specific start implementation.
 
         Args:
-            file_in (str): Path to the file you want to process.
-            file_out (str): Path where you want the processed file will be stored.
+            datafile (str): Input file.
+            info_dict (bool): Returns response dict.
+            parameters (dict): Parameters dict.
+
+        Returns:
+            dict or None: response.
+        """
+
+    def process(self, file_in=None, file_out=None, info_dict=False, **parameters):
+        """
+        Processes with accelerator.
+
+        Args:
+            file_in (str): Path to the file to process.
+            file_out (str): Path where the processed file will be stored.
             info_dict (bool): If True, returns a dict containing information on
                 process operation.
             parameters (str or dict): Accelerator process specific parameters
@@ -152,8 +167,38 @@ class AcceleratorClient(_utl.ABC):
                 AcceleratorClient contain output information from  process operation.
                 Take a look accelerator documentation for more information.
         """
+        # Configures processing
+        parameters = self._get_parameters(parameters, self._process_parameters)
+
+        # Processes
+        response = self._process(file_in, file_out, parameters)
+
+        # Get result from response
+        try:
+            result = response['app'].pop('specific')
+        except KeyError:
+            result = dict()
+
+        # Returns result
+        if info_dict:
+            # Returns it with optional response
+            return result, response
+        return result
 
     @_abstractmethod
+    def _process(self, file_in, file_out, parameters):
+        """
+        Client specific process implementation.
+
+        Args:
+            file_in (str): Input file.
+            file_out (str): Output file.
+            parameters (dict): Parameters dict.
+
+        Returns:
+            dict: response.
+        """
+
     def stop(self, info_dict=False):
         """
         Stop accelerator.
@@ -166,6 +211,24 @@ class AcceleratorClient(_utl.ABC):
             dict: Optional, only if "info_dict" is True. AcceleratorClient response.
                 AcceleratorClient contain output information from  stop operation.
                 Take a look to accelerator documentation for more information.
+        """
+        # Stops
+        response = self._stop(info_dict)
+
+        # Returns optional response
+        if info_dict:
+            return response
+
+    @_abstractmethod
+    def _stop(self, info_dict):
+        """
+        Client specific stop implementation.
+
+        Args:
+            info_dict (bool): Returns response dict.
+
+        Returns:
+            dict or None: response.
         """
 
     @staticmethod

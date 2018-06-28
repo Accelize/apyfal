@@ -44,7 +44,6 @@ def test_accelerator():
     raises_on_client_stop = False
     raises_on_host_stop = False
     dummy_url = 'http://accelize.com'
-    dummy_config_url = 'dummy_config_url'
     dummy_start_result = 'dummy_start_result'
     dummy_stop_result = 'dummy_stop_result'
     dummy_process_result = 'dummy_process_result'
@@ -62,19 +61,28 @@ def test_accelerator():
     class DummyClient(accelerator_client_class):
         """Dummy apyfal.client.AcceleratorClient"""
         url = None
-        configuration_url = dummy_config_url
         running = True
 
         def __new__(cls, *args, **kwargs):
             return object.__new__(cls)
 
-        def __init__(self, accelerator, **kwargs):
+        def __init__(self, accelerator, host_ip=None, **kwargs):
             """Checks arguments"""
+            self.url = host_ip
             accelerator_client_class.__init__(self, accelerator, **kwargs)
             assert accelerator == dummy_accelerator
 
         def __del__(self):
             """Don nothing"""
+
+        def _start(self, *_):
+            """Do Nothing"""
+
+        def _stop(self, *_):
+            """Do Nothing"""
+
+        def _process(self, *_):
+            """Do Nothing"""
 
         def start(self, datafile=None, host_env=None, info_dict=True, **parameters):
             """Checks arguments and returns fake result"""

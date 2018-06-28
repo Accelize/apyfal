@@ -44,6 +44,7 @@ class RESTClient(_Client):
     Args:
         accelerator (str): Name of the accelerator you want to initialize,
             to know the accelerator list please visit "https://accelstore.accelize.com".
+        client_type (str): Type of client. Default to "REST".
         accelize_client_id (str): Accelize Client ID.
             Client ID is part of the access key you can generate on
             "https:/accelstore.accelize.com/user/applications".
@@ -55,13 +56,20 @@ class RESTClient(_Client):
             user "home" folder. If none found, will use default configuration values.
     """
 
-    def __init__(self, accelerator, *args, **kwargs):
+    #: Client type
+    NAME = 'REST'
+
+    def __init__(self, accelerator, host_ip=None, *args, **kwargs):
         # Initializes OpenApi client
         self._configuration_url = None
         self._api_client = _api.ApiClient()
 
         # Initialize client
         _Client.__init__(self, accelerator, *args, **kwargs)
+
+        # Pass host URL if already defined.
+        if host_ip:
+            self.url = host_ip
 
     @property
     def url(self):
@@ -146,12 +154,22 @@ class RESTClient(_Client):
         if not (self._configuration_url is None or datafile or parameters or host_env):
             return
 
-        # Checks parameters
-        parameters = self._get_parameters(parameters, self._configuration_parameters)
-        parameters.update({
-            "env": {"client_id": self._client_id, "client_secret": self._secret_id}})
-        parameters['env'].update(host_env or dict())
+        # Starts
+        return _Client.start(
+            self, datafile=datafile, info_dict=info_dict, host_env=host_env, **parameters)
 
+    def _start(self, datafile, info_dict, parameters):
+        """
+        Client specific start implementation.
+
+        Args:
+            datafile (str): Input file.
+            info_dict (bool): Returns response dict.
+            parameters (dict): Parameters dict.
+
+        Returns:
+            dict or None: response.
+        """
         # Configures  accelerator
         api_instance = self._rest_api_configuration()
         api_response = api_instance.configuration_create(
@@ -253,27 +271,17 @@ class RESTClient(_Client):
 
         return api_response['id'], api_response['processed']
 
-    def process(self, file_in=None, file_out=None, info_dict=False, **parameters):
+    def _process(self, file_in, file_out, parameters):
         """
-        Process with accelerator.
+        Client specific process implementation.
 
         Args:
-            file_in (str): Path to the file you want to process.
-            file_out (str): Path where you want the processed file will be stored.
-            info_dict (bool): If True, returns a dict containing information on
-                process operation.
-            parameters (str or dict): Accelerator process specific parameters
-                Can also be a full process parameters dictionary
-                (Or JSON equivalent as str literal or path to file)
-                Parameters dictionary override default configuration values,
-                individuals specific parameters overrides parameters dictionary values.
-                Take a look to accelerator documentation for more information on possible parameters.
+            file_in (str): Input file.
+            file_out (str): Output file.
+            parameters (dict): Parameters dict.
 
         Returns:
-            dict: Result from process operation, depending used accelerator.
-            dict: Optional, only if "info_dict" is True. AcceleratorClient response.
-                AcceleratorClient contain output information from  process operation.
-                Take a look accelerator documentation for more information.
+            dict: response dict.
         """
         # Check if configuration was done
         if self._configuration_url is None:
@@ -287,9 +295,6 @@ class RESTClient(_Client):
         # Checks output directory presence, and creates it if not exists.
         if file_out:
             _utl.makedirs(_os.path.dirname(file_out), exist_ok=True)
-
-        # Configure processing
-        parameters = self._get_parameters(parameters, self._process_parameters)
 
         # Use cURL to improve performance and avoid issue with big file (https://bugs.python.org/issue8450)
         # If not available, use REST API (with limitations)
@@ -325,29 +330,17 @@ class RESTClient(_Client):
             # Process_delete api_response
             api_instance.process_delete(api_resp_id)
 
-        # Get result from response and returns
-        try:
-            result = process_response['app'].pop('specific')
-        except KeyError:
-            result = dict()
+        return process_response
 
-        if info_dict:
-            # Returns with optional response
-            return result, process_response
-        return result
-
-    def stop(self, info_dict=False):
+    def _stop(self, info_dict):
         """
-        Stop accelerator.
+        Client specific stop implementation.
 
         Args:
-            info_dict (bool): If True, returns a dict containing information on
-                stop operation.
+            info_dict (bool): Returns response dict.
 
         Returns:
-            dict: Optional, only if "info_dict" is True. AcceleratorClient response.
-                AcceleratorClient contain output information from  stop operation.
-                Take a look to accelerator documentation for more information.
+            dict or None: response.
         """
         if self._stopped:
             # Avoid double call with __exit__ + __del__
@@ -359,10 +352,9 @@ class RESTClient(_Client):
         except _exc.ClientRuntimeException:
             # No AcceleratorClient to stop
             return None
+
         try:
-            result = self._rest_api_stop().stop_list()
-            if info_dict:
-                return result
+            return self._rest_api_stop().stop_list()
         except _api.rest.ApiException:
             pass
 

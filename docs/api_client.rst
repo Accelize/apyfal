@@ -9,3 +9,4 @@ apyfal.client
    :maxdepth: 2
 
    api_client_rest
+   api_client_syscall

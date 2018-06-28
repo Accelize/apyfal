@@ -31,7 +31,13 @@ from apyfal import _utilities as _utl
 #: Metering server URL
 METERING_SERVER = 'https://master.metering.accelize.com'
 
-__all__ = ['create_configuration', 'Configuration', 'METERING_SERVER']
+#: Accelerator Executable path
+ACCELERATOR_EXECUTABLE = '/opt/accelize/accelerator/accelerator'
+
+__all__ = ['create_configuration', 'Configuration',
+           'ACCELERATOR_EXECUTABLE',
+           'accelerator_executable_available',
+           'METERING_SERVER']
 
 
 def create_configuration(configuration_file):
@@ -46,6 +52,17 @@ def create_configuration(configuration_file):
         # configuration_file is already a Configuration instance
         return configuration_file
     return Configuration(configuration_file)
+
+
+def accelerator_executable_available():
+    """
+    Returns True if accelerator executable available locally.
+
+    Returns:
+        bool: Accelerator executable found.
+    """
+
+    return _os_path.isfile(ACCELERATOR_EXECUTABLE)
 
 
 class _Section(dict):

@@ -62,27 +62,41 @@ class Accelerator(object):
         host_kwargs: Keyword arguments related to specific host. See targeted host class
             to see full list of arguments.
     """
-    def __init__(self, accelerator, config=None, accelize_client_id=None, accelize_secret_id=None,
-                 host_type=None, host_ip=None, stop_mode='term', **host_kwargs):
+    def __init__(self, accelerator, config=None, accelize_client_id=None,
+                 accelize_secret_id=None, host_type=None, host_ip=None,
+                 stop_mode='term', **host_kwargs):
 
         # Initialize configuration
         config = _cfg.create_configuration(config)
 
         # Create host object
-        self._host = _hst.Host(
-            host_type=host_type, config=config, host_ip=host_ip,
-            stop_mode=stop_mode, **host_kwargs)
+        host_type = host_type or config['host']['host_type']
+        if host_type is not None:
+            # Use a remote host
+            self._host = _hst.Host(
+                host_type=host_type, config=config, host_ip=host_ip,
+                stop_mode=stop_mode, **host_kwargs)
+
+            # Remote control use REST client
+            client_type = 'REST'
+
+            # Get updated URL if any
+            try:
+                host_ip = self._host.url
+            except _exc.HostException:
+                host_ip = None
+        else:
+            # Use local host
+            self._host = None
+
+            # Use default local client
+            client_type = None
 
         # Create AcceleratorClient object
         self._client = _clt.AcceleratorClient(
-            accelerator, accelize_client_id=accelize_client_id,
+            accelerator, client_type=client_type,
+            accelize_client_id=accelize_client_id, host_ip=host_ip,
             accelize_secret_id=accelize_secret_id, config=config)
-
-        # Try to pass host URL to Accelerator client if available
-        try:
-            self._client.url = self._host.url
-        except (_exc.HostException, _exc.ClientException):
-            pass
 
     def __enter__(self):
         return self
@@ -139,17 +153,19 @@ class Accelerator(object):
                   AcceleratorClient contain output information from  configuration operation.
                   Take a look to accelerator documentation for more information.
         """
-        # Start host if needed (Do nothing if already started)
-        self._host.start(accelerator=self._client.name, stop_mode=stop_mode)
+        if self._host is not None:
+            # Start host if needed (Do nothing if already started)
+            self._host.start(accelerator=self._client.name, stop_mode=stop_mode)
 
-        # Set accelerator URL to host URL
-        self._client.url = self._host.url
+            # Set accelerator URL to host URL
+            self._client.url = self._host.url
+
+            # Get environment
+            host_env = self._host.get_configuration_env(**(host_env or dict()))
 
         # Configure accelerator if needed
-        return self._client.start(
-            datafile=datafile,
-            host_env=self._host.get_configuration_env(**(host_env or dict())),
-            info_dict=info_dict, **parameters)
+        return self._client.start(datafile=datafile, host_env=host_env or dict(),
+                                  info_dict=info_dict, **parameters)
 
     def process(self, file_in=None, file_out=None, info_dict=False, **parameters):
         """
@@ -211,10 +227,11 @@ class Accelerator(object):
 
         # Stops host
         finally:
-            try:
-                self._host.stop(stop_mode)
-            except (AttributeError, _exc.HostException):
-                pass
+            if self._host is not None:
+                try:
+                    self._host.stop(stop_mode)
+                except (AttributeError, _exc.HostException):
+                    pass
 
         return stop_result
 

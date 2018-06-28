@@ -151,14 +151,17 @@ def test_restclient_start():
             """Fake URL"""
             return 'dummy_accelerator_url'
 
+    client_id = 'dummy_client_id'
+    secret_id = 'dummy_secret_id'
+
     accelerator = DummyAccelerator(
-        'Dummy', accelize_client_id='dummy_client_id',
-        accelize_secret_id='dummy_secret_id')
+        'Dummy', accelize_client_id=client_id,
+        accelize_secret_id=secret_id)
 
     base_parameters = {
         "env": {
-            "client_id": accelerator._client_id,
-            "client_secret": accelerator._secret_id}}
+            "client_id": client_id,
+            "client_secret": secret_id}}
 
     base_response = {'url_config': 'dummy_url',
                      'url_instance': accelerator.url}

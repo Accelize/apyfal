@@ -347,6 +347,7 @@ class Storage(_utl.ABC):
         if cls is not Storage:
             return object.__new__(cls)
 
+        # Get storage_type from configuration or argument
         storage_type = (_utl.get_first_arg(
             args, kwargs, 'storage_type') or '').split('.', 1)[0].lower()
 

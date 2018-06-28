@@ -9,37 +9,12 @@ import pytest
 def test_acceleratorclient_new_init():
     """Tests AcceleratorClient.__new__ and __init__"""
     from apyfal.client import AcceleratorClient
-    from apyfal.exceptions import ClientConfigurationException
-
-    accelerator = 'dummy_accelerator'
-    # Mock Client subclass
-
-    class DummyClient(AcceleratorClient):
-        def start(self, *_, **__):
-            """Do nothing"""
-
-        def process(self, *_, **__):
-            """Do nothing"""
-
-        def stop(self, *_, **__):
-            """Do nothing"""
-
-    # Test: host_ip
-    client = DummyClient(accelerator)
-    assert client.url is None
-
-    host_ip = 'https://www.accelize.com/'
-    client = DummyClient(accelerator, host_ip=host_ip)
-    assert client.url == host_ip
-
-    with pytest.raises(ClientConfigurationException):
-        client.url = None
-
-    with pytest.raises(ValueError):
-        DummyClient(accelerator, host_ip='invalid_url')
+    from apyfal.client.rest import RESTClient
 
     # Test: Subclass selection
-    AcceleratorClient(accelerator)
+    assert isinstance(
+        AcceleratorClient('dummy_accelerator', client_type='REST'),
+        RESTClient)
 
 
 def test_acceleratorclient_raise_for_status():
@@ -70,13 +45,13 @@ def test_acceleratorclient_get_parameters(tmpdir):
     class DummyClient(AcceleratorClient):
         """Dummy Client"""
 
-        def start(self, *_, **__):
+        def _start(self, *_):
             """Do nothing"""
 
-        def process(self, *_, **__):
+        def _process(self, *_):
             """Do nothing"""
 
-        def stop(self, *_, **__):
+        def _stop(self, *_):
             """Do nothing"""
 
         def function(self, **parameters):
