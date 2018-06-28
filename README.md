@@ -1,6 +1,6 @@
 [![Linux Build Status](https://travis-ci.org/Accelize/apyfal.svg?branch=master)](https://travis-ci.org/Accelize/apyfal)
 [![Windows Build status](https://ci.appveyor.com/api/projects/status/87jgroaoo2iddlco/branch/master?svg=true)](https://ci.appveyor.com/project/accelize-application/apyfal/branch/master)
-[![Coverage Status](https://coveralls.io/repos/github/Accelize/apyfal/badge.svg?branch=master)](https://coveralls.io/github/Accelize/apyfal?branch=master)
+[![codecov](https://codecov.io/gh/Accelize/apyfal/branch/master/graph/badge.svg)](https://codecov.io/gh/Accelize/apyfal)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/b67c9a1cf17e443290b0191a7970c3d1)](https://www.codacy.com/app/Accelize/apyfal?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Accelize/apyfal&amp;utm_campaign=Badge_Grade)
 [![Documentation Status](https://readthedocs.org/projects/apyfal/badge/?version=latest)](https://apyfal.readthedocs.io/en/latest/?badge=latest)
 
