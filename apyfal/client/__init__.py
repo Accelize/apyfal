@@ -1,12 +1,23 @@
 """Accelerator Client"""
 from abc import abstractmethod as _abstractmethod
+from contextlib import contextmanager as _contextmanager
 from copy import deepcopy as _deepcopy
 import json as _json
+from os import remove as _remove
+import os.path as _os_path
+from shutil import rmtree as _rmtree
+from tempfile import mkdtemp as _mkdtemp
+from uuid import uuid4 as _uuid
 
 import apyfal._utilities as _utl
 import apyfal.exceptions as _exc
 import apyfal.configuration as _cfg
+import apyfal.storage as _srg
 
+
+# TODO: _raise_for_status should not receive None
+# TODO: parameters/response as JSON str as in and out in _start, _stop, _process
+# TODO: _start, _stop, _process: stream support.
 
 class AcceleratorClient(_utl.ABC):
     """
@@ -46,6 +57,9 @@ class AcceleratorClient(_utl.ABC):
             "logging": {"format": 1, "verbosity": 2},
             "specific": {}}}
 
+    # Client is remote or not
+    REMOTE = False
+
     def __new__(cls, *args, **kwargs):
         # If call from a subclass, instantiate this subclass directly
         if cls is not AcceleratorClient:
@@ -64,6 +78,7 @@ class AcceleratorClient(_utl.ABC):
         self._client_type = client_type
         self._url = None
         self._stopped = False
+        self._tmp_dir = None
 
         # Read configuration
         self._config = config = _cfg.create_configuration(config)
@@ -103,9 +118,9 @@ class AcceleratorClient(_utl.ABC):
         Configures accelerator.
 
         Args:
-            datafile (str): Depending on the accelerator,
-                a configuration need to be loaded before a process can be run.
-                In such case please define the path of the configuration file.
+            datafile (str or file-like object): Depending on the accelerator,
+                a configuration detafile need to be loaded before a process can be run.
+                Can be apyfal.storage URL, paths, file-like object.
             info_dict (bool): If True, returns a dict containing information on
                 configuration operation.
             parameters (str or dict): Accelerator configuration specific parameters
@@ -120,12 +135,23 @@ class AcceleratorClient(_utl.ABC):
                 AcceleratorClient contain output information from  configuration operation.
                 Take a look accelerator documentation for more information.
         """
+        # Initialize temporary dir if needed
+        if not self._tmp_dir:
+            self._tmp_dir = _mkdtemp(dir=_cfg.ACCELERATOR_TMP_ROOT)
+
         # Configure start
         parameters = self._get_parameters(parameters, self._configuration_parameters)
         parameters['env'].update(host_env or dict())
 
-        # Starts
-        response = self._start(datafile, info_dict, parameters)
+        # Handle files
+        with self._handle_file(
+                datafile, parameters, 'file_in', read=True) as datafile:
+
+            # Starts
+            response = self._start(datafile, info_dict, parameters)
+
+        # Check response status
+        self._raise_for_status(response, "Failed to configure accelerator: ")
 
         # Returns optional response
         if info_dict:
@@ -137,7 +163,7 @@ class AcceleratorClient(_utl.ABC):
         Client specific start implementation.
 
         Args:
-            datafile (str): Input file.
+            datafile (str or file-like object): Input file.
             info_dict (bool): Returns response dict.
             parameters (dict): Parameters dict.
 
@@ -150,8 +176,10 @@ class AcceleratorClient(_utl.ABC):
         Processes with accelerator.
 
         Args:
-            file_in (str): Path to the file to process.
-            file_out (str): Path where the processed file will be stored.
+            file_in (str or file-like object): Input file to process.
+                Can be apyfal.storage URL, paths, file-like object.
+            file_out (str or file-like object): Output processed file.
+                Can be apyfal.storage URL, paths, file-like object.
             info_dict (bool): If True, returns a dict containing information on
                 process operation.
             parameters (str or dict): Accelerator process specific parameters
@@ -170,8 +198,17 @@ class AcceleratorClient(_utl.ABC):
         # Configures processing
         parameters = self._get_parameters(parameters, self._process_parameters)
 
-        # Processes
-        response = self._process(file_in, file_out, parameters)
+        # Handle files
+        with self._handle_file(
+                file_in, parameters, 'file_in', read=True) as file_in:
+            with self._handle_file(
+                    file_out, parameters, 'file_out', read=False) as file_out:
+
+                # Processes
+                response = self._process(file_in, file_out, parameters)
+
+        # Check response status
+        self._raise_for_status(response, "Processing failed: ")
 
         # Get result from response
         try:
@@ -191,8 +228,8 @@ class AcceleratorClient(_utl.ABC):
         Client specific process implementation.
 
         Args:
-            file_in (str): Input file.
-            file_out (str): Output file.
+            file_in (str or file-like object): Input file.
+            file_out (str or file-like object): Output file.
             parameters (dict): Parameters dict.
 
         Returns:
@@ -214,6 +251,14 @@ class AcceleratorClient(_utl.ABC):
         """
         # Stops
         response = self._stop(info_dict)
+
+        # Clears temporary dir
+        if self._tmp_dir:
+            try:
+                _rmtree(self._tmp_dir)
+            except OSError:
+                pass
+            self._tmp_dir = None
 
         # Returns optional response
         if info_dict:
@@ -314,3 +359,72 @@ class AcceleratorClient(_utl.ABC):
         _utl.recursive_update(
             parameters, config.get_literal('parameters') or {})
         return parameters
+
+    @_contextmanager
+    def _handle_file(self, url, parameters, parameter_name, read):
+        """Get files with apyfal.storage.
+
+        Args:
+            url (str or file-like object): Input URL.
+            parameters (dict): Parameters dict.
+            parameter_name (str): Parameter name for input URL.
+            read (bool): If True, file is intended to be read,
+                else to be write.
+
+        Returns:
+            str or file-like object or None:
+                Local version of input path.
+        """
+        # No URL, yields directly
+        if url is None:
+            yield None
+
+        # Gets scheme and path from URL
+        scheme, path = _srg.parse_url(url, self.REMOTE)
+
+        # File scheme: Handles locally
+        if scheme == 'file':
+
+            # Checks input file exists
+            if read and not _os_path.isfile(path):
+                raise _exc.ClientConfigurationException(
+                    gen_msg=('not_found_named', parameter_name, path))
+
+            # Ensures output parent directory exists
+            elif not read:
+                _utl.makedirs(_os_path.dirname(path), exist_ok=True)
+
+            # Yields directly
+            yield path
+
+        # Stream scheme: yields directly
+        elif scheme == 'stream':
+            yield path
+
+        # Other schemes, client side:
+        # Sends URL to host side as parameters and
+        # yields None to client
+        elif self.REMOTE:
+            parameters[parameter_name] = url
+            yield None
+
+        # Other schemes, host side:
+        # Generates local copy of file
+        else:
+            # Generates randomized temporary filename
+            local_path = _os_path.join(
+                self._tmp_dir, str(_uuid()))
+
+            # Gets input file
+            if read:
+                _srg.copy(url, local_path)
+
+            # Yields local temporary path
+            yield local_path
+
+            # Sends output file
+            if not read:
+                _srg.copy(local_path, url)
+
+            # Clears temporary file
+            _remove(local_path)

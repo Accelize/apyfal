@@ -59,13 +59,16 @@ class RESTClient(_Client):
     #: Client type
     NAME = 'REST'
 
+    # Client is remote or not
+    REMOTE = True
+
     def __init__(self, accelerator, host_ip=None, *args, **kwargs):
+        # Initialize client
+        _Client.__init__(self, accelerator, *args, **kwargs)
+
         # Initializes OpenApi client
         self._configuration_url = None
         self._api_client = _api.ApiClient()
-
-        # Initialize client
-        _Client.__init__(self, accelerator, *args, **kwargs)
 
         # Pass host URL if already defined.
         if host_ip:
@@ -133,9 +136,9 @@ class RESTClient(_Client):
         Configures accelerator.
 
         Args:
-            datafile (str): Depending on the accelerator,
-                a configuration need to be loaded before a process can be run.
-                In such case please define the path of the configuration file.
+            datafile (str or file-like object): Depending on the accelerator,
+                a configuration data file need to be loaded before a process can be run.
+                Can be apyfal.storage URL, paths, file-like object.
             info_dict (bool): If True, returns a dict containing information on
                 configuration operation.
             parameters (str or dict): Accelerator configuration specific parameters
@@ -163,7 +166,7 @@ class RESTClient(_Client):
         Client specific start implementation.
 
         Args:
-            datafile (str): Input file.
+            datafile (str or file-like object): Input file.
             info_dict (bool): Returns response dict.
             parameters (dict): Parameters dict.
 
@@ -177,7 +180,6 @@ class RESTClient(_Client):
 
         # Checks operation success
         config_result = _literal_eval(api_response.parametersresult)
-        self._raise_for_status(config_result, "Failed to configure accelerator: ")
 
         api_response_read = api_instance.configuration_read(api_response.id)
         if api_response_read.inerror:
@@ -199,7 +201,7 @@ class RESTClient(_Client):
 
         Args:
             json_parameters (str): AcceleratorClient parameter as JSON
-            datafile (str): Path to input datafile
+            datafile (str or file-like object): Input file.
 
         Returns:
             dict: Response from API
@@ -215,7 +217,7 @@ class RESTClient(_Client):
 
         Args:
             json_parameters (str): AcceleratorClient parameter as JSON
-            datafile (str): Path to input datafile
+            datafile (str or file-like object): Input file.
 
         Returns:
             dict: Response from API
@@ -276,8 +278,8 @@ class RESTClient(_Client):
         Client specific process implementation.
 
         Args:
-            file_in (str): Input file.
-            file_out (str): Output file.
+            file_in (str or file-like object): Input file.
+            file_out (str or file-like object): Output file.
             parameters (dict): Parameters dict.
 
         Returns:
@@ -287,14 +289,6 @@ class RESTClient(_Client):
         if self._configuration_url is None:
             raise _exc.ClientConfigurationException(
                 "AcceleratorClient has not been configured. Use 'start' function.")
-
-        # Checks input file presence
-        if file_in and not _os.path.isfile(file_in):
-            raise OSError("Could not find input file: %s", file_in)
-
-        # Checks output directory presence, and creates it if not exists.
-        if file_out:
-            _utl.makedirs(_os.path.dirname(file_out), exist_ok=True)
 
         # Use cURL to improve performance and avoid issue with big file (https://bugs.python.org/issue8450)
         # If not available, use REST API (with limitations)
@@ -317,7 +311,6 @@ class RESTClient(_Client):
                     _utl.pretty_dict(api_response.parametersresult))
 
             process_response = _literal_eval(api_response.parametersresult)
-            self._raise_for_status(process_response, "Processing failed: ")
 
             # Write result file
             if file_out:

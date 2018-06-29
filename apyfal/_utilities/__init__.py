@@ -384,6 +384,7 @@ def gen_msg(message_id, *args):
     """
     # Get message
     message = dict(
+        not_found_named="'%s' not found: %s",
         no_find="Unable to find %s",
         no_find_named="Unable to find %s '%s'",
         no_host_found='No host found. Please check your configuration.',

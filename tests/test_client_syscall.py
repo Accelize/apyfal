@@ -179,6 +179,9 @@ def test_syscall_client_run_executable():
         for arg in expected_args:
             assert arg in command
 
+    def dummy_remove(*_, **__):
+        """Do nothing"""
+
     @contextmanager
     def dummy_open(file, mode, **__):
         """Check arguments and simulate file"""
@@ -204,6 +207,7 @@ def test_syscall_client_run_executable():
 
     syscall_call = syscall._call
     syscall._call = dummy_call
+    syscall._remove = dummy_remove
     syscall.open = dummy_open
 
     # Tests
@@ -239,7 +243,7 @@ def test_syscall_client_run_executable():
 
         # Run _init_metering
         expected_args = []
-        expected_path = cfg.CREDENTIALS_JSON
+        expected_path = cfg.METERING_CREDENTIALS
         dummy_params = {'client_id': 'dummy_client_id',
                         'client_secret': 'dummy_client_secret'}
         client._init_metering({'env': dummy_params})
@@ -248,6 +252,7 @@ def test_syscall_client_run_executable():
     finally:
         delattr(syscall, 'open')
         syscall._call = syscall_call
+        syscall._remove = os.remove
 
 
 def test_syscall_client_start_process_stop():
@@ -281,7 +286,12 @@ def test_syscall_client_start_process_stop():
 
             # Checks parameters
             kwargs['mode'] = mode
-            assert expected_args == kwargs
+            for key, value in kwargs.items():
+                expected = expected_args.get(key)
+                if expected == str:
+                    assert isinstance(value, str)
+                else:
+                    assert expected == value
 
             # Returns response
             if kwargs.get('output_json'):
@@ -302,24 +312,24 @@ def test_syscall_client_start_process_stop():
 
         # Start
         expected_args = dict(
-            mode='0', input_file=dummy_file_in, input_json='start_input.json',
-            output_json='start_output.json', parameters=dummy_parameters)
+            mode='0', input_file=dummy_file_in, input_json=str,
+            output_json=str, parameters=dummy_parameters)
         assert client._start(dummy_file_in, True, dummy_parameters) == dummy_response
 
         expected_args = dict(
-            mode='0', input_file=dummy_file_in, input_json='start_input.json',
+            mode='0', input_file=dummy_file_in, input_json=str,
             parameters=dummy_parameters, output_json=None)
         assert client._start(dummy_file_in, False, dummy_parameters) is None
 
         # Process
         expected_args = dict(
             mode='1', input_file=dummy_file_in,  output_file=dummy_file_out,
-            input_json='process_input.json', output_json='process_output.json',
+            input_json=str, output_json=str,
             parameters=dummy_parameters, extra_args=['-v4'])
         assert client._process(dummy_file_in, dummy_file_out, dummy_parameters) == dummy_response
 
         # Stop
-        expected_args = dict(mode='2', output_json='stop_output.json')
+        expected_args = dict(mode='2', output_json=str)
         assert client._stop(True) == dummy_response
 
         expected_args = dict(mode='2', output_json=None)

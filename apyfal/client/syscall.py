@@ -2,10 +2,9 @@
 """Accelerator system call client."""
 
 import json as _json
+from os import remove as _remove
 from os.path import join as _join
-from shutil import rmtree as _rmtree
 from subprocess import Popen as _Popen, PIPE as _PIPE
-from tempfile import mkdtemp as _mkdtemp
 from uuid import uuid4 as _uuid
 
 import apyfal.exceptions as _exc
@@ -75,29 +74,25 @@ class SysCallClient(_Client):
     NAME = 'SysCall'
 
     def __init__(self, *args, **kwargs):
+        _Client.__init__(self, *args, **kwargs)
+
+        # Need accelerator executable to run
         if not _cfg.accelerator_executable_available():
-            # Need accelerator executable to run
             raise _exc.HostConfigurationException(
                 gen_msg='no_host_found')
-
-        _Client.__init__(self, *args, **kwargs)
 
     def _start(self, datafile, info_dict, parameters):
         """
         Client specific start implementation.
 
         Args:
-            datafile (str): Input file.
+            datafile (str or file-like object): Input file.
             info_dict (bool): Returns response dict.
             parameters (dict): Parameters dict.
 
         Returns:
             dict or None: response.
         """
-        # Initialize temporary dir if needed
-        if not self._tmp_dir:
-            self._tmp_dir = _mkdtemp()
-
         # Initialize metering
         self._init_metering(parameters)
 
@@ -105,8 +100,8 @@ class SysCallClient(_Client):
         return self._run_executable(
             mode='0',
             input_file=datafile,
-            input_json='start_input.json',
-            output_json='start_output.json' if info_dict else None,
+            input_json=str(_uuid()),
+            output_json=str(_uuid()) if info_dict else None,
             parameters=parameters,
         )
 
@@ -115,8 +110,8 @@ class SysCallClient(_Client):
         Client specific process implementation.
 
         Args:
-            file_in (str): Input file.
-            file_out (str): Output file.
+            file_in (str or file-like object): Input file.
+            file_out (str or file-like object): Output file.
             parameters (dict): Parameters dict.
 
         Returns:
@@ -126,8 +121,8 @@ class SysCallClient(_Client):
             mode='1',
             input_file=file_in,
             output_file=file_out,
-            input_json='process_input.json',
-            output_json='process_output.json',
+            input_json=str(_uuid()),
+            output_json=str(_uuid()),
             parameters=parameters,
             extra_args=['-v4'],
         )
@@ -148,17 +143,12 @@ class SysCallClient(_Client):
 
         response = self._run_executable(
             mode='2',
-            output_json='stop_output.json' if info_dict else None
+            output_json=str(_uuid()) if info_dict else None
         )
 
         # Stops services
         # TODO: Better to not stop services ?
         _systemctl('stop', 'meteringclient', 'meteringsession')
-
-        # Clears temporary dir
-        if self._tmp_dir:
-            _rmtree(self._tmp_dir)
-            self._tmp_dir = None
 
         # Gets optional information
         return response
@@ -211,10 +201,18 @@ class SysCallClient(_Client):
         # Runs command
         _call(command)
 
+        # Cleanup input JSON file
+        if input_json:
+            _remove(output_json)
+
         # Gets result from output JSON file
         if output_json:
             with open(output_json, 'rt') as json_output_file:
-                return _json.load(json_output_file)
+                response = _json.load(json_output_file)
+
+            # Cleanup output JSON file
+            _remove(output_json)
+            return response
 
     @staticmethod
     def _init_metering(parameters):
@@ -245,8 +243,8 @@ class SysCallClient(_Client):
         # New metering: Generate metering configuration file
         if 'client_id' in parameters['env']:
             # Set right
-            _call(['sudo', 'chmod', 'a+wr', _cfg.CREDENTIALS_JSON])
-            with open(_cfg.CREDENTIALS_JSON, 'wb') as credential_file:
+            _call(['sudo', 'chmod', 'a+wr', _cfg.METERING_CREDENTIALS])
+            with open(_cfg.METERING_CREDENTIALS, 'wb') as credential_file:
                 _json.dump(
                     {key: parameters['env'][key]
                      for key in ('client_id', 'client_secret')},

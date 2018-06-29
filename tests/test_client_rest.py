@@ -1,6 +1,7 @@
 # coding=utf-8
 """apyfal.client.rest tests"""
 import collections
+from contextlib import contextmanager
 import copy
 import io
 import gc
@@ -145,6 +146,12 @@ def test_restclient_start():
 
         def __del__(self):
             """Does nothing"""
+
+        @staticmethod
+        @contextmanager
+        def _handle_file(url, *_, **__):
+            """Skip file presence check"""
+            yield url
 
         @property
         def url(self):
@@ -635,12 +642,12 @@ def test_restclient_process(tmpdir):
         # Test accelerator not configured
         accelerator = DummyAccelerator('Dummy')
         with pytest.raises(exc.ClientConfigurationException):
-            accelerator.process(str(file_in), str(file_out))
+            accelerator.process()
 
         accelerator._configuration_url = 'dummy_configuration'
 
         # Test input file not exists
-        with pytest.raises(OSError):
+        with pytest.raises(exc.ClientConfigurationException):
             accelerator.process(str(file_in), str(file_out))
 
         # Creates input file

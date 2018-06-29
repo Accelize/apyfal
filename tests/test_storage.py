@@ -54,28 +54,28 @@ def test_storage_hook():
         srg._STORAGE.clear()
 
 
-def test_parse_host_url():
-    """Tests _parse_host_url"""
-    from apyfal.storage import _parse_host_url
+def test_parse_url():
+    """Tests parse_url"""
+    from apyfal.storage import parse_url
 
     # Tests client local file
-    assert _parse_host_url('path/without/scheme') == (
+    assert parse_url('path/without/scheme') == (
         'file', 'path/without/scheme')
-    assert _parse_host_url('file://path/with/scheme') == (
+    assert parse_url('file://path/with/scheme') == (
         'file', 'path/with/scheme')
 
     # Tests host local file conversion
-    assert _parse_host_url('host://path/on/host') == (
+    assert parse_url('host://path/on/host') == (
         'file', 'path/on/host')
 
     # Tests HTTP
-    assert _parse_host_url('http://www.accelize.com') == (
+    assert parse_url('http://www.accelize.com') == (
         'http', 'http://www.accelize.com')
-    assert _parse_host_url('https://www.accelize.com') == (
+    assert parse_url('https://www.accelize.com') == (
         'http', 'https://www.accelize.com')
 
     # Tests custom storage scheme
-    assert _parse_host_url('storage.name://path/on/storage') == (
+    assert parse_url('storage.name://path/on/storage') == (
         'storage.name', 'path/on/storage')
 
 

@@ -31,11 +31,14 @@ from apyfal import _utilities as _utl
 #: Accelerator Executable path
 ACCELERATOR_EXECUTABLE = '/opt/accelize/accelerator/accelerator'
 
+#: Accelerator temporary directory root
+ACCELERATOR_TMP_ROOT = '/dev/shm' if _os_path.isdir('/dev/shm') else None
+
 #: Metering server URL
 METERING_SERVER = 'https://master.metering.accelize.com'
 
 #: Metering Credentials JSON file
-CREDENTIALS_JSON = '/etc/accelize/credentials.json'
+METERING_CREDENTIALS = '/etc/accelize/credentials.json'
 
 #: Metering Server temporary directory
 METERING_TMP_DIR = '/tmp/meteringServer'
@@ -44,9 +47,11 @@ METERING_TMP_DIR = '/tmp/meteringServer'
 METERING_CLIENT_CONFIG = '/etc/sysconfig/meteringclient'
 
 __all__ = ['create_configuration', 'Configuration',
-           'ACCELERATOR_EXECUTABLE',
            'accelerator_executable_available',
-           'METERING_SERVER', 'CREDENTIALS_JSON']
+           'ACCELERATOR_EXECUTABLE', 'ACCELERATOR_TMP_ROOT',
+           'METERING_SERVER', 'METERING_TMP_DIR',
+           'METERING_CLIENT_CONFIG',
+           'METERING_CREDENTIALS']
 
 
 def create_configuration(configuration_file):
@@ -55,7 +60,7 @@ def create_configuration(configuration_file):
     Args:
         configuration_file (str or Configuration or file-like object or None):
             Configuration file path or instance.
-            Can Configuration instance or apyfal.storage URL,
+            Can be Configuration instance or apyfal.storage URL,
             paths, file-like object"""
     if isinstance(configuration_file, Configuration):
         # configuration_file is already a Configuration instance

@@ -39,13 +39,10 @@ import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
 
-__all__ = ['open', 'copy', 'Storage']
+__all__ = ['open', 'copy', 'parse_url', 'Storage']
 
 # Storage name aliases
 _ALIASES = {
-    # "host" only available on call from REST client
-    'host': 'file',
-
     # Schemes variants
     'https': 'http',
 }
@@ -89,20 +86,20 @@ def register(storage_type, **parameters):
     return _STORAGE.register(storage_type, **parameters)
 
 
-def _parse_host_url(url):
+def parse_url(url, host=True):
     """Return scheme and path from URL:
 
     URL = scheme://path
 
     If URL has no scheme, "file" scheme is inferred.
 
-    Scheme is returned from host point of view:
-    "host" scheme is converted to "file" scheme.
-
     If URL is a file-like object, returns "stream" as scheme.
 
     Args:
         url (str or file-like object): URL to parse
+        host (bool): If True, Scheme is returned from
+            host point of view: "host" scheme is converted
+            to "file" scheme.
 
     Returns:
         tuple of str: (scheme, path)
@@ -121,6 +118,10 @@ def _parse_host_url(url):
 
     # Get scheme from alias
     scheme = _ALIASES.get(scheme, scheme)
+
+    # Host point of view conversion
+    if host and scheme == 'host':
+        scheme = 'file'
 
     # Returns result
     # Some storage needs full URL as path
@@ -234,7 +235,7 @@ def open(url, mode="rb", encoding=None, errors=None, newline=None):
         file-like object: Opened object handle
     """
     # Parses URL
-    scheme, path = _parse_host_url(url)
+    scheme, path = parse_url(url)
     try:
         storage = _STORAGE[scheme]
 
@@ -279,8 +280,8 @@ def copy(source, destination):
     """
 
     # Parses URLs
-    src_scheme, src_path = _parse_host_url(source)
-    dst_scheme, dst_path = _parse_host_url(destination)
+    src_scheme, src_path = parse_url(source)
+    dst_scheme, dst_path = parse_url(destination)
 
     # Performs operation
     if src_scheme == 'file' and dst_scheme == 'file':
