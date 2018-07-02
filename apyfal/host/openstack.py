@@ -81,17 +81,10 @@ class OpenStackHost(_CSPHost):
         self._check_arguments('project_id', 'auth_url', 'interface')
 
         # Load session
-        self._session = _openstack.connection.Connection(
-            region_name=self._region,
-            auth=dict(
-                auth_url=self._auth_url,
-                username=self._client_id,
-                password=self._secret_id,
-                project_id=self._project_id
-            ),
-            compute_api_version='2',
-            identity_interface=self._interface
-        )
+        self._session = _utl_openstack.connect(
+            region=self._region, auth_url=self._auth_url,
+            client_id=self._client_id, secret_id=self._secret_id,
+            project_id=self._project_id, interface=self._interface)
 
     def _check_credential(self):
         """
