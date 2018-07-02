@@ -86,7 +86,7 @@ class SysCallClient(_Client):
         Client specific start implementation.
 
         Args:
-            datafile (str or file-like object): Input file.
+            datafile (str): Input file.
             parameters (dict): Parameters dict.
 
         Returns:
@@ -109,8 +109,8 @@ class SysCallClient(_Client):
         Client specific process implementation.
 
         Args:
-            file_in (str or file-like object): Input file.
-            file_out (str or file-like object): Output file.
+            file_in (str): Input file.
+            file_out (str): Output file.
             parameters (dict): Parameters dict.
 
         Returns:

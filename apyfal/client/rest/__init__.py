@@ -62,6 +62,9 @@ class RESTClient(_Client):
     # Client is remote or not
     REMOTE = True
 
+    # Format required for parameter: 'file' (default) or 'stream'
+    PARAMETER_IO_FORMAT = {'file_out': 'stream'}
+
     def __init__(self, accelerator, host_ip=None, *args, **kwargs):
         # Initialize client
         _Client.__init__(self, accelerator, *args, **kwargs)
@@ -199,7 +202,7 @@ class RESTClient(_Client):
 
         Args:
             json_parameters (str): AcceleratorClient parameter as JSON
-            datafile (str or file-like object): Input file.
+            datafile (str): Input file.
 
         Returns:
             dict: Response from API
@@ -215,7 +218,7 @@ class RESTClient(_Client):
 
         Args:
             json_parameters (str): AcceleratorClient parameter as JSON
-            datafile (str or file-like object): Input file.
+            datafile (str): Input file.
 
         Returns:
             dict: Response from API
@@ -242,7 +245,7 @@ class RESTClient(_Client):
         retries_done = 1
         while True:
             write_buffer = _BytesIO()
-            curl.setopt(_pycurl.WRITEFUNCTION, write_buffer.write)
+            curl.setopt(_pycurl.WRITEDATA, write_buffer)
 
             try:
                 curl.perform()
@@ -277,7 +280,7 @@ class RESTClient(_Client):
 
         Args:
             file_in (str or file-like object): Input file.
-            file_out (str or file-like object): Output file.
+            file_out (file-like object): Output file.
             parameters (dict): Parameters dict.
 
         Returns:
@@ -308,20 +311,18 @@ class RESTClient(_Client):
                     "Failed to process data: %s" %
                     _utl.pretty_dict(api_response.parametersresult))
 
-            process_response = _literal_eval(api_response.parametersresult)
-
             # Write result file
             if file_out:
                 response = _utl.http_session(https=False).get(
                     api_response.datafileresult, stream=True)
-                with open(file_out, 'wb') as out_file:
-                    _shutil.copyfileobj(response.raw, out_file)
+                _shutil.copyfileobj(response.raw, file_out)
+
+            # Get response
+            return _literal_eval(api_response.parametersresult)
 
         finally:
             # Process_delete api_response
             api_instance.process_delete(api_resp_id)
-
-        return process_response
 
     def _stop(self, info_dict):
         """

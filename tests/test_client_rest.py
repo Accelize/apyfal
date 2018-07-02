@@ -149,7 +149,7 @@ def test_restclient_start():
 
         @staticmethod
         @contextmanager
-        def _handle_file(url, *_, **__):
+        def _data_file(url, *_, **__):
             """Skip file presence check"""
             yield url
 
@@ -403,11 +403,11 @@ def test_restclient_process_curl():
                 raise pycurl.error
 
             # Write api_response
-            self.mock_write(api_response.encode())
+            self.mock_write.write(api_response.encode())
 
         def setopt(self, *args):
-            """set cURL options and intercept WRITEFUNCTION"""
-            if args[0] == pycurl.WRITEFUNCTION:
+            """set cURL options and intercept WRITEDATA"""
+            if args[0] == pycurl.WRITEDATA:
                 self.mock_write = args[1]
             self.curl.setopt(*args)
 

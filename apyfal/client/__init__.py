@@ -15,10 +15,6 @@ import apyfal.configuration as _cfg
 import apyfal.storage as _srg
 
 
-# TODO: parameters/response as JSON str as in and out in _start, _stop, _process
-# TODO: _start, _stop, _process: stream support.
-# TODO: Reinject (file_in, file_out, ...) from parameters
-
 class AcceleratorClient(_utl.ABC):
     """
     REST accelerator client.
@@ -59,6 +55,9 @@ class AcceleratorClient(_utl.ABC):
 
     # Client is remote or not
     REMOTE = False
+
+    # Format required for parameter: 'file' (default) or 'stream'
+    PARAMETER_IO_FORMAT = {}
 
     def __new__(cls, *args, **kwargs):
         # If call from a subclass, instantiate this subclass directly
@@ -144,8 +143,8 @@ class AcceleratorClient(_utl.ABC):
         parameters['env'].update(host_env or dict())
 
         # Handle files
-        with self._handle_file(
-                datafile, parameters, 'file_in', read=True) as datafile:
+        with self._data_file(
+                datafile, parameters, 'datafile', mode='rb') as datafile:
 
             # Starts
             response = self._start(datafile, parameters)
@@ -198,10 +197,10 @@ class AcceleratorClient(_utl.ABC):
         parameters = self._get_parameters(parameters, self._process_parameters)
 
         # Handle files
-        with self._handle_file(
-                file_in, parameters, 'file_in', read=True) as file_in:
-            with self._handle_file(
-                    file_out, parameters, 'file_out', read=False) as file_out:
+        with self._data_file(
+                file_in, parameters, 'file_in', mode='rb') as file_in:
+            with self._data_file(
+                    file_out, parameters, 'file_out', mode='wb') as file_out:
 
                 # Processes
                 response = self._process(file_in, file_out, parameters)
@@ -360,15 +359,14 @@ class AcceleratorClient(_utl.ABC):
         return parameters
 
     @_contextmanager
-    def _handle_file(self, url, parameters, parameter_name, read):
+    def _data_file(self, url, parameters, parameter_name, mode):
         """Get files with apyfal.storage.
 
         Args:
             url (str or file-like object): Input URL.
             parameters (dict): Parameters dict.
             parameter_name (str): Parameter name for input URL.
-            read (bool): If True, file is intended to be read,
-                else to be write.
+            mode (str): Access mode. 'r' or 'w'.
 
         Returns:
             str or file-like object or None:
@@ -377,53 +375,76 @@ class AcceleratorClient(_utl.ABC):
         # No URL, yields directly
         if url is None:
             yield None
+            return
 
         # Gets scheme and path from URL
         scheme, path = _srg.parse_url(url, self.REMOTE)
 
-        # File scheme: Handles locally
+        # File scheme: Check paths
         if scheme == 'file':
 
             # Checks input file exists
-            if read and not _os_path.isfile(path):
+            if 'r' in mode and not _os_path.isfile(path):
                 raise _exc.ClientConfigurationException(
                     gen_msg=('not_found_named', parameter_name, path))
 
             # Ensures output parent directory exists
-            elif not read:
+            elif 'w' in mode:
                 _utl.makedirs(_os_path.dirname(path), exist_ok=True)
 
-            # Yields directly
-            yield path
-
-        # Stream scheme: yields directly
-        elif scheme == 'stream':
-            yield path
-
-        # Other schemes, client side:
+        # Client side:
         # Sends URL to host side as parameters and
         # yields None to client
-        elif self.REMOTE:
+        if self.REMOTE and scheme not in ('stream', 'file'):
             parameters[parameter_name] = url
             yield None
 
-        # Other schemes, host side:
-        # Generates local copy of file
+        # Other case, yields file in expected format (file or stream)
         else:
-            # Generates randomized temporary filename
-            local_path = _os_path.join(
-                self._tmp_dir, str(_uuid()))
+            # As file
+            if self.PARAMETER_IO_FORMAT.get(
+                    parameter_name, 'file') == 'file':
 
-            # Gets input file
-            if read:
-                _srg.copy(url, local_path)
+                # Already a file
+                if scheme == 'file':
+                    yield path
 
-            # Yields local temporary path
-            yield local_path
+                # Use temporary file
+                else:
+                    with self.as_tmp_file(url, mode) as file:
+                        yield file
+            # As stream
+            else:
+                with _srg.open(url, mode) as stream:
+                    yield stream
 
-            # Sends output file
-            if not read:
-                _srg.copy(local_path, url)
+    @_contextmanager
+    def as_tmp_file(self, url, mode):
+        """
+        Return temporary representation of a file.
 
-            # Clears temporary file
-            _remove(local_path)
+        Args:
+            url (str): apyfal.storage URL of the file.
+            mode (str): Access mode. 'r' or 'w'.
+            stream (bool): Use temporary stream.
+
+        Returns:
+            str or file-like object: temporary object.
+        """
+        # Generates randomized temporary filename
+        local_path = _os_path.join(
+            self._tmp_dir, str(_uuid()))
+
+        # Gets input file
+        if 'r' in mode:
+            _srg.copy(url, local_path)
+
+        # Yields local temporary path
+        yield local_path
+
+        # Sends output file
+        if 'w' in mode:
+            _srg.copy(local_path, url)
+
+        # Clears temporary file
+        _remove(local_path)

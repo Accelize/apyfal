@@ -94,3 +94,111 @@ def test_acceleratorclient_get_parameters(tmpdir):
     del default_parameters['app']['specific']
     excepted_parameters['app']['specific'] = {'key0': 0, 'key1': 1}
     assert client.function(key0=0, key1=1) == excepted_parameters
+
+
+def test_data_file(tmpdir):
+    """Tests AcceleratorClient._data_file"""
+    from apyfal.client import AcceleratorClient
+    from apyfal.exceptions import ClientConfigurationException
+
+    # Initialize some values
+    parameters = {}
+    content = 'dummy_content'.encode()
+    parameter_name = 'dummy_name'
+    url = 'http://accelize.com'
+    file_in = tmpdir.join('in')
+    file_in.write(content)
+    file_in_path = str(file_in)
+    file_out = tmpdir.join('sub_dir').join('out')
+    file_out_path = str(file_out)
+
+    # Mocks Client
+    class DummyClient(AcceleratorClient):
+        """Dummy Client"""
+
+        _tmp_dir = str(tmpdir)
+
+        REMOTE = False
+        PARAMETER_IO_FORMAT = {parameter_name: 'file'}
+
+        def __init__(self, *_, **__):
+            """Do nothing"""
+
+        def _start(self, *_):
+            """Do nothing"""
+
+        def _process(self, *_):
+            """Do nothing"""
+
+        def _stop(self, *_):
+            """Do nothing"""
+
+    client = DummyClient()
+
+    # Test: None argument
+    with client._data_file(
+            None, parameters, parameter_name, 'rb') as path:
+        assert path is None
+
+    # Test: Input file
+    with client._data_file(
+            file_in_path, parameters, parameter_name, 'rb') as path:
+        assert path is file_in_path
+        with open(path, 'rb') as file:
+            assert file.read() == content
+
+    # Test: Input file not exists
+    with pytest.raises(ClientConfigurationException):
+        with client._data_file(
+                'path_not_exists', parameters, parameter_name, 'rb'):
+            pass
+
+    # Test: Output file
+    with client._data_file(
+            file_out_path, parameters, parameter_name, 'wb') as path:
+        assert path is file_out_path
+        with open(path, 'wb') as file:
+            file.write(content)
+        assert file_out.read_binary() == content
+    file_out.remove()
+
+    # Test: Input file as stream
+    client.PARAMETER_IO_FORMAT[parameter_name] = 'stream'
+    with client._data_file(
+            file_in_path, parameters, parameter_name, 'rb') as file:
+        assert file.read() == content
+    client.PARAMETER_IO_FORMAT[parameter_name] = 'file'
+
+    # Test: Input stream
+    with open(file_in_path, 'rb') as file:
+        with client._data_file(file, parameters, parameter_name, 'rb') as path:
+            with open(path, 'rb') as tmp_file:
+                assert tmp_file.read() == content
+
+    # Test: Output stream
+    with open(file_out_path, 'wb') as file:
+        with client._data_file(
+                file, parameters, parameter_name, 'wb') as path:
+            with open(path, 'wb') as tmp_file:
+                tmp_file.write(content)
+    assert file_out.read_binary() == content
+
+    # Remote mode: No change for file
+    client.REMOTE = True
+    with client._data_file(
+            file_in_path, parameters, parameter_name, 'rb') as path:
+        assert path is file_in_path
+    assert not parameters
+
+    # Remote mode: No change for stream
+    with open(file_in_path, 'rb') as file:
+        with client._data_file(
+                file, parameters, parameter_name, 'rb') as path:
+            assert path is not None
+    assert not parameters
+
+    # Remote mode: Others in parameters
+    with client._data_file(
+            url, parameters, parameter_name, 'rb') as path:
+        assert path is None
+    assert parameters[parameter_name] == url
