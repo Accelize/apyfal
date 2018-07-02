@@ -15,9 +15,9 @@ import apyfal.configuration as _cfg
 import apyfal.storage as _srg
 
 
-# TODO: _raise_for_status should not receive None
 # TODO: parameters/response as JSON str as in and out in _start, _stop, _process
 # TODO: _start, _stop, _process: stream support.
+# TODO: Reinject (file_in, file_out, ...) from parameters
 
 class AcceleratorClient(_utl.ABC):
     """
@@ -148,7 +148,7 @@ class AcceleratorClient(_utl.ABC):
                 datafile, parameters, 'file_in', read=True) as datafile:
 
             # Starts
-            response = self._start(datafile, info_dict, parameters)
+            response = self._start(datafile, parameters)
 
         # Check response status
         self._raise_for_status(response, "Failed to configure accelerator: ")
@@ -158,17 +158,16 @@ class AcceleratorClient(_utl.ABC):
             return response
 
     @_abstractmethod
-    def _start(self, datafile, info_dict, parameters):
+    def _start(self, datafile, parameters):
         """
         Client specific start implementation.
 
         Args:
             datafile (str or file-like object): Input file.
-            info_dict (bool): Returns response dict.
             parameters (dict): Parameters dict.
 
         Returns:
-            dict or None: response.
+            dict: response.
         """
 
     def process(self, file_in=None, file_out=None, info_dict=False, **parameters):

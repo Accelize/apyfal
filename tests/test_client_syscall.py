@@ -314,12 +314,7 @@ def test_syscall_client_start_process_stop():
         expected_args = dict(
             mode='0', input_file=dummy_file_in, input_json=str,
             output_json=str, parameters=dummy_parameters)
-        assert client._start(dummy_file_in, True, dummy_parameters) == dummy_response
-
-        expected_args = dict(
-            mode='0', input_file=dummy_file_in, input_json=str,
-            parameters=dummy_parameters, output_json=None)
-        assert client._start(dummy_file_in, False, dummy_parameters) is None
+        assert client._start(dummy_file_in, dummy_parameters) == dummy_response
 
         # Process
         expected_args = dict(

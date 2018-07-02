@@ -161,17 +161,16 @@ class RESTClient(_Client):
         return _Client.start(
             self, datafile=datafile, info_dict=info_dict, host_env=host_env, **parameters)
 
-    def _start(self, datafile, info_dict, parameters):
+    def _start(self, datafile, parameters):
         """
         Client specific start implementation.
 
         Args:
             datafile (str or file-like object): Input file.
-            info_dict (bool): Returns response dict.
             parameters (dict): Parameters dict.
 
         Returns:
-            dict or None: response.
+            dict: response.
         """
         # Configures  accelerator
         api_instance = self._rest_api_configuration()
@@ -189,11 +188,10 @@ class RESTClient(_Client):
         # Memorizes configuration
         self._configuration_url = api_response.url
 
-        # Returns optional response
-        if info_dict:
-            config_result['url_config'] = self._configuration_url
-            config_result['url_instance'] = self.url
-            return config_result
+        # Returns response
+        config_result['url_config'] = self._configuration_url
+        config_result['url_instance'] = self.url
+        return config_result
 
     def _process_openapi(self, json_parameters, datafile):
         """

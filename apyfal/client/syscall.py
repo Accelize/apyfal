@@ -81,17 +81,16 @@ class SysCallClient(_Client):
             raise _exc.HostConfigurationException(
                 gen_msg='no_host_found')
 
-    def _start(self, datafile, info_dict, parameters):
+    def _start(self, datafile, parameters):
         """
         Client specific start implementation.
 
         Args:
             datafile (str or file-like object): Input file.
-            info_dict (bool): Returns response dict.
             parameters (dict): Parameters dict.
 
         Returns:
-            dict or None: response.
+            dict: response.
         """
         # Initialize metering
         self._init_metering(parameters)
@@ -101,7 +100,7 @@ class SysCallClient(_Client):
             mode='0',
             input_file=datafile,
             input_json=str(_uuid()),
-            output_json=str(_uuid()) if info_dict else None,
+            output_json=str(_uuid()),
             parameters=parameters,
         )
 
