@@ -44,6 +44,9 @@ class CSPHost(_Host):
     #: Instance status when stopped
     STATUS_STOPPED = 'stopped'
 
+    #: Allowed ports for instance access
+    ALLOW_PORTS = [22, 80]
+
     # Attributes returned as dict by "info" property
     _INFO_NAMES = _Host._INFO_NAMES.copy()
     _INFO_NAMES.update({

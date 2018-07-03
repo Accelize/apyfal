@@ -304,22 +304,17 @@ class AWSHost(_CSPHost):
         # Add host IP to security group if not already done
         public_ip = _utl.get_host_public_ip()
 
+        ip_permissions = []
+        for port in self.ALLOW_PORTS:
+            ip_permissions.append({
+                'IpProtocol': 'tcp', 'FromPort': port, 'ToPort': port,
+                'IpRanges': [{'CidrIp': public_ip}]})
+
         with _ExceptionHandler.catch(
                 filter_error_codes='InvalidPermission.Duplicate'):
             ec2_client.authorize_security_group_ingress(
                 GroupId=security_group_id,
-                IpPermissions=[
-                    {'IpProtocol': 'tcp',
-                     'FromPort': 80,
-                     'ToPort': 80,
-                     'IpRanges': [{'CidrIp': public_ip}]
-                     },
-                    {'IpProtocol': 'tcp',
-                     'FromPort': 22,
-                     'ToPort': 22,
-                     'IpRanges': [{'CidrIp': public_ip}]
-                     }
-                ])
+                IpPermissions=ip_permissions)
 
         _get_logger().info(
             _utl.gen_msg('authorized_ip', public_ip, self._security_group))

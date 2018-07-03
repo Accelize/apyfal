@@ -139,7 +139,7 @@ class OpenStackHost(_CSPHost):
         public_ip = _utl.get_host_public_ip()
 
         # Create rule on SSH and HTTP
-        for port in (22, 80):
+        for port in self.ALLOW_PORTS:
             with _ExceptionHandler.catch(ignore=True):
                 self._session.create_security_group_rule(
                     security_group.id, port_range_min=port, port_range_max=port,
