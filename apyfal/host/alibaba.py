@@ -305,11 +305,11 @@ class AlibabaCSP(_CSPHost):
         # Adds host IP to security group if not already done
         public_ip = _utl.get_host_public_ip()
         rules = list()
-        for port_range in ('22/22', '80/80'):
+        for port in self.ALLOW_PORTS:
             rules.append(dict(
                 Priority=1,
                 IpProtocol='tcp',
-                PortRange=port_range,
+                PortRange='%s/%s' % (port, port),
                 SourceCidrIp=public_ip
             ))
 
