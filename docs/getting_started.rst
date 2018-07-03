@@ -325,12 +325,27 @@ It is possible to easily create a cloud instance using *Apyfal* and keeping the 
 
 And then connect to it with SSH :
 
+* ``key_pair`` is the path to the public SSK key file.
+  Key pair name can be get with ``myaccel.host.key_pair``.
+  The file in ``.pem`` format is generally stored in ``.ssh`` sub folder of user home.
+* ``host_ip`` is the IP address of the instance and can be get with ``myaccel.host.public_ip``.
+
+**Linux:**
+
 .. code-block:: bash
 
-    # "key_pair" can be get with "myaccel.host.key_pair"
-    # "host_ip" can be get with "myaccel.host.public_ip"
-
     ssh -Yt -i ${key_pair} centos@${host_ip}
+
+**Windows:**
+
+On Windows, `Putty <https://www.chiark.greenend.org.uk/~sgtatham/putty/>`_
+is required to connect with SSH. The key_pair file need to be in ``.ppk`` format
+(``puttygen.exe`` can be use to convert ``.pem`` file to ``.ppk``).
+
+.. code-block:: bat
+
+    putty.exe -ssh centos@%host_ip% 22 -i %key_pair%
+
 
 *Don't forget to terminate cloud instance after use to avoid additional fees*
 
