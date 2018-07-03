@@ -94,7 +94,7 @@ class AcceleratorClient(_utl.ABC):
             self._configuration_parameters['env']['client_id'] = client_id
         secret_id = config['accelize'].set('secret_id', accelize_secret_id)
         if secret_id:
-            self._configuration_parameters['env']['secret_id'] = secret_id
+            self._configuration_parameters['env']['client_secret'] = secret_id
 
         # Get process parameters
         self._process_parameters = self._load_configuration(
