@@ -25,9 +25,9 @@ On Linux, some extra packages are required:
    a C/C++ compiler may also be required for install dependencies.
    In this case, ``GCC`` (Or another compatible compiler) & ``Python-dev`` packages are required.
 
--  *PycURL* need ``libcurl-dev`` package to be build.
--  *PycURL* need a SSL library (like ``openssl-dev``) to support HTTPS.
-    ``PYCURL_SSL_LIBRARY`` environment variable need to be set to the selected SSL library before building.
+-  *PycURL* needs ``libcurl-dev`` package to be build.
+-  *PycURL* needs a SSL library (like ``openssl-dev``) to support HTTPS.
+   ``PYCURL_SSL_LIBRARY`` environment variable need to be set to the selected SSL library before building.
 
 Install is done with the package manager of your Linux distribution.
 
@@ -50,7 +50,7 @@ Python 2.7 is the only Python version installed by default on RHEL/CentOS 7.
 Debian or Ubuntu:
 ^^^^^^^^^^^^^^^^^
 
-Pycurl is already packaged ``python-pycurl`` on Debian and don't need to be build from source.
+Pycurl is already packaged ``python-pycurl`` on Debian and don't need to be built from source.
 
 **Python 2:**
 
