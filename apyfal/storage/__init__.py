@@ -35,6 +35,8 @@ from io import TextIOWrapper as _TextIOWrapper, open as _io_open
 from shutil import copy as _copy, copyfileobj as _copyfileobj
 import tempfile as _tempfile
 
+from psutil import virtual_memory as _virtual_memory
+
 import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
@@ -161,7 +163,15 @@ class _SpooledTemporaryFile(_tempfile.SpooledTemporaryFile):
     or StringIO to a real file when it exceeds a certain size or
     when a fileno is needed.
     """
-    # SpooledTemporaryFile with all io.IOBase abstract methods support
+
+    def __init__(self, *args, **kwargs):
+        # Set max_size to 80% of available memory by default
+        kwargs.setdefault(
+            'max_size', int(_virtual_memory().available * 0.80))
+        _tempfile.SpooledTemporaryFile.__init__(self, *args, **kwargs)
+
+    # Python 3.8 back port:
+    # Add all io.IOBase abstract methods support
 
     def readable(self):
         """
@@ -254,7 +264,7 @@ def open(url, mode="rb", encoding=None, errors=None, newline=None):
 
     # Open storage as stream
     else:
-        with _SpooledTemporaryFile(max_size=1e9) as stream:
+        with _SpooledTemporaryFile() as stream:
             if 'r' in mode:
                 storage.copy_to_stream(path, stream)
                 stream.seek(0)
@@ -441,8 +451,7 @@ class Storage(_utl.ABC):
             source (str): Source path
             destination (str): Destination path
         """
-        # TODO: Compute max_size to use instead to use fixed 1GB value (psutil)
-        with _SpooledTemporaryFile(max_size=1e9) as stream:
+        with _SpooledTemporaryFile() as stream:
             storage.copy_to_stream(source, stream)
             stream.seek(0)
             self.copy_from_stream(stream, destination)

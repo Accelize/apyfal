@@ -340,7 +340,7 @@ And then connect to it with SSH :
 
 On Windows, `Putty <https://www.chiark.greenend.org.uk/~sgtatham/putty/>`_
 is required to connect with SSH. The key_pair file need to be in ``.ppk`` format
-(``puttygen.exe`` can be use to convert ``.pem`` file to ``.ppk``).
+(``puttygen.exe`` can be used to convert ``.pem`` file to ``.ppk``).
 
 .. code-block:: bat
 

@@ -8,63 +8,63 @@ Supported Python versions: 2.7, 3.4, 3.5, 3.6, 3.7
 
 Required Python Packages:
 
--  ``Request``, ``urllib3``, ``six``, ``certifi``, ``python-dateutil``
+-  ``Request``, ``urllib3``, ``six``, ``certifi``, ``python-dateutil``, ``ipgetter``, ``psutil``
 -  ``pip`` and ``setuptools``: For package installation
 -  ``boto3`` (Optional): Required for AWS.
 -  ``openstack`` (Optional): Required for OpenStack and OVH.
--  ``pycurl`` (Optional): Improve upload performance and file size
-   limit.
+-  ``pycurl`` (Optional): Improve upload performance and file size limit.
 
 Linux
 ~~~~~
 
 On Linux, some extra packages are required:
 
--  *Pip* is required (Package is named ``python-pip`` for Python 2 and
-   ``python3-pip`` for Python 3).
+-  *Pip* is required.
 
--  Depending on the Python version, host targeted and wheel format
-   availability, a C/C++ compiler may also be required for install
-   dependencies. In this case, *GCC* (Or another compatible compiler) &
-   *Python-dev* are required.
+-  Depending on the Python version, host targeted and wheel format availability,
+   a C/C++ compiler may also be required for install dependencies.
+   In this case, ``GCC`` (Or another compatible compiler) & ``Python-dev`` packages are required.
 
--  *PycURL* need ``curl`` package.
+-  *PycURL* need ``libcurl-dev`` package to be build.
+-  *PycURL* need a SSL library (like ``openssl-dev``) to support HTTPS.
+    ``PYCURL_SSL_LIBRARY`` environment variable need to be set to the selected SSL library before building.
 
 Install is done with the package manager of your Linux distribution.
 
-**On RHEL or CentOS**:
+RHEL or CentOS 7:
+^^^^^^^^^^^^^^^^^
 
-*Python-dev* is named ``python-devel`` for Python2 and ``python3-devel``
-for Python 3.
+``-dev`` package suffix is renamed ``-devel`` on RHEL/CentOS.
 
-Python 2:
-
-.. code-block:: bash
-
-    sudo yum install gcc python-pip python-devel curl
-
-Python 3:
+**Python 2:**
 
 .. code-block:: bash
 
-    sudo yum install gcc python3-pip python3-devel curl
+    sudo yum install gcc python-pip python-devel libcurl-devel openssl-devel
+    export PYCURL_SSL_LIBRARY=openssl
 
-**On Debian or Ubuntu**:
+**Python 3:**
 
-*Python-dev* is named ``python-dev`` for Python2 and ``python3-dev`` for
-Python 3.
+Python 2.7 is the only Python version installed by default on RHEL/CentOS 7.
 
-Python 2:
+Debian or Ubuntu:
+^^^^^^^^^^^^^^^^^
+
+Pycurl is already packaged ``python-pycurl`` on Debian and don't need to be build from source.
+
+**Python 2:**
 
 .. code-block:: bash
 
-    sudo apt-get install gcc python-pip python-dev curl
+    sudo apt-get install gcc python-pip python-dev python-pycurl
 
-Python 3:
+**Python 3:**
+
+Python 3 packages are prefixed ``python3-`` instead of ``python-``.
 
 .. code-block:: bash
 
-    sudo apt-get install gcc python3-pip python3-dev curl
+    sudo apt-get install gcc python3-pip python3-dev python3-pycurl
 
 Windows
 ~~~~~~~
@@ -75,8 +75,13 @@ dependencies.
 
 -  see `Windows Compilers on Python documentation`_
 
-Some modules, like ``PycURL``, can be found as precompiled wheels here if not available directly from Pip:
-`Unofficial Windows Binaries for Python Extension Packages`_
+Some modules, like ``PycURL``, can be found as precompiled wheels here if not available directly from PyPI:
+`Unofficial Windows Binaries for Python Extension Packages`_.
+Download the wheel file for the selected Python version and run pip on it:
+
+.. code-block:: bash
+
+    pip install pycurl‑7.43.1‑cp37‑cp37m‑win_amd64.whl
 
 Setup
 -----
