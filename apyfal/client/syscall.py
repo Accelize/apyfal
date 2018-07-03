@@ -238,7 +238,7 @@ class SysCallClient(_Client):
         cur_env = {key: None for key in new_env}
         if _exists(_cfg.METERING_CREDENTIALS):
             # Get current credentials
-            with open(_cfg.METERING_CREDENTIALS, 'rb') as file:
+            with open(_cfg.METERING_CREDENTIALS, 'rt') as file:
                 cur_env.update(_json.load(file))
 
         if _exists(_cfg.METERING_CLIENT_CONFIG):
