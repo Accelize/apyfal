@@ -90,7 +90,7 @@ def accelize_credentials_available():
 
 @pytest.mark.need_accelize
 def test_configuration_access_token():
-    """Tests Configuration._access_token
+    """Tests Configuration.access_token
 
     without Accelize server"""
     from apyfal.configuration import Configuration, METERING_SERVER
@@ -139,14 +139,14 @@ def test_configuration_access_token():
         except KeyError:
             pass
         with pytest.raises(exc.ClientAuthenticationException):
-            assert config._access_token
+            assert config.access_token
 
         # Test: Everything OK
         config = Configuration()
         config['accelize']  # Creates section if not exists
         config._sections['accelize']['client_id'] = client_id
         config._sections['accelize']['secret_id'] = secret_id
-        assert config._access_token == access_token
+        assert config.access_token == access_token
 
         # Test: Check dict features
         assert len(config) == len(config._sections)
@@ -159,7 +159,7 @@ def test_configuration_access_token():
 
         # Test cached value
         del config._sections['accelize']
-        assert config._access_token == access_token
+        assert config.access_token == access_token
 
         # Test: Authentication failed
         config = Configuration()
@@ -169,7 +169,7 @@ def test_configuration_access_token():
             pass
         Response.status_code = 400
         with pytest.raises(exc.ClientAuthenticationException):
-            assert config._access_token
+            assert config.access_token
 
     # Restore requests
     finally:
@@ -178,7 +178,7 @@ def test_configuration_access_token():
 
 @pytest.mark.need_accelize
 def test_configuration_access_token_real():
-    """Tests Configuration._access_token
+    """Tests Configuration.access_token
 
     with Accelize server
     Test parts that needs credentials"""
@@ -191,7 +191,7 @@ def test_configuration_access_token_real():
     # Test: Valid credentials
     # Assuming Accelize credentials in configuration file are valid, should pass
     try:
-        assert config._access_token
+        assert config.access_token
     except ClientAuthenticationException as exception:
         if 'invalid_client' in str(exception):
             pytest.xfail("No valid Accelize credential")
@@ -202,12 +202,12 @@ def test_configuration_access_token_real():
     config['accelize']['secret_id'] = 'bad_secret_id'
     config._cache = {}
     with pytest.raises(ClientAuthenticationException):
-        assert config._access_token
+        assert config.access_token
 
 
 @pytest.mark.need_accelize
 def test_configuration_access_token_real_no_cred():
-    """Tests AcceleratorClient._access_token
+    """Tests AcceleratorClient.access_token
 
     with Accelize server
     Test parts that don't needs credentials"""
@@ -224,7 +224,7 @@ def test_configuration_access_token_real_no_cred():
 
     # Test: Bad client_id
     with pytest.raises(ClientAuthenticationException):
-        assert config._access_token
+        assert config.access_token
 
 
 def test_configuration_get_host_requirements():
@@ -245,7 +245,7 @@ def test_configuration_get_host_requirements():
         """Dummy Configuration"""
 
         @property
-        def _access_token(self):
+        def access_token(self):
             """Don't check credential"""
             return access_token
 

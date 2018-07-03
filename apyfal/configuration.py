@@ -41,7 +41,7 @@ METERING_SERVER = 'https://master.metering.accelize.com'
 METERING_CREDENTIALS = '/etc/accelize/credentials.json'
 
 #: Metering Server temporary directory
-METERING_TMP_DIR = '/tmp/meteringServer'
+METERING_TMP = '/tmp/meteringServer'
 
 #: Metering Client configuration
 METERING_CLIENT_CONFIG = '/etc/sysconfig/meteringclient'
@@ -49,7 +49,7 @@ METERING_CLIENT_CONFIG = '/etc/sysconfig/meteringclient'
 __all__ = ['create_configuration', 'Configuration',
            'accelerator_executable_available',
            'ACCELERATOR_EXECUTABLE', 'ACCELERATOR_TMP_ROOT',
-           'METERING_SERVER', 'METERING_TMP_DIR',
+           'METERING_SERVER', 'METERING_TMP',
            'METERING_CLIENT_CONFIG',
            'METERING_CREDENTIALS']
 
@@ -249,9 +249,9 @@ class Configuration(_Mapping):
         return self._sections.__len__()
 
     @property
-    def _access_token(self):
+    def access_token(self):
         """
-        Check user Accelize credential
+        Check user Accelize credential and returns its access token.
 
         Returns:
             str: Access token.
@@ -267,8 +267,7 @@ class Configuration(_Mapping):
             client_id = self['accelize']['client_id']
             secret_id = self['accelize']['secret_id']
             if client_id is None or secret_id is None:
-                raise _exc.ClientAuthenticationException(
-                    exc="Accelize client ID and secret ID are mandatory.")
+                raise _exc.ClientAuthenticationException(gen_msg='no_credentials')
 
             # Check access and get token from server
             response = _utl.http_session().post(
@@ -295,7 +294,7 @@ class Configuration(_Mapping):
         Returns:
             dict: AcceleratorClient requirements for host.
         """
-        headers = {"Authorization": "Bearer %s" % self._access_token,
+        headers = {"Authorization": "Bearer %s" % self.access_token,
                    "Content-Type": "application/json",
                    "Accept": "application/vnd.accelize.v1+json"}
 

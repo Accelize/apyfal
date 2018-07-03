@@ -3,7 +3,7 @@
 
 import json as _json
 from os import remove as _remove
-from os.path import join as _join
+from os.path import join as _join, exists as _exists
 from subprocess import Popen as _Popen, PIPE as _PIPE
 from uuid import uuid4 as _uuid
 
@@ -76,6 +76,8 @@ class SysCallClient(_Client):
     def __init__(self, *args, **kwargs):
         _Client.__init__(self, *args, **kwargs)
 
+        self._metering_env = None
+
         # Need accelerator executable to run
         if not _cfg.accelerator_executable_available():
             raise _exc.HostConfigurationException(
@@ -102,6 +104,9 @@ class SysCallClient(_Client):
             input_json=str(_uuid()),
             output_json=str(_uuid()),
             parameters=parameters,
+
+            # Reduces verbosity to minimum by default
+            extra_args=['-v4'],
         )
 
     def _process(self, file_in, file_out, parameters):
@@ -123,6 +128,8 @@ class SysCallClient(_Client):
             input_json=str(_uuid()),
             output_json=str(_uuid()),
             parameters=parameters,
+
+            # Reduces verbosity to minimum by default
             extra_args=['-v4'],
         )
 
@@ -213,42 +220,90 @@ class SysCallClient(_Client):
             _remove(output_json)
             return response
 
-    @staticmethod
-    def _init_metering(parameters):
+    def _init_metering(self, parameters):
         """Initialize metering services.
 
         Args:
             parameters (dict): start parameters.
         """
-        # Stop services
+        new_env = {
+            key: parameters['env'].get(key) for key in
+            ('AGFI', 'client_id', 'client_secret')}
+
+        # Cached value match with new env: Already configured
+        if new_env == self._metering_env:
+            return
+
+        # Get current configuration
+        cur_env = {key: None for key in new_env}
+        if _exists(_cfg.METERING_CREDENTIALS):
+            # Get current credentials
+            with open(_cfg.METERING_CREDENTIALS, 'rb') as file:
+                cur_env.update(_json.load(file))
+
+        if _exists(_cfg.METERING_CLIENT_CONFIG):
+            # Get current AGFI configuration
+            with open(_cfg.METERING_CLIENT_CONFIG, 'rt') as file:
+                for line in file:
+                    key, value = line.split('=')
+                    if key == 'AFI':
+                        cur_env['AGFI'] = value
+                        break
+
+        full_env = {
+            key: new_env.get(key) or cur_env.get(key)
+            for key in new_env}
+
+        # Cached value match with full env: Already configured
+        if full_env == self._metering_env:
+            return
+
+        # Checks if credentials needs to be updated
+        update_credentials = (
+            'client_id' in new_env and
+            (new_env['client_id'] != cur_env['client_id'] or
+             new_env['client_secret'] != cur_env['client_secret']))
+
+        if update_credentials:
+            # Checks if credentials are valid
+            self._config.access_token
+        elif cur_env['client_id'] is None:
+            # No credentials
+            raise _exc.ClientAuthenticationException(gen_msg='no_credentials')
+
+        # Checks if AGFI needs to be updated
+        update_agfi = (
+            new_env['AGFI'] and new_env['AGFI'] != cur_env['AGFI'])
+
+        # All is already up to date: caches values
+        if not update_agfi or not update_credentials:
+            self._metering_env = full_env
+            return
+
+        # Update: Stop services
         _systemctl(
             'stop', 'accelerator', 'meteringsession', 'meteringclient')
 
-        # Clear cache
-        _call(['sudo', 'rm', _cfg.METERING_TMP_DIR])
+        # Update: Clear cache
+        if _exists(_cfg.METERING_TMP):
+            _call(['sudo', 'rm', _cfg.METERING_TMP])
 
-        # Legacy metering: Generate metering configuration file
-        first_call = True
-        for key, value in (('USER_ID', parameters['env'].get('client_id')),
-                           ('SESSION_ID', _uuid()),
-                           ('AFI', parameters['env'].get('AGFI'))):
-            if not value:
-                continue
-            _call(['sudo', 'echo', '"%s=%s"' % (key, value),
-                   '>' if first_call else '>>',
-                   _cfg.METERING_CLIENT_CONFIG])
-            first_call = False
-
-        # New metering: Generate metering configuration file
-        if 'client_id' in parameters['env']:
-            # Set right
+        # Update: credentials
+        if update_credentials:
             _call(['sudo', 'chmod', 'a+wr', _cfg.METERING_CREDENTIALS])
-            with open(_cfg.METERING_CREDENTIALS, 'wb') as credential_file:
-                _json.dump(
-                    {key: parameters['env'][key]
-                     for key in ('client_id', 'client_secret')},
+            with open(_cfg.METERING_CREDENTIALS, 'wt') as credential_file:
+                _json.dump({
+                    key: full_env[key] for key in ('client_id', 'client_secret')},
                     credential_file)
 
-        # Restart services
+        # Update: AGFI
+        if update_agfi:
+            _call(['sudo', 'echo', '"AFI=%s"' % full_env['AGFI'], '>',
+                   _cfg.METERING_CLIENT_CONFIG])
+
+        # Update: Restart services
         _systemctl(
             'start', 'accelerator', 'meteringclient', 'meteringsession')
+
+        # Update: Cache values
+        self._metering_env = full_env

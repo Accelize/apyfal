@@ -203,7 +203,7 @@ def test_syscall_client_run_executable():
     class DummyClient(SysCallClient):
 
         def __init__(self, *_, **__):
-            self._tmp_dir = dummy_tmp
+            self._cache = {'tmp_dir': dummy_tmp}
 
     syscall_call = syscall._call
     syscall._call = dummy_call
@@ -241,18 +241,118 @@ def test_syscall_client_run_executable():
         expected_args = ['arg0', 'arg1']
         client._run_executable(mode='1', extra_args=expected_args)
 
-        # Run _init_metering
-        expected_args = []
-        expected_path = cfg.METERING_CREDENTIALS
-        dummy_params = {'client_id': 'dummy_client_id',
-                        'client_secret': 'dummy_client_secret'}
-        client._init_metering({'env': dummy_params})
-
     # Restores functions
     finally:
         delattr(syscall, 'open')
         syscall._call = syscall_call
         syscall._remove = os.remove
+
+
+def test_syscall_init_metering(tmpdir):
+    """Tests SysCallClient._init_metering"""
+    import apyfal.client.syscall as syscall
+    from apyfal.client.syscall import SysCallClient
+    import apyfal.configuration as cfg
+    from apyfal.exceptions import ClientAuthenticationException
+
+    # Mocks some functions
+    def dummy_call(*_, **__):
+        """Do nothing"""
+
+    class DummyConfiguration():
+        access_token = 'dummy_token'
+
+    class DummyClient(SysCallClient):
+
+        def __init__(self, *_, **__):
+            self._metering_env = None
+            self._config = DummyConfiguration()
+
+        def __del__(self):
+            """Do nothing"""
+
+    client = DummyClient()
+
+    cfg_metering_credentials = cfg.METERING_CREDENTIALS
+    metering_credentials = tmpdir.join('credentials')
+    cfg.METERING_CREDENTIALS = str(metering_credentials)
+
+    cfg_metering_client_config = cfg.METERING_CLIENT_CONFIG
+    metering_client_config = tmpdir.join('client_config')
+    cfg.METERING_CLIENT_CONFIG = str(metering_client_config)
+
+    cfg_metering_tmp = cfg.METERING_TMP
+    metering_tmp = tmpdir.join('tmp')
+    metering_tmp.ensure()
+    cfg.METERING_TMP = str(metering_tmp)
+
+    syscall_call = syscall._call
+    syscall._call = dummy_call
+
+    try:
+        client_id = 'dummy_client_id'
+        client_secret = 'dummy_client_secret'
+        agfi = 'dummy_agfi'
+
+        # Already configured and cached
+        client._metering_env = {
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'AGFI': None}
+        client._init_metering({'env': {
+            'client_id': client_id,
+            'client_secret': client_secret}})
+        assert not metering_client_config.check()
+        assert not metering_credentials.check()
+
+        # Already configured after config file verification
+        metering_client_config.write('AFI=%s' % agfi)
+        client._metering_env = {
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'AGFI': agfi}
+        client._init_metering({'env': {
+            'client_id': client_id,
+            'client_secret': client_secret}})
+        assert not metering_credentials.check()
+
+        # Not configured and no credentials
+        client._metering_env = None
+        with pytest.raises(ClientAuthenticationException):
+            client._init_metering({'env': {}})
+
+        # Already configured in files
+        client._metering_env = None
+        metering_credentials.write(json.dumps({
+            'client_id': client_id,
+            'client_secret': client_secret}))
+        client._init_metering({'env': {}})
+        assert client._metering_env == {
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'AGFI': agfi}
+
+        # Needs reconfiguration
+        new_client_id = 'new_client_id'
+        new_agfi = 'new_agfi'
+        client._metering_env = None
+        client._init_metering({'env': {
+            'client_id': new_client_id,
+            'AGFI': new_agfi}})
+        assert client._metering_env == {
+            'client_id': new_client_id,
+            'client_secret': client_secret,
+            'AGFI': new_agfi}
+        assert json.loads(metering_credentials.read()) == {
+            'client_id': new_client_id,
+            'client_secret': client_secret}
+
+    # Restore
+    finally:
+        syscall._call = syscall_call
+        cfg.METERING_CREDENTIALS = cfg_metering_credentials
+        cfg.METERING_CLIENT_CONFIG = cfg_metering_client_config
+        cfg.METERING_TMP = cfg_metering_tmp
 
 
 def test_syscall_client_start_process_stop():
@@ -271,7 +371,7 @@ def test_syscall_client_start_process_stop():
 
         def __init__(self, *_, **__):
             """Do nothing"""
-            self._tmp_dir = None
+            self._cache = {}
 
         def __del__(self):
             """Do nothing"""
@@ -313,7 +413,7 @@ def test_syscall_client_start_process_stop():
         # Start
         expected_args = dict(
             mode='0', input_file=dummy_file_in, input_json=str,
-            output_json=str, parameters=dummy_parameters)
+            output_json=str, parameters=dummy_parameters, extra_args=['-v4'])
         assert client._start(dummy_file_in, dummy_parameters) == dummy_response
 
         # Process

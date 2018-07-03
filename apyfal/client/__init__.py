@@ -41,7 +41,7 @@ class AcceleratorClient(_utl.ABC):
         "app": {
             "reset": 0,
             "enable-sw-comparison": 0,
-            "logging": {"format": 1, "verbosity": 2},
+            "logging": {"format": 1, "verbosity": 4},
             "specific": {}},
         "env": {}}
 
@@ -50,7 +50,7 @@ class AcceleratorClient(_utl.ABC):
         "app": {
             "reset": 0,
             "enable-sw-comparison": 0,
-            "logging": {"format": 1, "verbosity": 2},
+            "logging": {"format": 1, "verbosity": 4},
             "specific": {}}}
 
     # Client is remote or not
@@ -77,7 +77,9 @@ class AcceleratorClient(_utl.ABC):
         self._client_type = client_type
         self._url = None
         self._stopped = False
-        self._tmp_dir = None
+
+        # Dict to cache values
+        self._cache = {}
 
         # Read configuration
         self._config = config = _cfg.create_configuration(config)
@@ -134,10 +136,6 @@ class AcceleratorClient(_utl.ABC):
                 AcceleratorClient contain output information from  configuration operation.
                 Take a look accelerator documentation for more information.
         """
-        # Initialize temporary dir if needed
-        if not self._tmp_dir:
-            self._tmp_dir = _mkdtemp(dir=_cfg.ACCELERATOR_TMP_ROOT)
-
         # Configure start
         parameters = self._get_parameters(parameters, self._configuration_parameters)
         parameters['env'].update(host_env or dict())
@@ -250,13 +248,14 @@ class AcceleratorClient(_utl.ABC):
         # Stops
         response = self._stop(info_dict)
 
-        # Clears temporary dir
-        if self._tmp_dir:
-            try:
-                _rmtree(self._tmp_dir)
-            except OSError:
-                pass
-            self._tmp_dir = None
+        # Clears temporary directory
+        try:
+            _rmtree(self._cache['tmp_dir'])
+        except (OSError, KeyError):
+            pass
+
+        # Clears cache
+        self._cache.clear()
 
         # Returns optional response
         if info_dict:
@@ -448,3 +447,17 @@ class AcceleratorClient(_utl.ABC):
 
         # Clears temporary file
         _remove(local_path)
+
+    @property
+    def _tmp_dir(self):
+        """
+        Current client temporary directory.
+
+        Returns:
+            str: Current temporary directory path.
+        """
+        try:
+            return self._cache['tmp_dir']
+        except KeyError:
+            self._cache['tmp_dir'] = _mkdtemp(dir=_cfg.ACCELERATOR_TMP_ROOT)
+            return self._cache['tmp_dir']

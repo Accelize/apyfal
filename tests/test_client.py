@@ -2,6 +2,7 @@
 """apyfal.client tests"""
 import copy
 import json
+from os.path import isdir
 
 import pytest
 
@@ -116,13 +117,12 @@ def test_data_file(tmpdir):
     class DummyClient(AcceleratorClient):
         """Dummy Client"""
 
-        _tmp_dir = str(tmpdir)
-
         REMOTE = False
         PARAMETER_IO_FORMAT = {parameter_name: 'file'}
 
         def __init__(self, *_, **__):
             """Do nothing"""
+            self._cache = {'tmp_dir': str(tmpdir)}
 
         def _start(self, *_):
             """Do nothing"""
@@ -202,3 +202,37 @@ def test_data_file(tmpdir):
             url, parameters, parameter_name, 'rb') as path:
         assert path is None
     assert parameters[parameter_name] == url
+
+
+def test_tmp_dir():
+    """Tests AcceleratorClient._tmp_dir"""
+    from apyfal.client import AcceleratorClient
+
+    # Mocks Client
+    class DummyClient(AcceleratorClient):
+        """Dummy Client"""
+
+        def _start(self, *_):
+            """Do nothing"""
+
+        def _process(self, *_):
+            """Do nothing"""
+
+        def _stop(self, *_):
+            """Do nothing"""
+
+    client = DummyClient('dummy')
+    assert not client._cache
+
+    # First call: new temporary directory
+    tmp_dir = client._tmp_dir
+    assert tmp_dir == client._cache.get('tmp_dir')
+    assert isdir(tmp_dir)
+
+    # Next call: use previous directory
+    assert tmp_dir == client._tmp_dir
+
+    # Stop: Clear directory and cache
+    client.stop()
+    assert not client._cache
+    assert not isdir(tmp_dir)

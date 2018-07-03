@@ -391,6 +391,7 @@ def gen_msg(message_id, *args):
         no_instance_ip="Unable to find instance IP",
         no_instance_id="Unable to find instance '%s'",
         no_instance="Unable to find instance",
+        no_credentials="Accelize client ID and secret ID are mandatory.",
         created_named="Created %s '%s'",
         created_failed="Unable to create %s",
         created_failed_named="Unable to create %s '%s'",
