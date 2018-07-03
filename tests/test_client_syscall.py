@@ -15,7 +15,7 @@ except ImportError:
 import pytest
 
 
-def test_call():
+def test_call(tmpdir):
     """Tests _call"""
     import subprocess
     import apyfal.client.syscall as syscall
@@ -25,6 +25,9 @@ def test_call():
 
     dummy_stdout = 'dummy_stdout'
     dummy_stderr = 'dummy_stderr'
+    dummy_file_content = 'dummy_file'.encode()
+    dummy_file = tmpdir.join('file')
+    dummy_file.write(dummy_file_content)
     dummy_args = ['arg0', 'arg1']
     dummy_oserror = 'dummy_oserror'
     raises_oserror = False
@@ -57,10 +60,11 @@ def test_call():
         # Bad Error code
         DummyPopen.returncode = 1
         with pytest.raises(ClientRuntimeException) as exception:
-            syscall._call(dummy_args)
+            syscall._call(dummy_args, check_file=str(dummy_file))
             assert ' '.join(dummy_args) in str(exception)
             assert dummy_stdout in str(exception)
             assert dummy_stderr in str(exception)
+            assert dummy_file_content in str(exception)
 
         # Raise OSError
         raises_oserror = True
@@ -259,14 +263,18 @@ def test_syscall_init_metering(tmpdir):
     def dummy_call(*_, **__):
         """Do nothing"""
 
-    class DummyConfiguration():
-        access_token = 'dummy_token'
+    class DummyConfiguration(cfg.Configuration):
+
+        @property
+        def access_token(self):
+            return 'dummy_token'
 
     class DummyClient(SysCallClient):
 
         def __init__(self, *_, **__):
             self._metering_env = None
             self._config = DummyConfiguration()
+            self._configuration_parameters = {'env': {}}
 
         def __del__(self):
             """Do nothing"""

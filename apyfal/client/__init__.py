@@ -41,7 +41,7 @@ class AcceleratorClient(_utl.ABC):
         "app": {
             "reset": 0,
             "enable-sw-comparison": 0,
-            "logging": {"format": 1, "verbosity": 4},
+            "logging": {"format": 1, "verbosity": 2},
             "specific": {}},
         "env": {}}
 
@@ -84,14 +84,19 @@ class AcceleratorClient(_utl.ABC):
         # Read configuration
         self._config = config = _cfg.create_configuration(config)
 
+        # Get Start parameters
         self._configuration_parameters = self._load_configuration(
             self.DEFAULT_CONFIGURATION_PARAMETERS, 'configuration')
-        self._configuration_parameters['env'].update({
-            "client_id":
-                config['accelize'].set('client_id', accelize_client_id),
-            "client_secret":
-                config['accelize'].set('secret_id', accelize_secret_id)})
 
+        # Add credential information if available
+        client_id = config['accelize'].set('client_id', accelize_client_id)
+        if client_id:
+            self._configuration_parameters['env']['client_id'] = client_id
+        secret_id = config['accelize'].set('secret_id', accelize_secret_id)
+        if secret_id:
+            self._configuration_parameters['env']['secret_id'] = secret_id
+
+        # Get process parameters
         self._process_parameters = self._load_configuration(
             self.DEFAULT_PROCESS_PARAMETERS, 'process')
 

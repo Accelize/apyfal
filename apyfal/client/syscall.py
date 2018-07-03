@@ -12,12 +12,13 @@ from apyfal.client import AcceleratorClient as _Client
 import apyfal.configuration as _cfg
 
 
-def _call(command, **exc_args):
+def _call(command, check_file=None, **exc_args):
     """
     Call command in subprocess.
 
     Args:
         command (str or list or tuple): Command to call.
+        check_file (str): Returns file content in exception if exists.
         exc_args: Extra arguments for exception to raise
             if error.
 
@@ -29,12 +30,15 @@ def _call(command, **exc_args):
         process = _Popen(
             command, stdout=_PIPE, stderr=_PIPE, universal_newlines=True,
             shell=False)
-        outputs = process.communicate()
+        outputs = list(process.communicate())
         in_error = process.returncode
     except OSError as exception:
         in_error = True
         outputs = [str(exception)]
     if in_error:
+        if check_file and _exists(check_file):
+            with open(check_file, 'rt') as file:
+                outputs.append(file.read())
         raise _exc.ClientRuntimeException(exc='\n'.join(
             [command if isinstance(command, str) else ' '.join(command)] +
             [output for output in outputs if output]), **exc_args)
@@ -104,9 +108,6 @@ class SysCallClient(_Client):
             input_json=str(_uuid()),
             output_json=str(_uuid()),
             parameters=parameters,
-
-            # Reduces verbosity to minimum by default
-            extra_args=['-v4'],
         )
 
     def _process(self, file_in, file_out, parameters):
@@ -205,11 +206,11 @@ class SysCallClient(_Client):
             command += ['-p', output_json]
 
         # Runs command
-        _call(command)
+        _call(command, check_file=output_json)
 
         # Cleanup input JSON file
         if input_json:
-            _remove(output_json)
+            _remove(input_json)
 
         # Gets result from output JSON file
         if output_json:
@@ -245,7 +246,7 @@ class SysCallClient(_Client):
             # Get current AGFI configuration
             with open(_cfg.METERING_CLIENT_CONFIG, 'rt') as file:
                 for line in file:
-                    key, value = line.split('=')
+                    key, value = line.strip().split('=')
                     if key == 'AFI':
                         cur_env['AGFI'] = value
                         break
@@ -265,8 +266,15 @@ class SysCallClient(_Client):
              new_env['client_secret'] != cur_env['client_secret']))
 
         if update_credentials:
+            # Update credential in config
+            for cred_key, config_key in (('client_id', 'client_id'),
+                                         ('client_secret', 'secret_id')):
+                self._config['accelize'][config_key] = full_env[cred_key]
+                self._configuration_parameters['env'][config_key] = full_env[cred_key]
+
             # Checks if credentials are valid
             self._config.access_token
+
         elif cur_env['client_id'] is None:
             # No credentials
             raise _exc.ClientAuthenticationException(gen_msg='no_credentials')
@@ -280,30 +288,33 @@ class SysCallClient(_Client):
             self._metering_env = full_env
             return
 
-        # Update: Stop services
+        # Stop services
         _systemctl(
             'stop', 'accelerator', 'meteringsession', 'meteringclient')
 
-        # Update: Clear cache
-        if _exists(_cfg.METERING_TMP):
-            _call(['sudo', 'rm', _cfg.METERING_TMP])
+        # Update
+        try:
+            # Clear cache
+            if _exists(_cfg.METERING_TMP):
+                _call(['sudo', 'rm', _cfg.METERING_TMP])
 
-        # Update: credentials
-        if update_credentials:
-            _call(['sudo', 'chmod', 'a+wr', _cfg.METERING_CREDENTIALS])
-            with open(_cfg.METERING_CREDENTIALS, 'wt') as credential_file:
-                _json.dump({
-                    key: full_env[key] for key in ('client_id', 'client_secret')},
-                    credential_file)
+            # Credentials
+            if update_credentials:
+                _call(['sudo', 'chmod', 'a+wr', _cfg.METERING_CREDENTIALS])
+                with open(_cfg.METERING_CREDENTIALS, 'wt') as credential_file:
+                    _json.dump({
+                        key: full_env[key] for key in ('client_id', 'client_secret')},
+                        credential_file)
 
-        # Update: AGFI
-        if update_agfi:
-            _call(['sudo', 'echo', '"AFI=%s"' % full_env['AGFI'], '>',
-                   _cfg.METERING_CLIENT_CONFIG])
+            # AGFI
+            if update_agfi:
+                _call(['sudo', 'echo', '"AFI=%s"' % full_env['AGFI'], '>',
+                       _cfg.METERING_CLIENT_CONFIG])
 
-        # Update: Restart services
-        _systemctl(
-            'start', 'accelerator', 'meteringclient', 'meteringsession')
+        # Restart services
+        finally:
+            _systemctl(
+                'start', 'accelerator', 'meteringclient', 'meteringsession')
 
-        # Update: Cache values
+        # Cache values
         self._metering_env = full_env
