@@ -1,5 +1,5 @@
 # coding=utf-8
-"""Alibaba Cloud"""
+"""Alibaba Cloud ECS"""
 import json as _json
 from uuid import uuid1 as _uuid
 
@@ -50,7 +50,7 @@ class AlibabaCSP(_CSPHost):
             convenience and does not cover all exit case like process kill and
             may not work on all OS.
     """
-    #: Provider name to use
+    #: Provider name
     NAME = "Alibaba"
 
     #: Alibaba Website
