@@ -591,6 +591,7 @@ def test_csphost_set_accelerator_requirements():
         assert csp.get_configuration_env() == config_env
         assert csp._accelerator == dummy_accelerator
         assert dummy_accelerator in csp._get_instance_name()
+        assert dummy_accelerator in csp.instance_name
 
         # Test: Pass accelerator
         csp = get_dummy_csp_class()(

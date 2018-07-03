@@ -27,6 +27,7 @@ class CSPHost(_Host):
         security_group: CSP Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing CSP instance to use.
             If not specified, create a new instance.
+        instance_name_prefix (str): Prefix to add to instance name.
         host_ip (str): IP or URL address of an already existing CSP instance to use.
             If not specified, create a new instance.
         stop_mode (str or int): Define the "stop" method behavior.
@@ -50,11 +51,12 @@ class CSPHost(_Host):
     # Attributes returned as dict by "info" property
     _INFO_NAMES = _Host._INFO_NAMES.copy()
     _INFO_NAMES.update({
-        'public_ip', 'private_ip', '_region', '_instance_type',
+        'public_ip', 'private_ip', '_region', '_instance_type', '_instance_name',
         '_key_pair', '_security_group', '_instance_id', '_instance_type_name'})
 
     def __init__(self, client_id=None, secret_id=None, region=None,
-                 instance_type=None, key_pair=None, security_group=None, instance_id=None, **kwargs):
+                 instance_type=None, key_pair=None, security_group=None, instance_id=None,
+                 instance_name_prefix=None, **kwargs):
         _Host.__init__(self, **kwargs)
 
         # Default some attributes
@@ -74,6 +76,9 @@ class CSPHost(_Host):
         self._region = region or section['region']
         self._instance_type = instance_type or section['instance_type']
         self._instance_id = instance_id or section['instance_id']
+        self._instance_name_prefix = (
+                instance_name_prefix or
+                section['instance_name_prefix'] or '')
 
         self._key_pair = (
             key_pair or section['key_pair'] or
@@ -165,6 +170,16 @@ class CSPHost(_Host):
             str: ID
         """
         return self._instance_id
+
+    @property
+    def instance_name(self):
+        """
+        Name of the current instance.
+
+        Returns:
+            str: Name
+        """
+        return self._instance_name
 
     @_abstractmethod
     def _check_credential(self):
@@ -360,8 +375,14 @@ class CSPHost(_Host):
             str: name with format
                 'Accelize_<AcceleratorName>_<DateTime>'"""
         if self._instance_name is None:
-            self._instance_name = "accelize_%s_%s" % (
-                self._accelerator, _datetime.now().strftime('%y%m%d%H%M%S'))
+
+            self._instance_name = '_'.join(
+                name for name in (
+                    self._instance_name_prefix,
+                    'accelize', self._accelerator,
+                    _datetime.now().strftime('%y%m%d%H%M%S'))
+                if name)
+
         return self._instance_name
 
     def stop(self, stop_mode=None):
