@@ -150,7 +150,7 @@ class RESTClient(_Client):
                 configuration operation.
             parameters (str or dict): Accelerator configuration specific parameters
                 Can also be a full configuration parameters dictionary
-                (Or JSON equivalent as str literal or path to file)
+                (Or JSON equivalent as str literal or apyfal.storage URL to file)
                 Parameters dictionary override default configuration values,
                 individuals specific parameters overrides parameters dictionary values.
                 Take a look to accelerator documentation for more information on possible parameters.
@@ -313,7 +313,7 @@ class RESTClient(_Client):
             if api_response.inerror:
                 raise _exc.ClientRuntimeException(
                     "Failed to process data: %s" %
-                    _utl.pretty_dict(api_response.parametersresult))
+                    api_response.parametersresult)
 
             # Write result file
             if file_out:

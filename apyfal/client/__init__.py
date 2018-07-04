@@ -125,13 +125,13 @@ class AcceleratorClient(_utl.ABC):
 
         Args:
             datafile (str or file-like object): Depending on the accelerator,
-                a configuration detafile need to be loaded before a process can be run.
+                a configuration data file need to be loaded before a process can be run.
                 Can be apyfal.storage URL, paths, file-like object.
             info_dict (bool): If True, returns a dict containing information on
                 configuration operation.
             parameters (str or dict): Accelerator configuration specific parameters
                 Can also be a full configuration parameters dictionary
-                (Or JSON equivalent as str literal or path to file)
+                (Or JSON equivalent as str literal or apyfal.storage URL to file)
                 Parameters dictionary override default configuration values,
                 individuals specific parameters overrides parameters dictionary values.
                 Take a look to accelerator documentation for more information on possible parameters.
@@ -185,7 +185,7 @@ class AcceleratorClient(_utl.ABC):
                 process operation.
             parameters (str or dict): Accelerator process specific parameters
                 Can also be a full process parameters dictionary
-                (Or JSON equivalent as str literal or path to file)
+                (Or JSON equivalent as str literal or apyfal.storage URL to file)
                 Parameters dictionary override default configuration values,
                 individuals specific parameters overrides parameters dictionary values.
                 Take a look to accelerator documentation for more information on possible parameters.
@@ -303,7 +303,7 @@ class AcceleratorClient(_utl.ABC):
         Gets parameters from different sources, and merge them together.
 
         If 'parameters' contain a key named 'parameters', it will be
-        read as a full parameter dict, or JSON literal or JSON file.
+        read as a full parameter dict, or JSON literal or JSON file URL.
 
         Other keys from 'parameters' will be merged to the 'specific'
         section of the result dict.
@@ -332,7 +332,7 @@ class AcceleratorClient(_utl.ABC):
 
                 # JSON file
                 else:
-                    with open(json_parameters, 'rt') as json_file:
+                    with _srg.open(json_parameters, 'rt') as json_file:
                         json_parameters = _json.load(json_file)
 
             # Merges to result

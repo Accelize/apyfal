@@ -21,7 +21,7 @@ __copyright__ = "Copyright 2018 Accelize"
 __licence__ = "Apache 2.0"
 
 from sys import version_info as _py
-if (_py[0] == 2 and _py[1] < 7) or (_py[0] == 3 and _py[1] < 4):
+if (_py[0] < 2) or (_py[0] == 2 and _py[1] < 7) or (_py[0] == 3 and _py[1] < 4):
     from sys import version
     raise ImportError('Python %s is not supported by Apyfal' % version)
 
@@ -136,13 +136,13 @@ class Accelerator(object):
                 See "apyfal.host.Host.stop_mode" property for more
                 information and possible values.
             datafile (str or file-like object): Depending on the accelerator,
-                a configuration detafile need to be loaded before a process can be run.
+                a configuration data file need to be loaded before a process can be run.
                 Can be apyfal.storage URL, paths, file-like object.
             info_dict (bool): If True, returns a dict containing information on
                 configuration operation.
             parameters (str or dict): Accelerator configuration specific parameters
                 Can also be a full configuration parameters dictionary
-                (Or JSON equivalent as str literal or path to file)
+                (Or JSON equivalent as str literal or apyfal.storage URL to file)
                 Parameters dictionary override default configuration values,
                 individuals specific parameters overrides parameters dictionary values.
                 Take a look to accelerator documentation for more information on possible parameters.
@@ -179,7 +179,7 @@ class Accelerator(object):
                 process operation.
             parameters (str or dict): Accelerator process specific parameters
                 Can also be a full process parameters dictionary
-                (Or JSON equivalent as str literal or path to file)
+                (Or JSON equivalent as str literal or apyfal.storage URL to file)
                 Parameters dictionary override default configuration values,
                 individuals specific parameters overrides parameters dictionary values.
                 Take a look to accelerator documentation for more information on possible parameters.

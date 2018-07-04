@@ -2,11 +2,9 @@
 """Generic utilities used in apyfal code"""
 
 import abc
-import ast
 import collections
 from contextlib import contextmanager
 from importlib import import_module
-import json
 import os
 import re
 import sys
@@ -288,19 +286,6 @@ def get_host_public_ip(max_tries=10, validation_sample=3):
             if ip_address:
                 return "%s/32" % ip_address
     raise OSError('Unable to get public IP address')
-
-
-def pretty_dict(obj):
-    """
-    Format dictionary to text.
-
-    Args:
-        obj (dict): Dict to format.
-
-    Returns:
-        str: formatted dict
-    """
-    return json.dumps(ast.literal_eval(str(obj)), indent=4)
 
 
 def recursive_update(to_update, update):
