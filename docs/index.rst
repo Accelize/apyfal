@@ -45,9 +45,9 @@ Feature
 + Remote or local execution facility
 + Simplified API
 
-**Limitations**
+**Limitations in remote mode**
 
-+ Max data file is limited to 30GB (in case of usage of pycurl) or 2GB else
++ Max data file is limited to 30GB (in case of usage of PycURL) or 2GB else
 + Timeout will appear if request takes more than 900s
 
 
@@ -58,6 +58,7 @@ Feature
    installation
    configuration
    getting_started
+   advanced
 
 .. toctree::
    :maxdepth: 2
@@ -65,6 +66,7 @@ Feature
    
    api
    rest
+   accelerator_executable
 
 .. toctree::
    :maxdepth: 2

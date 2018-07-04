@@ -6,22 +6,20 @@ Changelog
 
 New features
 
-- Add support for cloud storage and more using apyfal.storage URL.
-
-General improvements:
-
-- Importing Apyfal from an unsupported Python version now raise ImportError.
+- Add support for cloud storage and more using ``apyfal.storage`` URL.
+- Apyfal can now be used locally on host (like accelerator executable).
 
 Configuration improvements:
 
-- Add subsection support in configuration file (ex: *[host.host_type]*)
-- Configuration file can be loaded from apyfal.storage URL.
+- Add subsection support in configuration file (ex: ``[host.host_type]``)
+- Configuration file can be loaded from ``apyfal.storage`` URL.
 - Configuration class is now a Mapping instead of ConfigParser subclass.
 
 Fixes:
 
-- Host "stop_mode" not correctly loaded from configuration file.
-- "accelerator" in exception message when trying to use a non existing region.
+- Importing Apyfal from an unsupported Python version now raise ``ImportError``.
+- Host ``stop_mode`` not correctly loaded from configuration file.
+- ``accelerator`` in exception message when trying to use a non existing region.
 
 1.0.0 (2018/06)
 ---------------

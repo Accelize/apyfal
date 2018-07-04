@@ -1,8 +1,7 @@
 Getting Started
 ===============
 
-This section explains how to use Apyfal with Python to run
-accelerators.
+This section explains how to use Apyfal with Python to run accelerators.
 
 All of theses examples requires that you first install the
 Apyfal and get configuration requirements like at least your
@@ -27,8 +26,8 @@ logger to see more details on running steps:*
     import apyfal
     apyfal.get_logger(True)
 
-Running an accelerator on a cloud instance host
------------------------------------------------
+Running an accelerator remotely on a cloud instance host
+--------------------------------------------------------
 
 This tutorial will cover creating a simple accelerator and
 process a file using a Cloud Service Provider (*CSP*) as host.
@@ -39,6 +38,8 @@ need always at least:
 -  ``host_type``: CSP name
 -  ``region``: CSP region name, need a region that support FPGA.
 -  ``client_id`` and ``secret_id``: CSP credentials
+
+See :doc:`api_host` for details on possibles parameters for the targeted CSP.
 
 See your CSP documentation to know how obtains theses values.
 
@@ -164,6 +165,65 @@ host and can't stop it.
 
        myaccel.process(file_in='/path/myfile.dat', file_out='/path/result.dat')
 
+
+Running an accelerator locally
+------------------------------
+
+This tutorial will cover the use of an accelerator on an already configured FPGA host locally.
+
+Requirements
+~~~~~~~~~~~~
+
+An already configured host is required to use this feature.
+
+It is possible to easily create a cloud instance using *Apyfal* and keeping the host running
+(Using ``stop_mode='keep'``, See above for more information).
+
+*Don't forget to terminate cloud instance after use to avoid additional fees*
+
+And then connect to it with SSH :
+
+* ``key_pair`` is key pair name that can be get with ``myaccel.host.key_pair``.
+  The related private key in ``.pem`` format is generally stored in ``.ssh`` sub folder of user home.
+* ``host_ip`` is the IP address of the instance and can be get with ``myaccel.host.public_ip``.
+
+**Linux:**
+
+.. code-block:: bash
+
+    ssh -Yt -i ~/.ssh/${key_pair}.pem centos@${host_ip}
+
+**Windows:**
+
+On Windows, `Putty <https://www.chiark.greenend.org.uk/~sgtatham/putty/>`_
+is required to connect with SSH. The private key file need to be in ``.ppk`` format
+(``puttygen.exe``, bundled with Putty, can be used to convert ``.pem`` file to ``.ppk``).
+
+.. code-block:: batch
+
+    putty.exe -ssh centos@%host_ip% 22 -i %userprofile%\.ssh\%key_pair%.ppk
+
+Running Apyfal
+~~~~~~~~~~~~~~
+
+The use of Apyfal in this case is easier since accelerator is preconfigured:
+
+* By default, ``accelize_client_id`` and ``accelize_secret_id`` values are those used to create instance previously with
+  Apyfal (It is still possible to change theme by passing other values).
+* ``accelerator`` value is the one used to create instance and can not be changed.
+* Host related arguments are not required and don't have any effect (``stop_mode``, ``host_ip``...)
+
+.. code-block:: python
+
+   import apyfal
+
+   with apyfal.Accelerator() as myaccel:
+
+       myaccel.start()
+
+       myaccel.process(file_in='/path/myfile.dat', file_out='/path/result.dat')
+
+
 Configuring accelerators
 ------------------------
 
@@ -243,158 +303,6 @@ The ``process`` method accept the following arguments:
        # - parameter1, parameter2: Keywords parameters passed to "**parameters" arguments.
        myaccel.process(file_in='/path/myfile1.dat', file_out='/path/result1.dat',
                        parameter1='my_parameter_1', parameter2='my_parameter_2')
-
-Configuration and Process JSON parameters files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The low level accelerator API that run on FPGA host work parameters
-files:
-
-This files are JSON that have the following format:
-
-.. code-block:: python
-
-   {
-       "app": {
-           "specific":{
-           # Specific parameters as key, values pairs.
-           }
-       }
-   }
-
-Read the accelerator documentation to see possibles specific parameters
-values.
-
-Using ``**parameters`` argument with JSON parameters files
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The ``**parameters`` argument passed to ``start`` and ``process``
-methods can also be used to pass *JSON parameters files* like defined
-previously. In this case, ``**parameters`` is used as ``parameters=``
-
-Assuming ``parameters.json`` is the JSON parameters files:
-
--  To pass the ``parameters.json`` file, simply pass its path:
-   ``parameters='/path/parameters.json'``.
--  To pass the ``parameters.json`` content as JSON ``str`` literal:
-   ``parameters=parameters_json_content``.
--  To pass the ``dict`` equivalent of ``parameters.json``:
-   ``parameters=parameters_json_content_as_dict``.
-
-``parameters=`` can be used with classical ``**parameters`` keywords
-arguments, in this case keywords arguments overrides values already
-existing in in dict passed to ``parameters=``.
-
-.. code-block:: python
-
-   import apyfal
-
-   with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
-       myaccel.start()
-
-       # Example passing the parameter JSON file and keywords arguments at same time
-       myaccel.process(file_in='/path/myfile1.dat', file_out='/path/result1.dat',
-                       # Passing Path to JSON file to "parameters="
-                       parameters='/path/parameters.json',
-                       # Passing keywords arguments
-                       parameter1='my_parameter_1', parameter2='my_parameter_2')
-
-Using JSON parameters files with the configuration file
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-JSON parameters files can also be defined directly in
-``accelerator.conf``. Parameters in configuration files will act as
-default values and will be overridden by any parameter passed directly
-to ``start`` and ``process`` methods.
-
-See :doc:`configuration` for more information.
-
-Using low-level Accelerator command
------------------------------------
-
-On its host, accelerator uses a low-level command to communicate with FPGA. It is possible to use this command
-directly.
-
-Requirements
-~~~~~~~~~~~~
-
-An already configured host is required to use this feature.
-
-It is possible to easily create a cloud instance using *Apyfal* and keeping the host running
-(Using ``stop_mode='keep'``, See above for more information).
-
-And then connect to it with SSH :
-
-* ``key_pair`` is the path to the public SSK key file.
-  Key pair name can be get with ``myaccel.host.key_pair``.
-  The file in ``.pem`` format is generally stored in ``.ssh`` sub folder of user home.
-* ``host_ip`` is the IP address of the instance and can be get with ``myaccel.host.public_ip``.
-
-**Linux:**
-
-.. code-block:: bash
-
-    ssh -Yt -i ${key_pair} centos@${host_ip}
-
-**Windows:**
-
-On Windows, `Putty <https://www.chiark.greenend.org.uk/~sgtatham/putty/>`_
-is required to connect with SSH. The key_pair file need to be in ``.ppk`` format
-(``puttygen.exe`` can be used to convert ``.pem`` file to ``.ppk``).
-
-.. code-block:: bat
-
-    putty.exe -ssh centos@%host_ip% 22 -i %key_pair%
-
-
-*Don't forget to terminate cloud instance after use to avoid additional fees*
-
-The accelerator command
-~~~~~~~~~~~~~~~~~~~~~~~
-
-The accelerator command path is: ``/opt/accelize/accelerator/accelerator``.
-
-It needs to be run as ``root`` (or with ``sudo``)
-
-It support following arguments:
-
-- ``-m``: Accelerator mode. Possibles values are:
-  ``0`` for configuration/start mode, ``1`` for process mode, ``2`` for stop mode.
-  This is equivalent to ``apyfal.Accelerator`` ``start``, ``process`` and ``stop`` methods.
-- ``-i``: Input file path, used to pass ``datafile`` in configuration mode and ``file_in`` in process mode.
-- ``-o``: Output file path, used to pass ``file_out`` in process mode.
-- ``-j``: JSON parameter file path, used to pass a JSON parameters files like described previously.
-- ``-p``: JSON output file path, used to get some results in JSON format.
-- ``-v``: Verbosity level. Possible values: from ``0`` (Full verbosity) to ``4`` (Less verbosity).
-
-.. code-block:: bash
-
-    # Configures accelerator with datafile and JSON parameters
-    sudo /opt/accelize/accelerator/accelerator -m 0 -i ${datafile} -j ${parameters}
-
-    # Processes file_in and save result to file_out
-    sudo /opt/accelize/accelerator/accelerator -m 1 -i ${file_in} -o ${file_out}
-
-Metering services
-^^^^^^^^^^^^^^^^^
-
-For use accelerator command, metering services needs to be started.
-
-Theses commands starts services:
-
-.. code-block:: bash
-
-    sudo systemctl start meteringsession
-    sudo systemctl start meteringclient
-
-Theses commands stops services:
-
-.. code-block:: bash
-
-    sudo systemctl stop meteringclient
-    sudo systemctl stop meteringsession
-
-In two cases, run order of commands is important.
 
 Metering information
 --------------------
