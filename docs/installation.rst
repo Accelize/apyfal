@@ -34,31 +34,23 @@ Install is done with the package manager of your Linux distribution.
 RHEL or CentOS 7:
 ^^^^^^^^^^^^^^^^^
 
+The `EPEL repository`_ is required to install some packages.
+
 ``-dev`` package suffix is renamed ``-devel`` on RHEL/CentOS.
 
-**Python 2:**
+Python 2.7 is the only Python version installed by default on RHEL/CentOS 7.
 
 .. code-block:: bash
 
     sudo yum install gcc python-pip python-devel libcurl-devel openssl-devel
     export PYCURL_SSL_LIBRARY=openssl
 
-**Python 3:**
-
-Python 2.7 is the only Python version installed by default on RHEL/CentOS 7.
-
 Debian or Ubuntu:
 ^^^^^^^^^^^^^^^^^
 
 Pycurl is already packaged ``python-pycurl`` on Debian and don't need to be built from source.
 
-**Python 2:**
-
-.. code-block:: bash
-
-    sudo apt-get install gcc python-pip python-dev python-pycurl
-
-**Python 3:**
+**Python 3:** (*Debian 8 Jessie*/*Ubuntu 14.04 Trusty* and more)
 
 Python 3 packages are prefixed ``python3-`` instead of ``python-``.
 
@@ -66,14 +58,23 @@ Python 3 packages are prefixed ``python3-`` instead of ``python-``.
 
     sudo apt-get install gcc python3-pip python3-dev python3-pycurl
 
+On next steps, use ``python3`` instead of ``python`` and ``pip3`` instead of ``pip`` to call Python and Pip.
+
+**Python 2:**
+
+.. code-block:: bash
+
+    sudo apt-get install gcc python-pip python-dev python-pycurl
+
 Windows
 ~~~~~~~
 
-Depending on the Python version, host targeted and wheel format
-availability, a C/C++ compiler may also be required for install
-dependencies.
+Python for Windows is available on `Python Website`_.
 
--  see `Windows Compilers on Python documentation`_
+Depending on the Python version, host targeted and wheel format availability,
+a C/C++ compiler may also be required for install dependencies.
+
+-  See `Windows Compilers on Python documentation`_ for more information.
 
 Some modules, like ``PycURL``, can be found as precompiled wheels here if not available directly from PyPI:
 `Unofficial Windows Binaries for Python Extension Packages`_.
@@ -114,5 +115,7 @@ Example for installing the ``OpenStack`` + ``optional`` extras:
 
     pip install apyfal[OpenStack,optional]
 
+.. _EPEL repository: https://fedoraproject.org/wiki/EPEL
+.. _Python Website: https://www.python.org/downloads
 .. _Windows Compilers on Python documentation: https://wiki.python.org/moin/WindowsCompilers
 .. _Unofficial Windows Binaries for Python Extension Packages: https://www.lfd.uci.edu/~gohlke/pythonlibs
