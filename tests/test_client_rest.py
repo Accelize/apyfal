@@ -64,6 +64,10 @@ def test_restclient_url():
 
     accelerator = DummyAccelerator('Dummy')
 
+    # Test: No accelerator provided
+    with pytest.raises(ClientConfigurationException):
+        DummyAccelerator()
+
     # Test: No URL provided
     with pytest.raises(ClientConfigurationException):
         accelerator.url = None

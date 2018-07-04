@@ -138,7 +138,7 @@ def test_syscall_client_init():
     # Tests
     try:
         # Accelerator not available
-        DummySysCallClient('accelerator')
+        DummySysCallClient()
 
         # Default for Accelerator if no host specified
         config = cfg.Configuration()
@@ -146,14 +146,14 @@ def test_syscall_client_init():
             del config._sections['host']
         except KeyError:
             pass
-        client = Accelerator('accelerator', config=config).client
+        client = Accelerator(config=config).client
         client._stop = DummySysCallClient._stop  # Disable __del__
         assert isinstance(client, SysCallClient)
 
         # Accelerator not available
         accelerator_available = False
         with pytest.raises(exc.HostConfigurationException):
-            SysCallClient('accelerator')
+            SysCallClient()
 
     # Restores functions
     finally:

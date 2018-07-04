@@ -42,14 +42,14 @@ class Accelerator(object):
     Accelerator and its host.
 
     Args:
-        accelerator (str): Name of the accelerator you want to initialize,
+        accelerator (str): Name of the accelerator to initialize,
             to know the accelerator list please visit "https://accelstore.accelize.com".
         config (str or apyfal.configuration.Configuration or file-like object):
             Can be Configuration instance, apyfal.storage URL, paths, file-like object.
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration values.
         accelize_client_id (str): Accelize Client ID.
-            Client ID is part of the access key you can generate on
+            Client ID is part of the access key generated on
             "https:/accelstore.accelize.com/user/applications".
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with xlz_client_id.
         host_type (str): Type of host to use.
@@ -62,7 +62,7 @@ class Accelerator(object):
         host_kwargs: Keyword arguments related to specific host. See targeted host class
             to see full list of arguments.
     """
-    def __init__(self, accelerator, config=None, accelize_client_id=None,
+    def __init__(self, accelerator=None, config=None, accelize_client_id=None,
                  accelize_secret_id=None, host_type=None, host_ip=None,
                  stop_mode='term', **host_kwargs):
 
@@ -94,7 +94,7 @@ class Accelerator(object):
 
         # Create AcceleratorClient object
         self._client = _clt.AcceleratorClient(
-            accelerator, client_type=client_type,
+            accelerator=accelerator, client_type=client_type,
             accelize_client_id=accelize_client_id, host_ip=host_ip,
             accelize_secret_id=accelize_secret_id, config=config)
 
@@ -135,10 +135,9 @@ class Accelerator(object):
             stop_mode (str or int): Host stop mode. If not None, override current "stop_mode" value.
                 See "apyfal.host.Host.stop_mode" property for more
                 information and possible values.
-            datafile (str): Depending on the accelerator (like for HyperFiRe),
-                a configuration need to be loaded before a process can be run.
-                In such case please define the path of the configuration file
-                (for HyperFiRe the corpus file path).
+            datafile (str or file-like object): Depending on the accelerator,
+                a configuration detafile need to be loaded before a process can be run.
+                Can be apyfal.storage URL, paths, file-like object.
             info_dict (bool): If True, returns a dict containing information on
                 configuration operation.
             parameters (str or dict): Accelerator configuration specific parameters
@@ -146,7 +145,7 @@ class Accelerator(object):
                 (Or JSON equivalent as str literal or path to file)
                 Parameters dictionary override default configuration values,
                 individuals specific parameters overrides parameters dictionary values.
-                Take a look accelerator documentation for more information on possible parameters.
+                Take a look to accelerator documentation for more information on possible parameters.
 
         Returns:
             dict: Optional, only if "info_dict" is True. AcceleratorClient response.
@@ -169,11 +168,13 @@ class Accelerator(object):
 
     def process(self, file_in=None, file_out=None, info_dict=False, **parameters):
         """
-        Process a file with accelerator.
+        Processes with accelerator.
 
         Args:
-            file_in (str): Path where you want the processed file will be stored.
-            file_out (str): Path to the file you want to process.
+            file_in (str or file-like object): Input file to process.
+                Can be apyfal.storage URL, paths, file-like object.
+            file_out (str or file-like object): Output processed file.
+                Can be apyfal.storage URL, paths, file-like object.
             info_dict (bool): If True, returns a dict containing information on
                 process operation.
             parameters (str or dict): Accelerator process specific parameters
@@ -181,13 +182,13 @@ class Accelerator(object):
                 (Or JSON equivalent as str literal or path to file)
                 Parameters dictionary override default configuration values,
                 individuals specific parameters overrides parameters dictionary values.
-                Take a look accelerator documentation for more information on possible parameters.
+                Take a look to accelerator documentation for more information on possible parameters.
 
         Returns:
             dict: Result from process operation, depending used accelerator.
             dict: Optional, only if "info_dict" is True. AcceleratorClient response.
                 AcceleratorClient contain output information from  process operation.
-                Take a look to accelerator documentation for more information.
+                Take a look accelerator documentation for more information.
         """
         _enable_logger = _get_logger().isEnabledFor(20)
 
@@ -204,7 +205,7 @@ class Accelerator(object):
 
     def stop(self, stop_mode=None, info_dict=False):
         """
-        Stop your accelerator session and accelerator host depending of the parameters
+        Stop accelerator session and accelerator host depending of the parameters
 
         Args:
             stop_mode (str or int): Host stop mode. If not None, override current "stop_mode" value.

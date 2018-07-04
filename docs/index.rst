@@ -6,13 +6,13 @@ Overview
 
 Apyfal is a powerful and flexible toolkit to operate FPGA [#fpga]_ accelerated functions.
 
-Some reasons you might want to use Apyfal :
+Some reasons to use Apyfal :
 
 + Apyfal provides an abstraction layer to use the power of FPGA accelerated function in a hybrid
   multi-cloud environment.
-+ The configuration and the provisioning is generated for you in your FPGA cloud context.
++ The configuration and the provisioning is generated for the FPGA cloud context.
 + Apyfal can perform acceleration directly on cloud storage files.
-+ Don't like Python ? Use the REST API and generate a client in the language of your choice.
++ Don't like Python ? Use the REST API and generate a client in any language.
 
 **All the accelerated functions**
 

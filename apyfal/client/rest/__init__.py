@@ -42,11 +42,10 @@ class RESTClient(_Client):
     Remote Accelerator OpenAPI REST client.
 
     Args:
-        accelerator (str): Name of the accelerator you want to initialize,
+        accelerator (str): Name of the accelerator to initialize,
             to know the accelerator list please visit "https://accelstore.accelize.com".
-        client_type (str): Type of client. Default to "REST".
         accelize_client_id (str): Accelize Client ID.
-            Client ID is part of the access key you can generate on
+            Client ID is part of the access key generate from
             "https:/accelstore.accelize.com/user/applications".
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with client_id.
         host_ip (str): IP or URL address of the accelerator host.
@@ -65,13 +64,18 @@ class RESTClient(_Client):
     # Format required for parameter: 'file' (default) or 'stream'
     PARAMETER_IO_FORMAT = {'file_out': 'stream'}
 
-    def __init__(self, accelerator, host_ip=None, *args, **kwargs):
+    def __init__(self, accelerator=None, host_ip=None, *args, **kwargs):
         # Initialize client
-        _Client.__init__(self, accelerator, *args, **kwargs)
+        _Client.__init__(self, accelerator=accelerator, *args, **kwargs)
 
         # Initializes OpenApi client
         self._configuration_url = None
         self._api_client = _api.ApiClient()
+
+        # Mandatory parameters
+        if not accelerator:
+            raise _exc.ClientConfigurationException(
+                "'accelerator' argument is mandatory.")
 
         # Pass host URL if already defined.
         if host_ip:

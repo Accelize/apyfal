@@ -30,7 +30,7 @@ Generating REST API client with OpenApi
 apyfal REST API client code (``apyfal.client.rest._openapi``)
 is not stored in repository but generated from OpenApi.
 
-This code need to be generated before run apyfal in your
+This code need to be generated before run apyfal in
 development environment.
 
    *Java* is required to perform this step.
@@ -71,7 +71,7 @@ directory:
     ./setup.py build_sphinx
 
 To see generated documentation open ``/build/sphinx/html/index.html``
-with your navigator.
+with browser.
 
 Generating wheel package
 ------------------------

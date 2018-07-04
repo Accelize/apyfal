@@ -27,7 +27,7 @@ Fixes:
 Created the new *apyfal* library based on legacy *acceleratorAPI*.
 
 Apyfal keeps all the features from acceleratorAPI but was largely improved. Apyfal is not backward compatible with
-acceleratorAPI (Read the documentation to see how update your code). Future version of Apyfal will be compatible with
+acceleratorAPI (Read the documentation to see how update code). Future version of Apyfal will be compatible with
 this one.
 
 Features of the 1.0.0 version:

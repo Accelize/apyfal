@@ -3,20 +3,19 @@ Getting Started
 
 This section explains how to use Apyfal with Python to run accelerators.
 
-All of theses examples requires that you first install the
-Apyfal and get configuration requirements like at least your
+All of theses examples requires the installation of
+Apyfal and some configuration requirements like at least
 Accelize credentials (``accelize_client_id`` and ``accelize_secret_id``
 parameters in following examples).
 
 See :doc:`installation` and :doc:`configuration` for more information.
 
-You also needs the name (``accelerator`` parameter in following example)
-of the accelerator you want to use.
+The name of the accelerator to use is also required (``accelerator`` parameter in following example)
 
 See `AccelStore <https://accelstore.accelize.com>`_ for more information.
 
 *Examples below uses configuration as arguments to be more explicit,
-but you can also set them with configuration file.*
+but it is also possible to set them with configuration file.*
 
 *For testing and examples, it is possible to enable apyfal
 logger to see more details on running steps:*
@@ -41,7 +40,7 @@ need always at least:
 
 See :doc:`api_host` for information on possibles parameters of the targeted CSP.
 
-See your CSP documentation to know how obtains theses values.
+See CSP documentation to know how obtains theses values.
 
 .. code-block:: python
 
@@ -62,11 +61,11 @@ See your CSP documentation to know how obtains theses values.
         # Start the accelerator:
         # In this case a new cloud instance will be provisioned credential passed to
         # Accelerator as host
-        # Note: This step can take some minutes depending your CSP
+        # Note: This step can take some minutes depending on CSP
         myaccel.start()
 
         # Process data:
-        # Define witch file you want to process and where they should be stored.
+        # Define witch file to process and where they should be stored.
         myaccel.process(file_in='/path/myfile1.dat', file_out='/path/result1.dat')
         myaccel.process(file_in='/path/myfile2.dat', file_out='/path/result2.dat')
         # ... It is possible to process any number of file
@@ -114,8 +113,8 @@ Reusing existing host
 With host instance ID and full host access
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-With ``instance_id``, depending your CSP, your can reuse an already
-existing host without providing ``client_id`` and ``secret_id``.
+With ``instance_id``, depending CSP, an already
+existing host can be reused without providing ``client_id`` and ``secret_id``.
 
 An accelerator started with ``instance_id`` keep control on this
 host an can stop it.
@@ -142,7 +141,7 @@ host an can stop it.
 With host IP with accelerator only access
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-With ``host_ip``, your can reuse an already existing host
+With ``host_ip``, an already existing host can be reused
 without providing any other host information.
 
 An accelerator started with ``host_ip`` have no control over this
@@ -309,5 +308,5 @@ Metering information
 
 Using Accelerators consumes "Coins" based on amount of processed data.
 
-You can access to your metering information on your
+Metering information are available on
 `AccelStore account <https://accelstore.accelize.com/user/applications>`_.

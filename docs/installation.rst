@@ -29,7 +29,7 @@ On Linux, some extra packages are required:
 -  *PycURL* needs a SSL library (like ``openssl-dev``) to support HTTPS.
    ``PYCURL_SSL_LIBRARY`` environment variable need to be set to the selected SSL library before building.
 
-Install is done with the package manager of your Linux distribution.
+Install is done with the package manager of Linux distribution.
 
 RHEL or CentOS 7:
 ^^^^^^^^^^^^^^^^^

@@ -1,8 +1,8 @@
 Configuration
 =============
 
-*Warning: do not use your credentials on untrusted environments. You are
-responsible to secure your credentials and accelerator access.*
+*Warning: do not use credentials on untrusted environments. User is
+responsible to secure its credentials and accelerator access.*
 
 What is needed to configure an accelerator ?
 --------------------------------------------
@@ -17,8 +17,7 @@ accelerator:
 
 -  `Accelize credential`_
 
-Your user account provides also to your metering information on your
-accelerator use `AccelStore account`_.
+Metering information on accelerator use is available on `AccelStore account`_.
 
 Host configuration
 ~~~~~~~~~~~~~~~~~~
@@ -37,8 +36,8 @@ by passing directly information to API as parameters.
 Using the configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can use the ``accelerator.conf`` file to provides parameters to run
-your accelerator.
+``accelerator.conf`` file can be used to provide parameters to run
+ accelerator.
 
 .. NOTE: "configuration_file.rst" is dynamically generated from "accelerator.conf".
    Update directly documentation in "accelerator.conf" if needed.

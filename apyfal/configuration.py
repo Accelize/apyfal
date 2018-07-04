@@ -3,7 +3,7 @@
 
 Notes:
     The "accelerator.conf" file provided with this package can
-    be used as sample for creation of your own configuration files.
+    be used as sample for creation of user configuration files.
 
     Use of this file is parameteral. All parameters can also be
     passed to API class. Non specified ones will use default values.

@@ -61,11 +61,8 @@ class SysCallClient(_Client):
     Accelerator client.
 
     Args:
-        accelerator (str): Name of the accelerator you want to initialize,
-            to know the accelerator list please visit "https://accelstore.accelize.com".
-        client_type (str): Type of client. Default to "SysCall".
         accelize_client_id (str): Accelize Client ID.
-            Client ID is part of the access key you can generate on
+            Client ID is part of the access key generate from
             "https:/accelstore.accelize.com/user/applications".
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with client_id.
         config (str or apyfal.configuration.Configuration or file-like object):

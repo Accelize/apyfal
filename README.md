@@ -8,12 +8,13 @@
 
 Apyfal is a powerful and flexible toolkit to operate FPGA <sup>[1](#fpga)</sup> accelerated function .
 
-Some reasons you might want to use Apyfal :
+Some reasons to use Apyfal :
 
 + Apyfal provides an abstraction layer to use the power of FPGA accelerated function in a hybrid
   multi-cloud environment.
-+ The configuration and the provisioning is generated for you in your FPGA cloud context.
-+ Don't like Python ? Use the REST API and generate a client in the language of your choice.
++ The configuration and the provisioning is generated for the FPGA cloud context.
++ Apyfal can perform acceleration directly on cloud storage files.
++ Don't like Python ? Use the REST API and generate a client in any language.
 
 ## All the accelerated functions
 
@@ -46,16 +47,16 @@ For more information on Apyfal, please read the [documentation](https://apyfal.r
 
 # Installation
 
-Installation is made with PIP. Some installation options are available depending the host you want to use (See 
+Installation is made with PIP. Some installation options are available depending the host to use (See 
 documentation for more information).
 
-You can install the full package with all options using:
+The full package can be installed using:
 ```bash
 pip install apyfal[all]
 ```
 
 # Support and enhancement requests
-[Contact us](https://www.accelize.com/contact) if you have any support or enhancement request.
+[Contact us](https://www.accelize.com/contact) for any support or enhancement request.
 
 
 # Footnotes

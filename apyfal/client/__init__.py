@@ -71,7 +71,7 @@ class AcceleratorClient(_utl.ABC):
         return _utl.factory(
             cls, client_type, 'client_type', _exc.ClientConfigurationException)
 
-    def __init__(self, accelerator, client_type=None, accelize_client_id=None,
+    def __init__(self, accelerator=None, client_type=None, accelize_client_id=None,
                  accelize_secret_id=None, config=None, **_):
         self._name = accelerator
         self._client_type = client_type
