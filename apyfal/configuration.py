@@ -257,8 +257,7 @@ class Configuration(_Mapping):
             str: Access token.
 
         Raises:
-            apyfal.exceptions.ConfigurationException:
-            User credential are not valid.
+            apyfal.exceptions.ConfigurationException: User credential are not valid.
         """
         try:
             return self._cache['metering_access_token']
