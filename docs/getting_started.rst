@@ -39,7 +39,7 @@ need always at least:
 -  ``region``: CSP region name, need a region that support FPGA.
 -  ``client_id`` and ``secret_id``: CSP credentials
 
-See :doc:`api_host` for details on possibles parameters for the targeted CSP.
+See :doc:`api_host` for information on possibles parameters of the targeted CSP.
 
 See your CSP documentation to know how obtains theses values.
 
@@ -184,7 +184,7 @@ It is possible to easily create a cloud instance using *Apyfal* and keeping the 
 And then connect to it with SSH :
 
 * ``key_pair`` is key pair name that can be get with ``myaccel.host.key_pair``.
-  The related private key in ``.pem`` format is generally stored in ``.ssh`` sub folder of user home.
+  The related private key file in ``.pem`` format is generally stored in the ``.ssh`` sub folder of user home.
 * ``host_ip`` is the IP address of the instance and can be get with ``myaccel.host.public_ip``.
 
 **Linux:**
@@ -196,8 +196,8 @@ And then connect to it with SSH :
 **Windows:**
 
 On Windows, `Putty <https://www.chiark.greenend.org.uk/~sgtatham/putty/>`_
-is required to connect with SSH. The private key file need to be in ``.ppk`` format
-(``puttygen.exe``, bundled with Putty, can be used to convert ``.pem`` file to ``.ppk``).
+can be used to connect with SSH. The private key file needs to be in ``.ppk`` format
+(``puttygen.exe``, bundled with Putty, can convert ``.pem`` to ``.ppk``).
 
 .. code-block:: batch
 
@@ -206,11 +206,11 @@ is required to connect with SSH. The private key file need to be in ``.ppk`` for
 Running Apyfal
 ~~~~~~~~~~~~~~
 
-The use of Apyfal in this case is easier since accelerator is preconfigured:
+The use of Apyfal in this case is straightforward since accelerator is preconfigured:
 
-* By default, ``accelize_client_id`` and ``accelize_secret_id`` values are those used to create instance previously with
-  Apyfal (It is still possible to change theme by passing other values).
-* ``accelerator`` value is the one used to create instance and can not be changed.
+* By default, ``accelize_client_id`` and ``accelize_secret_id`` values are those used to when creating instance.
+  It is still possible to change them by passing other values.
+* ``accelerator`` value is the one used when creating instance and can not be changed.
 * Host related arguments are not required and don't have any effect (``stop_mode``, ``host_ip``...)
 
 .. code-block:: python

@@ -1,11 +1,11 @@
 JSON configuration files
 ========================
 
-This section extend parameter use documentation explained in :doc:`getting_started`.
+This section extend parameter use documentation from :doc:`getting_started`.
 
-The low level accelerator API that run on FPGA host work parameters files:
+The low level accelerator API that run on FPGA host works with parameters files.
 
-This files are JSON that have the following format:
+Theses files are JSON that have the following format:
 
 .. code-block:: python
 

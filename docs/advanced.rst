@@ -1,8 +1,6 @@
 Advanced use
 ============
 
-This section explain advanced uses of Apyfal.
-
 .. toctree::
    :maxdepth: 2
 

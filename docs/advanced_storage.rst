@@ -56,13 +56,13 @@ Register storage services
 Cloud storage services use credentials to secure access and can't be accessed without them.
 
 In Apyfal storage, theses service needs to be registered before use.
-Each storage needs an unique ``storage_type`` that will be used to register it and as scheme to access to it with URL.
+Each storage needs an unique ``storage_type`` that will be used to register it and as *scheme* to access to it with URL.
 
 This can be done using the ``apyfal.storage.register`` function or with configuration file.
 
-See :doc:`api_storage` for detail on possibles parameters for the targeted storage.
+See :doc:`api_storage` for information on possibles parameters of the targeted storage.
 
-Examples show the registration of ``my_provider.my_bucket`` storage type.
+Following examples shows the registration of ``my_provider.my_bucket`` storage type.
 This storage needs following parameters to be registered: ``client_id``, ``secret_id`` & ``region``.
 
 With register function
@@ -122,7 +122,7 @@ This example shows some possible files operations:
     # Copy file from local file system to storage
     copy('my_file', 'my_provider.my_bucket://my_file')
 
-    # Copy file from storage to another bucket
+    # Copy file between storage
     copy('my_provider.my_bucket://my_file', 'my_provider.my_other_bucket://my_file')
 
     # Download a file from internet to storage

@@ -19,10 +19,10 @@ It support following arguments:
 - ``-m``: Accelerator mode. Possibles values are:
   ``0`` for configuration/start mode, ``1`` for process mode, ``2`` for stop mode.
   This is equivalent to ``apyfal.Accelerator`` ``start``, ``process`` and ``stop`` methods.
-- ``-i``: Input file path, used to pass ``datafile`` in configuration mode and ``file_in`` in process mode.
-- ``-o``: Output file path, used to pass ``file_out`` in process mode.
-- ``-j``: JSON parameter file path, used to pass a JSON parameters files like described in :doc:`advanced`.
-- ``-p``: JSON output file path, used to get some results in JSON format.
+- ``-i``: Input local file path, used to pass ``datafile`` in configuration mode and ``file_in`` in process mode.
+- ``-o``: Output local file path, used to pass ``file_out`` in process mode.
+- ``-j``: JSON parameter local file path, used to pass a JSON parameters files like described in :doc:`advanced`.
+- ``-p``: JSON output local file path, used to get some results in JSON format.
 - ``-v``: Verbosity level. Possible values: from ``0`` (Full verbosity) to ``4`` (Less verbosity).
 
 .. code-block:: bash
