@@ -38,6 +38,7 @@ def test_acceleratorclient_raise_for_status():
 def test_acceleratorclient_get_parameters(tmpdir):
     """Tests AcceleratorClient._get_parameters"""
     from apyfal.client import AcceleratorClient
+    from apyfal._utilities import recursive_update
 
     # Mocks some variables
     default_parameters = {'app': {'specific': {}, "key0": 0, "key1": 1}}
@@ -69,7 +70,7 @@ def test_acceleratorclient_get_parameters(tmpdir):
     # Test: loads parameters dict
     dummy_parameters = {'app': {'specific': {'key1': 1}, "key0": 1}}
     excepted_parameters = copy.deepcopy(default_parameters)
-    excepted_parameters.update(dummy_parameters)
+    recursive_update(excepted_parameters, dummy_parameters)
 
     assert client.function(
         parameters=dummy_parameters) == excepted_parameters
@@ -85,7 +86,7 @@ def test_acceleratorclient_get_parameters(tmpdir):
 
     # Test: Simultaneous parameters dict + keyword arguments
     excepted_parameters = copy.deepcopy(default_parameters)
-    excepted_parameters.update(dummy_parameters)
+    recursive_update(excepted_parameters, dummy_parameters)
     excepted_parameters['app']['specific'].update({'key0': 0, 'key1': 0})
     assert client.function(
         parameters=dummy_parameters, key0=0, key1=0) == excepted_parameters

@@ -45,6 +45,10 @@ def test_configuration(tmpdir):
     config = DummyConfiguration(str(config_file))
     assert has_accelize_credential(config)
 
+    # Test: __repr__
+    assert 'accelize' in repr(config)
+    assert 'client_id' in repr(config['accelize'])
+
     # Test: Use file from home
     config_file = os.path.join(
         os.path.expanduser('~'), dummy_configuration)

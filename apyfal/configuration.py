@@ -119,6 +119,12 @@ class _Section(dict):
                 self._default_section][parameter]
         return value
 
+    def __str__(self):
+        return dict(self).__str__()
+
+    def __repr__(self):
+        return '%s(%s)' % (object.__repr__(self), self.__str__())
+
     def set(self, parameter, value=None):
         """Set value to parameter and return
         value.
@@ -247,6 +253,12 @@ class Configuration(_Mapping):
 
     def __len__(self):
         return self._sections.__len__()
+
+    def __str__(self):
+        return dict(self).__str__()
+
+    def __repr__(self):
+        return '%s(%s)' % (object.__repr__(self), self.__str__())
 
     @property
     def access_token(self):

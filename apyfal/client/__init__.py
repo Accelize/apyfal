@@ -145,6 +145,9 @@ class AcceleratorClient(_utl.ABC):
         parameters = self._get_parameters(parameters, self._configuration_parameters)
         parameters['env'].update(host_env or dict())
 
+        # Looks for default datafile value
+        datafile = datafile or parameters.pop('datafile', None)
+
         # Handle files
         with self._data_file(
                 datafile, parameters, 'datafile', mode='rb') as datafile:
@@ -198,6 +201,10 @@ class AcceleratorClient(_utl.ABC):
         """
         # Configures processing
         parameters = self._get_parameters(parameters, self._process_parameters)
+
+        # Looks for default file_in/file_out values
+        file_in = file_in or parameters.pop('file_in', None)
+        file_out = file_out or parameters.pop('file_out', None)
 
         # Handle files
         with self._data_file(
@@ -298,7 +305,7 @@ class AcceleratorClient(_utl.ABC):
             raise _exc.ClientRuntimeException(message + api_result['app']['msg'])
 
     @staticmethod
-    def _get_parameters(parameters, default_parameters):
+    def _get_parameters(parameters, default_parameters, copy=True):
         """
         Gets parameters from different sources, and merge them together.
 
@@ -311,12 +318,17 @@ class AcceleratorClient(_utl.ABC):
         Args:
             parameters (dict): parameters
             default_parameters (dict): default parameters
+            copy (bool): If True return a copy of updated default_parameters,
+                else update directly.
 
         Returns:
             dict : parameters.
         """
         # Takes default parameters as basis
-        result = _deepcopy(default_parameters)
+        if copy:
+            result = _deepcopy(default_parameters)
+        else:
+            result = default_parameters
 
         # Gets parameters from included JSON file
         try:
@@ -327,7 +339,7 @@ class AcceleratorClient(_utl.ABC):
             # Reads JSON parameter from file or literal
             if isinstance(json_parameters, str):
                 # JSON literal
-                if json_parameters.startswith('{'):
+                if json_parameters.rstrip().startswith('{'):
                     json_parameters = _json.loads(json_parameters)
 
                 # JSON file
@@ -336,14 +348,14 @@ class AcceleratorClient(_utl.ABC):
                         json_parameters = _json.load(json_file)
 
             # Merges to result
-            result.update(json_parameters)
+            _utl.recursive_update(result, json_parameters)
 
         # Merges other parameters to specific section of parameters
         try:
             specific = result['app']['specific']
         except KeyError:
             specific = result['app']['specific'] = dict()
-        specific.update(parameters)
+        _utl.recursive_update(specific, parameters)
 
         return result
 
@@ -357,9 +369,11 @@ class AcceleratorClient(_utl.ABC):
         parameters = _deepcopy(default_parameters)
 
         # Update with configuration
-        config = self._config['%s.%s' % (section, self._name)]
-        _utl.recursive_update(
-            parameters, config.get_literal('parameters') or {})
+        for section in (
+                section, '%s.%s' % (section, self._name)):
+            self._get_parameters(
+                {key: self._config[section].get_literal(key)
+                 for key in self._config[section]}, parameters, copy=False)
         return parameters
 
     @_contextmanager
