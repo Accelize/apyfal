@@ -11,6 +11,7 @@ Some reasons you might want to use Apyfal :
 + Apyfal provides an abstraction layer to use the power of FPGA accelerated function in a hybrid
   multi-cloud environment.
 + The configuration and the provisioning is generated for you in your FPGA cloud context.
++ Apyfal can perform acceleration directly on cloud storage files.
 + Don't like Python ? Use the REST API and generate a client in the language of your choice.
 
 **All the accelerated functions**
@@ -41,9 +42,9 @@ process files:
 Feature
 -------
 
-+ Configuration of cloud host environment for AWS, OVH
-+ Remote or local execution facility
-+ Simplified API
++ Configuration of cloud host environment
++ Remote or local execution
++ Cloud storage direct access from accelerator
 
 **Limitations in remote mode**
 
