@@ -24,10 +24,10 @@ def _exception_handler():
                     )(exc='%s: %s' % (exception.code, exception.message))
 
 
-class AlibabaStorage(_BucketStorage):
+class OSSStorage(_BucketStorage):
     """Alibaba Cloud OSS Bucket
 
-    apyfal.storage URL: "Alibaba.BucketName://ObjectKey"
+    apyfal.storage URL: "oss://BucketName/ObjectKey"
 
     Args:
         storage_type (str): Cloud service provider name. Default to "Alibaba".
@@ -38,24 +38,38 @@ class AlibabaStorage(_BucketStorage):
         client_id (str): Alibaba Access Key ID.
         secret_id (str): Alibaba Secret Access Key.
         region (str): Alibaba region.
-        bucket_name (str): Name on the bucket on Alibaba Cloud OSS.
     """
+    #: Service name
+    NAME = 'OSS'
+
     #: Provider name
-    NAME = "Alibaba"
+    HOST_NAME = 'Alibaba'
 
     #: Alibaba Website
     DOC_URL = 'https://www.alibabacloud.com'
 
-    def _get_bucket(self):
-        """Get OSS bucket
+    def __init__(self, region=None, **kwargs):
+        _BucketStorage.__init__(self, **kwargs)
+
+        self._region = self._from_config('region', region)
+
+    def _get_bucket(self, path):
+        """
+        Get bucket and file path from global path.
+
+        Args:
+            path (str): path
 
         Returns:
-            objct: OSS bucket object.
+            tuple: bucket, file path
         """
-        return _oss.Bucket(
-            _oss.Auth(self._client_id, self._secret_id),
-            'http://oss-%s.aliyuncs.com' % self._region,
-            self._bucket_name)
+        bucket_name, path = path.split('/', 1)
+        with _exception_handler():
+            bucket = _oss.Bucket(
+                _oss.Auth(self._client_id, self._secret_id),
+                'http://oss-%s.aliyuncs.com' % self._region,
+                bucket_name)
+        return bucket, path
 
     def copy_to_local(self, source, local_path):
         """
@@ -65,9 +79,9 @@ class AlibabaStorage(_BucketStorage):
             source (str): Source URL.
             local_path (str): Local destination path.
         """
+        bucket, path = self._get_bucket(source)
         with _exception_handler():
-            self._get_bucket().get_object_to_file(
-                source, local_path)
+            bucket.get_object_to_file(path, local_path)
 
     def copy_from_local(self, local_path, destination):
         """
@@ -77,9 +91,9 @@ class AlibabaStorage(_BucketStorage):
             local_path (str): Local source path.
             destination (str): Destination URL
         """
+        bucket, path = self._get_bucket(destination)
         with _exception_handler():
-            self._get_bucket().put_object_from_file(
-                destination, local_path)
+            bucket.put_object_from_file(path, local_path)
 
     def copy_to_stream(self, source, stream):
         """
@@ -89,8 +103,9 @@ class AlibabaStorage(_BucketStorage):
             source (str): Source URL.
             stream (file-like object): Destination binary stream.
         """
+        bucket, path = self._get_bucket(source)
         with _exception_handler():
-            _copyfileobj(self._get_bucket().get_object(source), stream)
+            _copyfileobj(bucket.get_object(path), stream)
 
     def copy_from_stream(self, stream, destination):
         """
@@ -100,5 +115,6 @@ class AlibabaStorage(_BucketStorage):
             stream (file-like object): Source binary stream.
             destination (str): Destination URL.
         """
+        bucket, path = self._get_bucket(destination)
         with _exception_handler():
-            self._get_bucket().put_object(destination, stream)
+            bucket.put_object(path, stream)
