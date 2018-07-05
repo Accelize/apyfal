@@ -22,10 +22,6 @@ Storage URL format:
     "StorageType://path" with StorageType the storage type
     defining this storage.
 
-    Some storage use sub levels, this is separated from
-    storage type with dot ".":
-    "StorageType.SubLevel://path"
-
 See target storage class documentation for more information.
 """
 
