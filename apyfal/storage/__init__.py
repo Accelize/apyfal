@@ -45,9 +45,12 @@ __all__ = ['open', 'copy', 'parse_url', 'Storage']
 
 # Storage name aliases
 _ALIASES = {
-    # Schemes variants
+    # Storage type/schemes variants
     'https': 'http',
 }
+
+# Needs full URL as path
+_NEED_FULL_URL = ['http']
 
 
 # Registered storage
@@ -89,13 +92,11 @@ def register(storage_type, **parameters):
 
 
 def parse_url(url, host=True):
-    """Return scheme and path from URL:
-
-    URL = scheme://path
+    """Return storage_type and path from URL.
 
     If URL has no scheme, "file" scheme is inferred.
 
-    If URL is a file-like object, returns "stream" as scheme.
+    If URL is a file-like object, returns "stream" as storage_type.
 
     Args:
         url (str or file-like object): URL to parse
@@ -104,7 +105,7 @@ def parse_url(url, host=True):
             to "file" scheme.
 
     Returns:
-        tuple of str: (scheme, path)
+        tuple of str: (storage_type, path)
     """
     if not isinstance(url, str):
         return 'stream', url
@@ -118,16 +119,19 @@ def parse_url(url, host=True):
         # Path without scheme are "file://"
         return 'file', url
 
-    # Get scheme from alias
-    scheme = _ALIASES.get(scheme, scheme)
+    # Host storage_type special case
+    if scheme == 'host':
+        return 'file' if host else scheme, path
 
-    # Host point of view conversion
-    if host and scheme == 'host':
-        scheme = 'file'
+    # Get storage_type from scheme
+    storage_type = _ALIASES.get(scheme, scheme)
+
+    # Some storage needs full URL as path
+    if storage_type in _NEED_FULL_URL:
+        path = url
 
     # Returns result
-    # Some storage needs full URL as path
-    return scheme, url if scheme in ('http', ) else path
+    return storage_type, path
 
 
 @_contextmanager
@@ -165,9 +169,9 @@ class _SpooledTemporaryFile(_tempfile.SpooledTemporaryFile):
     """
 
     def __init__(self, *args, **kwargs):
-        # Set max_size to 80% of available memory by default
+        # Set max_size to 90% of available memory by default
         kwargs.setdefault(
-            'max_size', int(_virtual_memory().available * 0.80))
+            'max_size', int(_virtual_memory().available * 0.90))
         _tempfile.SpooledTemporaryFile.__init__(self, *args, **kwargs)
 
     # Python 3.8 back port:

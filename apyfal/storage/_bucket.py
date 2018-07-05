@@ -9,7 +9,7 @@ from apyfal.storage import Storage as _Storage
 class BucketStorage(_Storage):
     """Cloud storage Bucket
 
-    apyfal.storage URL: "CSPName.BucketName://KeyToObject"
+    apyfal.storage URL: "CSPName://BucketName/KeyToObject"
 
     Args:
         storage_type (str): Cloud service provider name.
@@ -19,47 +19,49 @@ class BucketStorage(_Storage):
             user "home" folder. If none found, will use default configuration values.
         client_id (str): CSP Access Key ID.
         secret_id (str): CSP Secret Access Key.
-        region (str): CSP region.
-        bucket_name (str): Name on the bucket on CSP.
     """
 
-    def __init__(self,
-                 client_id=None, secret_id=None,
-                 region=None, bucket_name=None, **kwargs):
-        _Storage.__init__(self, **kwargs)
+    #: Linked apyfal.host NAME, if not different from NAME
+    HOST_NAME = None
 
-        # Get bucket name from storage_type
-        try:
-            self._storage_type, self._bucket_name = self._storage_type.split('.', 1)
-        except ValueError:
-            self._bucket_name = None
-        self._bucket_name = bucket_name or self._bucket_name
+    def __init__(self, client_id=None, secret_id=None, **kwargs):
+        _Storage.__init__(self, **kwargs)
 
         # Default some attributes
         self._session = None
 
-        # Read configuration from file
-        section = self._config['storage.%s' % self.storage_id]
-        self._client_id = client_id or section['client_id']
-        self._secret_id = secret_id or section['secret_id']
-        self._region = region or section['region']
+        # Read configuration from file, start to search
+        self._client_id = self._from_config('client_id', client_id)
+        self._secret_id = self._from_config('secret_id', secret_id)
 
-    @property
-    def bucket(self):
-        """Bucket name
+    def _from_config(self, key, value=None):
+        """Get value from configuration file.
+        Look in following section in this order:
+        storage.provider.bucket, storage.provider, host.provider
 
-        Returns:
-            str: bucket name."""
-        return self._bucket_name
-
-    @property
-    def storage_id(self):
-        """Storage ID representing this storage.
+        Args:
+            key (str): Key to find
+            value (str): If specified and not None, return this value.
 
         Returns:
-            str: Storage ID."""
-        return ('%s.%s' % (
-            self.NAME, self._bucket_name)).lower()
+            str: value
+        """
+        return (value or
+                self._config['storage.%s' % self.NAME][key] or
+                self._config['host.%s' % self.HOST_NAME or self.NAME][key])
+
+    @staticmethod
+    def _get_bucket(path):
+        """
+        Get bucket and file path from global path.
+
+        Args:
+            path (str): path
+
+        Returns:
+            tuple of str: bucket, file path
+        """
+        return path.split('/', 1)
 
     @_abstractmethod
     def copy_to_stream(self, source, stream):

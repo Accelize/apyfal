@@ -21,10 +21,10 @@ class _ExceptionHandler(_utl_aws.ExceptionHandler):
     ERROR_CODE = {'404': _exc.StorageResourceNotExistsException}
 
 
-class AWSStorage(_BucketStorage):
+class S3Storage(_BucketStorage):
     """AWS S3 Bucket
 
-    apyfal.storage URL: "AWS.BucketName://ObjectKey"
+    apyfal.storage URL: s3://BucketName/ObjectKey
 
     Args:
         storage_type (str): Cloud service provider name. Default to "AWS".
@@ -34,11 +34,12 @@ class AWSStorage(_BucketStorage):
             user "home" folder. If none found, will use default configuration values.
         client_id (str): AWS Access Key ID.
         secret_id (str): AWS Secret Access Key.
-        region (str): AWS region.
-        bucket_name (str): Name on the bucket on AWS S3.
     """
+    #: Service name
+    NAME = 'S3'
+
     #: Provider name
-    NAME = 'AWS'
+    HOST_NAME = 'AWS'
 
     #: AWS Website
     DOC_URL = "https://aws.amazon.com"
@@ -50,16 +51,22 @@ class AWSStorage(_BucketStorage):
         self._session = _boto3.session.Session(
             aws_access_key_id=self._client_id,
             aws_secret_access_key=self._secret_id,
-            region_name=self._region
         )
 
-    def _get_bucket(self):
-        """Return S3 Bucket
+    def _get_bucket(self, path):
+        """
+        Get bucket and file path from global path.
+
+        Args:
+            path (str): path
 
         Returns:
-            Bucket object"""
-        s3_resource = self._session.resource('s3')
-        return s3_resource.Bucket(self._bucket_name)
+            tuple: bucket, file path
+        """
+        bucket_name, path = path.split('/', 1)
+        with _ExceptionHandler.catch():
+            bucket = self._session.resource('s3').Bucket(bucket_name)
+        return bucket, path
 
     def copy_to_local(self, source, local_path):
         """
@@ -69,8 +76,9 @@ class AWSStorage(_BucketStorage):
             source (str): Source URL.
             local_path (str): Local destination path.
         """
+        bucket, path = self._get_bucket(source)
         with _ExceptionHandler.catch():
-            self._get_bucket().download_file(source, local_path)
+            bucket.download_file(path, local_path)
 
     def copy_from_local(self, local_path, destination):
         """
@@ -80,8 +88,9 @@ class AWSStorage(_BucketStorage):
             local_path (str): Local source path.
             destination (str): Destination URL
         """
+        bucket, path = self._get_bucket(destination)
         with _ExceptionHandler.catch():
-            self._get_bucket().upload_file(local_path, destination)
+            bucket.upload_file(local_path, path)
 
     def copy_to_stream(self, source, stream):
         """
@@ -91,8 +100,9 @@ class AWSStorage(_BucketStorage):
             source (str): Source URL.
             stream (file-like object): Destination binary stream.
         """
+        bucket, path = self._get_bucket(source)
         with _ExceptionHandler.catch():
-            self._get_bucket().download_fileobj(source, stream)
+            bucket.download_fileobj(source, stream)
 
     def copy_from_stream(self, stream, destination):
         """
@@ -102,18 +112,20 @@ class AWSStorage(_BucketStorage):
             stream (file-like object): Source binary stream.
             destination (str): Destination URL.
         """
+        bucket, path = self._get_bucket(destination)
         with _ExceptionHandler.catch():
-            self._get_bucket().upload_fileobj(stream, destination)
+            bucket.upload_fileobj(stream, destination)
 
-    def _copy_from_aws(self, storage, source, destination):
+    def _copy_from_aws(self, source, destination):
         """
         Copy from another AWS S3 bucket to this other.
 
         Args:
-            storage (AWSStorage): Other bucket.
             source (str): Source key in other bucket.
             destination (str): Destination key in this bucket.
         """
+        dst_bucket, dst_path = self._get_bucket(destination)
+        src_bucket, src_path = source.split('/', 1)
         with _ExceptionHandler.catch():
-            self._get_bucket().copy(
-                {'Bucket': storage.bucket, 'Key': source}, destination)
+            dst_bucket.copy(
+                {'Bucket': src_bucket, 'Key': src_path}, dst_path)

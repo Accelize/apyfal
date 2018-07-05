@@ -1,20 +1,20 @@
 # coding=utf-8
-"""apyfal.storage.aws tests"""
+"""apyfal.storage.s3 tests"""
 
 import pytest
 from tests.test_storage_bucket import run_full_real_test_sequence, import_from_generic_test
 
 
-def test_awsclass_import():
-    """AWSStorage import"""
+def test_s3class_import():
+    """S3Storage import"""
     # Test: Import by factory without errors
-    import_from_generic_test('AWS')
+    import_from_generic_test('S3')
 
 
 def test_exception_handler():
     """Tests ExceptionHandler"""
     from botocore.exceptions import ClientError
-    from apyfal.storage.aws import _ExceptionHandler
+    from apyfal.storage.s3 import _ExceptionHandler
     import apyfal.exceptions as exc
 
     # Tests no exception
@@ -37,6 +37,6 @@ def test_exception_handler():
 
 @pytest.mark.need_csp
 @pytest.mark.need_csp_aws
-def test_awsclass_real(tmpdir):
-    """AWSStorage in real case"""
-    run_full_real_test_sequence('AWS', tmpdir)
+def test_s3class_real(tmpdir):
+    """S3Storage in real case"""
+    run_full_real_test_sequence('S3', tmpdir)

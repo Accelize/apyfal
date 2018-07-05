@@ -1,13 +1,13 @@
 # coding=utf-8
 """OVH Object Store"""
 
-from apyfal.storage.openstack import OpenStackStorage as _OpenStackStorage
+from apyfal.storage.swift import SwiftStorage as _SwiftStorage
 
 
-class OVHStorage(_OpenStackStorage):
+class OVHStorage(_SwiftStorage):
     """OVH Object Store
 
-    apyfal.storage URL: "OVH.ContainerName://ObjectName"
+    apyfal.storage URL: "ovh://ContainerName/ObjectName"
 
     Args:
         storage_type (str): Cloud service provider name. Default to "OVH".
@@ -18,11 +18,13 @@ class OVHStorage(_OpenStackStorage):
         client_id (str): OVH Access Key ID.
         secret_id (str): OVH Secret Access Key.
         region (str): OVH region.
-        bucket_name (str): Name on the container on OVH.
         project_id (str): OVH Project
     """
-    #: Provider name
+    #: Service name
     NAME = 'OVH'
+
+    #: Provider name
+    HOST_NAME = 'OVH'
 
     #: OVH Website
     DOC_URL = "https://horizon.cloud.ovh.net"

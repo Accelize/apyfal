@@ -17,10 +17,10 @@ class _ExceptionHandler(_utl_openstack.ExceptionHandler):
     AUTHENTICATION = _exc.StorageAuthenticationException
 
 
-class OpenStackStorage(_BucketStorage):
-    """OpenStack Object Storage
+class SwiftStorage(_BucketStorage):
+    """OpenStack Swift Object Storage
 
-    apyfal.storage URL: "OpenStack.ContainerName://ObjectName"
+    apyfal.storage URL: "swift://ContainerName/ObjectName"
 
     Args:
         storage_type (str): Cloud service provider name. Default to "OpenStack".
@@ -31,13 +31,15 @@ class OpenStackStorage(_BucketStorage):
         client_id (str): OpenStack Access Key ID.
         secret_id (str): OpenStack Secret Access Key.
         region (str): OpenStack region.
-        bucket_name (str): Name on the container on OpenStack.
         project_id (str): OpenStack Project
         auth_url (str): OpenStack auth-URL
         interface (str): OpenStack interface
     """
+    #: Service name
+    NAME = 'Swift'
+
     #: Provider name
-    NAME = 'OpenStack'
+    HOST_NAME = 'OpenStack'
 
     # Default OpenStack auth-URL to use (str)
     OPENSTACK_AUTH_URL = None
@@ -45,19 +47,18 @@ class OpenStackStorage(_BucketStorage):
     # Default Interface to use (str)
     OPENSTACK_INTERFACE = None
 
-    def __init__(self, project_id=None, auth_url=None, interface=None, **kwargs):
+    def __init__(self, region=None, project_id=None, auth_url=None, interface=None, **kwargs):
         _BucketStorage.__init__(self, **kwargs)
 
         # Read configuration
-        section = self._config['storage.%s' % self.storage_id]
-        self._project_id = project_id or section['project_id']
+        self._region = self._from_config('region', region)
+        self._project_id = self._from_config('project_id', project_id)
         self._auth_url = (
-            auth_url or section['auth_url'] or
+            self._from_config('auth_url', auth_url) or
             self.OPENSTACK_AUTH_URL)
         self._interface = (
-            interface or section['interface'] or
+            self._from_config('interface', interface) or
             self.OPENSTACK_INTERFACE)
-        # TODO: Check mandatory arguments
 
         # Load session
         self._session = _utl_openstack.connect(
@@ -73,11 +74,12 @@ class OpenStackStorage(_BucketStorage):
             source (str): Source URL.
             stream (file-like object): Destination binary stream.
         """
+        container, path = self._get_bucket(source)
         with _ExceptionHandler.catch(
                 to_catch=_openstack.exceptions.NotFoundException,
                 to_raise=_exc.StorageResourceNotExistsException):
             data = self._session.object_store.download_object(
-                source, container=self._bucket_name)
+                path, container=container)
         stream.write(data)
 
     def copy_from_stream(self, stream, destination):
@@ -88,8 +90,8 @@ class OpenStackStorage(_BucketStorage):
             stream (file-like object): Source binary stream.
             destination (str): Destination URL.
         """
+        container, path = self._get_bucket(destination)
         data = stream.read()
         with _ExceptionHandler.catch():
             self._session.object_store.create_object(
-                container=self._bucket_name, name=destination,
-                data=data)
+                container=container, name=path, data=data)

@@ -30,15 +30,12 @@ def test_storage_bucket_storage():
             """Do nothing"""
 
     # Test: Instantiation
-    bucket = DummyBucket(storage_type='dummy.bucket')
-    assert bucket._storage_type == 'dummy'
-    assert bucket.storage_id == 'dummy.bucket'
-    assert bucket.bucket == 'bucket'
+    bucket = DummyBucket()
 
-    bucket = DummyBucket(storage_type='dummy', bucket_name='bucket')
-    assert bucket._storage_type == 'dummy'
-    assert bucket.storage_id == 'dummy.bucket'
-    assert bucket.bucket == 'bucket'
+    # Get bucket from path
+    name = 'bucket'
+    path = 'path/to/object'
+    assert bucket._get_bucket('%s/%s' % (name, path)) == [name, path]
 
 
 def import_from_generic_test(storage_type, **kwargs):
