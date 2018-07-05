@@ -1,5 +1,5 @@
 # coding=utf-8
-"""apyfal.client tests"""
+"""apyfal._utilities tests"""
 import os
 import time
 
