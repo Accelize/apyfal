@@ -145,9 +145,6 @@ class AcceleratorClient(_utl.ABC):
         parameters = self._get_parameters(parameters, self._configuration_parameters)
         parameters['env'].update(host_env or dict())
 
-        # Looks for default datafile value
-        datafile = datafile or parameters.pop('datafile', None)
-
         # Handle files
         with self._data_file(
                 datafile, parameters, 'datafile', mode='rb') as datafile:
@@ -201,10 +198,6 @@ class AcceleratorClient(_utl.ABC):
         """
         # Configures processing
         parameters = self._get_parameters(parameters, self._process_parameters)
-
-        # Looks for default file_in/file_out values
-        file_in = file_in or parameters.pop('file_in', None)
-        file_out = file_out or parameters.pop('file_out', None)
 
         # Handle files
         with self._data_file(
@@ -390,10 +383,16 @@ class AcceleratorClient(_utl.ABC):
             str or file-like object or None:
                 Local version of input path.
         """
-        # No URL, yields directly
+        # No URL
         if url is None:
-            yield None
-            return
+            # Get URL from parameters if not provided directly
+            try:
+                url = parameters['app']['specific'].pop(parameter_name)
+
+            # Still no URL, yields directly
+            except KeyError:
+                yield None
+                return
 
         # Gets scheme and path from URL
         scheme, path = _srg.parse_url(url, self.REMOTE)
@@ -414,7 +413,7 @@ class AcceleratorClient(_utl.ABC):
         # Sends URL to host side as parameters and
         # yields None to client
         if self.REMOTE and scheme not in ('stream', 'file'):
-            parameters[parameter_name] = url
+            parameters['app']['specific'][parameter_name] = url
             yield None
 
         # Other case, yields file in expected format (file or stream)

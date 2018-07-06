@@ -104,7 +104,7 @@ def test_data_file(tmpdir):
     from apyfal.exceptions import ClientConfigurationException
 
     # Initialize some values
-    parameters = {}
+    parameters = {'app': {'specific': {}}}
     content = 'dummy_content'.encode()
     parameter_name = 'dummy_name'
     url = 'http://accelize.com'
@@ -189,20 +189,33 @@ def test_data_file(tmpdir):
     with client._data_file(
             file_in_path, parameters, parameter_name, 'rb') as path:
         assert path is file_in_path
-    assert not parameters
+    assert not parameters['app']['specific']
 
     # Remote mode: No change for stream
     with open(file_in_path, 'rb') as file:
         with client._data_file(
                 file, parameters, parameter_name, 'rb') as path:
             assert path is not None
-    assert not parameters
+    assert not parameters['app']['specific']
 
     # Remote mode: Others in parameters
     with client._data_file(
             url, parameters, parameter_name, 'rb') as path:
         assert path is None
-    assert parameters[parameter_name] == url
+    assert parameters['app']['specific'][parameter_name] == url
+
+    # Reload from parameters
+    parameters['app']['specific'][parameter_name] = file_in_path
+    assert parameters['app']['specific'][parameter_name] == file_in_path
+    with client._data_file(
+            None, parameters, parameter_name, 'rb') as path:
+        assert path is file_in_path
+    assert not parameters['app']['specific']
+
+    # Try reload from parameters, but not found
+    with client._data_file(
+            None, parameters, parameter_name, 'rb') as path:
+        assert path is None
 
 
 def test_tmp_dir():
