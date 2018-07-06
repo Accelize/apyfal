@@ -33,3 +33,25 @@ def test_asymmetric_cipher():
     # Tests signature with bad key
     bad_signature = AsymmetricCipher().sign(message)
     assert not cipher_public.verify(bad_signature, message)
+
+
+def test_symmetric_cipher():
+    """Tests SymmetricCipher"""
+    from apyfal._utilities.security import SymmetricCipher
+
+    # Tests new cipher
+    cipher = SymmetricCipher()
+
+    # Tests cipher from key
+    assert SymmetricCipher(cipher.key).key == cipher.key
+
+    # Tests encrypt/decrypt
+    message = 'Unencrypted message'
+    encrypted = cipher.encrypt(message)
+    assert message != encrypted
+    decrypted = cipher.decrypt(encrypted)
+    assert decrypted == message
+
+    # Tests encrypt/decrypt with bad key
+    with pytest.raises(ValueError):
+        SymmetricCipher().decrypt(encrypted)

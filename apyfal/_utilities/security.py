@@ -2,6 +2,7 @@
 """Generic security utilities"""
 import base64
 
+from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
@@ -11,8 +12,6 @@ from cryptography.exceptions import InvalidSignature
 
 class AsymmetricCipher:
     """Asymmetric cipher for encryption and signature.
-
-    Use a key pair with private and public keys.
 
     Args:
         public_key (str): Public key in PEM format.
@@ -61,7 +60,7 @@ class AsymmetricCipher:
         """
         encrypted = self._public_key.encrypt(
             message.encode(), *self._encryption_parameters())
-        return base64.b64encode(encrypted).decode()
+        return base64.urlsafe_b64encode(encrypted).decode()
 
     def verify(self, signature, message):
         """
@@ -74,7 +73,7 @@ class AsymmetricCipher:
         Returns:
             bool: True if signature match.
         """
-        signature = base64.b64decode(signature.encode())
+        signature = base64.urlsafe_b64decode(signature.encode())
         try:
             self._public_key.verify(
                 signature, message.encode(),
@@ -95,7 +94,7 @@ class AsymmetricCipher:
         Returns:
             str: Decrypted message
         """
-        encrypted = base64.b64decode(encrypted.encode())
+        encrypted = base64.urlsafe_b64decode(encrypted.encode())
         return self._private_key.decrypt(
             encrypted, *self._encryption_parameters()).decode()
 
@@ -111,7 +110,7 @@ class AsymmetricCipher:
         """
         signature = self._private_key.sign(
             message.encode(), *self._signature_parameters())
-        return base64.b64encode(signature).decode()
+        return base64.urlsafe_b64encode(signature).decode()
 
     # Utilities
 
@@ -134,3 +133,61 @@ class AsymmetricCipher:
         return (padding.PSS(mgf=padding.MGF1(hashes.SHA256()),
                             salt_length=padding.PSS.MAX_LENGTH),
                 hashes.SHA256())
+
+
+class SymmetricCipher:
+    """Symmetric cipher for encryption.
+
+    Args:
+        key (str): Key in PEM format.
+            If not specified, a new key will be generated.
+    """
+
+    def __init__(self, key=None):
+        self._key = None
+
+        # Generate new key if not exists
+        if not key:
+            self._key = Fernet.generate_key()
+
+        # Load key
+        else:
+            self._key = key.encode()
+
+        self._fernet = Fernet(self._key)
+
+    @property
+    def key(self):
+        """Key
+
+        Returns:
+            str: Key.
+        """
+        return self._key.decode()
+
+    def encrypt(self, message):
+        """
+        Encrypt with public key.
+
+        Args:
+            message (str): Message to encrypt
+
+        Returns:
+            str: encrypted message
+        """
+        return self._fernet.encrypt(message.encode()).decode()
+
+    def decrypt(self, encrypted):
+        """
+        Decrypt message with private key.
+
+        Args:
+            encrypted (str): Encrypted message
+
+        Returns:
+            str: Decrypted message
+        """
+        try:
+            return self._fernet.decrypt(encrypted.encode()).decode()
+        except InvalidToken:
+            raise ValueError('Unable to decrypt value')
