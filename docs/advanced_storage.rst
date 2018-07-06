@@ -1,40 +1,40 @@
 Storage
 =======
 
-Apyfal storage provides ability to use cloud storage services and other storage as source and target for
-accelerator.
+Apyfal storage provides the ability to use cloud storage services and other storage as a
+source and target for an accelerator.
 
 Using this feature to handle files provides some advantages:
 
-* When using Apyfal to remotely control an accelerator, all file transfer is performed on host directly.
-* Apyfal storage use simple URL like ``str`` to define files.
+* When using Apyfal to remotely control an accelerator, all file transfers are performed on the host directly.
+* Apyfal storage uses simple URLs like ``str`` to define files.
 * Apyfal storage can also be used to handle basic copy or open operations on storage services files.
 
 Apyfal storage URL format
 -------------------------
 
-Apyfal storage works with extended URL that support extra schemes.
+Apyfal storage works with extended URLs that support extra schemes.
 
 Apyfal use the standard URL format ``scheme://path``.
 
 Basic schemes
 ~~~~~~~~~~~~~
 
-Apyfal storage support following basic schemes.
+Apyfal storage supports the following basic schemes.
 
 * ``file``: Local file on file system (``file`` scheme is assumed if no scheme provided). Example:
   ``file:///home/user/myfile`` or ``/home/user/myfile``
 * ``http``/``https``: File available on HTTP/HTTPS. Example:
   ``http://www.accelize.com/file`` or ``https://www.accelize.com/file``
 
-Cloud storage scheme
-~~~~~~~~~~~~~~~~~~~~
+Cloud storage schemes
+~~~~~~~~~~~~~~~~~~~~~
 
-Apyfal storage support the extra scheme for cloud storage services. In this case, the scheme is the service name or
+Apyfal storage supports extra schemes for cloud storage services. In this case, the scheme is the service name or
 the provider name.
 
 Cloud storage use buckets (or containers) to hold data.
-The bucket name need to be specified just before the file path in URL.
+The bucket name needs to be specified just before the file path in URL.
 
 See :doc:`api_storage` for information available storage services and the scheme to use.
 
@@ -43,20 +43,21 @@ Example:
 * ``s3://my_bucket/my_file``: File with ``my_file`` key on AWS S3 ``my_bucket`` bucket.
 * ``ovh://my_container/my_file``: File with ``my_file`` name on OVH Object Store ``my_container`` container.
 
-Host scheme
-~~~~~~~~~~~
+The ``host`` scheme
+~~~~~~~~~~~~~~~~~~~
 
-``host`` scheme is like ``file`` scheme, but is only available when using Apyfal to remotely control accelerator.
+The ``host`` scheme is similar to the ``file`` scheme, but is only available when using Apyfal to use remotely
+the accelerator.
 
 In this case:
 
-* ``file`` represent a client-side file that needs to be transferred on/from host.
-* ``host`` represent a host-side file that can be used directly.
+* ``file`` represents a client-side file that needs to be transferred to/from host.
+* ``host`` represents a host-side file that can be used directly.
 
 Using storage with Accelerator
 ------------------------------
 
-``apyfal.Accelerator`` have native Apyfal storage URL support for files parameters:
+``apyfal.Accelerator`` has native Apyfal storage URL support for file parameters:
 
 .. code-block:: python
 
@@ -71,12 +72,12 @@ Using storage with Accelerator
 Basic storage operations
 ------------------------
 
-Apyfal storage provides some basic files operations functions to easily manipulate files on storage:
+Apyfal storage provides some basic file operation functions to easily manipulate storage files:
 
 * ``apyfal.storage.open``: Open a file as file-like object. Like builtin ``open``.
 * ``apyfal.storage.copy``: Copy a file between two URL. Like ``shutil.copy``.
 
-This example shows some possible files operations:
+The following example shows some possible file operations:
 
 .. code-block:: python
 
@@ -105,26 +106,25 @@ This example shows some possible files operations:
 Register extra storage services
 -------------------------------
 
-Cloud storage services use credentials to secure access and can't be accessed without them.
+Cloud storage services use a login and password to secure access and can’t be accessed without them.
 
-By default, storage services that are already configured as host will be automatically registered with same parameters.
+By default, storage services that are already configured as host are automatically registered with same parameters.
 
-But, if parameters are different or if the storage service don't have CSP host equivalent,
-the service needs to be registered before use.
+But, in other cases, these services need to be registered before use. Each storage needs
+a unique ``storage_type`` that will be used to register it and to access it with a URL.
 
-Each storage needs an unique ``storage_type`` that will be used to register it and as *scheme* to access to it with URL.
+This can be done using the ``apyfal.storage.register`` function or with the configuration file.
 
-This can be done using the ``apyfal.storage.register`` function or with configuration file.
+See :doc:`api_storage` for information on possible parameters for the targeted storage..
 
-See :doc:`api_storage` for information on possibles parameters of the targeted storage.
-
-Following examples shows the registration of ``my_storage`` storage type.
-This storage needs following parameters to be registered: ``client_id``, ``secret_id``.
+The following examples show the registration of the ``my_storage`` storage type.
+This storage needs the following parameters to be
+registered: ``client_id`` and ``secret_id``.
 
 With register function
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The registration of ``my_storage`` storage is done like following.
+The registration of ``my_storage`` storage is performed as follows.
 
 .. code-block:: python
 
@@ -137,7 +137,7 @@ The registration of ``my_storage`` storage is done like following.
 With configuration file
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The registration of ``my_storage`` storage is done by adding a ``storage`` subsection to
+The registration of ``my_storage`` storage is performed by adding a ``storage`` subsection to
 the configuration file containing storage parameters.
 
 .. code-block:: ini
@@ -146,4 +146,4 @@ the configuration file containing storage parameters.
     client_id  = my_client_id
     secret_id  = my_secret_id
 
-See :doc:`configuration` for more information on configuration file.
+See :doc:`configuration` for more information on the configuration file.

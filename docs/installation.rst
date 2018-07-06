@@ -8,7 +8,7 @@ Supported Python versions: 2.7, 3.4, 3.5, 3.6, 3.7
 
 Required Python Packages:
 
--  ``Request``, ``urllib3``, ``six``, ``certifi``, ``python-dateutil``, ``ipgetter``, ``psutil``
+-  ``Request``, ``urllib3``, ``six``, ``certifi``, ``python-dateutil``, ``ipgetter``, ``psutil``, ``cryptography``
 -  ``pip`` and ``setuptools``: For package installation
 -  ``boto3`` (Optional): Required for AWS.
 -  ``openstack`` (Optional): Required for OpenStack and OVH.
@@ -27,9 +27,9 @@ On Linux, some extra packages are required:
 
 -  *PycURL* needs ``libcurl-dev`` package to be build.
 -  *PycURL* needs a SSL library (like ``openssl-dev``) to support HTTPS.
-   ``PYCURL_SSL_LIBRARY`` environment variable need to be set to the selected SSL library before building.
+   The ``PYCURL_SSL_LIBRARY`` environment variable need to be set to the selected SSL library before building.
 
-Install is done with the package manager of Linux distribution.
+Use the package manager of the Linux distribution to install packages.
 
 RHEL or CentOS 7:
 ^^^^^^^^^^^^^^^^^
@@ -48,7 +48,7 @@ Python 2.7 is the only Python version installed by default on RHEL/CentOS 7.
 Debian or Ubuntu:
 ^^^^^^^^^^^^^^^^^
 
-Pycurl is already packaged ``python-pycurl`` on Debian and don't need to be built from source.
+Pycurl is already packaged ``python-pycurl`` on Debian and doesn’t need to be built from source.
 
 **Python 3:** (*Debian 8 Jessie*/*Ubuntu 14.04 Trusty* and more)
 
@@ -58,7 +58,7 @@ Python 3 packages are prefixed ``python3-`` instead of ``python-``.
 
     sudo apt-get install gcc python3-pip python3-dev python3-pycurl
 
-On next steps, use ``python3`` instead of ``python`` and ``pip3`` instead of ``pip`` to call Python and Pip.
+Use ``python3`` instead of ``python`` and ``pip3`` instead of ``pip`` to call Python and Pip from this point on.
 
 **Python 2:**
 
@@ -69,10 +69,10 @@ On next steps, use ``python3`` instead of ``python`` and ``pip3`` instead of ``p
 Windows
 ~~~~~~~
 
-Python for Windows is available on `Python Website`_.
+Python for Windows is available on the `Python Website`_.
 
-Depending on the Python version, host targeted and wheel format availability,
-a C/C++ compiler may also be required for install dependencies.
+Depending on the Python version, the host targeted, and wheel format availability,
+a C/C++ compiler may also be required to install dependencies.
 
 -  See `Windows Compilers on Python documentation`_ for more information.
 
@@ -87,15 +87,14 @@ Download the wheel file for the selected Python version and run pip on it:
 Setup
 -----
 
-Installation is done using PIP:
+Installation is performed using PIP:
 
 .. code-block:: bash
 
     pip install apyfal
 
-All mandatory dependencies are automatically installed. It is possible
-to install also optional dependencies passing following setuptools
-extras:
+All mandatory dependencies are automatically installed.
+You can also install these optional extras:
 
 -  ``all``: Install all extras.
 -  ``AWS``: Requirements for AWS.

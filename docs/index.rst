@@ -1,10 +1,10 @@
-Welcome to Apyfal's documentation!
-===================================================
+Welcome to Apyfal’s Documentation!
+==================================
 
 Overview
 --------
 
-Apyfal is a powerful and flexible toolkit to operate FPGA [#fpga]_ accelerated functions.
+Apyfal is a powerful and flexible toolkit that enables you to use FPGA [#fpga]_ accelerated functions.”
 
 Some reasons to use Apyfal :
 
@@ -22,8 +22,8 @@ Browse our web site `AccelStore <https://accelstore.accelize.com>`_, to discover
 
 **Basic Python code example**
 
-Accelerator API is easy to use and only need few lines of codes for instantiate accelerator and its host and then
-process files:
+Accelerator API is easy to use and only needs a few lines of codes to instantiate an accelerator and its host
+and process files:
 
 .. code-block:: python
 
@@ -39,8 +39,8 @@ process files:
        myaccel.process(file_in='/path/myfile1.dat',  file_out='/path/result1.dat')
        myaccel.process(file_in='/path/myfile2.dat',  file_out='/path/result2.dat')
 
-Feature
--------
+Features
+--------
 
 + Configuration of cloud host environment
 + Remote or local execution
@@ -48,8 +48,8 @@ Feature
 
 **Limitations in remote mode**
 
-+ Max data file is limited to 30GB (in case of usage of PycURL) or 2GB else
-+ Timeout will appear if request takes more than 900s
++ Max data file is limited to 30GB if using PycURL, or 2GB otherwise.
++ Timeout will occur if a request takes more than 900s.
 
 
 .. toctree::
@@ -96,4 +96,4 @@ Indices and tables
 
 .. rubric:: Footnotes
 
-.. [#fpga] FPGA is a programmable chip that can be used as function specialized high performance accelerator.
+.. [#fpga] FPGA is a programmable chip that can be used as a function-specialized, high-performance accelerator.

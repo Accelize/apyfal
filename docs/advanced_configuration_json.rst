@@ -1,31 +1,30 @@
 JSON configuration files
 ========================
 
-This section extend parameter use documentation from :doc:`getting_started`.
+This section provides more information about parameter use than that described in the :doc:`getting_started`.
 
-The low level accelerator API that run on FPGA host works with parameters files.
+The low-level accelerator API that runs on the FPGA host works with parameters files.
 
-Theses files are JSON that have the following format:
+These files are JSON files that have the following format:
 
 .. code-block:: python
 
    {
        "app": {
            "specific":{
-           # Specific parameters as key, values pairs.
+           # Specific parameters as key value pairs.
            }
        }
    }
 
-Read the accelerator documentation to see possibles specific parameters
-values.
+See the accelerator documentation for specific parameters values.
 
 Using ``**parameters`` argument with JSON parameters files
 ----------------------------------------------------------
 
-The ``**parameters`` argument passed to ``start`` and ``process``
-methods can also be used to pass *JSON parameters files* like defined
-previously. In this case, ``**parameters`` is used as ``parameters=``
+The ``**parameters`` argument passed to the ``start`` and ``process``
+methods, as described previously, can also be used to pass *JSON parameters files*.
+In this case, ``**parameters`` is used as ``parameters=``
 
 Assuming ``parameters.json`` is the JSON parameters files:
 
@@ -37,8 +36,8 @@ Assuming ``parameters.json`` is the JSON parameters files:
    ``parameters=parameters_json_content_as_dict``.
 
 ``parameters=`` can be used with classical ``**parameters`` keywords
-arguments, in this case keywords arguments overrides values already
-existing in in dict passed to ``parameters=``.
+arguments. In this case, the keywords arguments override values already
+existing in the dict passed to ``parameters=``.
 
 .. code-block:: python
 
@@ -47,7 +46,7 @@ existing in in dict passed to ``parameters=``.
    with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
        myaccel.start()
 
-       # Example passing the parameter JSON file and keywords arguments at same time
+       # Example of passing the parameter JSON file and keyword arguments at the same time
        myaccel.process(file_in='/path/myfile1.dat', file_out='/path/result1.dat',
                        # Passing Path to JSON file to "parameters="
                        parameters='/path/parameters.json',
@@ -57,9 +56,8 @@ existing in in dict passed to ``parameters=``.
 Using JSON parameters files with the configuration file
 -------------------------------------------------------
 
-JSON parameters files can also be defined directly in
-``accelerator.conf``. Parameters in configuration files will act as
-default values and will be overridden by any parameter passed directly
-to ``start`` and ``process`` methods.
+JSON parameters files can also be defined directly in ``accelerator.conf``.
+Parameters in configuration files will act as default values and will be overridden by any
+parameter passed directly to the ``start`` and ``process`` methods.
 
 See :doc:`configuration` for more information.
