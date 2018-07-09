@@ -38,11 +38,24 @@ The `EPEL repository`_ is required to install some packages.
 
 ``-dev`` package suffix is renamed ``-devel`` on RHEL/CentOS.
 
-Python 2.7 is the only Python version installed by default on RHEL/CentOS 7.
+Python 2.7 is the only Python version installed by default on RHEL/CentOS 7. But installation of Python 3.6 is possible.
+
+**Python 3:**
+
+The `IUS repository`_ is required to install Python 3.6 packages.
 
 .. code-block:: bash
 
-    sudo yum install gcc python-pip python-devel libcurl-devel openssl-devel
+    sudo yum install gcc python36u python36u-pip python36u-devel libcurl-devel openssl-devel -y
+    export PYCURL_SSL_LIBRARY=openssl
+
+Use ``python3.6`` instead of ``python`` and ``pip3.6`` instead of ``pip`` to call Python and Pip from this point on.
+
+**Python 2:**
+
+.. code-block:: bash
+
+    sudo yum install gcc python-pip python-devel libcurl-devel openssl-devel -y
     export PYCURL_SSL_LIBRARY=openssl
 
 Debian or Ubuntu:
@@ -115,6 +128,7 @@ Example for installing the ``OpenStack`` + ``optional`` extras:
     pip install apyfal[OpenStack,optional]
 
 .. _EPEL repository: https://fedoraproject.org/wiki/EPEL
+.. _IUS repository: https://ius.io/GettingStarted/#subscribing-to-the-ius-repository
 .. _Python Website: https://www.python.org/downloads
 .. _Windows Compilers on Python documentation: https://wiki.python.org/moin/WindowsCompilers
 .. _Unofficial Windows Binaries for Python Extension Packages: https://www.lfd.uci.edu/~gohlke/pythonlibs

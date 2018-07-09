@@ -46,8 +46,8 @@ Example:
 The ``host`` scheme
 ~~~~~~~~~~~~~~~~~~~
 
-The ``host`` scheme is similar to the ``file`` scheme, but is only available when using Apyfal to use remotely
-the accelerator.
+The ``host`` scheme is similar to the ``file`` scheme, but is only available when using Apyfal to control the
+accelerator remotely.
 
 In this case:
 
