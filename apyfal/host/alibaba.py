@@ -1,5 +1,6 @@
 # coding=utf-8
 """Alibaba Cloud ECS"""
+from base64 import b64encode as _b64encode
 import json as _json
 from uuid import uuid1 as _uuid
 
@@ -341,14 +342,24 @@ class AlibabaCSP(_CSPHost):
                                  InstanceType=self._instance_type)
         max_bandwidth = response['Bandwidths']['Bandwidth'][0]['Max']
 
-        # Creates instance
-        response = self._request(
-            'CreateInstance', ImageId=self._image_id,
+        # Prepares args:
+        kwargs = dict(
+            ImageId=self._image_id,
             InstanceType=self._instance_type,
             SecurityGroupId=self._security_group_id,
             InstanceName=self._get_instance_name(),
             Description=_utl.gen_msg('accelize_generated'),
-            InternetMaxBandwidthOut=max_bandwidth)
+            InternetMaxBandwidthOut=max_bandwidth
+        )
+
+        # Handles user data
+        user_data = self._user_data
+        if user_data:
+            # Needs to be in base64
+            kwargs['UserData'] = _b64encode(user_data).decode()
+
+        # Creates instance
+        response = self._request('CreateInstance', **kwargs)
         instance_id = response['InstanceId']
 
         # Allocates public IP address
