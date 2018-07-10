@@ -724,3 +724,39 @@ def run_full_real_test_sequence(host_type, environment,
     finally:
         if not use_full_images:
             apyfal._utilities.check_url = utilities_check_url
+
+
+def test_csphost_user_data(tmpdir):
+    """Tests Host._user_data"""
+    from apyfal.configuration import Configuration
+
+    # Mock CSP class
+    class DummyCSP(get_dummy_csp_class()):
+        """Dummy CSP"""
+
+    content = ("[dummy]\n"
+               "dummy1 = dummy1\n"
+               "dummy2 = dummy2\n")
+    config_file = tmpdir.join('dummy.conf')
+    config_file.write(content)
+    config = Configuration(str(config_file))
+
+    # No user data
+    assert DummyCSP(
+        client_id='client_id', secret_id='secret_id',
+        region='region')._user_data is None
+
+    # Get user data
+    user_data = DummyCSP(
+        client_id='client_id', secret_id='secret_id',
+        region='region', init_config=config)._user_data.decode()
+
+    # Check shebang
+    assert user_data.startswith('#!')
+
+    # Check configuration file presence
+    for line in content.splitlines():
+        assert line in user_data
+
+    # Check path
+    assert DummyCSP._HOME in user_data

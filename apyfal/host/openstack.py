@@ -44,6 +44,9 @@ class OpenStackHost(_CSPHost):
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing instance.
             See "stop_mode" property for more information and possible values.
+        init_config (str or apyfal.configuration.Configuration or file-like object):
+            Configuration file to pass to instance on initialization.
+            This configuration file will be used as default for host side accelerator.
         exit_host_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
             if Python interpreter is not exited properly. Note: this is provided for
@@ -284,7 +287,8 @@ class OpenStackHost(_CSPHost):
                 name=self._get_instance_name(),
                 image_id=self._image_id, flavor_id=self._instance_type,
                 key_name=self._key_pair,
-                security_groups=[{"name": self._security_group}])
+                security_groups=[{"name": self._security_group}],
+                userdata=self._user_data)
 
         return instance, instance.id
 

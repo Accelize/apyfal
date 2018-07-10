@@ -18,9 +18,14 @@ from ast import literal_eval as _literal_eval
 try:
     # Python 3
     from collections.abc import Mapping as _Mapping
+    from configparser import ConfigParser
+    CONFIG_PARSER_READ = 'read_file'
+
 except ImportError:
     # Python 2
     from collections import Mapping as _Mapping
+    from ConfigParser import ConfigParser
+    CONFIG_PARSER_READ = 'readfp'
 
 import json as _json
 import os.path as _os_path
@@ -212,21 +217,12 @@ class Configuration(_Mapping):
         # host and accelerator classes to uses defaults values
         if configuration_file:
             # Initialize configuration parser
-            # Lazy import since not used if no configuration file
-            try:
-                # Python 3
-                from configparser import ConfigParser
-                read_method = 'read_file'
-            except ImportError:
-                # Python 2
-                from ConfigParser import ConfigParser
-                read_method = 'readfp'
             ini_file = ConfigParser(allow_no_value=True)
 
             # Read from file with apyfal.storage support
             from apyfal.storage import open as srg_open
             with srg_open(configuration_file, 'rt') as file:
-                getattr(ini_file, read_method)(file)
+                getattr(ini_file, CONFIG_PARSER_READ)(file)
 
             # Retrieve parameters from configuration parser
             self._sections = {
@@ -333,6 +329,32 @@ class Configuration(_Mapping):
 
         accelerator_config['accelerator'] = accelerator
         return accelerator_config
+
+    def write(self, fileobject):
+        """
+        Write configuration file.
+
+        Args:
+            fileobject (file-like oQbject):
+                file-like object open in text mode.
+        """
+        # Creates config parser
+        config_parser = ConfigParser()
+        for section_name, section in self._sections.items():
+            for option, value in section.items():
+                # Checks if value is valid
+                if not value:
+                    continue
+
+                # Creates section only if option to add
+                if not config_parser.has_section(section_name):
+                    config_parser.add_section(section_name)
+
+                # Adds option
+                config_parser.set(section_name, option, value)
+
+        # Writes config parser to file object
+        config_parser.write(fileobject)
 
     def _legacy_backward_compatibility(self):
         """

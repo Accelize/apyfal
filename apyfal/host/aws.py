@@ -49,6 +49,9 @@ class AWSHost(_CSPHost):
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing instance.
             See "stop_mode" property for more information and possible values.
+        init_config (str or apyfal.configuration.Configuration or file-like object):
+            Configuration file to pass to instance on initialization.
+            This configuration file will be used as default for host side accelerator.
         exit_host_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
             if Python interpreter is not exited properly. Note: this is provided for
@@ -422,7 +425,8 @@ class AWSHost(_CSPHost):
             object: Instance
             str: Instance ID
         """
-        instance = self._session.resource('ec2').create_instances(
+        # Base arguments
+        kwargs = dict(
             ImageId=self._image_id,
             InstanceType=self._instance_type,
             KeyName=self._key_pair,
@@ -435,9 +439,17 @@ class AWSHost(_CSPHost):
                     {'Key': 'Generated',
                      'Value': _utl.gen_msg('accelize_generated')},
                     {'Key': 'Name',
-                     'Value': self._get_instance_name()}
-                ]}],
-            MinCount=1, MaxCount=1)[0]
+                     'Value': self._get_instance_name()}]}],
+            MinCount=1, MaxCount=1,)
+
+        # Optional arguments
+        user_data = self._user_data
+        if user_data:
+            kwargs['UserData'] = user_data
+
+        # Create instance
+        instance = self._session.resource('ec2').create_instances(
+            **kwargs)[0]
 
         return instance, instance.id
 

@@ -3,8 +3,10 @@
 
 from abc import abstractmethod as _abstractmethod
 from datetime import datetime as _datetime
+from io import StringIO as _StringIO
 
 from apyfal.host import Host as _Host
+import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
 from apyfal._utilities import get_logger as _get_logger
@@ -33,6 +35,13 @@ class CSPHost(_Host):
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing instance.
             See "stop_mode" property for more information and possible values.
+        init_config (bool or str or apyfal.configuration.Configuration or file-like object):
+            Configuration file to pass to instance on initialization.
+            This configuration file will be used as default for host side accelerator.
+            If value is True, use 'config' configuration.
+            If value is a configuration use this configuration.
+            If value is None or False, don't passe any configuration file
+            (This is default behavior).
         exit_host_on_signal (bool): If True, exit instance
             on OS exit signals. This may help to not have instance still running
             if Python interpreter is not exited properly. Note: this is provided for
@@ -54,9 +63,12 @@ class CSPHost(_Host):
         'public_ip', 'private_ip', '_region', '_instance_type', '_instance_name',
         '_key_pair', '_security_group', '_instance_id', '_instance_type_name'})
 
+    # Instance user home directory
+    _HOME = '/home/centos'
+
     def __init__(self, client_id=None, secret_id=None, region=None,
                  instance_type=None, key_pair=None, security_group=None, instance_id=None,
-                 instance_name_prefix=None, **kwargs):
+                 instance_name_prefix=None, init_config=None, **kwargs):
         _Host.__init__(self, **kwargs)
 
         # Default some attributes
@@ -91,6 +103,8 @@ class CSPHost(_Host):
         self.stop_mode = (
             kwargs.get('stop_mode') or section['stop_mode'] or
             ('keep' if instance_id or kwargs.get('host_ip') else 'term'))
+
+        self._init_config = init_config or section['init_config']
 
         # Checks mandatory configuration values
         self._check_arguments('region')
@@ -535,3 +549,31 @@ class CSPHost(_Host):
             dict: configuration environment
         """
         return self._config_env
+
+    @property
+    def _user_data(self):
+        """
+        Generate a shell script to initialize instance.
+
+        Returns:
+            str: shell script.
+        """
+        if self._init_config is None:
+            return None
+
+        config = (self._config if self._init_config is True else
+                  self._init_config)
+
+        # Initialize file with shebang
+        commands = ["#!/usr/bin/env bash"]
+
+        # Write default configuration file
+        stream = _StringIO()
+        _cfg.create_configuration(config).write(stream)
+        stream.seek(0)
+
+        commands += [
+            "cat << EOF > %s/accelerator.conf" % self._HOME,
+            stream.read(), "EOF"]
+
+        return '\n'.join(commands).encode()

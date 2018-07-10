@@ -25,12 +25,21 @@ def has_accelize_credential(config):
 def test_configuration(tmpdir):
     """Tests Configuration"""
     from apyfal.configuration import Configuration
+    try:
+        # Python 3
+        from configparser import ConfigParser
+    except ImportError:
+        # Python 2
+        from ConfigParser import ConfigParser
 
     # Mocks configuration
     dummy_configuration = 'dummy_configuration.conf'
     content = ("[accelize]\n"
                "client_id = client\n"
-               "secret_id = secret\n")
+               "secret_id = secret\n"
+               "[empty_section]\n"
+               "[empty_option]\n"
+               "option=\n")
 
     class DummyConfiguration(Configuration):
         """Dummy configuration"""
@@ -44,6 +53,17 @@ def test_configuration(tmpdir):
     config_file.write(content)
     config = DummyConfiguration(str(config_file))
     assert has_accelize_credential(config)
+
+    # Test: export file
+    config['dummy']['dummy'] = None
+    config_copy = tmpdir.join('config_copy.conf')
+    with open(str(config_copy), 'wt') as file:
+        config.write(file)
+    read_copy = ConfigParser()
+    read_copy.read([str(config_copy)])
+    assert read_copy.has_option('accelize', 'client_id')
+    assert not read_copy.has_section('empty_section')
+    assert not read_copy.has_section('empty_option')
 
     # Test: __repr__
     assert 'accelize' in repr(config)
@@ -62,6 +82,7 @@ def test_configuration(tmpdir):
     finally:
         # Remove file from home
         os.remove(config_file)
+
 
 
 def test_create_configuration():
