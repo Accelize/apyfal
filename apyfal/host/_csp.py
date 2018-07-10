@@ -3,7 +3,13 @@
 
 from abc import abstractmethod as _abstractmethod
 from datetime import datetime as _datetime
-from io import StringIO as _StringIO
+
+try:
+    # Python 2
+    from StringIO import StringIO as _StringIO
+except ImportError:
+    # Python 3
+    from io import StringIO as _StringIO
 
 from apyfal.host import Host as _Host
 import apyfal.configuration as _cfg
