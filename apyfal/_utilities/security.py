@@ -9,6 +9,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization
 from cryptography.exceptions import InvalidSignature
 
+from apyfal.exceptions import ClientSecurityException
+
 
 class AsymmetricCipher:
     """Asymmetric cipher for encryption and signature.
@@ -16,9 +18,10 @@ class AsymmetricCipher:
     Args:
         public_key (str): Public key in PEM format.
             If not specified, a new key pair will be generated.
+        private_key (str): Private key in PEM format.
     """
 
-    def __init__(self, public_key=None):
+    def __init__(self, public_key=None, private_key=None):
         self._private_key = None
         self._public_key = None
 
@@ -34,6 +37,12 @@ class AsymmetricCipher:
         else:
             self._public_key = serialization.load_pem_public_key(
                 public_key.encode(), backend=default_backend())
+
+            # Load private key
+            if private_key:
+                self._private_key = serialization.load_pem_private_key(
+                    private_key.encode(), backend=default_backend(),
+                    password=None)
 
     # Public key only functions
 
@@ -69,9 +78,6 @@ class AsymmetricCipher:
         Args:
             signature (str): Signature
             message (str): Signed message
-
-        Returns:
-            bool: True if signature match.
         """
         signature = base64.urlsafe_b64decode(signature.encode())
         try:
@@ -79,10 +85,22 @@ class AsymmetricCipher:
                 signature, message.encode(),
                 *self._signature_parameters())
         except InvalidSignature:
-            return False
-        return True
+            raise ClientSecurityException('Invalid Signature')
 
     # Private key only functions
+
+    @property
+    def private_key(self):
+        """Private key
+
+        Returns:
+            str: Private key in PEM format.
+        """
+        return self._private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        ).decode()
 
     def decrypt(self, encrypted):
         """
@@ -95,8 +113,11 @@ class AsymmetricCipher:
             str: Decrypted message
         """
         encrypted = base64.urlsafe_b64decode(encrypted.encode())
-        return self._private_key.decrypt(
-            encrypted, *self._encryption_parameters()).decode()
+        try:
+            return self._private_key.decrypt(
+                encrypted, *self._encryption_parameters()).decode()
+        except ValueError:
+            raise ClientSecurityException('Decryption Error')
 
     def sign(self, message):
         """
@@ -190,4 +211,192 @@ class SymmetricCipher:
         try:
             return self._fernet.decrypt(encrypted.encode()).decode()
         except InvalidToken:
-            raise ValueError('Unable to decrypt value')
+            raise ClientSecurityException('Decryption Error')
+
+
+class CryptoServer:
+    """
+    Manage cryptography server side.
+
+    Args:
+        config (apyfal.configuration.Configuration):
+            Configuration.
+    """
+
+    def __init__(self, config):
+
+        # Configuration
+        self._use_signature = (
+            config['security']['use_signature'] or True)
+        self._use_encryption = (
+            config['security']['use_encryption'] or True)
+
+        # Server asymmetric cipher
+        self._asym_cipher = AsymmetricCipher()
+
+        # Client authorized public keys
+        self._client_public_keys = set()
+
+        # Opened sessions with client
+        # Contains: (AsymmetricCipher, SymmetricCipher)
+        self._client_sessions = {}
+
+    def authorize_public_keys(self, *public_keys):
+        """Register public keys
+
+        Args:
+            public_keys (str):
+        """
+        self._client_public_keys.update(*public_keys)
+
+    def revoke_public_keys(self, *public_keys):
+        """Revoke public keys
+
+        Args:
+            public_keys (str):
+        """
+        self._client_public_keys.difference_update(*public_keys)
+
+    def register_session(self, session, public_key):
+        """
+        Register a client session.
+
+        Args:
+            session (str): Session UUID
+            public_key (str): Client public key.
+
+        Returns:
+            str: Symmetric key
+        """
+        if public_key not in self._client_public_keys:
+            raise ClientSecurityException('Unknown public key')
+
+        sym_cipher = SymmetricCipher()
+        self._client_sessions[session] = (
+            AsymmetricCipher(public_key=public_key), sym_cipher)
+
+        return sym_cipher.key
+
+    def unregister_session(self, session):
+        """
+        Unregister a client session.
+
+        Args:
+            session (str): Session UUID
+        """
+        del self._client_sessions[session]
+
+    def encrypt(self, message, session):
+        """
+        Encrypt and sign data.
+
+        Args:
+            message (str): Message to write.
+            session (str): Client session UUID
+
+        Returns:
+            Output message.
+        """
+        _, sym_cipher = self._client_sessions[session]
+
+        # Encrypt data
+        if self._use_encryption:
+            message = sym_cipher.encrypt(message)
+
+        # Sign data
+        if self._use_signature:
+            message = '%s:%s' % (
+                message, self._asym_cipher.sign(message))
+
+        return message
+
+    def decrypt(self, message, session):
+        """
+        Verify signature and decrypt data.
+
+        Args:
+            message (str): Message to read.
+            session (str): Client session UUID
+
+        Returns:
+            Output message.
+        """
+        try:
+            asym_cipher, sym_cipher = self._client_sessions[session]
+        except KeyError:
+            raise ClientSecurityException('Invalid Session')
+
+        # Verify signature
+        if self._use_signature:
+            signature, message = message.split(':')
+            asym_cipher.verify(signature, message)
+
+        # Decrypt data
+        if self._use_encryption:
+            message = sym_cipher.decrypt(message)
+
+        return message
+
+
+class CryptoClient:
+    """Manage cryptography client side."""
+
+    def __init(self, use_encryption, use_signature,
+               private_key, public_key, sym_key,
+               host_public_key):
+
+        # Client side ciphers
+        self._asym_cipher = AsymmetricCipher(
+            public_key=public_key, private_key=private_key)
+        self._sym_cipher = SymmetricCipher(
+            key=sym_key)
+
+        # Host side ciphers
+        self._host_cipher = AsymmetricCipher(
+            public_key=host_public_key)
+
+        # Configuration
+        self._use_encryption = use_encryption
+        self._use_signature = use_signature
+
+    def encrypt(self, message):
+        """
+        Encrypt and sign data.
+
+        Args:
+            message (str): Message to write.
+
+        Returns:
+            Output message.
+        """
+        # Encrypt data
+        if self._use_encryption:
+            message = self._sym_cipher.encrypt(message)
+
+        # Sign data
+        if self._use_signature:
+            message = '%s:%s' % (
+                message, self._asym_cipher.sign(message))
+
+        return message
+
+    def decrypt(self, message):
+        """
+        Verify signature and decrypt data.
+
+        Args:
+            message (str): Message to read.
+
+        Returns:
+            Output message.
+        """
+        # Verify signature
+        if self._use_signature:
+            signature, message = message.split(':')
+            self._host_cipher.verify(signature, message)
+
+        # Decrypt data
+        if self._use_encryption:
+            message = self._sym_cipher.decrypt(message)
+
+        return message

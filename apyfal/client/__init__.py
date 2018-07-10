@@ -81,6 +81,9 @@ class AcceleratorClient(_utl.ABC):
         self._url = None
         self._stopped = False
 
+        # Define a session UUID
+        self._session_uuid = str(_uuid())
+
         # Dict to cache values
         self._cache = {}
 
@@ -413,7 +416,7 @@ class AcceleratorClient(_utl.ABC):
             if not self.REMOTE and url.startswith('host://'):
                 for authorized in self._authorized_host_dirs:
                     if not _os_path.abspath(path).startswith(authorized):
-                        raise _exc.ClientConfigurationException(
+                        raise _exc.ClientSecurityException(
                                 "Unauthorized path: '%s'" % path)
 
             # Checks input file exists

@@ -101,7 +101,8 @@ def test_acceleratorclient_get_parameters(tmpdir):
 def test_data_file(tmpdir):
     """Tests AcceleratorClient._data_file"""
     from apyfal.client import AcceleratorClient
-    from apyfal.exceptions import ClientConfigurationException
+    from apyfal.exceptions import (
+        ClientConfigurationException, ClientSecurityException)
 
     # Initialize some values
     parameters = {'app': {'specific': {}}}
@@ -186,7 +187,7 @@ def test_data_file(tmpdir):
     assert file_out.read_binary() == content
 
     # host://: Unauthorized dir
-    with pytest.raises(ClientConfigurationException):
+    with pytest.raises(ClientSecurityException):
         with client._data_file(
                 'host://%s' % file_in_path, parameters,
                 parameter_name, 'rb'):

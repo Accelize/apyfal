@@ -48,6 +48,11 @@ class ClientRuntimeException(ClientException):
     """Error with AcceleratorClient running."""
 
 
+class ClientSecurityException(ClientException):
+    """Generic security related exception."""
+    DEFAULT_MESSAGE = "Security Error"
+
+
 class HostException(AcceleratorException):
     """Generic host related exception"""
 
