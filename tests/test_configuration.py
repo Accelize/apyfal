@@ -84,7 +84,6 @@ def test_configuration(tmpdir):
         os.remove(config_file)
 
 
-
 def test_create_configuration():
     """Tests create_configuration"""
     from apyfal.configuration import (
@@ -181,6 +180,10 @@ def test_configuration_access_token():
 
         config._sections['accelize']['test_value'] = '1,2,3'
         assert config['accelize'].get_literal('test_value') == (1, 2, 3)
+        config._sections['accelize']['test_value'] = '1\n2\n3'
+        assert config['accelize'].get_list('test_value') == ["1", "2", "3"]
+        assert config['accelize'].get_literal('no_value') is None
+        assert config['accelize'].get_list('no_value') == []
 
         # Test cached value
         del config._sections['accelize']

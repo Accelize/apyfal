@@ -107,12 +107,12 @@ def test_data_file(tmpdir):
     parameters = {'app': {'specific': {}}}
     content = 'dummy_content'.encode()
     parameter_name = 'dummy_name'
-    url = 'http://accelize.com'
     file_in = tmpdir.join('in')
     file_in.write(content)
     file_in_path = str(file_in)
     file_out = tmpdir.join('sub_dir').join('out')
     file_out_path = str(file_out)
+    authorized_dir = tmpdir.join('authorized')
 
     # Mocks Client
     class DummyClient(AcceleratorClient):
@@ -124,6 +124,7 @@ def test_data_file(tmpdir):
         def __init__(self, *_, **__):
             """Do nothing"""
             self._cache = {'tmp_dir': str(tmpdir)}
+            self._authorized_host_dirs = [str(authorized_dir)]
 
         def _start(self, *_):
             """Do nothing"""
@@ -184,6 +185,22 @@ def test_data_file(tmpdir):
                 tmp_file.write(content)
     assert file_out.read_binary() == content
 
+    # host://: Unauthorized dir
+    with pytest.raises(ClientConfigurationException):
+        with client._data_file(
+                'host://%s' % file_in_path, parameters,
+                parameter_name, 'rb'):
+            pass
+
+    # host://: Authorized dir
+    authorized_file_in = authorized_dir.join('in')
+    authorized_file_in.ensure()
+    authorized_file_in_path = str(authorized_file_in)
+    with client._data_file(
+            'host://%s' % authorized_file_in_path,
+            parameters, parameter_name, 'rb') as path:
+        assert path == authorized_file_in_path
+
     # Remote mode: No change for file
     client.REMOTE = True
     with client._data_file(
@@ -199,6 +216,7 @@ def test_data_file(tmpdir):
     assert not parameters['app']['specific']
 
     # Remote mode: Others in parameters
+    url = 'host://%s' % authorized_file_in_path
     with client._data_file(
             url, parameters, parameter_name, 'rb') as path:
         assert path is None

@@ -5,7 +5,7 @@ Notes:
     The "accelerator.conf" file provided with this package can
     be used as sample for creation of user configuration files.
 
-    Use of this file is parameteral. All parameters can also be
+    Use of this file is optional. All parameters can also be
     passed to API class. Non specified ones will use default values.
 
     API search automatically search for "accelerator.conf" in
@@ -160,6 +160,22 @@ class _Section(dict):
             return _literal_eval(value)
         except (ValueError, TypeError, SyntaxError):
             return value
+
+    def get_list(self, parameter, sep='\n'):
+        """
+        Returns a list from parameter.
+
+        Args:
+            parameter (str): Parameter to get
+            sep (str): Separator between values.
+
+        Returns:
+            list of str: List of parameter values
+        """
+        try:
+            return self[parameter].split(sep)
+        except (TypeError, AttributeError):
+            return []
 
 
 class Configuration(_Mapping):

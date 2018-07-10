@@ -54,6 +54,11 @@ In this case:
 * ``file`` represents a client-side file that needs to be transferred to/from host.
 * ``host`` represents a host-side file that can be used directly.
 
+For security reason, ``host`` scheme is restricted to a whitelisted list of directories on host.
+This list can be modified, host side, using the ``authorized_host_dirs``
+of the ``security`` section in the configuration file.
+The only default authorized directory is ``~/shared``.
+
 Using storage with Accelerator
 ------------------------------
 

@@ -59,6 +59,9 @@ class AcceleratorClient(_utl.ABC):
     # Format required for parameter: 'file' (default) or 'stream'
     PARAMETER_IO_FORMAT = {}
 
+    #: Default directories that can be processed remotely on host
+    DEFAULT_AUTHORIZED_HOST_DIRS = ['~/shared']
+
     def __new__(cls, *args, **kwargs):
         # If call from a subclass, instantiate this subclass directly
         if cls is not AcceleratorClient:
@@ -95,6 +98,12 @@ class AcceleratorClient(_utl.ABC):
         secret_id = config['accelize'].set('secret_id', accelize_secret_id)
         if secret_id:
             self._configuration_parameters['env']['client_secret'] = secret_id
+
+        #: Directories that can be processed remotely on host
+        self._authorized_host_dirs = [
+            '%s/' % _os_path.abspath(_os_path.expanduser(path)) for path in (
+                config['security'].get_list('authorized_host_dirs') or
+                self.DEFAULT_AUTHORIZED_HOST_DIRS)]
 
         # Get process parameters
         self._process_parameters = self._load_configuration(
@@ -395,10 +404,17 @@ class AcceleratorClient(_utl.ABC):
                 return
 
         # Gets scheme and path from URL
-        scheme, path = _srg.parse_url(url, self.REMOTE)
+        scheme, path = _srg.parse_url(url, not self.REMOTE)
 
         # File scheme: Check paths
         if scheme == 'file':
+
+            # Only authorises files in whitelisted directories on host
+            if not self.REMOTE and url.startswith('host://'):
+                for authorized in self._authorized_host_dirs:
+                    if not _os_path.abspath(path).startswith(authorized):
+                        raise _exc.ClientConfigurationException(
+                                "Unauthorized path: '%s'" % path)
 
             # Checks input file exists
             if 'r' in mode and not _os_path.isfile(path):
