@@ -38,3 +38,11 @@ Features of the 1.0.0 version:
 - Support for AWS and OVH public host.
 - Complete unittest for the core or the package.
 - Full Sphinx documentation.
+
+Known Issues:
+-------------
+
+- All communication between client and host accelerator is in unencrypted plain text.
+- Using ``stop_mode="stop"`` on OpenStack terminates instance.
+- Using ``start`` is mandatory when connecting to an already existing instance.
+- Configuration file is not properly passed to the instance on OpenStack with ``init_config`` argument.
