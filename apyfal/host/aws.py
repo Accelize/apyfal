@@ -134,7 +134,9 @@ class AWSHost(_CSPHost):
         """
         Initialize policy.
 
-        This is required to allow loading FPGA bitstream.
+        This policy allow instance to:
+            - Load FPGA bitstream.
+            - Access to S3 buckets objects  for read and write.
 
         Args:
             policy:
@@ -143,27 +145,30 @@ class AWSHost(_CSPHost):
         policy_document = _json_dumps({
             "Version": "2012-10-17",
             "Statement": [
-                {
-                    "Sid": "AllowFpgaCommands",
-                    "Effect": "Allow",
-                    "Action": [
-                        "ec2:AssociateFpgaImage",
-                        "ec2:DisassociateFpgaImage",
-                        "ec2:DescribeFpgaImages"
-                    ],
-                    "Resource": ["*"]
-                }
-            ]
-        })
+
+                # Grant FPGA access
+                {"Sid": "AllowFpgaCommands",
+                 "Effect": "Allow",
+                 "Action": [
+                     "ec2:AssociateFpgaImage",
+                     "ec2:DisassociateFpgaImage",
+                     "ec2:DescribeFpgaImages"],
+                 "Resource": ["*"]},
+
+                # Grant S3 buckets access
+                {"Sid": "AllowS3Access",
+                 "Effect": "Allow",
+                 "Action": [
+                     "s3:GetObject",
+                     "s3:PutObject"],
+                 "Resource": ["arn:aws:s3:::*"]}
+            ]})
 
         iam_client = self._session.client('iam')
-        try:
+        with _ExceptionHandler.catch(filter_error_codes='EntityAlreadyExists'):
             iam_client.create_policy(
                 PolicyName=policy, PolicyDocument=policy_document)
 
-        except iam_client.exceptions.EntityAlreadyExistsException:
-            pass
-        else:
             _get_logger().info(
                 _utl.gen_msg('created_named', 'policy', policy))
 
@@ -181,28 +186,22 @@ class AWSHost(_CSPHost):
         """
         Initialize IAM role.
 
-        This is required to allow loading FPGA bitstream.
+        This role allow to perform actions defined by policy.
         """
         assume_role_policy_document = _json_dumps({
             "Version": "2012-10-17",
             "Statement": {
                 "Effect": "Allow",
                 "Principal": {"Service": "ec2.amazonaws.com"},
-                "Action": "sts:AssumeRole"
-            }
-        })
+                "Action": "sts:AssumeRole"}})
 
         iam_resource = self._session.resource('iam')
-        try:
+        with _ExceptionHandler.catch(filter_error_codes='EntityAlreadyExists'):
             role = iam_resource.create_role(
                 RoleName=self._role,
                 AssumeRolePolicyDocument=assume_role_policy_document,
-                Description=_utl.gen_msg('accelize_generated')
-            )
+                Description=_utl.gen_msg('accelize_generated'))
 
-        except _boto_exceptions.ClientError:
-            pass
-        else:
             _get_logger().info(
                 _utl.gen_msg('created_named', 'IAM role', role))
 
@@ -219,44 +218,43 @@ class AWSHost(_CSPHost):
             policy_arn (str): Policy ARN
         """
         iam_client = self._session.client('iam')
-        try:
-            # Create a policy
+
+        with _ExceptionHandler.catch(filter_error_codes='EntityAlreadyExists'):
             iam_client.attach_role_policy(
                 PolicyArn=policy_arn, RoleName=self._role)
 
-        except iam_client.exceptions.EntityAlreadyExistsException:
-            return
-        _get_logger().info(
-            _utl.gen_msg('attached_to', 'policy',
-                         policy_arn, 'IAM role', self._role))
+            _get_logger().info(
+                _utl.gen_msg('attached_to', 'policy',
+                             policy_arn, 'IAM role', self._role))
 
     def _init_instance_profile(self):
         """
         Initialize instance profile.
 
-        This is required to allow loading FPGA bitstream.
+        This instance_profile allow to perform actions defined by role.
         """
-        instance_profile = 'AccelizeLoadFPGA'
-
         iam_client = self._session.client('iam')
-        try:
-            instance_profile = iam_client.create_instance_profile(
-                InstanceProfileName=instance_profile)
 
-        except iam_client.exceptions.EntityAlreadyExistsException:
-            pass
+        # Create instance profile
+        instance_profile_name = 'AccelizeLoadFPGA'
+        with _ExceptionHandler.catch(filter_error_codes='EntityAlreadyExists'):
+            iam_client.create_instance_profile(
+                InstanceProfileName=instance_profile_name)
 
-        else:
             _get_logger().info(
-                _utl.gen_msg('created_object', 'instance profile', instance_profile))
+                _utl.gen_msg('created_object', 'instance profile',
+                             instance_profile_name))
 
             _time.sleep(5)
 
-            # Attach role to instance profile
-            instance_profile.add_role(RoleName=self._role)
+        # Attach role to instance profile
+        with _ExceptionHandler.catch(filter_error_codes='LimitExceeded'):
+            iam_client.add_role_to_instance_profile(
+                InstanceProfileName=instance_profile_name, RoleName=self._role)
+
             _get_logger().info(
                 _utl.gen_msg('attached_to', 'role', self._role,
-                             'instance profile', instance_profile))
+                             'instance profile', instance_profile_name))
 
     def _init_security_group(self):
         """
