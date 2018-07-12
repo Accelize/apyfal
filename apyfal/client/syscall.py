@@ -270,7 +270,7 @@ class SysCallClient(_Client):
                 self._configuration_parameters['env'][config_key] = full_env[cred_key]
 
             # Checks if credentials are valid
-            self._config.access_token
+            new_env['access_token'] = self._config.access_token
 
         elif cur_env['client_id'] is None:
             # No credentials

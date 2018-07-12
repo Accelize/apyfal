@@ -351,7 +351,7 @@ class Configuration(_Mapping):
         Write configuration file.
 
         Args:
-            fileobject (file-like oQbject):
+            fileobject (file-like object):
                 file-like object open in text mode.
         """
         # Creates config parser

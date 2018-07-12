@@ -61,6 +61,7 @@ class Host(_utl.ABC):
         # Default some attributes
         self._accelerator = None
         self._stop_mode = None
+        self._config_env = None
         self._config_section = 'host.%s' % self.NAME if self.NAME else 'host'
 
         # Read configuration from file

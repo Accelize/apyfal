@@ -354,13 +354,15 @@ class AWSHost(_CSPHost):
         """
         with _utl.Timeout(1, sleep=0.01) as timeout:
             while True:
+                # Check Timeout
+                if timeout.reached():
+                    raise _exc.HostRuntimeException(
+                        gen_msg=('no_instance_id', self._instance_id))
+
+                # Get status
                 with _ExceptionHandler.catch(
                         filter_error_codes='InvalidInstanceID.NotFound'):
                     return self._instance.state["Name"]
-                if timeout.reached():
-                    raise _exc.HostRuntimeException(
-                        gen_msg=('no_instance_id', self._instance_id),
-                        exc=exception)
 
     def _get_config_env_from_region(self, accel_parameters_in_region):
         """
@@ -387,17 +389,17 @@ class AWSHost(_CSPHost):
         Returns:
             dict: Configuration environment.
         """
-        currenv = _deepcopy(self._config_env)
+        current_env = _deepcopy(self._config_env)
 
         try:
-            currenv['AGFI'] = kwargs['AGFI']
+            current_env['AGFI'] = kwargs['AGFI']
         except KeyError:
             pass
         else:
             import warnings
             warnings.warn(
                 "Overwrite AGFI factory requirements with custom configuration")
-        return currenv
+        return current_env
 
     def _create_instance(self):
         """

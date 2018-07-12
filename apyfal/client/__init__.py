@@ -462,7 +462,6 @@ class AcceleratorClient(_utl.ABC):
         Args:
             url (str): apyfal.storage URL of the file.
             mode (str): Access mode. 'r' or 'w'.
-            stream (bool): Use temporary stream.
 
         Returns:
             str or file-like object: temporary object.

@@ -221,10 +221,10 @@ class Accelerator(object):
         """
         # Stops accelerator
         try:
-            stop_result = self._client.stop(info_dict=info_dict)
+            return self._client.stop(info_dict=info_dict)
 
         except (AttributeError, _exc.ClientException):
-            stop_result = None
+            return None
 
         # Stops host
         finally:
@@ -233,8 +233,6 @@ class Accelerator(object):
                     self._host.stop(stop_mode)
                 except (AttributeError, _exc.HostException):
                     pass
-
-        return stop_result
 
     @staticmethod
     def _log_profiling_info(process_result):

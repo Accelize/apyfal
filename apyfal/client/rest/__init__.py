@@ -21,6 +21,7 @@ try:
 except ImportError:
     _USE_PYCURL = False
     _pycurl = None
+    _BytesIO = None
 
 import apyfal._utilities as _utl
 import apyfal.exceptions as _exc
