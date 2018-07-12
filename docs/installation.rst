@@ -8,7 +8,7 @@ Supported Python versions: 2.7, 3.4, 3.5, 3.6, 3.7
 
 Required Python Packages:
 
--  ``Request``, ``urllib3``, ``six``, ``certifi``, ``python-dateutil``, ``ipgetter``, ``psutil``, ``cryptography``
+-  ``Request``, ``urllib3``, ``six``, ``certifi``, ``python-dateutil``, ``ipgetter``, ``psutil``
 -  ``pip`` and ``setuptools``: For package installation
 -  ``boto3`` (Optional): Required for AWS.
 -  ``openstack`` (Optional): Required for OpenStack and OVH.
