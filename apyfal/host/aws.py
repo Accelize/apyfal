@@ -6,7 +6,6 @@ from json import dumps as _json_dumps
 import time as _time
 
 import boto3 as _boto3
-import botocore.exceptions as _boto_exceptions
 
 from apyfal.host._csp import CSPHost as _CSPHost
 import apyfal.exceptions as _exc

@@ -102,7 +102,7 @@ class S3Storage(_BucketStorage):
         """
         bucket, path = self._get_bucket(source)
         with _ExceptionHandler.catch():
-            bucket.download_fileobj(source, stream)
+            bucket.download_fileobj(path, stream)
 
     def copy_from_stream(self, stream, destination):
         """
@@ -114,7 +114,7 @@ class S3Storage(_BucketStorage):
         """
         bucket, path = self._get_bucket(destination)
         with _ExceptionHandler.catch():
-            bucket.upload_fileobj(stream, destination)
+            bucket.upload_fileobj(stream, path)
 
     def _copy_from_aws(self, source, destination):
         """
