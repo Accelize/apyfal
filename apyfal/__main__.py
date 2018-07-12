@@ -281,7 +281,7 @@ def _run_command():
     """
     Command line entry point
     """
-    from argparse import ArgumentParser
+    from argparse import ArgumentParser, SUPPRESS
 
     # Initialize some values
     epilog_base = (
@@ -324,6 +324,7 @@ def _run_command():
     action.add_argument('--accelize_secret_id')
     action.add_argument('--host_type')
     action.add_argument('--host_ip')
+    action.add_argument('--stop_mode', default='keep', help=SUPPRESS)
 
     # apyfal.Accelerator.start()
     description = 'Start and configure Accelerator.'
@@ -356,6 +357,7 @@ def _run_command():
         'stop', help=description, description=description)
     action.add_argument('--name', '-n', **name_arg)
     action.add_argument('--info_dict', action='store_true')
+    action.add_argument('--stop_mode', default='term')
 
     # apyfal.storage.copy()
     description = 'Copy Apyfal Storage URL.'
