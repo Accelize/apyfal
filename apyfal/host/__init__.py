@@ -23,11 +23,6 @@ class Host(_utl.ABC):
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new host, or 'keep' if already existing host.
             See "stop_mode" property for more information and possible values.
-        exit_host_on_signal (bool): If True, exit host
-            on OS exit signals. This may help to not have host still running
-            if Python interpreter is not exited properly. Note: this is provided for
-            convenience and does not cover all exit case like process kill and
-            may not work on all OS.
     """
     #: Host type name (str), must be the same as expected "host_type" argument value
     NAME = None
@@ -61,7 +56,7 @@ class Host(_utl.ABC):
             cls, host_type, 'host_type', _exc.HostConfigurationException)
 
     def __init__(self, host_type=None, config=None, host_ip=None,
-                 stop_mode=None, exit_host_on_signal=False, **_):
+                 stop_mode=None, **_):
 
         # Default some attributes
         self._accelerator = None
@@ -79,9 +74,6 @@ class Host(_utl.ABC):
         self.stop_mode = (
             stop_mode or section['stop_mode'] or
             ('keep' if host_ip else 'term'))
-
-        # Enable optional Signal handler
-        self._set_signals(exit_host_on_signal)
 
     def __enter__(self):
         return self
@@ -239,25 +231,6 @@ class Host(_utl.ABC):
             # Use default value if any
             host_type = cls.NAME
         return host_type
-
-    def _set_signals(self, exit_host_on_signal=True):
-        """
-        Set a list of interrupt signals to be handled asynchronously to emergency stop
-        host in case of unexpected exit.
-
-        Args:
-            exit_host_on_signal (bool): If True, enable stop on signals.
-        """
-        if not exit_host_on_signal:
-            return
-
-        # Lazy import since optional feature
-        import signal
-
-        for signal_name in ('SIGTERM', 'SIGINT', 'SIGQUIT'):
-            # Check signal exist on current OS before setting it
-            if hasattr(signal, signal_name):
-                signal.signal(getattr(signal, signal_name), self.stop)
 
     def _check_arguments(self, *arg_name):
         """

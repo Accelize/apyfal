@@ -52,11 +52,6 @@ class AWSHost(_CSPHost):
         init_config (str or apyfal.configuration.Configuration or file-like object):
             Configuration file to pass to instance on initialization.
             This configuration file will be used as default for host side accelerator.
-        exit_host_on_signal (bool): If True, exit instance
-            on OS exit signals. This may help to not have instance still running
-            if Python interpreter is not exited properly. Note: this is provided for
-            convenience and does not cover all exit case like process kill and
-            may not work on all OS.
     """
     #: Provider name to use
     NAME = 'AWS'

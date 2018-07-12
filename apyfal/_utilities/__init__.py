@@ -300,12 +300,13 @@ def recursive_update(to_update, update):
 
     Returns:
         dict: to_update
-        """
-    for key, value in update.items():
-        if isinstance(value, collections.Mapping):
-            value = recursive_update(
-                to_update.get(key, {}), value)
-        to_update[key] = value
+    """
+    if update:
+        for key, value in update.items():
+            if isinstance(value, collections.Mapping):
+                value = recursive_update(
+                    to_update.get(key, {}), value)
+            to_update[key] = value
     return to_update
 
 

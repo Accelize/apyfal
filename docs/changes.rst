@@ -1,8 +1,8 @@
 Changelog
 =========
 
-1.1.0 (In development)
-----------------------
+1.1.0 (2018/07)
+---------------
 
 New features
 
@@ -13,13 +13,19 @@ Configuration improvements:
 
 - Add subsection support in configuration file (ex: ``[host.host_type]``)
 - Configuration file can be loaded from ``apyfal.storage`` URL.
-- Configuration class is now a Mapping instead of ConfigParser subclass.
+- Configuration class is now a ``Mapping`` instead of ``ConfigParser`` subclass.
+- Configuration file is now open with UTF-8 encoding.
 
 Fixes:
 
-- Importing Apyfal from an unsupported Python version now raise ``ImportError``.
+- Importing Apyfal from an unsupported Python version now raises ``ImportError``.
 - Host ``stop_mode`` not correctly loaded from configuration file.
 - ``accelerator`` in exception message when trying to use a non existing region.
+
+Deprecations:
+
+- ``exit_host_on_signal`` host parameter was removed due to side effects.
+  Use accelerator with the ``with`` statement to automatically terminate instance after run.
 
 1.0.0 (2018/06)
 ---------------
@@ -43,6 +49,10 @@ Known Issues:
 -------------
 
 - All communication between client and host accelerator is in unencrypted plain text.
-- Using ``stop_mode="stop"`` on OpenStack terminates instance.
 - Using ``start`` is mandatory when connecting to an already existing instance.
-- Configuration file is not properly passed to the instance on OpenStack with ``init_config`` argument.
+
+OpenStack only:
+~~~~~~~~~~~~~~~
+
+- Using ``stop_mode="stop"`` terminates instance.
+- Configuration file is not properly passed to the instance with ``init_config`` argument.

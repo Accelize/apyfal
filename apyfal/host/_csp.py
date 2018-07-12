@@ -48,11 +48,6 @@ class CSPHost(_Host):
             If value is a configuration use this configuration.
             If value is None or False, don't passe any configuration file
             (This is default behavior).
-        exit_host_on_signal (bool): If True, exit instance
-            on OS exit signals. This may help to not have instance still running
-            if Python interpreter is not exited properly. Note: this is provided for
-            convenience and does not cover all exit case like process kill and
-            may not work on all OS.
     """
     #: Instance status when running
     STATUS_RUNNING = 'running'

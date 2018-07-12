@@ -237,7 +237,7 @@ class Configuration(_Mapping):
 
             # Read from file with apyfal.storage support
             from apyfal.storage import open as srg_open
-            with srg_open(configuration_file, 'rt') as file:
+            with srg_open(configuration_file, 'rt', encoding='utf-8') as file:
                 getattr(ini_file, CONFIG_PARSER_READ)(file)
 
             # Retrieve parameters from configuration parser

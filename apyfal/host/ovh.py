@@ -27,11 +27,6 @@ class OVHHost(_OpenStackHost):
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing instance.
             See "stop_mode" property for more information and possible values.
-        exit_host_on_signal (bool): If True, exit instance
-            on OS exit signals. This may help to not have instance still running
-            if Python interpreter is not exited properly. Note: this is provided for
-            convenience and does not cover all exit case like process kill and
-            may not work on all OS.
     """
     #: Provider name to use
     NAME = 'OVH'
