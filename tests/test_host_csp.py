@@ -648,9 +648,15 @@ def run_full_real_test_sequence(host_type, environment,
     # Skip if no correct configuration with this host_type
     config = Configuration()
 
-    if config['host']['host_type'] == host_type:
-        del config['host']['client_id']
-        del config['host']['secret_id']
+    if config['host']['host_type'] != host_type:
+        try:
+            del config['host']['client_id']
+        except KeyError:
+            pass
+        try:
+            del config['host']['secret_id']
+        except KeyError:
+            pass
 
     section = config['host.%s' % host_type]
     if not section['client_id'] or not section['secret_id']:
