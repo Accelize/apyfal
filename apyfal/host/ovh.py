@@ -21,7 +21,8 @@ class OVHHost(_OpenStackHost):
         security_group: OVH Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing OVH nova instance to use.
             If not specified, create a new instance.
-        instance_ip (str): IP or URL address of an already existing OVH nova instance to use.
+        instance_name_prefix (str): Prefix to add to instance name.
+        host_ip (str): IP or URL address of an already existing AWS EC2 instance to use.
             If not specified, create a new instance.
         project_id (str): OVH Project
         stop_mode (str or int): Define the "stop" method behavior.

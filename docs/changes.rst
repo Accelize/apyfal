@@ -15,6 +15,8 @@ Configuration improvements:
 - Configuration file can be loaded from ``apyfal.storage`` URL.
 - Configuration class is now a ``Mapping`` instead of ``ConfigParser`` subclass.
 - Configuration file is now open with UTF-8 encoding.
+- Add ``instance_name_prefix`` in host section, This allow to add a custom prefix at the start
+  of the created instance name.
 
 Fixes:
 

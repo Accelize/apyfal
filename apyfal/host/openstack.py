@@ -36,7 +36,8 @@ class OpenStackHost(_CSPHost):
         security_group: OpenStack Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing OpenStack nova instance to use.
             If not specified, create a new instance.
-        instance_ip (str): IP or URL address of an already existing OpenStack nova instance to use.
+        instance_name_prefix (str): Prefix to add to instance name.
+        host_ip (str): IP or URL address of an already existing AWS EC2 instance to use.
             If not specified, create a new instance.
         project_id (str): OpenStack Project
         auth_url (str): OpenStack auth-URL

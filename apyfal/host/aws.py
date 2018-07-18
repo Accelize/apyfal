@@ -41,7 +41,8 @@ class AWSHost(_CSPHost):
         security_group: AWS Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing AWS EC2 instance to use.
             If not specified, create a new instance.
-        instance_ip (str): IP or URL address of an already existing AWS EC2 instance to use.
+        instance_name_prefix (str): Prefix to add to instance name.
+        host_ip (str): IP or URL address of an already existing AWS EC2 instance to use.
             If not specified, create a new instance.
         role (str): AWS IAM role. Generated to allow instance to load AGFI (FPGA bitstream).
             Default to 'AccelizeRole'.
