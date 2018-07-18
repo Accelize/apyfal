@@ -3,6 +3,7 @@
 
 from io import BytesIO
 from shutil import copyfileobj
+from sys import version_info
 
 
 def test_storage_hook():
@@ -120,8 +121,9 @@ def test_open(tmpdir):
             assert data.read() == content.decode()
 
         # Python 2 unicode URL
-        with srg.open(str(local_file).decode(), 'rt') as data:
-            assert data.read() == content.decode()
+        if version_info[0] == 2:
+            with srg.open(str(local_file).decode(), 'rt') as data:
+                assert data.read() == content.decode()
 
         # Stream:
         stream_file = BytesIO(content)

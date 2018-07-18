@@ -242,7 +242,10 @@ class Configuration(_Mapping):
 
             # Retrieve parameters from configuration parser
             self._sections = {
-                section: _Section(section, self, ini_file.items(section))
+                section: _Section(
+                    section, self,
+                    {key: value for key, value in ini_file.items(section)
+                     if value not in (None, '')})
                 for section in ini_file.sections()}
 
             # AcceleratorAPI backward compatibility

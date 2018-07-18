@@ -53,6 +53,7 @@ def test_configuration(tmpdir):
     config_file.write(content)
     config = DummyConfiguration(str(config_file))
     assert has_accelize_credential(config)
+    assert config['empty_option']['option'] is None
 
     # Test: export file
     config['dummy']['dummy'] = None
