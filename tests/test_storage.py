@@ -119,6 +119,10 @@ def test_open(tmpdir):
         with srg.open(str(local_file), 'rt') as data:
             assert data.read() == content.decode()
 
+        # Python 2 unicode URL
+        with srg.open(str(local_file).decode(), 'rt') as data:
+            assert data.read() == content.decode()
+
         # Stream:
         stream_file = BytesIO(content)
         with srg.open(stream_file, 'rb') as data:

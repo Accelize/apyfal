@@ -238,7 +238,7 @@ def format_url(url_or_ip):
         ValueError: Not a proper URL
     """
     # Skip if URL is None.
-    if url_or_ip is None:
+    if not url_or_ip:
         return None
 
     # From "django.core.validator.URLValidator"

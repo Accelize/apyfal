@@ -103,7 +103,7 @@ def parse_url(url, host=True):
     Returns:
         tuple of str: (storage_type, path)
     """
-    if not isinstance(url, str):
+    if hasattr(url, 'read'):
         return 'stream', url
 
     split_url = url.split('://', 1)
