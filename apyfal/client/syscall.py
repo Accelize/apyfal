@@ -150,10 +150,6 @@ class SysCallClient(_Client):
             output_json=str(_uuid()) if info_dict else None
         )
 
-        # Stops services
-        # TODO: Better to not stop services ?
-        _systemctl('stop', 'meteringclient', 'meteringsession')
-
         # Gets optional information
         return response
 
