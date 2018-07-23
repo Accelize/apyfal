@@ -8,6 +8,7 @@ except ImportError:
     # Python 3
     from io import BytesIO
 
+from importlib import import_module
 from shutil import copyfileobj
 import uuid
 
@@ -60,17 +61,10 @@ def run_full_real_test_sequence(storage_type, tmpdir):
         storage_type (str): Bucket storage_type.
         tmpdir (object): tmpdir Pytest fixture
     """
-    from apyfal.configuration import Configuration
+    from apyfal.storage import Storage
 
     # Skip if no correct configuration with this host_type
-    config = Configuration()
-    full_storage_type = ''
-    for section in config:
-        if section.lower().startswith(
-                'storage.%s.' % storage_type.lower()):
-            full_storage_type = section.split('.', 1)[1]
-
-    if not full_storage_type:
+    if not Storage(storage_type=storage_type)._client_id:
         pytest.skip('No configuration for %s.' % storage_type)
 
     # Initializes local file source
@@ -113,8 +107,8 @@ def run_full_real_test_sequence(storage_type, tmpdir):
     # Tests
     try:
         # Register bucket
-        storage = register(full_storage_type)
-        storage_dir = '%s://apyfal_testing/' % storage.storage_id
+        storage = register(storage_type)
+        storage_dir = '%s://testaccelizestorage/apyfal_testing/' % storage.storage_id
 
         # Local file to bucket
         file_name = storage_dir + str(uuid.uuid4())
