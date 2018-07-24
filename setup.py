@@ -52,9 +52,10 @@ PACKAGE_INFO = dict(
         'optional': ['pycurl'],
 
         # Host specific requirements
-        'Alibaba' : [
-            'pyopenssl', 'oss2', 'aliyun-python-sdk-core%s' % (
-            '-v3' if version_info[0] > 2 else '')],
+        'Alibaba': [
+            'pyopenssl', 'oss2',
+            'aliyun-python-sdk-core; python_version == "2.7"',
+            'aliyun-python-sdk-core-v3; python_version >= "3.4"'],
         'AWS': ['boto3'],
         'OpenStack': ['openstacksdk'],
         'OVH': ['openstacksdk']},
