@@ -22,7 +22,7 @@ PACKAGE_INFO = dict(
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
-        'Topic :: Other/Nonlisted Topic',
+        'Topic :: System :: Distributed Computing',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
