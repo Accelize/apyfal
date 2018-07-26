@@ -19,6 +19,6 @@ def test_ovhclass_real():
     run_full_real_test_sequence('OVH', {
         'GRA3': {
             # Image name: Debian 9
-            'image': 'b1ad5a98-e83f-45f3-a60e-5a9fea01d141',
+            'image': 'bc8953ea-74cd-407f-a09e-2652b5779fe8',
             'instancetype': 's1-2'
-        }}, support_stop_restart=False)
+        }})

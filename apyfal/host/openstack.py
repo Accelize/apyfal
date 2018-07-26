@@ -1,22 +1,43 @@
 # coding=utf-8
 """OpenStack Nova"""
-# Absolute import required on Python 2 to avoid collision
-# of this module with openstack-sdk package
-from __future__ import absolute_import as _absolute_import
+from contextlib import contextmanager as _contextmanager
 
-import openstack as _openstack
+from novaclient.client import Client as _Client
+from novaclient.exceptions import (
+    Unauthorized as _Unauthorized, ClientException as _ClientException)
 
 from apyfal.host._csp import CSPHost as _CSPHost
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
-import apyfal._utilities.openstack as _utl_openstack
 from apyfal._utilities import get_logger as _get_logger
+import apyfal._utilities.openstack as _utl_openstack
 
 
-class _ExceptionHandler(_utl_openstack.ExceptionHandler):
-    """Host OpenStack exception handler"""
-    RUNTIME = _exc.HostRuntimeException
-    AUTHENTICATION = _exc.HostAuthenticationException
+@_contextmanager
+def _exception_handler(to_raise=None, ignore=False, **exc_kwargs):
+    """
+    Context manager that catch OpenStack exceptions and raises
+    Apyfal exceptions.
+
+    Args:
+        to_raise (apyfal.exception.AcceleratorException subclass):
+            Exception to raise. self.RUNTIME if not specified.
+        ignore (bool): If True, don't raises exception.
+        exc_kwargs: Exception to raise arguments.
+    """
+    # Performs operation
+    try:
+        yield
+
+    # Catch authentication exceptions
+    except _Unauthorized as exception:
+        raise _exc.HostAuthenticationException(exc=exception)
+
+    # Catch specified exceptions
+    except _ClientException as exception:
+        # Raises Apyfal exception
+        if not ignore:
+            raise (to_raise or _exc.HostRuntimeException)(exc=exception, **exc_kwargs)
 
 
 class OpenStackHost(_CSPHost):
@@ -52,6 +73,15 @@ class OpenStackHost(_CSPHost):
     #: Provider name to use
     NAME = 'OpenStack'
 
+    #: Instance status when running
+    STATUS_RUNNING = 'ACTIVE'
+
+    #: Instance status when stopped
+    STATUS_STOPPED = 'PAUSED'
+
+    #: Instance status when in error
+    STATUS_ERROR = 'ERROR'
+
     # Default OpenStack auth-URL to use (str)
     OPENSTACK_AUTH_URL = None
 
@@ -80,10 +110,10 @@ class OpenStackHost(_CSPHost):
         self._check_arguments('project_id', 'auth_url', 'interface')
 
         # Load session
-        self._session = _utl_openstack.connect(
-            region=self._region, auth_url=self._auth_url,
-            client_id=self._client_id, secret_id=self._secret_id,
-            project_id=self._project_id, interface=self._interface)
+        self._session = _Client(
+            version='2', username=self._client_id, password=self._secret_id,
+            project_id=self._project_id, auth_url=self._auth_url,
+            region_name=self._region)
 
     def _check_credential(self):
         """
@@ -93,9 +123,8 @@ class OpenStackHost(_CSPHost):
             apyfal.exceptions.HostAuthenticationException:
                 Authentication failed.
         """
-        with _ExceptionHandler.catch(
-                to_raise=_exc.HostAuthenticationException):
-            list(self._session.network.networks())
+        with _exception_handler():
+            self._session.servers.list(detailed=False, limit=1)
 
     def _init_key_pair(self):
         """
@@ -104,18 +133,17 @@ class OpenStackHost(_CSPHost):
         Returns:
             bool: True if reuses existing key
         """
-        # Get key pair from CSP
-        with _ExceptionHandler.catch(gen_msg=('no_find', "key pair")):
-            key_pair = self._session.compute.find_keypair(
-                self._key_pair, ignore_missing=True)
-
-        # Use existing key
-        if key_pair:
-            return True
+        # Get key pair from CSP is exists
+        key_pair_name = self._key_pair.lower()
+        with _exception_handler(gen_msg=('no_find', "key pair")):
+            for key_pair in self._session.keypairs.list():
+                if key_pair.name.lower() == key_pair_name:
+                    self._key_pair = key_pair.name
+                    return True
 
         # Create key pair if not exists
-        with _ExceptionHandler.catch(gen_msg=('created_failed', "key pair")):
-            key_pair = self._session.compute.create_keypair(name=self._key_pair)
+        with _exception_handler(gen_msg=('created_failed', "key pair")):
+            key_pair = self._session.keypairs.create_keypair(name=self._key_pair)
 
         _utl.create_key_pair_file(self._key_pair, key_pair.private_key)
 
@@ -125,10 +153,18 @@ class OpenStackHost(_CSPHost):
         """
         Initialize CSP security group.
         """
+        # TODO: python-novaclient >= 8 don't support security groups
+        # Needs to use neutronclient
+        # https://github.com/gc3-uzh-ch/elasticluster/issues/425
+        session = _utl_openstack.connect(
+            region=self._region, auth_url=self._auth_url,
+            client_id=self._client_id, secret_id=self._secret_id,
+            project_id=self._project_id, interface=self._interface)
+
         # Create security group if not exists
-        security_group = self._session.get_security_group(self._security_group)
+        security_group = session.get_security_group(self._security_group)
         if security_group is None:
-            security_group = self._session.create_security_group(
+            security_group = session.create_security_group(
                 self._security_group, _utl.gen_msg('accelize_generated'),
                 project_id=self._project_id)
             _get_logger().info(_utl.gen_msg(
@@ -139,11 +175,13 @@ class OpenStackHost(_CSPHost):
 
         # Create rule on SSH and HTTP
         for port in self.ALLOW_PORTS:
-            with _ExceptionHandler.catch(ignore=True):
-                self._session.create_security_group_rule(
+            try:
+                session.create_security_group_rule(
                     security_group.id, port_range_min=port, port_range_max=port,
                     protocol="tcp", remote_ip_prefix=public_ip,
                     project_id=self._project_id)
+            except _utl_openstack.SDKException:
+                pass
 
         _get_logger().info(
             _utl.gen_msg('authorized_ip', public_ip, self._security_group))
@@ -156,9 +194,9 @@ class OpenStackHost(_CSPHost):
             object: Instance
         """
         # Try to find instance
-        with _ExceptionHandler.catch(
+        with _exception_handler(
                 gen_msg=('no_instance_id', self._instance_id)):
-            return self._session.get_server(self._instance_id)
+            return self._session.servers.get(self._instance_id)
 
     def _get_public_ip(self):
         """
@@ -167,7 +205,7 @@ class OpenStackHost(_CSPHost):
         Returns:
             str: IP address
         """
-        for address in list(self._instance.addresses.values())[0]:
+        for address in list(self._get_instance().addresses.values())[0]:
             if address['version'] == 4:
                 return address['addr']
         raise _exc.HostRuntimeException(gen_msg='no_instance_ip')
@@ -188,7 +226,7 @@ class OpenStackHost(_CSPHost):
         Returns:
             str: Status
         """
-        return self._instance.status
+        return self._get_instance().status
 
     def _create_instance(self):
         """
@@ -212,10 +250,9 @@ class OpenStackHost(_CSPHost):
             accel_parameters_in_region)
 
         # Checks if image exists and get its name
-        with _ExceptionHandler.catch(
-                to_catch=_openstack.exceptions.ResourceNotFound,
+        with _exception_handler(
                 gen_msg=('unable_find_from', 'image', image_id, 'Accelize')):
-            image = self._session.compute.find_image(image_id)
+            image = self._session.glance.find_image(image_id)
         try:
             self._image_name = image.name
         except AttributeError:
@@ -236,39 +273,17 @@ class OpenStackHost(_CSPHost):
             str: instance_type
         """
         # Get instance type (flavor)
-        self._instance_type_name = _CSPHost._get_instance_type_from_region(
-            accel_parameters_in_region)
-        with _ExceptionHandler.catch(
-                to_catch=_openstack.exceptions.ResourceNotFound,
+        flavor_name = _CSPHost._get_instance_type_from_region(
+            accel_parameters_in_region).lower()
+
+        with _exception_handler(
                 to_raise=_exc.HostConfigurationException,
                 gen_msg=('unable_find_from', 'flavor',
-                         self._instance_type_name, self._host_type)):
-            instance_type = self._session.compute.find_flavor(
-                self._instance_type_name).id
-
-        return instance_type
-
-    def _wait_instance_ready(self):
-        """
-        Wait until instance is ready.
-        """
-        # Waiting for the instance provisioning
-        try:
-            self._instance = self._session.compute.wait_for_server(self._instance)
-        except _openstack.exceptions.SDKException as exception:
-            self._instance = self._get_instance()
-            try:
-                msg = self._instance.fault.message
-            except AttributeError:
-                msg = exception
-            raise _exc.HostRuntimeException(exc=msg)
-
-        # Check instance status
-        status = self._get_status()
-        if status.lower() == "error":
-            self.stop()
-            raise _exc.HostRuntimeException(
-                gen_msg=('unable_to_status', "initialize", status))
+                         flavor_name, self._host_type)):
+            for flavor in self._session.flavors.list():
+                if flavor.name.lower() == flavor_name:
+                    self._instance_type_name = flavor.name
+                    return flavor.id
 
     def _start_new_instance(self):
         """
@@ -278,12 +293,14 @@ class OpenStackHost(_CSPHost):
             object: Instance
             str: Instance ID
         """
-        with _ExceptionHandler.catch(gen_msg=('unable_to', "start")):
-            instance = self._session.compute.create_server(
+        with _exception_handler(gen_msg=('unable_to', "start")):
+            image = self._session.glance.find_image(self._image_id)
+            flavor = self._session.flavors.get(self._instance_type)
+            instance = self._session.servers.create(
                 name=self._get_instance_name(),
-                image_id=self._image_id, flavor_id=self._instance_type,
+                image=image, flavor=flavor,
                 key_name=self._key_pair,
-                security_groups=[{"name": self._security_group}],
+                security_groups=[self._security_group],
                 userdata=self._user_data)
 
         return instance, instance.id
@@ -295,21 +312,20 @@ class OpenStackHost(_CSPHost):
         Args:
             status (str): Status of the instance.
         """
-        if status.lower() != "active":
-            with _ExceptionHandler.catch(
-                    gen_msg=('unable_to', "start")):
-                self._session.start_server(self._instance)
+        if status.lower() != self.STATUS_RUNNING:
+            with _exception_handler(gen_msg=('unable_to', "start")):
+                self._session.servers.start(self._instance)
 
     def _terminate_instance(self):
         """
         Terminate and delete instance.
         """
-        with _ExceptionHandler.catch(gen_msg=('unable_to', "delete")):
-            if not self._session.delete_server(self._instance, wait=True):
-                raise _exc.HostRuntimeException(_utl.gen_msg('unable_to', "delete"))
+        with _exception_handler(gen_msg=('unable_to', "delete")):
+            self._session.servers.force_delete(self._instance)
 
     def _pause_instance(self):
         """
         Pause instance.
         """
-        self._terminate_instance()
+        with _exception_handler(gen_msg=('unable_to', "pause")):
+            self._session.servers.pause(self._instance)
