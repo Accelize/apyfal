@@ -55,6 +55,9 @@ class CSPHost(_Host):
     #: Instance status when stopped
     STATUS_STOPPED = 'stopped'
 
+    #: Instance status when in error
+    STATUS_ERROR = 'error'
+
     #: Allowed ports for instance access
     ALLOW_PORTS = [22, 80]
 
@@ -369,7 +372,7 @@ class CSPHost(_Host):
                 status = self._status()
                 if status == self.STATUS_RUNNING:
                     return
-                elif timeout.reached():
+                elif status == self.STATUS_ERROR or timeout.reached():
                     raise _exc.HostRuntimeException(
                         gen_msg=('timeout_status', "provisioning", status))
 
