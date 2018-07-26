@@ -53,8 +53,7 @@ PACKAGE_INFO = dict(
 
         # CSP specific requirements
         'AWS': ['boto3'],
-        'OpenStack': ['openstacksdk'],
-        'OVH': ['openstacksdk']},
+        'OpenStack': ['openstacksdk', 'python-novaclient']},
     setup_requires=['setuptools'],
     tests_require=['pytest'],
     packages=find_packages(exclude=['docs', 'tests', 'rest_api']),
@@ -63,6 +62,9 @@ PACKAGE_INFO = dict(
     command_options={},
     cmdclass={}
     )
+
+# Add OpenStack sub extra:
+PACKAGE_INFO['extras_require']['OVH'] = PACKAGE_INFO['extras_require']['OpenStack']
 
 # Gets package __version__ from package
 SETUP_DIR = abspath(dirname(__file__))
