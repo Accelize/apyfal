@@ -4,6 +4,8 @@ Accelerator executable
 On its host, accelerator uses a the ``accelerator`` command to communicate with FPGA. It is possible to use this command
 directly.
 
+Accelerator CLI do not provides as features as Apyfal CLI, but it can help to reduce latency in some cases.
+
 A configured host is required to use this command. Apyfal can be used to configure an instance and access it with SSH.
 See :doc:`getting_started` for more information.
 

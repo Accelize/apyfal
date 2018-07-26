@@ -1,5 +1,7 @@
-apyfal
-======
+Apyfal API
+==========
+
+This section describes the ``apyfal`` Python package API.
 
 .. automodule:: apyfal
    :members:
