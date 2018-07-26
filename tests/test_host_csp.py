@@ -644,11 +644,13 @@ def run_full_real_test_sequence(host_type, environment,
             and restart.
     """
     from apyfal.configuration import Configuration
+    from apyfal.exceptions import AcceleratorException
 
     # Skip if no correct configuration with this host_type
     config = Configuration()
 
     if config['host']['host_type'] != host_type:
+        config['host']['host_type'] = host_type
         try:
             del config['host']['client_id']
         except KeyError:
@@ -700,8 +702,8 @@ def run_full_real_test_sequence(host_type, environment,
         # Also check getting instance handle with ID
         if support_stop_restart:
             print('Test: Start and stop')
-            with Host(config=config, stop_mode='stop') as csp:
-                csp.start(accel_parameters=environment)
+            with Host(config=config, stop_mode='stop') as csp_stop:
+                csp_stop.start(accel_parameters=environment)
                 instance_id = csp.instance_id
 
             print('Test: Start from stopped and terminate')
@@ -709,11 +711,17 @@ def run_full_real_test_sequence(host_type, environment,
                       stop_mode='term') as csp:
                 csp.start()
 
+            try:
+                # Force close of instance
+                csp_stop.stop(stop_mode='term')
+            except AcceleratorException:
+                pass
+
         # Start and keep, then
         # Also check getting instance handle with URL
         print('Test: Start and keep')
-        with Host(config=config, stop_mode='keep') as csp:
-            csp.start(accel_parameters=environment)
+        with Host(config=config, stop_mode='keep') as csp_keep:
+            csp_keep.start(accel_parameters=environment)
             instance_id = csp.instance_id
             host_ip = csp.url
 
@@ -725,6 +733,12 @@ def run_full_real_test_sequence(host_type, environment,
         with Host(config=config, instance_id=instance_id,
                   stop_mode='term') as csp:
             csp.start()
+
+        try:
+            # Force close of instance
+            csp_keep.stop(stop_mode='term')
+        except AcceleratorException:
+            pass
 
     # Restore check_url
     finally:
