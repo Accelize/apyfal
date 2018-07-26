@@ -66,6 +66,7 @@ Features
    :caption: API Documentation
    
    api
+   cli
    rest
    accelerator_executable
 
