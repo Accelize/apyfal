@@ -372,7 +372,10 @@ class CSPHost(_Host):
                 status = self._status()
                 if status == self.STATUS_RUNNING:
                     return
-                elif status == self.STATUS_ERROR or timeout.reached():
+                elif status == self.STATUS_ERROR:
+                    raise _exc.HostRuntimeException(
+                        gen_msg=('unable_to_status', "provisioning", status))
+                elif timeout.reached():
                     raise _exc.HostRuntimeException(
                         gen_msg=('timeout_status', "provisioning", status))
 

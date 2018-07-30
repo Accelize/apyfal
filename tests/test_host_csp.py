@@ -394,8 +394,9 @@ def test_csphost_start():
         raises_on_start_instance = False
 
         # Test: Fail on instance provisioning
+        # by timeout
         csp = DummyClass(**dummy_kwargs)
-        csp.STATUS_RUNNING = 'bad_status'
+        status = 'bad_status'
         with pytest.raises(HostException) as exc_info:
             csp.start()
             assert csp.DOC_URL in exc_info
@@ -404,6 +405,14 @@ def test_csphost_start():
         assert csp.mark_instance_created
         assert csp.mark_instance_started
         assert csp.mark_instance_terminated
+
+        # Test: Fail on instance provisioning
+        # by error
+        csp = DummyClass(**dummy_kwargs)
+        status = csp.STATUS_ERROR
+        with pytest.raises(HostException):
+            csp.start()
+        status = csp.STATUS_RUNNING
 
         # Test: Fail on boot instance
         raises_on_boot = True

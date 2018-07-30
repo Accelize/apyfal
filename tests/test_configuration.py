@@ -57,6 +57,7 @@ def test_configuration(tmpdir):
 
     # Test: export file
     config['dummy']['dummy'] = None
+    config['dummy']['empty'] = ''
     config_copy = tmpdir.join('config_copy.conf')
     with open(str(config_copy), 'wt') as file:
         config.write(file)
