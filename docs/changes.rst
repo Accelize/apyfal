@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.1.0 (2018/07)
+1.1.0 (2018/08)
 ---------------
 
 New features
@@ -23,6 +23,7 @@ Fixes:
 - Importing Apyfal from an unsupported Python version now raises ``ImportError``.
 - Host ``stop_mode`` not correctly loaded from configuration file.
 - ``accelerator`` in exception message when trying to use a non existing region.
+- Don't wait until end of timeout if instance in error status during instance provisioning.
 
 Deprecations:
 
