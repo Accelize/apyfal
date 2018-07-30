@@ -3,6 +3,7 @@
 
 import abc
 import collections
+from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor
 from contextlib import contextmanager
 from importlib import import_module
 import os
@@ -278,13 +279,22 @@ def get_host_public_ip(max_tries=10, validation_sample=3):
 
     # Gets IP address from multiple sources and
     # checks result consistency before returning one
-    for _ in range(max_tries):
-        ip_addresses = set(
-            myip() for _ in range(validation_sample))
-        if len(ip_addresses) == 1:
-            ip_address = ip_addresses.pop()
-            if ip_address:
-                return "%s/32" % ip_address
+    with _ThreadPoolExecutor(
+            max_workers=validation_sample) as executor:
+        for _ in range(max_tries):
+            # Gets address from multiple source in parallel
+            ip_addresses = [
+                executor.submit(myip)
+                for _ in range(validation_sample)]
+
+            # Checks if addresses match
+            ip_addresses = set(
+                ip_address.result()
+                for ip_address in ip_addresses)
+            if len(ip_addresses) == 1:
+                ip_address = ip_addresses.pop()
+                if ip_address:
+                    return "%s/32" % ip_address
     raise OSError('Unable to get public IP address')
 
 
