@@ -11,7 +11,7 @@ Required Python Packages:
 -  ``Request``, ``urllib3``, ``six``, ``certifi``, ``python-dateutil``, ``ipgetter``, ``psutil``
 -  ``pip`` and ``setuptools``: For package installation
 -  ``boto3`` (Optional): Required for AWS.
--  ``openstack`` (Optional): Required for OpenStack and OVH.
+-  ``python-novaclient`` and ``python-neutronclient`` (Optional): Required for OpenStack and OVH.
 -  ``pycurl`` (Optional): Improve upload performance and file size limit.
 
 Linux

@@ -7,8 +7,11 @@ Changelog
 Improvements
 
 - Speed up instance configuration.
+- Move OpenStack library from ``openstacksdk`` to ``python-novaclient`` and ``python-neutronclient``.
+  This adds more precision over the OpenStach Nova host control and reduces the overall number of required dependencies.
 
 Fixes:
+
 - ``stop`` ``stop_mode`` with OpenStack now pauses instance instead of terminates it.
 
 1.1.0 (2018/07)
