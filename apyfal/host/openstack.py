@@ -2,15 +2,15 @@
 """OpenStack Nova"""
 from contextlib import contextmanager as _contextmanager
 
-from novaclient.client import Client as _Client
-from novaclient.exceptions import (
-    Unauthorized as _Unauthorized, ClientException as _ClientException)
+from novaclient.client import Client as _NovaClient
+from neutronclient.v2_0.client import Client as _NeutronClient
+import novaclient.exceptions as _nova_exc
+import neutronclient.common.exceptions as _neutron_exc
 
 from apyfal.host._csp import CSPHost as _CSPHost
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
 from apyfal._utilities import get_logger as _get_logger
-import apyfal._utilities.openstack as _utl_openstack
 
 
 @_contextmanager
@@ -30,14 +30,17 @@ def _exception_handler(to_raise=None, ignore=False, **exc_kwargs):
         yield
 
     # Catch authentication exceptions
-    except _Unauthorized as exception:
+    except (_nova_exc.Unauthorized,
+            _neutron_exc.Unauthorized) as exception:
         raise _exc.HostAuthenticationException(exc=exception)
 
     # Catch specified exceptions
-    except _ClientException as exception:
+    except (_nova_exc.ClientException,
+            _neutron_exc.NeutronClientException) as exception:
         # Raises Apyfal exception
         if not ignore:
-            raise (to_raise or _exc.HostRuntimeException)(exc=exception, **exc_kwargs)
+            raise (to_raise or _exc.HostRuntimeException)(
+                exc=exception, **exc_kwargs)
 
 
 class OpenStackHost(_CSPHost):
@@ -113,7 +116,7 @@ class OpenStackHost(_CSPHost):
         self._check_arguments('project_id', 'auth_url', 'interface')
 
         # Load session
-        self._session = _Client(
+        self._session = _NovaClient(
             version='2', username=self._client_id, password=self._secret_id,
             project_id=self._project_id, auth_url=self._auth_url,
             region_name=self._region)
@@ -155,35 +158,42 @@ class OpenStackHost(_CSPHost):
         """
         Initialize CSP security group.
         """
-        # TODO: python-novaclient >= 8 don't support security groups
-        # Needs to use neutronclient
-        # https://github.com/gc3-uzh-ch/elasticluster/issues/425
-        session = _utl_openstack.connect(
-            region=self._region, auth_url=self._auth_url,
-            client_id=self._client_id, secret_id=self._secret_id,
-            project_id=self._project_id, interface=self._interface)
+        # Connect to Neutron using same authentication session
+        neutron = _NeutronClient(session=self._session.client.session,
+                                 region_name=self._region)
+
+        # Checks if security group exists
+        security_group_id = None
+        security_group_name = self._security_group.lower()
+        with _exception_handler(gen_msg=('no_find', "security groups")):
+            for security_group in neutron.list_security_groups()['security_groups']:
+                if security_group['name'].lower() == security_group_name:
+                    self._security_group = security_group['name']
+                    security_group_id = security_group['id']
 
         # Create security group if not exists
-        security_group = session.get_security_group(self._security_group)
-        if security_group is None:
-            security_group = session.create_security_group(
-                self._security_group, _utl.gen_msg('accelize_generated'),
-                project_id=self._project_id)
+        if security_group_id is None:
+            with _exception_handler(gen_msg=('created_failed', "security groups")):
+                security_group_id = neutron.create_security_group({
+                    'security_group': {
+                        'name': self._security_group,
+                        'description': _utl.gen_msg('accelize_generated'),
+                    }})['security_group']['id']
+
             _get_logger().info(_utl.gen_msg(
-                'created_named', 'security group', security_group.name))
+                'created_named', 'security group', self._security_group))
 
         # Verify rules associated to security group for host IP address
         public_ip = _utl.get_host_public_ip()
 
         # Create rule on SSH and HTTP
         for port in self.ALLOW_PORTS:
-            try:
-                session.create_security_group_rule(
-                    security_group.id, port_range_min=port, port_range_max=port,
-                    protocol="tcp", remote_ip_prefix=public_ip,
-                    project_id=self._project_id)
-            except _utl_openstack.SDKException:
-                pass
+            with _exception_handler(ignore=True):
+                neutron.create_security_group_rule(
+                   {'security_group_rule': {
+                       'direction': 'ingress', 'port_range_min': str(port),
+                       'port_range_max': str(port), 'remote_ip_prefix': public_ip,
+                       'protocol': 'tcp', 'security_group_id': security_group_id}})
 
         _get_logger().info(
             _utl.gen_msg('authorized_ip', public_ip, self._security_group))

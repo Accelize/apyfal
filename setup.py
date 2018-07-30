@@ -54,7 +54,7 @@ PACKAGE_INFO = dict(
 
         # CSP specific requirements
         'AWS': ['boto3'],
-        'OpenStack': ['openstacksdk', 'python-novaclient']},
+        'OpenStack': ['python-novaclient', 'python-neutronclient']},
     setup_requires=['setuptools'],
     tests_require=['pytest'],
     packages=find_packages(exclude=['docs', 'tests', 'rest_api']),
