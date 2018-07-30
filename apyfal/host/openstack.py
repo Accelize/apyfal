@@ -91,8 +91,8 @@ class OpenStackHost(_CSPHost):
     _INFO_NAMES = _CSPHost._INFO_NAMES.copy()
     _INFO_NAMES.update({'_project_id', '_auth_url', '_interface'})
 
-    _INIT_METHODS = _CSPHost._INIT_METHODS.copy()
-    _INIT_METHODS += ['_init_image']
+    _INIT_METHODS = list(_CSPHost._INIT_METHODS)
+    _INIT_METHODS.append('_init_image')
 
     def __init__(self, project_id=None, auth_url=None, interface=None, **kwargs):
         _CSPHost.__init__(self, **kwargs)
