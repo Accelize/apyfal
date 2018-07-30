@@ -12,7 +12,7 @@ def test_exception_handler():
 
     # Tests no exception
     with _exception_handler():
-        assert 1
+        pass
 
     # Tests catch authentication exception
     with pytest.raises(exc.HostAuthenticationException):
@@ -25,5 +25,5 @@ def test_exception_handler():
             raise ClientException('Error')
 
     # Tests ignore exception
-    with _exception_handler(ignore=True):
+    with _exception_handler(filter_error_codes=('Error',)):
         raise ClientException('Error')

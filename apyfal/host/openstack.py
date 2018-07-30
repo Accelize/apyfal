@@ -14,7 +14,7 @@ from apyfal._utilities import get_logger as _get_logger
 
 
 @_contextmanager
-def _exception_handler(to_raise=None, ignore=False, **exc_kwargs):
+def _exception_handler(to_raise=None, filter_error_codes=None, **exc_kwargs):
     """
     Context manager that catch OpenStack exceptions and raises
     Apyfal exceptions.
@@ -22,7 +22,8 @@ def _exception_handler(to_raise=None, ignore=False, **exc_kwargs):
     Args:
         to_raise (apyfal.exception.AcceleratorException subclass):
             Exception to raise. self.RUNTIME if not specified.
-        ignore (bool): If True, don't raises exception.
+        filter_error_codes (tuple):
+                Don't raise exception if error code in this argument.
         exc_kwargs: Exception to raise arguments.
     """
     # Performs operation
@@ -37,8 +38,17 @@ def _exception_handler(to_raise=None, ignore=False, **exc_kwargs):
     # Catch specified exceptions
     except (_nova_exc.ClientException,
             _neutron_exc.NeutronClientException) as exception:
+        error_code = None
+        for attr_name in ('code', 'status_code'):
+            if hasattr(exception, attr_name):
+                error_code = getattr(exception, attr_name)
+                break
+
+        if filter_error_codes is None:
+            filter_error_codes = ()
+
         # Raises Apyfal exception
-        if not ignore:
+        if error_code not in filter_error_codes:
             raise (to_raise or _exc.HostRuntimeException)(
                 exc=exception, **exc_kwargs)
 
@@ -188,7 +198,7 @@ class OpenStackHost(_CSPHost):
 
         # Create rule on SSH and HTTP
         for port in self.ALLOW_PORTS:
-            with _exception_handler(ignore=True):
+            with _exception_handler(filter_error_codes=(409,)):
                 neutron.create_security_group_rule(
                    {'security_group_rule': {
                        'direction': 'ingress', 'port_range_min': str(port),
@@ -277,6 +287,23 @@ class OpenStackHost(_CSPHost):
             str: Status
         """
         return self._get_instance().status
+
+    def _wait_instance_ready(self):
+        """
+        Waits until instance is ready.
+        """
+        try:
+            _CSPHost._wait_instance_ready(self)
+        except _exc.HostException as exception:
+            # Get extra information about error if possible
+            try:
+                raise _exc.HostRuntimeException(
+                    exception.args[0],
+                    exc=self._get_instance().fault['message'])
+
+            # If not extra information, re raise previous error
+            except (AttributeError, _nova_exc.ClientException):
+                raise exception
 
     def _start_new_instance(self):
         """
