@@ -1,6 +1,7 @@
 # coding=utf-8
 """Amazon Web Services EC2"""
 
+from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor
 from copy import deepcopy as _deepcopy
 from json import dumps as _json_dumps
 import time as _time
@@ -64,7 +65,7 @@ class AWSHost(_CSPHost):
     STATUS_STOPPING = 'stopping'
 
     _INFO_NAMES = _CSPHost._INFO_NAMES.copy()
-    _INFO_NAMES.add('_role')
+    _INFO_NAMES.update(['_role', '_policy'])
 
     def __init__(self, role=None, **kwargs):
         _CSPHost.__init__(self, **kwargs)
@@ -73,6 +74,7 @@ class AWSHost(_CSPHost):
         self._role = (
             role or self._config[self._config_section]['role'] or
             self._default_parameter_value('Role'))
+        self._policy = None
 
         # Load session
         self._session = _boto3.session.Session(
@@ -97,9 +99,6 @@ class AWSHost(_CSPHost):
     def _init_key_pair(self):
         """
         Initializes key pair.
-
-        Returns:
-            bool: True if reuses existing key
         """
         ec2_client = self._session.client('ec2')
 
@@ -114,7 +113,7 @@ class AWSHost(_CSPHost):
             key_pair_name = key_pair['KeyName']
             if key_pair_name.lower() == name_lower:
                 self._key_pair = key_pair_name
-                return True
+                return
 
         # Key does not exist on the CSP, create it
         ec2_resource = self._session.resource('ec2')
@@ -122,21 +121,18 @@ class AWSHost(_CSPHost):
             key_pair = ec2_resource.create_key_pair(KeyName=self._key_pair)
 
         _utl.create_key_pair_file(self._key_pair, key_pair.key_material)
+        _get_logger().info(_utl.gen_msg("created_named", "key pair", self._key_pair))
 
-        return False
-
-    def _init_policy(self, policy):
+    def _init_policy(self):
         """
         Initialize policy.
 
         This policy allow instance to:
             - Load FPGA bitstream.
             - Access to S3 buckets objects  for read and write.
-
-        Args:
-            policy:
         """
         # Create a policy
+        policy = 'AccelizePolicy'
         policy_document = _json_dumps({
             "Version": "2012-10-17",
             "Statement": [
@@ -172,7 +168,8 @@ class AWSHost(_CSPHost):
             Scope='Local', OnlyAttached=False, MaxItems=100)
         for policy_item in response['Policies']:
             if policy_item['PolicyName'] == policy:
-                return policy_item['Arn']
+                self._policy = policy_item['Arn']
+                return
 
         raise _exc.HostConfigurationException(
             gen_msg=('created_failed_named', 'policy', policy))
@@ -205,22 +202,19 @@ class AWSHost(_CSPHost):
 
         return arn
 
-    def _attach_role_policy(self, policy_arn):
+    def _attach_role_policy(self):
         """
         Attach policy to IAM role.
-
-        Args:
-            policy_arn (str): Policy ARN
         """
         iam_client = self._session.client('iam')
 
         with _ExceptionHandler.catch(filter_error_codes='EntityAlreadyExists'):
             iam_client.attach_role_policy(
-                PolicyArn=policy_arn, RoleName=self._role)
+                PolicyArn=self._policy, RoleName=self._role)
 
             _get_logger().info(
                 _utl.gen_msg('attached_to', 'policy',
-                             policy_arn, 'IAM role', self._role))
+                             self._policy, 'IAM role', self._role))
 
     def _init_instance_profile(self):
         """
@@ -365,19 +359,6 @@ class AWSHost(_CSPHost):
                         filter_error_codes='InvalidInstanceID.NotFound'):
                     return self._instance.state["Name"]
 
-    def _get_config_env_from_region(self, accel_parameters_in_region):
-        """
-        Read accelerator parameters and get configuration environment.
-
-        Args:
-            accel_parameters_in_region (dict): AcceleratorClient parameters
-                for the current CSP region.
-
-        Returns:
-            dict: configuration environment
-        """
-        return {'AGFI': accel_parameters_in_region['fpgaimage']}
-
     def get_configuration_env(self, **kwargs):
         """
         Return environment to pass to
@@ -406,11 +387,28 @@ class AWSHost(_CSPHost):
         """
         Initialize and create instance.
         """
-        policy_arn = self._init_policy('AccelizePolicy')
-        self._init_role()
-        self._init_instance_profile()
-        self._attach_role_policy(policy_arn)
-        self._init_security_group()
+        futures = []
+        with _ThreadPoolExecutor(max_workers=6) as executor:
+            # Run configuration in parallel
+            policy = executor.submit(self._init_policy)
+            role = executor.submit(self._init_role)
+            for method in (
+                    self._init_key_pair,
+                    self._init_instance_profile,
+                    self._init_security_group):
+                futures.append(executor.submit(method))
+
+            # Wait that role and policy are completed to attach them
+            role.result()
+            policy.result()
+            futures.append(executor.submit(self._attach_role_policy))
+
+        # Wait completion
+        for future in futures:
+            future.result()
+
+        # Sets AGFI
+        self._config_env = {'AGFI': self._region_parameters['fpgaimage']}
 
     def _start_new_instance(self):
         """

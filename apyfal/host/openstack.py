@@ -91,6 +91,9 @@ class OpenStackHost(_CSPHost):
     _INFO_NAMES = _CSPHost._INFO_NAMES.copy()
     _INFO_NAMES.update({'_project_id', '_auth_url', '_interface'})
 
+    _INIT_METHODS = _CSPHost._INIT_METHODS.copy()
+    _INIT_METHODS += ['_init_image']
+
     def __init__(self, project_id=None, auth_url=None, interface=None, **kwargs):
         _CSPHost.__init__(self, **kwargs)
 
@@ -139,15 +142,14 @@ class OpenStackHost(_CSPHost):
             for key_pair in self._session.keypairs.list():
                 if key_pair.name.lower() == key_pair_name:
                     self._key_pair = key_pair.name
-                    return True
+                    return
 
         # Create key pair if not exists
         with _exception_handler(gen_msg=('created_failed', "key pair")):
             key_pair = self._session.keypairs.create_keypair(name=self._key_pair)
 
         _utl.create_key_pair_file(self._key_pair, key_pair.private_key)
-
-        return False
+        _get_logger().info(_utl.gen_msg("created_named", "key pair", self._key_pair))
 
     def _init_security_group(self):
         """
@@ -185,6 +187,44 @@ class OpenStackHost(_CSPHost):
 
         _get_logger().info(
             _utl.gen_msg('authorized_ip', public_ip, self._security_group))
+
+    def _init_image(self):
+        """
+        Initializes image.
+        """
+        # Checks if image exists and get its name
+        with _exception_handler(
+                gen_msg=('unable_find_from', 'image', self._image_id, 'Accelize')):
+            image = self._session.glance.find_image(self._image_id)
+        try:
+            self._image_name = image.name
+        except AttributeError:
+            raise _exc.HostConfigurationException(gen_msg=(
+                'unable_find_from', 'image', self._image_id, 'Accelize'))
+
+    def _init_flavor(self):
+        """
+        Initialize flavor
+        """
+        # Checks flavor exists and gets its ID
+        # "instance_type" is name at this step
+        with _exception_handler(
+                to_raise=_exc.HostConfigurationException,
+                gen_msg=('unable_find_from', 'flavor',
+                         self._instance_type, self._host_type)):
+            for flavor in self._session.flavors.list():
+                if flavor.name.lower() == self._instance_type:
+                    self._instance_type_name = flavor.name
+                    self._instance_type = flavor.id
+
+    def _create_instance(self):
+        """
+        Initializes and creates instance.
+        """
+        _CSPHost._create_instance(self)
+
+        # Needs to run after others
+        self._init_flavor()
 
     def _get_instance(self):
         """
@@ -227,63 +267,6 @@ class OpenStackHost(_CSPHost):
             str: Status
         """
         return self._get_instance().status
-
-    def _create_instance(self):
-        """
-        Initialize and create instance.
-        """
-        self._init_security_group()
-
-    def _get_image_id_from_region(self, accel_parameters_in_region):
-        """
-        Read accelerator parameters and get image id.
-
-        Args:
-            accel_parameters_in_region (dict): AcceleratorClient parameters
-                for the current CSP region.
-
-        Returns:
-            str: image_id
-        """
-        # Gets image
-        image_id = _CSPHost._get_image_id_from_region(
-            accel_parameters_in_region)
-
-        # Checks if image exists and get its name
-        with _exception_handler(
-                gen_msg=('unable_find_from', 'image', image_id, 'Accelize')):
-            image = self._session.glance.find_image(image_id)
-        try:
-            self._image_name = image.name
-        except AttributeError:
-            raise _exc.HostConfigurationException(gen_msg=(
-                'unable_find_from', 'image', image_id, 'Accelize'))
-
-        return image_id
-
-    def _get_instance_type_from_region(self, accel_parameters_in_region):
-        """
-        Read accelerator parameters and instance type.
-
-        Args:
-            accel_parameters_in_region (dict): AcceleratorClient parameters
-                for the current CSP region.
-
-        Returns:
-            str: instance_type
-        """
-        # Get instance type (flavor)
-        flavor_name = _CSPHost._get_instance_type_from_region(
-            accel_parameters_in_region).lower()
-
-        with _exception_handler(
-                to_raise=_exc.HostConfigurationException,
-                gen_msg=('unable_find_from', 'flavor',
-                         flavor_name, self._host_type)):
-            for flavor in self._session.flavors.list():
-                if flavor.name.lower() == flavor_name:
-                    self._instance_type_name = flavor.name
-                    return flavor.id
 
     def _start_new_instance(self):
         """
