@@ -36,7 +36,7 @@ class Host(_utl.ABC):
         1: "stop",
         2: "keep"}
     #: Timeout for host status change in seconds
-    TIMEOUT = 360.0
+    TIMEOUT = 420.0
 
     # Attributes returned as dict by "info" property
     _INFO_NAMES = {'_host_type', '_stop_mode', '_url'}
