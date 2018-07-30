@@ -2,6 +2,7 @@
 """Cloud Service Providers"""
 
 from abc import abstractmethod as _abstractmethod
+from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor
 from datetime import datetime as _datetime
 
 try:
@@ -62,10 +63,15 @@ class CSPHost(_Host):
     _INFO_NAMES = _Host._INFO_NAMES.copy()
     _INFO_NAMES.update({
         'public_ip', 'private_ip', '_region', '_instance_type', '_instance_name',
-        '_key_pair', '_security_group', '_instance_id', '_instance_type_name'})
+        '_key_pair', '_security_group', '_instance_id', '_instance_type_name',
+        '_region_parameters'
+    })
 
     # Instance user home directory
     _HOME = '/home/centos'
+
+    # Initialization methods
+    _INIT_METHODS = ['_init_security_group', '_init_key_pair']
 
     def __init__(self, client_id=None, secret_id=None, region=None,
                  instance_type=None, key_pair=None, security_group=None, instance_id=None,
@@ -81,6 +87,7 @@ class CSPHost(_Host):
         self._instance_name = None
         self._instance_type = None
         self._instance_type_name = None
+        self._region_parameters = None
 
         # Read configuration from file
         section = self._config[self._config_section]
@@ -257,6 +264,12 @@ class CSPHost(_Host):
             bool: True if reuses existing key
         """
 
+    @_abstractmethod
+    def _init_security_group(self):
+        """
+        Initialize CSP security group.
+        """
+
     def start(self, accelerator=None, accel_parameters=None, stop_mode=None):
         """
         Start instance if not already started. Create instance if necessary.
@@ -284,12 +297,6 @@ class CSPHost(_Host):
             # Creates and starts instance if not exists
             if self.instance_id is None:
                 _get_logger().info("Configuring %s instance...", self._host_type)
-
-                # Configure and create instance
-                reuse_key = self._init_key_pair()
-                if not reuse_key:
-                    _get_logger().info(_utl.gen_msg(
-                        "created_named", "key pair", self._key_pair))
 
                 try:
                     self._create_instance()
@@ -333,11 +340,20 @@ class CSPHost(_Host):
             raise _exc.HostRuntimeException(
                 gen_msg=('unable_reach_url', self._url))
 
-    @_abstractmethod
     def _create_instance(self):
         """
         Initializes and creates instance.
         """
+        # Run configuration in parallel
+        futures = []
+        with _ThreadPoolExecutor(
+                max_workers=len(self._INIT_METHODS)) as executor:
+            for method in self._INIT_METHODS:
+                futures.append(executor.submit(getattr(self, method)))
+
+        # Wait completion
+        for future in futures:
+            future.result()
 
     @_abstractmethod
     def _start_new_instance(self):
@@ -485,7 +501,7 @@ class CSPHost(_Host):
             apyfal.exceptions.HostConfigurationException:
                 Parameters are not valid..
         """
-        # Get parameters
+        # Gets parameters
         parameters = dict()
         if accelerator is not None:
             parameters.update(self._config.get_host_requirements(
@@ -494,62 +510,20 @@ class CSPHost(_Host):
         if accel_parameters is not None:
             parameters.update(accel_parameters)
 
-        # Check if region is valid
+        # Checks if region is valid
         if self._region not in parameters.keys():
             raise _exc.HostConfigurationException(
                 "Region '%s' is not supported. Available regions are: %s" % (
                     self._region, ', '.join(
                         region for region in parameters if region != 'accelerator')))
 
-        # Get accelerator name
+        # Gets accelerator name
         self._accelerator = parameters['accelerator']
 
-        # Set parameters for current region
-        region_parameters = parameters[self._region]
-        self._image_id = self._get_image_id_from_region(region_parameters)
-        self._instance_type = self._get_instance_type_from_region(region_parameters)
-        self._config_env = self._get_config_env_from_region(region_parameters)
-
-    @staticmethod
-    def _get_image_id_from_region(accel_parameters_in_region):
-        """
-        Read accelerator parameters and get image id.
-
-        Args:
-            accel_parameters_in_region (dict): AcceleratorClient parameters
-                for the current CSP region.
-
-        Returns:
-            str: image_id
-        """
-        return accel_parameters_in_region['image']
-
-    @staticmethod
-    def _get_instance_type_from_region(accel_parameters_in_region):
-        """
-        Read accelerator parameters and instance type.
-
-        Args:
-            accel_parameters_in_region (dict): AcceleratorClient parameters
-                for the current CSP region.
-
-        Returns:
-            str: instance_type
-        """
-        return accel_parameters_in_region['instancetype']
-
-    def _get_config_env_from_region(self, accel_parameters_in_region):
-        """
-        Read accelerator parameters and get configuration environment.
-
-        Args:
-            accel_parameters_in_region (dict): AcceleratorClient parameters
-                for the current CSP region.
-
-        Returns:
-            dict: configuration environment
-        """
-        return self._config_env
+        # Gets parameters for current region
+        self._region_parameters = parameters[self._region]
+        self._image_id = self._region_parameters['image']
+        self._instance_type = self._region_parameters['instancetype']
 
     @property
     def _user_data(self):
