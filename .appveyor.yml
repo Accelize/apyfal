@@ -18,8 +18,8 @@ install:
     # Builds OpenApi client
     - "python ./setup.py swagger_codegen"
 
-    # No wheel with last Pycurl version on Python 3.4, use older version.
-    - 'IF /I "%PYTHON%"=="C:\Python34-x64" (python -m pip install pycurl==7.43.0)'
+    # Ensures PycURL is installed from wheel.
+    - 'python -m pip install pycurl --prefer-binary'
 
     # Installs all package dependencies
     - "python -m pip install -e .[all]"
