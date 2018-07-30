@@ -1,6 +1,17 @@
 Changelog
 =========
 
+1.2.0 (2018/09)
+---------------
+
+Improvements
+
+- Speed up instance configuration.
+
+Fixes:
+
+- ``stop`` ``stop_mode`` with OpenStack now pauses instance instead of terminates it.
+
 1.1.0 (2018/08)
 ---------------
 
@@ -58,5 +69,4 @@ Known Issues:
 OpenStack only:
 ~~~~~~~~~~~~~~~
 
-- Using ``stop_mode="stop"`` terminates instance.
 - Configuration file is not properly passed to the instance with ``init_config`` argument.

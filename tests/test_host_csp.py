@@ -88,7 +88,7 @@ def get_dummy_csp_class():
         def _init_key_pair(self):
             """Dummy method"""
 
-        def _create_instance(self):
+        def _init_security_group(self):
             """Dummy method"""
 
         def _start_new_instance(self):
@@ -262,7 +262,9 @@ def test_csphost_start():
         'client_id': 'dummy_client_id'}
 
     # Mock CSP class
-    class DummyClass(get_dummy_csp_class()):
+    base_class = get_dummy_csp_class()
+
+    class DummyClass(base_class):
         """Dummy CSP"""
         DOC_URL = 'dummy_csp_help'
         STATUS_RUNNING = status
@@ -292,6 +294,7 @@ def test_csphost_start():
                 # Exception with no message
                 raise HostException
             self.mark_instance_created = True
+            base_class._create_instance(self)
 
         def _terminate_instance(self):
             """Marks as executed, simulate exception"""
@@ -357,7 +360,6 @@ def test_csphost_start():
         with pytest.raises(HostException):
             csp.start()
         assert csp.mark_credential_checked
-        assert csp.mark_key_pair_created
         assert not csp.mark_instance_created
         assert csp.mark_instance_terminated
 
