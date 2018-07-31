@@ -1,5 +1,7 @@
 # coding=utf-8
 """apyfal.__main__ tests"""
+from collections import namedtuple
+
 import pytest
 
 
@@ -132,6 +134,10 @@ def test_get_accelerator(tmpdir):
         accelerator = _get_accelerator(name, action='load')
         assert isinstance(accelerator, Accelerator)
 
+        # Load accelerator
+        accelerator = _get_accelerator(name, action='update')
+        assert isinstance(accelerator, Accelerator)
+
     # Restore cache dir
     finally:
         main._ACCELERATOR_CACHE = old_cache_dir
@@ -218,7 +224,11 @@ def test_actions(tmpdir):
 
     # Mocks accelerator and parser
 
+    Host = namedtuple('Host', ('url', 'key_pair'))
+
     class Accelerator:
+
+        host = Host(url='http://url', key_pair='key_pair')
 
         @staticmethod
         def start(**kwargs):
@@ -235,7 +245,8 @@ def test_actions(tmpdir):
             """Checks parameters"""
             assert kwargs == dummy_parameters
 
-    def _get_accelerator(name=None, action='load', parameters=None):
+    def _get_accelerator(
+            name=None, action='load', parameters=None, **_):
         """Checks parameters and returns fake result"""
         assert name == dummy_name
 
@@ -272,6 +283,11 @@ def test_actions(tmpdir):
         main._action_start(parser, full_parameters.copy())
         main._action_process(parser, full_parameters.copy())
         main._action_stop(parser, full_parameters.copy())
+
+        # Host without URL
+        Accelerator.host = None
+        main._action_create(parser, full_parameters.copy())
+        main._action_start(parser, full_parameters.copy())
 
         # Cache cleanup
         cache_dir.join(dummy_name).ensure()
