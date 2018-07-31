@@ -265,10 +265,15 @@ class OpenStackHost(_CSPHost):
         Returns:
             str: IP address
         """
-        for address in list(self._get_instance().addresses.values())[0]:
-            if address['version'] == 4:
-                return address['addr']
-        raise _exc.HostRuntimeException(gen_msg='no_instance_ip')
+        with _utl.Timeout(self.TIMEOUT) as timeout:
+            while True:
+                for address in list(
+                        self._get_instance().addresses.values())[0]:
+                    if address['version'] == 4:
+                        return address['addr']
+                if timeout.reached():
+                    raise _exc.HostRuntimeException(
+                        gen_msg='no_instance_ip')
 
     def _get_private_ip(self):
         """
