@@ -296,7 +296,7 @@ def _run_command():
     parser = ArgumentParser(
         prog='apyfal', description='Apyfal command line utility.')
     sub_parsers = parser.add_subparsers(
-        required=True, dest=_COMMAND_DEST, title='Commands',
+        dest=_COMMAND_DEST, title='Commands',
         description='Apyfal must perform one of the following commands:',
         help='Apyfal commands')
 
