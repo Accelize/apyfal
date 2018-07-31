@@ -92,33 +92,38 @@ def _handle_command(func):
     return patched
 
 
-def _get_accelerator(name, action='load', parameters=None):
+def _get_accelerator(name, action='load', parameters=None,
+                     accelerator=None):
     """
     Instantiate apyfal.Accelerator.
 
     Args:
         name (str): --name argument value
-        action (str): 'load' or 'create'.
+        action (str): 'load', 'create' or 'update".
         parameters (dict): apyfal.Accelerator parameters.
+        accelerator (apyfal.Accelerator): Accelerator.
 
     Returns:
         apyfal.Accelerator: Accelerator instance.
     """
     # Load cached accelerator
-    if action == 'load':
+    if action in ('load', 'update'):
         parameters = _cached_accelerator(name, 'load')
 
     # Instantiate accelerator
-    from apyfal import Accelerator, get_logger
-    accelerator = Accelerator(**parameters)
+    if accelerator is None:
+        from apyfal import Accelerator, get_logger
+        accelerator = Accelerator(**parameters)
 
-    # Show logger
-    get_logger(True)
+        # Show logger
+        get_logger(True)
 
     # Cache accelerator
-    if action == 'create':
-        for attribute, key in (('url', 'host_ip'),
-                               ('instance_id', 'instance_id')):
+    if action in ('create', 'update'):
+        for attribute, key in (
+                ('host_type', 'host_type'),
+                ('url', 'host_ip'),
+                ('instance_id', 'instance_id')):
             try:
                 parameters[key] = getattr(
                     accelerator.host, attribute)
@@ -160,7 +165,23 @@ def _action_start(_, parameters):
         dict: apyfal.Accelerator.start result.
     """
     name = parameters.pop('name')
-    return _get_accelerator(name=name).start(**parameters)
+    accelerator = _get_accelerator(name=name)
+    result = accelerator.start(**parameters)
+
+    # Update cached accelerator
+    _get_accelerator(
+        name=name, action='update', accelerator=accelerator)
+
+    # Show Accelerator information
+    try:
+        ip_address = accelerator.host.url
+        if ip_address is not None and '://' in ip_address:
+            ip_address = ip_address.split('://')[1].strip('/')
+        key_pair = accelerator.host.key_pair
+    except AttributeError:
+        return result
+    return 'Accelerator IP address: %s\nSSH key pair: %s%s' % (
+        ip_address, key_pair, ('\n\n%s' % result) if result else '')
 
 
 @_handle_command
@@ -282,6 +303,10 @@ def _run_command():
     Command line entry point
     """
     from argparse import ArgumentParser, SUPPRESS
+    from warnings import filterwarnings
+
+    # Disable Python warnings
+    filterwarnings("ignore")
 
     # Initialize some values
     epilog_base = (
