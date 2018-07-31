@@ -174,7 +174,7 @@ def test_parse_and_run():
 
     # Tests
     try:
-        # Command with all kinf of arguments
+        # Command with all kind of arguments
         sys.argv = [
             '', 'dummy',
             '--known', 'known_value',
