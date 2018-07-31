@@ -345,7 +345,8 @@ class OpenStackHost(_CSPHost):
         """
         Terminate and delete instance.
         """
-        with _exception_handler(gen_msg=('unable_to', "delete")):
+        with _exception_handler(gen_msg=('unable_to', "delete"),
+                                filter_error_codes=(404,)):
             self._session.servers.force_delete(self._instance)
 
     def _pause_instance(self):
