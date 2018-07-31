@@ -531,12 +531,11 @@ def test_csphost_stop(tmpdir):
     assert csp._instance
 
     # Test: Stop with no instance started
-    instance = None
     csp = DummyHost(stop_mode='term')
+    csp._instance_id = None
     csp.stop()
     assert csp.url == url
     assert csp.stopped_mode == 'keep'
-    instance = 'dummy_instance'
 
     raise_on_status = True
     csp = DummyHost(stop_mode='term')
