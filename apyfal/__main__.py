@@ -256,6 +256,8 @@ def _parse_and_run(parser):
 
     # Get command name
     command = kwargs.pop(_COMMAND_DEST)
+    if not command:
+        parser.error('An Apyfal command is required')
 
     # Parser unknown arguments
     parameter = None

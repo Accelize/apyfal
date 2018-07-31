@@ -174,6 +174,7 @@ def test_parse_and_run():
 
     # Tests
     try:
+        # Command with all kinf of arguments
         sys.argv = [
             '', 'dummy',
             '--known', 'known_value',
@@ -182,6 +183,11 @@ def test_parse_and_run():
             '--spaced', 'value1', 'value2',
             '--spaced_equal=value3', 'value4']
         _parse_and_run(dummy_parser)
+
+        # No command
+        sys.argv = ['']
+        with pytest.raises(SystemExit):
+            _parse_and_run(dummy_parser)
 
     # Removes Mocked action
     finally:
