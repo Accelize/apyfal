@@ -101,31 +101,41 @@ def test_get_accelerator(tmpdir):
     """Tests _get_accelerator"""
     from apyfal.__main__ import _get_accelerator
     import apyfal.__main__ as main
+    import apyfal
 
     name = 'accelerator'
-    instance_id = '123'
-    parameters = {'instance_id': instance_id,
+    parameters = {'instance_id': '123',
                   'accelerator': 'accelerator'}
     cache_dir = tmpdir.join('cache')
 
-    # Mock cache dir
+    # Mock cache dir and Accelerator
     old_cache_dir = main._ACCELERATOR_CACHE
     main._ACCELERATOR_CACHE = str(cache_dir)
 
+    class Accelerator:
+        """Dummy Accelerator"""
+
+        def __init__(self, *_, **kwargs):
+            """Checks arguments"""
+            assert kwargs == parameters
+
+    apyfal_accelerator = apyfal.Accelerator
+    apyfal.Accelerator = Accelerator
     # Tests
     try:
         # Create accelerator
         accelerator = _get_accelerator(
             name, action='create', parameters=parameters)
-        assert accelerator.host.instance_id == instance_id
+        assert isinstance(accelerator, Accelerator)
 
         # Load accelerator
         accelerator = _get_accelerator(name, action='load')
-        assert accelerator.host.instance_id == instance_id
+        assert isinstance(accelerator, Accelerator)
 
     # Restore cache dir
     finally:
         main._ACCELERATOR_CACHE = old_cache_dir
+        apyfal.Accelerator = apyfal_accelerator
 
 
 def test_parse_and_run():
