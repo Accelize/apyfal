@@ -24,6 +24,7 @@ Fixes:
 - Host ``stop_mode`` not correctly loaded from configuration file.
 - ``accelerator`` in exception message when trying to use a non existing region.
 - Don't wait until end of timeout if instance in error status during instance provisioning.
+- Instance don't terminate if both instance_id and host_ip are provided.
 
 Deprecations:
 

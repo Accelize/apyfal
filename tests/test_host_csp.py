@@ -2,7 +2,6 @@
 """apyfal.host._csp tests"""
 import gc
 import time
-import warnings
 
 import pytest
 

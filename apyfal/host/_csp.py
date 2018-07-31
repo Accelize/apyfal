@@ -415,7 +415,7 @@ class CSPHost(_Host):
             stop_mode (str or int): If not None, override current "stop_mode" value.
         """
         # No instance to stop (Avoid double call with __exit__ + __del__)
-        if self._instance is None:
+        if self._instance_id is None:
             return
 
         # Define stop mode
@@ -431,6 +431,10 @@ class CSPHost(_Host):
 
         # Checks if instance to stop
         try:
+            # Force instance update
+            self._instance = self._get_instance()
+
+            # Checks status
             self._status()
         except _exc.HostRuntimeException:
             return
@@ -438,14 +442,16 @@ class CSPHost(_Host):
         # Terminates and delete instance completely
         if stop_mode == 'term':
             self._terminate_instance()
-            self._instance = None
             _get_logger().info("Instance '%s' has been terminated", self._instance_id)
 
         # Pauses instance and keep it alive
         else:
             self._pause_instance()
-            self._instance = None
             _get_logger().info("Instance '%s' has been stopped", self._instance_id)
+
+        # Detaches from instance
+        self._instance_id = None
+        self._instance = None
 
     @_abstractmethod
     def _terminate_instance(self):
