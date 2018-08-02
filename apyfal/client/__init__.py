@@ -411,11 +411,12 @@ class AcceleratorClient(_utl.ABC):
 
         # File scheme: Check paths
         if scheme == 'file':
+            path = _os_path.abspath(path)
 
             # Only authorises files in whitelisted directories on host
             if not self.REMOTE and url.startswith('host://'):
                 for authorized in self._authorized_host_dirs:
-                    if not _os_path.abspath(path).startswith(authorized):
+                    if not path.startswith(authorized):
                         raise _exc.ClientSecurityException(
                                 "Unauthorized path: '%s'" % path)
 
