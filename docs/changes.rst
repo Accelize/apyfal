@@ -34,10 +34,11 @@ Configuration improvements:
 Fixes:
 
 - Importing Apyfal from an unsupported Python version now raises ``ImportError``.
-- Host ``stop_mode`` not correctly loaded from configuration file.
-- ``accelerator`` in exception message when trying to use a non existing region.
-- Don't wait until end of timeout if instance in error status during instance provisioning.
-- Instance don't terminate if both instance_id and host_ip are provided.
+- Host ``stop_mode`` is now correctly loaded from configuration file.
+- Fix available regions list in exception message when trying to use a non existing region.
+- Apyfal don't wait until end of timeout if instance is in ``error`` status during instance
+  provisioning.
+- Instance now terminates correctly if both ``instance_id`` and ``host_ip`` are provided.
 
 Deprecations:
 
