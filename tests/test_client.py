@@ -206,7 +206,7 @@ def test_data_file(tmpdir):
     client.REMOTE = True
     with client._data_file(
             file_in_path, parameters, parameter_name, 'rb') as path:
-        assert path is file_in_path
+        assert path == file_in_path
     assert not parameters['app']['specific']
 
     # Remote mode: No change for stream
@@ -228,7 +228,7 @@ def test_data_file(tmpdir):
     assert parameters['app']['specific'][parameter_name] == file_in_path
     with client._data_file(
             None, parameters, parameter_name, 'rb') as path:
-        assert path is file_in_path
+        assert path == file_in_path
     assert not parameters['app']['specific']
 
     # Try reload from parameters, but not found
