@@ -146,7 +146,7 @@ def test_data_file(tmpdir):
     # Test: Input file
     with client._data_file(
             file_in_path, parameters, parameter_name, 'rb') as path:
-        assert path is file_in_path
+        assert path == file_in_path
         with open(path, 'rb') as file:
             assert file.read() == content
 
@@ -159,7 +159,7 @@ def test_data_file(tmpdir):
     # Test: Output file
     with client._data_file(
             file_out_path, parameters, parameter_name, 'wb') as path:
-        assert path is file_out_path
+        assert path == file_out_path
         with open(path, 'wb') as file:
             file.write(content)
         assert file_out.read_binary() == content
