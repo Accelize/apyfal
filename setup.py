@@ -46,15 +46,16 @@ PACKAGE_INFO = dict(
     },
     license='Apache License, Version 2.0',
     python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',
-    install_requires=['setuptools', 'requests', 'ipgetter', 'psutil',
+    install_requires=['setuptools', 'requests', 'ipgetter', 'psutil', 'pycosio',
                       'futures; python_version == "2.7"'],
     extras_require={
         # Optional speedup
         'optional': ['pycurl'],
 
         # CSP specific requirements
-        'AWS': ['boto3'],
-        'OpenStack': ['python-novaclient', 'python-neutronclient']},
+        'AWS': ['boto3', 'pycosio[s3]'],
+        'OpenStack': ['python-novaclient', 'python-neutronclient',
+                      'pycosio[swift]']},
     setup_requires=['setuptools'],
     tests_require=['pytest'],
     packages=find_packages(exclude=['docs', 'tests', 'rest_api']),
@@ -65,7 +66,8 @@ PACKAGE_INFO = dict(
     )
 
 # Add OpenStack sub extra:
-PACKAGE_INFO['extras_require']['OVH'] = PACKAGE_INFO['extras_require']['OpenStack']
+PACKAGE_INFO['extras_require']['OVH'] = PACKAGE_INFO[
+    'extras_require']['OpenStack']
 
 # Gets package __version__ from package
 SETUP_DIR = abspath(dirname(__file__))
@@ -94,7 +96,8 @@ class SwaggerCommand(Command):
     """
     description = "Generate REST API client"
     user_options = [
-        ('swagger-version=', None, 'Force use of a specific Swagger-Codegen version'),
+        ('swagger-version=', None,
+         'Force use of a specific Swagger-Codegen version'),
     ]
 
     def initialize_options(self):
@@ -166,7 +169,8 @@ class SwaggerCommand(Command):
         # Download Swagger-codegen Jar if needed
         if not isfile(jar_path):
             print('Downloading %s' % jar_name)
-            urlretrieve('/'.join((repository, self.swagger_version, jar_name)), jar_path)
+            urlretrieve('/'.join((repository, self.swagger_version, jar_name)),
+                        jar_path)
 
         # Clear output directory
         print('Clearing %s' % REST_API_GENERATED_DIR)
@@ -193,8 +197,10 @@ class SwaggerCommand(Command):
                 src_package = 'swagger_client'
                 replacements = [
                     ('from %s' % src_package, 'from %s' % REST_API_PACKAGE),
-                    ('import %s' % src_package, 'import %s' % REST_API_PACKAGE),
-                    ('getattr(%s.' % src_package, 'getattr(%s.' % REST_API_PACKAGE),
+                    ('import %s' % src_package, 'import %s' %
+                     REST_API_PACKAGE),
+                    ('getattr(%s.' % src_package, 'getattr(%s.'%
+                     REST_API_PACKAGE),
                 ]
 
                 # Fix Swagger-codegen issue:
@@ -256,6 +262,11 @@ PACKAGE_INFO['extras_require']['all'] = list(set(
     requirement for extra in PACKAGE_INFO['extras_require']
     for requirement in PACKAGE_INFO['extras_require'][extra]
     ))
+for key in tuple(PACKAGE_INFO['extras_require']['all']):
+    # Force pycosio[all]
+    if key.startswith('pycosio'):
+        PACKAGE_INFO['extras_require']['all'].remove(key)
+PACKAGE_INFO['extras_require']['all'].append('pycosio[all]')
 
 # Gets Sphinx configuration
 PACKAGE_INFO['command_options']['build_sphinx'] = {

@@ -16,6 +16,9 @@ install:
     # Installs all package dependencies
     - "python -m pip install -e .[all]"
 
+    # Installs pre-releases of pycosio
+    - 'python -m pip install pycosio[all] --pre'
+
 script:
     # Runs tests
     - "py.test -v --cov=apyfal --cov-report=term-missing"
