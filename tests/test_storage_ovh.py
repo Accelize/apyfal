@@ -2,7 +2,8 @@
 """apyfal.storage.ovh tests"""
 
 import pytest
-from tests.test_storage_bucket import run_full_real_test_sequence, import_from_generic_test
+from tests.test_storage import (
+    run_full_real_test_sequence, import_from_generic_test)
 
 
 def test_ovhclass_import():

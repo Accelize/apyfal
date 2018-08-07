@@ -32,7 +32,7 @@ PACKAGE_INFO = dict(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Operating System :: OS Independent'
-        ],
+    ],
     keywords='cloud accelerator fpga hpc',
     author='Accelize',
     author_email='info@accelize.com',
@@ -63,7 +63,7 @@ PACKAGE_INFO = dict(
     zip_safe=True,
     command_options={},
     cmdclass={}
-    )
+)
 
 # Add OpenStack sub extra:
 PACKAGE_INFO['extras_require']['OVH'] = PACKAGE_INFO[
@@ -178,10 +178,10 @@ class SwaggerCommand(Command):
 
         # Generate OpenApi client
         command = ' '.join([
-                "java", "-jar", jar_path, "generate",
-                "-i", input_spec_path,
-                "-o", REST_API_GENERATED_DIR,
-                "-l", "python"])
+            "java", "-jar", jar_path, "generate",
+            "-i", input_spec_path,
+            "-o", REST_API_GENERATED_DIR,
+            "-l", "python"])
         print('Running command "%s"' % command)
         Popen(command, shell=True).communicate()
 
@@ -199,7 +199,7 @@ class SwaggerCommand(Command):
                     ('from %s' % src_package, 'from %s' % REST_API_PACKAGE),
                     ('import %s' % src_package, 'import %s' %
                      REST_API_PACKAGE),
-                    ('getattr(%s.' % src_package, 'getattr(%s.'%
+                    ('getattr(%s.' % src_package, 'getattr(%s.' %
                      REST_API_PACKAGE),
                 ]
 
@@ -237,6 +237,7 @@ PACKAGE_INFO['cmdclass']['swagger_codegen'] = SwaggerCommand
 if 'swagger_codegen' not in argv:
     if isfile(REST_API_SETUP):
         from ast import literal_eval
+
         with open(REST_API_SETUP) as source_file:
             for line in source_file:
                 if line.rstrip().startswith('REQUIRES = ['):
@@ -245,6 +246,7 @@ if 'swagger_codegen' not in argv:
                     break
     else:
         import warnings
+
         warnings.warn(
             "REST API not generated, "
             "please run 'setup.py swagger_codegen' first", Warning)
@@ -260,8 +262,7 @@ elif 'build_sphinx' in argv:
 # Generates wildcard "all" extras_require
 PACKAGE_INFO['extras_require']['all'] = list(set(
     requirement for extra in PACKAGE_INFO['extras_require']
-    for requirement in PACKAGE_INFO['extras_require'][extra]
-    ))
+    for requirement in PACKAGE_INFO['extras_require'][extra]))
 for key in tuple(PACKAGE_INFO['extras_require']['all']):
     # Force pycosio[all]
     if key.startswith('pycosio'):
@@ -274,8 +275,7 @@ PACKAGE_INFO['command_options']['build_sphinx'] = {
     'version': ('setup.py', PACKAGE_INFO['version']),
     'release': ('setup.py', PACKAGE_INFO['version']),
     'copyright': ('setup.py', '2017-%s, %s' % (
-        datetime.now().year, PACKAGE_INFO['author'])),
-    }
+        datetime.now().year, PACKAGE_INFO['author']))}
 
 # Unable to install PyURL on ReadTheDocs
 if environ.get('READTHEDOCS'):

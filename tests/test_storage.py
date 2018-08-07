@@ -1,58 +1,69 @@
 # coding=utf-8
 """apyfal.storage tests"""
-
 from io import BytesIO
-from shutil import copyfileobj
 from sys import version_info
+from uuid import uuid4 as uuid
+
+import pytest
 
 
-def test_storage_hook():
-    """Tests _StorageHook"""
+def test_register():
+    """Tests register"""
     import apyfal.storage as srg
+    from apyfal.configuration import Configuration
+    from apyfal.exceptions import StorageConfigurationException
+    import pycosio
 
-    # Mock Storage
-    dummy_storage_type = 'dummy_storage_type'
-    dummy_parameters = {}
+    # Mock _Storage and pycosio.register
+    storage_type = 'dummy_storage'
+    storage_name = 'dummy_name'
+    user = 'dummy_user'
+    password = 'dummy_password'
+    excepted_storage_parameters = {
+            'user': user,
+            'arg0': 'arg0',
+            'params': {'password': password,
+                       'arg1': 'arg1'}}
+    registered = []
 
-    class DummyStorage:
+    class DummyStorage(srg._Storage):
+        """Dummy storage"""
+        NAME = storage_type
+        STORAGE_NAME = storage_name
+        EXTRA_URL_PREFIX = 'dummy_prefix://'
+        STORAGE_PARAMETERS = {
+            'user': 'self._client_id',
+            'arg0': 'arg0',
+            'params': {'password': 'self._secret_id',
+                       'arg1': 'arg1'}}
 
-        storage_id = dummy_storage_type
+    def register(storage=None, extra_url_prefix=None, storage_parameters=None):
+        """Dummy pycosio.register"""
+        assert storage == storage_name
+        assert extra_url_prefix == DummyStorage.EXTRA_URL_PREFIX
+        assert storage_parameters == excepted_storage_parameters
+        registered.append(storage)
 
-        def __init__(self, storage_type=None, **parameters):
-            assert storage_type == dummy_storage_type
-            assert parameters == dummy_parameters
-
-    srg_storage = srg.Storage
-    srg.Storage = DummyStorage
+    pycosio_register = pycosio.register
+    pycosio.register = register
 
     # Tests
     try:
-        # Lazy instanatiation of storage
-        hook = srg._StorageHook()
-        assert dummy_storage_type not in hook
+        # Register
+        assert not registered
+        config = Configuration()
+        config['host.%s' % storage_type]['secret_id'] = password
+        DummyStorage(config=config, client_id=user).register()
+        assert registered == [storage_name]
 
-        storage = hook[dummy_storage_type]
-        assert storage.storage_id == dummy_storage_type
-        assert dummy_storage_type in hook
+        # Register with no class available
+        if version_info[0] > 2:
+            with pytest.raises(StorageConfigurationException):
+                srg.register(storage_type, config=config, client_id=user)
 
-        # Manual instantiation
-        hook = srg._StorageHook()
-        assert dummy_storage_type not in hook
-
-        storage = hook.register(dummy_storage_type, **dummy_parameters)
-        assert storage.storage_id == dummy_storage_type
-        assert dummy_storage_type in hook
-
-        # Public register function
-        srg._STORAGE.clear()
-        srg.register(dummy_storage_type, **dummy_parameters)
-        assert dummy_storage_type in srg._STORAGE
-        assert srg._STORAGE[dummy_storage_type].storage_id == dummy_storage_type
-
-    # Restore Storage
+    # Restore pycosio
     finally:
-        srg.Storage = srg_storage
-        srg._STORAGE.clear()
+        pycosio.register = pycosio_register
 
 
 def test_parse_url():
@@ -69,98 +80,66 @@ def test_parse_url():
     assert parse_url('host://path/on/host') == (
         'file', 'path/on/host')
 
-    # Tests HTTP
-    assert parse_url('http://www.accelize.com') == (
-        'http', 'http://www.accelize.com')
-    assert parse_url('https://www.accelize.com') == (
-        'http', 'https://www.accelize.com')
-
     # Tests custom storage scheme
     assert parse_url('storage.name://path/on/storage') == (
         'storage.name', 'path/on/storage')
 
 
 def test_open(tmpdir):
-    """Tests open"""
+    """Tests open and copy"""
     import apyfal.storage as srg
 
-    srg._STORAGE.clear()
+    # Prepares files
+    src_file = tmpdir.join('src.txt')
+    dst_file = tmpdir.join('dst.txt')
     content = 'dummy_content'.encode()
+    src_file.write(content)
 
-    # Mock other storage class
-    class DummyStorage(srg.Storage):
+    # Tests open binary stream
+    with srg.open(BytesIO(content), 'rb') as opened:
+        assert opened.read() == content
 
-        def __init__(self, *args, **kwargs):
-            """Init storage and create stream"""
-            srg.Storage.__init__(self, *args, **kwargs)
-            self.stream = BytesIO()
-            self.storage_to_storage = False
+    # Tests open text stream
+    assert not hasattr(BytesIO(content), 'encoding')
+    with srg.open(BytesIO(content), 'rt') as opened:
+        assert opened.read() == content.decode()
 
-        def copy_from_stream(self, stream, destination):
-            """Write to storage stream from other stream"""
-            self.stream = BytesIO()
-            copyfileobj(stream, self.stream)
-            self.stream.seek(0)
+    # Tests open file
+    with srg.open(str(src_file), 'rb') as opened:
+        assert opened.read() == content
 
-        def copy_to_stream(self, source, stream):
-            """Write in stream fro storage stream"""
-            self.stream.seek(0)
-            copyfileobj(self.stream, stream)
-
-    srg._STORAGE['dummy'] = storage = DummyStorage('dummy')
-
-    # Tests
-    try:
-        # Local file
-        local_file = tmpdir.join('file.txt')
-        local_file.write(content)
-        with srg.open(str(local_file), 'rb') as data:
-            assert data.read() == content
-
-        with srg.open(str(local_file), 'rt') as data:
-            assert data.read() == content.decode()
-
-        # Python 2 unicode URL
-        if version_info[0] == 2:
-            with srg.open(str(local_file).decode(), 'rt') as data:
-                assert data.read() == content.decode()
-
-        # Stream:
-        stream_file = BytesIO(content)
-        with srg.open(stream_file, 'rb') as data:
-            assert data.read() == content
-
-        stream_file = BytesIO(content)
-        with srg.open(stream_file, 'rt') as data:
-            assert data.read() == content.decode()
-
-        # Storage
-        with srg.open('dummy://path', 'wb') as data:
-            data.write(content)
-        assert storage.stream.read() == content
-
-        storage.stream = BytesIO()
-        with srg.open('dummy://path', 'wt') as data:
-            data.write(content.decode())
-        storage.stream.seek(0)
-        assert storage.stream.read() == content
-
-        storage.stream.seek(0)
-        with srg.open('dummy://path', 'rb') as data:
-            assert data.read() == content
-
-        storage.stream.seek(0)
-        with srg.open('dummy://path', 'rt') as data:
-            assert data.read() == content.decode()
-
-    # Clear registered storage
-    finally:
-        srg._STORAGE.clear()
+    # Tests copy file
+    srg.copy(str(src_file), str(dst_file))
+    assert src_file.read_binary() == dst_file.read_binary()
 
 
-def test_copy(tmpdir):
-    """Tests copy"""
-    from apyfal.storage import copy, _STORAGE, Storage
+def import_from_generic_test(storage_type, **kwargs):
+    """
+    Test to import a class from generic.
+
+    Args:
+        storage_type( str): Bucket storage_type
+        kwargs: Other args required
+    """
+    from apyfal.storage import _Storage
+    _Storage(
+        storage_type=storage_type, region='dummy_region',
+        client_id='dummy_client_id', secret_id='dummy_secret_id',
+        **kwargs)
+
+
+def run_full_real_test_sequence(storage_type, tmpdir):
+    """Run common real tests for all buckets.
+
+    Args:
+        storage_type (str): Bucket storage_type.
+        tmpdir (object): tmpdir Pytest fixture
+    """
+    from apyfal.storage import _Storage, copy, register
+
+    # Skip if no correct configuration with this host_type
+    if not _Storage(storage_type=storage_type)._client_id:
+        pytest.skip('No configuration for %s.' % storage_type)
 
     # Initializes local file source
     content = 'dummy_content'.encode()
@@ -173,139 +152,21 @@ def test_copy(tmpdir):
     tmp_dst = tmpdir.join('dst.txt')
     tmp_dst_path = str(tmp_dst)
 
-    # Register a dummy storage
-    storage_path = 'path'
+    # Register bucket
+    storage = register(storage_type)
+    storage_dir = ('%stestaccelizestorage/apyfal_testing/' %
+                   storage.EXTRA_URL_PREFIX)
 
-    class DummyStorage(Storage):
+    # Local file to bucket
+    file_name = storage_dir + str(uuid())
+    copy(tmp_src_path, file_name)
 
-        def __init__(self, *args, **kwargs):
-            """Init storage and create stream"""
-            Storage.__init__(self, *args, **kwargs)
-            self.stream = BytesIO()
-            self.storage_to_storage = False
+    # Bucket to local file
+    assert not tmp_dst.check(file=True)
+    copy(file_name, tmp_dst_path)
+    assert tmp_dst.check(file=True)
+    assert tmp_dst.read_binary() == content
 
-        def copy_from_stream(self, stream, destination):
-            """Write to storage stream from other stream"""
-            assert destination == storage_path
-            self.stream = BytesIO()
-            copyfileobj(stream, self.stream)
-            self.stream.seek(0)
-
-        def copy_to_stream(self, source, stream):
-            """Write in stream fro storage stream"""
-            assert source == storage_path
-            self.stream.seek(0)
-            copyfileobj(self.stream, stream)
-
-        def _copy_from_dummy(self, storage, source, destination):
-            """Copy between 2 storages"""
-            assert source == storage_path
-            assert destination == storage_path
-
-            storage.stream.seek(0)
-            self.stream.seek(0)
-
-            copyfileobj(storage.stream, self.stream)
-
-            storage.stream.seek(0)
-            self.stream.seek(0)
-
-            self.storage_to_storage = True
-
-    _STORAGE.clear()
-    _STORAGE['dummy1'] = DummyStorage('dummy1')
-    _STORAGE['dummy2'] = DummyStorage('dummy2')
-
-    # Tests
-    try:
-        # Local to local
-        assert not tmp_dst.check(file=True)
-        copy(tmp_src_path, tmp_dst_path)
-        assert tmp_dst.check(file=True)
-        assert tmp_dst.read_binary() == content
-        tmp_dst.remove()
-
-        # Local to local with scheme
-        assert not tmp_dst.check(file=True)
-        copy('file://%s' % tmp_src_path, 'file://%s' % tmp_dst_path)
-        assert tmp_dst.check(file=True)
-        assert tmp_dst.read_binary() == content
-        tmp_dst.remove()
-
-        # Local to storage
-        assert not _STORAGE['dummy1'].stream.read()
-        copy(tmp_src_path, 'dummy1://path')
-        assert _STORAGE['dummy1'].stream.read() == content
-
-        # Storage to local
-        assert not tmp_dst.check(file=True)
-        copy('dummy1://path', tmp_dst_path)
-        assert tmp_dst.check(file=True)
-        assert tmp_dst.read_binary() == content
-        tmp_dst.remove()
-
-        # Stream to stream
-        src_stream = BytesIO(content)
-        dst_stream = BytesIO()
-        copy(src_stream, dst_stream)
-        dst_stream.seek(0)
-        assert dst_stream.read() == content
-
-        # Stream to local
-        assert not tmp_dst.check(file=True)
-        src_stream.seek(0)
-        copy(src_stream, tmp_dst_path)
-        assert tmp_dst.check(file=True)
-        assert tmp_dst.read_binary() == content
-        tmp_dst.remove()
-
-        # Local to stream
-        dst_stream = BytesIO()
-        copy(tmp_src_path, dst_stream)
-        dst_stream.seek(0)
-        assert dst_stream.read() == content
-
-        # Stream to storage
-        src_stream.seek(0)
-        assert not _STORAGE['dummy2'].stream.read()
-        copy(src_stream, 'dummy2://path')
-        assert _STORAGE['dummy2'].stream.read() == content
-
-        # Storage to stream
-        dst_stream = BytesIO()
-        copy('dummy1://path', dst_stream)
-        dst_stream.seek(0)
-        assert dst_stream.read() == content
-
-        # Storage to storage (Using temporary file)
-        _STORAGE['dummy1'].NAME = None
-        _STORAGE['dummy2'].stream = BytesIO()
-        assert not _STORAGE['dummy2'].stream.read()
-        copy('dummy1://path', 'dummy2://path')
-        assert _STORAGE['dummy2'].stream.read() == content
-        assert not _STORAGE['dummy1'].storage_to_storage
-        assert not _STORAGE['dummy2'].storage_to_storage
-
-        # Storage to storage (Using special method)
-        _STORAGE['dummy1'].NAME = 'dummy'
-        _STORAGE['dummy2'].NAME = 'dummy'
-        _STORAGE['dummy2'].stream = BytesIO()
-        assert not _STORAGE['dummy2'].stream.read()
-        assert not _STORAGE['dummy2'].storage_to_storage
-        copy('dummy1://path', 'dummy2://path')
-        assert _STORAGE['dummy2'].storage_to_storage
-        assert _STORAGE['dummy2'].stream.read() == content
-
-    # Clear registered storage
-    finally:
-        _STORAGE.clear()
-
-
-def test_storage():
-    """Tests Storage"""
-    from apyfal.storage import Storage
-
-    # Tests subclass instantiation
-    storage = Storage('http')
-    assert storage.NAME == 'HTTP'
-    assert storage.storage_id == 'http'
+    # Bucket to bucket
+    file_name2 = storage_dir + str(uuid())
+    copy(file_name, file_name2)

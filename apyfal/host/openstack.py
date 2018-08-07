@@ -31,8 +31,7 @@ def _exception_handler(to_raise=None, filter_error_codes=None, **exc_kwargs):
         yield
 
     # Catch authentication exceptions
-    except (_nova_exc.Unauthorized,
-            _neutron_exc.Unauthorized) as exception:
+    except (_nova_exc.Unauthorized, _neutron_exc.Unauthorized) as exception:
         raise _exc.HostAuthenticationException(exc=exception)
 
     # Catch specified exceptions
@@ -59,29 +58,39 @@ class OpenStackHost(_CSPHost):
     Args:
         host_type (str): Cloud service provider name. Default to "OpenStack".
         config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
-            If not set, will search it in current working directory, in current
-            user "home" folder. If none found, will use default configuration values.
+            Can be Configuration instance, apyfal.storage URL, paths, file-like
+            object. If not set, will search it in current working directory,
+            in current user "home" folder. If none found, will use default
+            configuration values.
         client_id (str): OpenStack Access Key ID.
         secret_id (str): OpenStack Secret Access Key.
-        region (str): OpenStack region. Needs a region supporting instances with FPGA devices.
+        region (str): OpenStack region. Needs a region supporting instances with
+            FPGA devices.
         instance_type (str): OpenStack Flavor. Default defined by accelerator.
-        key_pair (str): OpenStack Key pair. Default to 'Accelize<HostName>KeyPair'.
-        security_group: OpenStack Security group. Default to 'AccelizeSecurityGroup'.
-        instance_id (str): Instance ID of an already existing OpenStack nova instance to use.
-            If not specified, create a new instance.
+        key_pair (str): OpenStack Key pair.
+            Default to 'Accelize<HostName>KeyPair'.
+        security_group: OpenStack Security group.
+            Default to 'AccelizeSecurityGroup'.
+        instance_id (str): Instance ID of an already existing OpenStack nova
+            instance to use. If not specified, create a new instance.
         instance_name_prefix (str): Prefix to add to instance name.
-        host_ip (str): IP or URL address of an already existing AWS EC2 instance to use.
-            If not specified, create a new instance.
+        host_ip (str): IP or URL address of an already existing OpenStack nova
+            instance to use. If not specified, create a new instance.
         project_id (str): OpenStack Project
         auth_url (str): OpenStack auth-URL
         interface (str): OpenStack interface
         stop_mode (str or int): Define the "stop" method behavior.
-            Default to 'term' if new instance, or 'keep' if already existing instance.
-            See "stop_mode" property for more information and possible values.
-        init_config (str or apyfal.configuration.Configuration or file-like object):
-            Configuration file to pass to instance on initialization.
-            This configuration file will be used as default for host side accelerator.
+            Default to 'term' if new instance, or 'keep' if already existing
+            instance. See "stop_mode" property for more information and possible
+            values.
+        init_config (bool or str or apyfal.configuration.Configuration or
+            file-like object): Configuration file to pass to instance on
+            initialization. This configuration file will be used as default for
+            host side accelerator.
+            If value is True, use 'config' configuration.
+            If value is a configuration use this configuration.
+            If value is None or False, don't passe any configuration file
+            (This is default behavior).
     """
     #: Provider name to use
     NAME = 'OpenStack'
@@ -107,7 +116,8 @@ class OpenStackHost(_CSPHost):
     _INIT_METHODS = list(_CSPHost._INIT_METHODS)
     _INIT_METHODS.append('_init_image')
 
-    def __init__(self, project_id=None, auth_url=None, interface=None, **kwargs):
+    def __init__(self, project_id=None, auth_url=None, interface=None,
+                 **kwargs):
         _CSPHost.__init__(self, **kwargs)
 
         # OpenStack specific arguments
@@ -159,10 +169,12 @@ class OpenStackHost(_CSPHost):
 
         # Create key pair if not exists
         with _exception_handler(gen_msg=('created_failed', "key pair")):
-            key_pair = self._session.keypairs.create_keypair(name=self._key_pair)
+            key_pair = self._session.keypairs.create_keypair(
+                name=self._key_pair)
 
         _utl.create_key_pair_file(self._key_pair, key_pair.private_key)
-        _get_logger().info(_utl.gen_msg("created_named", "key pair", self._key_pair))
+        _get_logger().info(_utl.gen_msg(
+            "created_named", "key pair", self._key_pair))
 
     def _init_security_group(self):
         """
@@ -176,14 +188,16 @@ class OpenStackHost(_CSPHost):
         security_group_id = None
         security_group_name = self._security_group.lower()
         with _exception_handler(gen_msg=('no_find', "security groups")):
-            for security_group in neutron.list_security_groups()['security_groups']:
+            for security_group in neutron.list_security_groups(
+                    )['security_groups']:
                 if security_group['name'].lower() == security_group_name:
                     self._security_group = security_group['name']
                     security_group_id = security_group['id']
 
         # Create security group if not exists
         if security_group_id is None:
-            with _exception_handler(gen_msg=('created_failed', "security groups")):
+            with _exception_handler(gen_msg=(
+                    'created_failed', "security groups")):
                 security_group_id = neutron.create_security_group({
                     'security_group': {
                         'name': self._security_group,
@@ -202,8 +216,10 @@ class OpenStackHost(_CSPHost):
                 neutron.create_security_group_rule(
                    {'security_group_rule': {
                        'direction': 'ingress', 'port_range_min': str(port),
-                       'port_range_max': str(port), 'remote_ip_prefix': public_ip,
-                       'protocol': 'tcp', 'security_group_id': security_group_id}})
+                       'port_range_max': str(port),
+                       'remote_ip_prefix': public_ip,
+                       'protocol': 'tcp',
+                       'security_group_id': security_group_id}})
 
         _get_logger().info(
             _utl.gen_msg('authorized_ip', public_ip, self._security_group))
@@ -213,8 +229,8 @@ class OpenStackHost(_CSPHost):
         Initializes image.
         """
         # Checks if image exists and get its name
-        with _exception_handler(
-                gen_msg=('unable_find_from', 'image', self._image_id, 'Accelize')):
+        with _exception_handler(gen_msg=(
+                'unable_find_from', 'image', self._image_id, 'Accelize')):
             image = self._session.glance.find_image(self._image_id)
         try:
             self._image_name = image.name
@@ -254,8 +270,8 @@ class OpenStackHost(_CSPHost):
             object: Instance
         """
         # Try to find instance
-        with _exception_handler(
-                gen_msg=('no_instance_id', self._instance_id)):
+        with _exception_handler(gen_msg=(
+                'no_instance_id', self._instance_id)):
             return self._session.servers.get(self._instance_id)
 
     def _get_public_ip(self):
@@ -272,8 +288,7 @@ class OpenStackHost(_CSPHost):
                     if address['version'] == 4:
                         return address['addr']
                 if timeout.reached():
-                    raise _exc.HostRuntimeException(
-                        gen_msg='no_instance_ip')
+                    raise _exc.HostRuntimeException(gen_msg='no_instance_ip')
 
     def _get_private_ip(self):
         """
@@ -322,10 +337,8 @@ class OpenStackHost(_CSPHost):
             image = self._session.glance.find_image(self._image_id)
             flavor = self._session.flavors.get(self._instance_type)
             instance = self._session.servers.create(
-                name=self._get_instance_name(),
-                image=image, flavor=flavor,
-                key_name=self._key_pair,
-                security_groups=[self._security_group],
+                name=self._get_instance_name(), image=image, flavor=flavor,
+                key_name=self._key_pair, security_groups=[self._security_group],
                 userdata=self._user_data)
 
         return instance, instance.id

@@ -9,6 +9,7 @@ from ast import literal_eval as _literal_eval
 
 try:
     import pycurl as _pycurl
+
     _USE_PYCURL = True
 
     try:
@@ -44,16 +45,19 @@ class RESTClient(_Client):
 
     Args:
         accelerator (str): Name of the accelerator to initialize,
-            to know the accelerator list please visit "https://accelstore.accelize.com".
+            to know the accelerator list please visit
+            "https://accelstore.accelize.com".
         accelize_client_id (str): Accelize Client ID.
             Client ID is part of the access key generate from
             "https:/accelstore.accelize.com/user/applications".
-        accelize_secret_id (str): Accelize Secret ID. Secret ID come with client_id.
+        accelize_secret_id (str): Accelize Secret ID. Secret ID come with
+            client_id.
         host_ip (str): IP or URL address of the accelerator host.
         config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
-            If not set, will search it in current working directory, in current
-            user "home" folder. If none found, will use default configuration values.
+            Can be Configuration instance, apyfal.storage URL, paths, file-like
+            object. If not set, will search it in current working directory,
+            in current user "home" folder. If none found, will use default
+            configuration values.
     """
 
     #: Client type
@@ -103,7 +107,8 @@ class RESTClient(_Client):
         # Configure REST API host
         self._api_client.configuration.host = self._url
 
-        # If possible use the last accelerator configuration (it can still be overwritten later)
+        # If possible use the last accelerator configuration (it can still be
+        # overwritten later)
         self._use_last_configuration()
 
     def _is_alive(self):
@@ -125,7 +130,8 @@ class RESTClient(_Client):
         """
         # Get last configuration, if any
         try:
-            config_list = self._rest_api_configuration().configuration_list().results
+            config_list = self._rest_api_configuration().configuration_list(
+            ).results
         except ValueError:
             # ValueError from generated code with Swagger Codegen >= 2.3.0
             return
@@ -136,38 +142,44 @@ class RESTClient(_Client):
         if last_config.used == 0:
             return
 
-        # The last configuration URL should be keep in order to not request it to user.
+        # The last configuration URL should be keep in order to not request
+        # it to user.
         self._configuration_url = last_config.url
 
-    def start(self, datafile=None, info_dict=False, host_env=None, **parameters):
+    def start(self, datafile=None, info_dict=False, host_env=None,
+              **parameters):
         """
         Configures accelerator.
 
         Args:
             datafile (str or file-like object): Depending on the accelerator,
-                a configuration data file need to be loaded before a process can be run.
-                Can be apyfal.storage URL, paths, file-like object.
+                a configuration data file need to be loaded before a process can
+                be run. Can be apyfal.storage URL, paths, file-like object.
             info_dict (bool): If True, returns a dict containing information on
                 configuration operation.
-            parameters (str or dict): Accelerator configuration specific parameters
-                Can also be a full configuration parameters dictionary
-                (Or JSON equivalent as str literal or apyfal.storage URL to file)
-                Parameters dictionary override default configuration values,
-                individuals specific parameters overrides parameters dictionary values.
-                Take a look to accelerator documentation for more information on possible parameters.
+            parameters (str or dict): Accelerator configuration specific
+                parameters. Can also be a full configuration parameters
+                dictionary (Or JSON equivalent as str literal or apyfal.storage
+                URL to file) Parameters dictionary override default
+                configuration values, individuals specific parameters overrides
+                parameters dictionary values. Take a look to accelerator
+                documentation for more information on possible parameters.
 
         Returns:
-            dict: Optional, only if "info_dict" is True. AcceleratorClient response.
-                AcceleratorClient contain output information from  configuration operation.
-                Take a look accelerator documentation for more information.
+            dict: Optional, only if "info_dict" is True. AcceleratorClient
+                response. AcceleratorClient contain output information from
+                configuration operation. Take a look accelerator documentation
+                for more information.
         """
         # Skips configuration if already configured
-        if not (self._configuration_url is None or datafile or parameters or host_env):
+        if not (self._configuration_url is None or datafile or parameters or
+                host_env):
             return
 
         # Starts
         return _Client.start(
-            self, datafile=datafile, info_dict=info_dict, host_env=host_env, **parameters)
+            self, datafile=datafile, info_dict=info_dict, host_env=host_env,
+            **parameters)
 
     def _start(self, datafile, parameters):
         """
@@ -214,7 +226,8 @@ class RESTClient(_Client):
             bool: True if processed
         """
         api_response = self._rest_api_process().process_create(
-            self._configuration_url, parameters=json_parameters, datafile=datafile)
+            self._configuration_url, parameters=json_parameters,
+            datafile=datafile)
         return api_response.id, api_response.processed
 
     def _process_curl(self, json_parameters, datafile):
@@ -239,8 +252,7 @@ class RESTClient(_Client):
 
         for curl_opt in (
                 (_pycurl.URL, str("%s/v1.0/process/" % self.url)),
-                (_pycurl.POST, 1),
-                (_pycurl.TIMEOUT, 1200),
+                (_pycurl.POST, 1), (_pycurl.TIMEOUT, 1200),
                 (_pycurl.HTTPPOST, post),
                 (_pycurl.HTTPHEADER, ['Content-Type: multipart/form-data'])):
             curl.setopt(*curl_opt)
@@ -275,7 +287,8 @@ class RESTClient(_Client):
 
         if 'id' not in api_response:
             raise _exc.ClientRuntimeException(
-                "Processing failed with no message (host application did not run): %s" % content)
+                "Processing failed with no message "
+                "(host application did not run): %s" % content)
 
         return api_response['id'], api_response['processed']
 
@@ -294,12 +307,16 @@ class RESTClient(_Client):
         # Check if configuration was done
         if self._configuration_url is None:
             raise _exc.ClientConfigurationException(
-                "AcceleratorClient has not been configured. Use 'start' function.")
+                "AcceleratorClient has not been configured. "
+                "Use 'start' function.")
 
-        # Use cURL to improve performance and avoid issue with big file (https://bugs.python.org/issue8450)
+        # Use cURL to improve performance and avoid issue with big file
+        # (https://bugs.python.org/issue8450)
         # If not available, use REST API (with limitations)
-        process_function = self._process_curl if _USE_PYCURL else self._process_openapi
-        api_resp_id, processed = process_function(_json.dumps(parameters), file_in)
+        process_function = (
+            self._process_curl if _USE_PYCURL else self._process_openapi)
+        api_resp_id, processed = process_function(_json.dumps(parameters),
+                                                  file_in)
 
         # Get result
         api_instance = self._rest_api_process()
@@ -366,7 +383,8 @@ class RESTClient(_Client):
             Configured instance of API class.
         """
         api_instance = api(api_client=self._api_client)
-        api_instance.api_client.rest_client.pool_manager.connection_pool_kw['retries'] = 3
+        api_instance.api_client.rest_client.pool_manager.connection_pool_kw[
+            'retries'] = 3
         return api_instance
 
     def _rest_api_process(self):

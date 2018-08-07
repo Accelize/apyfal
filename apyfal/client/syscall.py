@@ -64,11 +64,13 @@ class SysCallClient(_Client):
         accelize_client_id (str): Accelize Client ID.
             Client ID is part of the access key generate from
             "https:/accelstore.accelize.com/user/applications".
-        accelize_secret_id (str): Accelize Secret ID. Secret ID come with client_id.
+        accelize_secret_id (str): Accelize Secret ID. Secret ID come with
+            client_id.
         config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
-            If not set, will search it in current working directory, in current
-            user "home" folder. If none found, will use default configuration values.
+            Can be Configuration instance, apyfal.storage URL, paths, file-like
+            object. If not set, will search it in current working directory,
+            in current user "home" folder. If none found, will use default
+            configuration values.
     """
 
     #: Client type
@@ -100,12 +102,8 @@ class SysCallClient(_Client):
 
         # Run and return response
         return self._run_executable(
-            mode='0',
-            input_file=datafile,
-            input_json=str(_uuid()),
-            output_json=str(_uuid()),
-            parameters=parameters,
-        )
+            mode='0', input_file=datafile, input_json=str(_uuid()),
+            output_json=str(_uuid()), parameters=parameters)
 
     def _process(self, file_in, file_out, parameters):
         """
@@ -120,16 +118,12 @@ class SysCallClient(_Client):
             dict: response dict.
         """
         return self._run_executable(
-            mode='1',
-            input_file=file_in,
-            output_file=file_out,
-            input_json=str(_uuid()),
-            output_json=str(_uuid()),
+            mode='1', input_file=file_in, output_file=file_out,
+            input_json=str(_uuid()), output_json=str(_uuid()),
             parameters=parameters,
 
             # Reduces verbosity to minimum by default
-            extra_args=['-v4'],
-        )
+            extra_args=['-v4'])
 
     def _stop(self, info_dict):
         """
@@ -146,9 +140,7 @@ class SysCallClient(_Client):
             return
 
         response = self._run_executable(
-            mode='2',
-            output_json=str(_uuid()) if info_dict else None
-        )
+            mode='2', output_json=str(_uuid()) if info_dict else None)
 
         # Gets optional information
         return response
@@ -254,16 +246,17 @@ class SysCallClient(_Client):
 
         # Checks if credentials needs to be updated
         update_credentials = (
-            'client_id' in new_env and
-            (new_env['client_id'] != cur_env['client_id'] or
-             new_env['client_secret'] != cur_env['client_secret']))
+                'client_id' in new_env and
+                (new_env['client_id'] != cur_env['client_id'] or
+                 new_env['client_secret'] != cur_env['client_secret']))
 
         if update_credentials:
             # Update credential in config
             for cred_key, config_key in (('client_id', 'client_id'),
                                          ('client_secret', 'secret_id')):
                 self._config['accelize'][config_key] = full_env[cred_key]
-                self._configuration_parameters['env'][config_key] = full_env[cred_key]
+                self._configuration_parameters['env'][config_key] = full_env[
+                    cred_key]
 
             # Checks if credentials are valid
             new_env['access_token'] = self._config.access_token
@@ -273,8 +266,7 @@ class SysCallClient(_Client):
             raise _exc.ClientAuthenticationException(gen_msg='no_credentials')
 
         # Checks if AGFI needs to be updated
-        update_agfi = (
-            new_env['AGFI'] and new_env['AGFI'] != cur_env['AGFI'])
+        update_agfi = (new_env['AGFI'] and new_env['AGFI'] != cur_env['AGFI'])
 
         # All is already up to date: caches values
         if not update_agfi or not update_credentials:
@@ -296,8 +288,8 @@ class SysCallClient(_Client):
                 _call(['sudo', 'chmod', 'a+wr', _cfg.METERING_CREDENTIALS])
                 with open(_cfg.METERING_CREDENTIALS, 'wt') as credential_file:
                     _json.dump({
-                        key: full_env[key] for key in ('client_id', 'client_secret')},
-                        credential_file)
+                        key: full_env[key] for key in (
+                        'client_id', 'client_secret')}, credential_file)
 
             # AGFI
             if update_agfi:

@@ -221,8 +221,8 @@ class Configuration(_Mapping):
                 # Search configuration file in current working directory
                 self.DEFAULT_CONFIG_FILE,
                 # Search configuration file in home directory
-                _os_path.join(_os_path.expanduser('~'), self.DEFAULT_CONFIG_FILE)
-            )
+                _os_path.join(_os_path.expanduser('~'),
+                              self.DEFAULT_CONFIG_FILE))
             for path in paths:
                 if _os_path.isfile(path):
                     configuration_file = path
@@ -294,7 +294,8 @@ class Configuration(_Mapping):
             client_id = self['accelize']['client_id']
             secret_id = self['accelize']['secret_id']
             if client_id is None or secret_id is None:
-                raise _exc.ClientAuthenticationException(gen_msg='no_credentials')
+                raise _exc.ClientAuthenticationException(
+                    gen_msg='no_credentials')
 
             # Check access and get token from server
             response = _utl.http_session().post(
@@ -344,7 +345,8 @@ class Configuration(_Mapping):
             accelerator_config = provider_config[accelerator]
         except KeyError:
             raise _exc.ClientConfigurationException(
-                "AcceleratorClient '%s' is not supported on '%s'." % (accelerator, host_type))
+                "AcceleratorClient '%s' is not supported on '%s'." % (
+                    accelerator, host_type))
 
         accelerator_config['accelerator'] = accelerator
         return accelerator_config

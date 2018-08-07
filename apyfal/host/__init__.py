@@ -15,26 +15,26 @@ class Host(_utl.ABC):
     Args:
         host_type (str): Host type.
         config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
-            If not set, will search it in current working directory, in current
-            user "home" folder. If none found, will use default configuration values.
+            Can be Configuration instance, apyfal.storage URL, paths, file-like
+            object. If not set, will search it in current working directory,
+            in current user "home" folder. If none found, will use default
+            configuration values.
         host_ip (str): IP or URL address of an already existing host to use.
             If not specified, create a new host.
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new host, or 'keep' if already existing host.
             See "stop_mode" property for more information and possible values.
     """
-    #: Host type name (str), must be the same as expected "host_type" argument value
+    #: Host type name (str), must be the same as expected "host_type" argument
+    # value
     NAME = None
 
     #: Link to host documentation or website
     DOC_URL = ''
 
     #: Possible stop_mode int values
-    STOP_MODES = {
-        0: "term",
-        1: "stop",
-        2: "keep"}
+    STOP_MODES = {0: "term", 1: "stop", 2: "keep"}
+
     #: Timeout for host status change in seconds
     TIMEOUT = 420.0
 
@@ -165,8 +165,10 @@ class Host(_utl.ABC):
 
         Args:
             accelerator (str): Name of the accelerator.
-            accel_parameters (dict): Can override parameters from accelerator client.
-            stop_mode (str or int): See "stop_mode" property for more information.
+            accel_parameters (dict): Can override parameters from accelerator
+                client.
+            stop_mode (str or int): See "stop_mode" property for more
+                information.
         """
         # Check configuration
         if not self._url:
@@ -199,7 +201,8 @@ class Host(_utl.ABC):
         See "stop_mode" property for more information.
 
         Args:
-            stop_mode (str or int): If not None, override current "stop_mode" value.
+            stop_mode (str or int): If not None, override current "stop_mode"
+                value.
         """
 
     def get_configuration_env(self, **_):
@@ -262,7 +265,8 @@ class Host(_utl.ABC):
         Returns:
             str: default parameter value.
         """
-        return 'Accelize%s%s' % (cls.NAME if include_host else '', parameter_name)
+        return 'Accelize%s%s' % (
+            cls.NAME if include_host else '', parameter_name)
 
     @classmethod
     def _add_csp_help_to_exception_message(cls, exception):
@@ -274,5 +278,6 @@ class Host(_utl.ABC):
         """
         if cls.DOC_URL:
             args = list(exception.args)
-            args[0] = '%s, please refer to: %s' % (args[0].rstrip('.'), cls.DOC_URL)
+            args[0] = '%s, please refer to: %s' % (
+                args[0].rstrip('.'), cls.DOC_URL)
             exception.args = tuple(args)

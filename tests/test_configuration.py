@@ -445,11 +445,11 @@ def test_subsections(tmpdir):
     assert config['section.subsection']['key3'] == '1.3'
 
     assert config['section.subsection.subsubsection'
-                  ]['key1'] == '1.1.1'
+           ]['key1'] == '1.1.1'
 
     assert config['section'].get_literal('key1') == 1
     assert config['section.subsection.subsubsection'
-                  ].get_literal('key1') == '1.1.1'
+           ].get_literal('key1') == '1.1.1'
 
     # Test: writing
     config['section']['key1'] = None

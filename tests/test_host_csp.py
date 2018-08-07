@@ -23,8 +23,10 @@ def test_csphost_new_init():
                 del config._sections[section]
     except KeyError:
         pass
-    kwargs = {'region': 'region', 'project_id': 'project_id', 'client_id': 'client_id',
-              'auth_url': 'auth_url', 'interface': 'interface', 'config': config}
+    kwargs = {'region': 'region', 'project_id': 'project_id',
+              'client_id': 'client_id',
+              'auth_url': 'auth_url', 'interface': 'interface',
+              'config': config}
 
     # Test: Existing CSP class and module
     assert isinstance(Host(host_type="OVH", **kwargs), OVHHost)
@@ -159,9 +161,9 @@ def test_csphost_properties():
     csp._INFO_NAMES.add('not_exists')
     info = csp.info
     for name in {
-            'host_type', 'public_ip',
-            'private_ip', 'url',
-            'instance_id', 'region', 'stop_mode'}:
+        'host_type', 'public_ip',
+        'private_ip', 'url',
+        'instance_id', 'region', 'stop_mode'}:
         assert info[name] == locals()[name]
     assert 'not_exists' not in info
 
@@ -211,6 +213,7 @@ def test_csphost_status():
     # Mock CSP class
     class DummyClass(get_dummy_csp_class()):
         """Dummy CSP"""
+
         def __init__(self):
             self._instance_id = None
             self._instance = None
@@ -573,7 +576,8 @@ def test_csphost_set_accelerator_requirements():
     config_env = "dummy_config_env"
     region_parameters = {'image': image_id, 'instancetype': instance_type}
     dummy_accelerator = "dummy_accelerator"
-    accel_parameters = {region: region_parameters, 'accelerator': dummy_accelerator}
+    accel_parameters = {region: region_parameters,
+                        'accelerator': dummy_accelerator}
 
     # Mock Accelerator client
 
@@ -604,7 +608,8 @@ def test_csphost_set_accelerator_requirements():
 
         # Test: Pass accelerator
         csp = get_dummy_csp_class()(
-            host_type=dummy_host_type, region=region, client_id='dummy_client_id')
+            host_type=dummy_host_type, region=region,
+            client_id='dummy_client_id')
         csp._config_env = config_env
         csp._set_accelerator_requirements(accelerator=dummy_accelerator)
         assert csp._image_id == image_id
@@ -614,7 +619,8 @@ def test_csphost_set_accelerator_requirements():
         assert dummy_accelerator in csp._get_instance_name()
 
         # Test: Region not found
-        accel_parameters = {'another_region': region_parameters, 'accelerator': dummy_accelerator}
+        accel_parameters = {'another_region': region_parameters,
+                            'accelerator': dummy_accelerator}
         with pytest.raises(HostConfigurationException):
             csp._set_accelerator_requirements(accel_parameters=accel_parameters)
 

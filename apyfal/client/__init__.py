@@ -21,37 +21,35 @@ class AcceleratorClient(_utl.ABC):
 
     Args:
         accelerator (str): Name of the accelerator to initialize,
-            to know the accelerator list please visit "https://accelstore.accelize.com".
+            to know the accelerator list please visit
+            "https://accelstore.accelize.com".
         client_type (str): Type of client.
         accelize_client_id (str): Accelize Client ID.
             Client ID is part of the access key generate from
             "https:/accelstore.accelize.com/user/applications".
-        accelize_secret_id (str): Accelize Secret ID. Secret ID come with client_id.
+        accelize_secret_id (str): Accelize Secret ID. Secret ID come with
+            client_id.
         config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
-            If not set, will search it in current working directory, in current
-            user "home" folder. If none found, will use default configuration values.
+            Can be Configuration instance, apyfal.storage URL, paths, file-like
+            object. If not set, will search it in current working directory,
+            in current user "home" folder. If none found, will use default
+            configuration values.
     """
 
-    #: Client type name (str), must be the same as expected "client_type" argument value
+    #: Client type name (str), must be the same as expected "client_type"
+    # argument value
     NAME = None
 
     #: Default parameters JSON for configuration/start stage
     DEFAULT_CONFIGURATION_PARAMETERS = {
-        "app": {
-            "reset": 0,
-            "enable-sw-comparison": 0,
-            "logging": {"format": 1, "verbosity": 2},
-            "specific": {}},
+        "app": {"reset": 0, "enable-sw-comparison": 0,
+                "logging": {"format": 1, "verbosity": 2}, "specific": {}},
         "env": {}}
 
     #: Default parameters JSON for process stage
     DEFAULT_PROCESS_PARAMETERS = {
-        "app": {
-            "reset": 0,
-            "enable-sw-comparison": 0,
-            "logging": {"format": 1, "verbosity": 4},
-            "specific": {}}}
+        "app": {"reset": 0, "enable-sw-comparison": 0,
+                "logging": {"format": 1, "verbosity": 4}, "specific": {}}}
 
     # Client is remote or not
     REMOTE = False
@@ -74,8 +72,9 @@ class AcceleratorClient(_utl.ABC):
         return _utl.factory(
             cls, client_type, 'client_type', _exc.ClientConfigurationException)
 
-    def __init__(self, accelerator=None, client_type=None, accelize_client_id=None,
-                 accelize_secret_id=None, config=None, **_):
+    def __init__(self, accelerator=None, client_type=None,
+                 accelize_client_id=None, accelize_secret_id=None, config=None,
+                 **_):
         self._name = accelerator
         self._client_type = client_type
         self._url = None
@@ -131,36 +130,39 @@ class AcceleratorClient(_utl.ABC):
         """
         return self._name
 
-    def start(self, datafile=None, info_dict=False, host_env=None, **parameters):
+    def start(self, datafile=None, info_dict=False, host_env=None,
+              **parameters):
         """
         Configures accelerator.
 
         Args:
             datafile (str or file-like object): Depending on the accelerator,
-                a configuration data file need to be loaded before a process can be run.
-                Can be apyfal.storage URL, paths, file-like object.
+                a configuration data file need to be loaded before a process can
+                be run. Can be apyfal.storage URL, paths, file-like object.
             info_dict (bool): If True, returns a dict containing information on
                 configuration operation.
-            parameters (str or dict): Accelerator configuration specific parameters
-                Can also be a full configuration parameters dictionary
-                (Or JSON equivalent as str literal or apyfal.storage URL to file)
-                Parameters dictionary override default configuration values,
-                individuals specific parameters overrides parameters dictionary values.
-                Take a look to accelerator documentation for more information on possible parameters.
+            parameters (str or dict): Accelerator configuration specific
+                parameters Can also be a full configuration parameters
+                dictionary (Or JSON equivalent as str literal or apyfal.storage
+                URL to file) Parameters dictionary override default
+                configuration values, individuals specific parameters overrides
+                parameters dictionary values. Take a look to accelerator
+                documentation for more information on possible parameters.
 
         Returns:
-            dict: Optional, only if "info_dict" is True. AcceleratorClient response.
-                AcceleratorClient contain output information from  configuration operation.
-                Take a look accelerator documentation for more information.
+            dict: Optional, only if "info_dict" is True. AcceleratorClient
+                response. AcceleratorClient contain output information from
+                configuration operation. Take a look accelerator documentation
+                for more information.
         """
         # Configure start
-        parameters = self._get_parameters(parameters, self._configuration_parameters)
+        parameters = self._get_parameters(
+            parameters, self._configuration_parameters)
         parameters['env'].update(host_env or dict())
 
         # Handle files
         with self._data_file(
                 datafile, parameters, 'datafile', mode='rb') as datafile:
-
             # Starts
             response = self._start(datafile, parameters)
 
@@ -184,7 +186,8 @@ class AcceleratorClient(_utl.ABC):
             dict: response.
         """
 
-    def process(self, file_in=None, file_out=None, info_dict=False, **parameters):
+    def process(self, file_in=None, file_out=None, info_dict=False,
+                **parameters):
         """
         Processes with accelerator.
 
@@ -197,16 +200,18 @@ class AcceleratorClient(_utl.ABC):
                 process operation.
             parameters (str or dict): Accelerator process specific parameters
                 Can also be a full process parameters dictionary
-                (Or JSON equivalent as str literal or apyfal.storage URL to file)
-                Parameters dictionary override default configuration values,
-                individuals specific parameters overrides parameters dictionary values.
-                Take a look to accelerator documentation for more information on possible parameters.
+                (Or JSON equivalent as str literal or apyfal.storage URL to
+                file). Parameters dictionary override default configuration
+                values, individuals specific parameters overrides parameters
+                dictionary values. Take a look to accelerator documentation for
+                more information on possible parameters.
 
         Returns:
             dict: Result from process operation, depending used accelerator.
-            dict: Optional, only if "info_dict" is True. AcceleratorClient response.
-                AcceleratorClient contain output information from  process operation.
-                Take a look accelerator documentation for more information.
+            dict: Optional, only if "info_dict" is True. AcceleratorClient
+                response. AcceleratorClient contain output information from
+                process operation. Take a look accelerator documentation for
+                more information.
         """
         # Configures processing
         parameters = self._get_parameters(parameters, self._process_parameters)
@@ -216,7 +221,6 @@ class AcceleratorClient(_utl.ABC):
                 file_in, parameters, 'file_in', mode='rb') as file_in:
             with self._data_file(
                     file_out, parameters, 'file_out', mode='wb') as file_out:
-
                 # Processes
                 response = self._process(file_in, file_out, parameters)
 
@@ -258,9 +262,10 @@ class AcceleratorClient(_utl.ABC):
                 stop operation.
 
         Returns:
-            dict: Optional, only if "info_dict" is True. AcceleratorClient response.
-                AcceleratorClient contain output information from  stop operation.
-                Take a look to accelerator documentation for more information.
+            dict: Optional, only if "info_dict" is True. AcceleratorClient
+                response. AcceleratorClient contain output information from
+                stop operation. Take a look to accelerator documentation for
+                more information.
         """
         # Stops
         response = self._stop(info_dict)
@@ -297,7 +302,8 @@ class AcceleratorClient(_utl.ABC):
 
         Args:
             api_result (dict): Result from accelerator.
-            message (str): Optional exception message to add before accelerator message.
+            message (str): Optional exception message to add before accelerator
+                message.
 
         Raises:
             apyfal.exceptions.ClientRuntimeException: Exception from arguments.
@@ -307,7 +313,8 @@ class AcceleratorClient(_utl.ABC):
         except KeyError:
             raise _exc.ClientRuntimeException('%sNo result returned' % message)
         if status:
-            raise _exc.ClientRuntimeException(message + api_result['app']['msg'])
+            raise _exc.ClientRuntimeException(
+                message + api_result['app']['msg'])
 
     @staticmethod
     def _get_parameters(parameters, default_parameters, copy=True):
@@ -418,7 +425,7 @@ class AcceleratorClient(_utl.ABC):
                 for authorized in self._authorized_host_dirs:
                     if not path.startswith(authorized):
                         raise _exc.ClientSecurityException(
-                                "Unauthorized path: '%s'" % path)
+                            "Unauthorized path: '%s'" % path)
 
             # Checks input file exists
             if 'r' in mode and not _os_path.isfile(path):

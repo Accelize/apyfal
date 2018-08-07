@@ -136,13 +136,15 @@ def test_restclient_start():
         @staticmethod
         def configuration_read(id_value):
             """Checks input arguments and returns fake response"""
-            Response = collections.namedtuple('Response', ['inerror', 'id', 'url'])
+            Response = collections.namedtuple('Response',
+                                              ['inerror', 'id', 'url'])
 
             # Check parameters
             assert id_value == 'dummy_id'
 
             # Return response
-            return Response(url='dummy_url', id=id_value, inerror=configuration_read_in_error)
+            return Response(url='dummy_url', id=id_value,
+                            inerror=configuration_read_in_error)
 
     # Mock some accelerators parts
     class DummyAccelerator(RESTClient):
@@ -505,7 +507,8 @@ def test_restclient_process_openapi():
                 assert configuration == dummy_configuration
 
                 # Return fake response
-                Response = collections.namedtuple('Response', ['processed', 'id'])
+                Response = collections.namedtuple('Response',
+                                                  ['processed', 'id'])
                 return Response(id=dummy_id, processed=dummy_processed)
 
         # Mock some accelerators parts
@@ -607,7 +610,8 @@ def test_restclient_process(tmpdir):
 
             Checks input arguments and returns fake response"""
             # Checks input parameters
-            assert json.loads(accelerator_parameters) == self._process_parameters
+            assert json.loads(
+                accelerator_parameters) == self._process_parameters
             assert datafile == file_in
 
             # Returns fake result
@@ -674,7 +678,7 @@ def test_restclient_process(tmpdir):
         del expected_parameters_result['app']['specific']
         assert accelerator.process(
             str(file_in), str(file_out), info_dict=True) == (
-            specific, expected_parameters_result)
+                   specific, expected_parameters_result)
         assert file_out.read_binary() == out_content
 
         # Checks without info_dict

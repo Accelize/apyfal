@@ -84,7 +84,8 @@ def test_accelerator():
         def _process(self, *_):
             """Do Nothing"""
 
-        def start(self, datafile=None, host_env=None, info_dict=True, **parameters):
+        def start(self, datafile=None, host_env=None, info_dict=True,
+                  **parameters):
             """Checks arguments and returns fake result"""
             assert datafile == dummy_datafile
             assert parameters == {'parameters': dummy_accelerator_parameters}
@@ -100,7 +101,8 @@ def test_accelerator():
 
             return dummy_stop_result
 
-        def process(self, file_in=None, file_out=None, info_dict=True, **parameters):
+        def process(self, file_in=None, file_out=None, info_dict=True,
+                    **parameters):
             """Checks arguments and returns fake result"""
             assert parameters == {'parameters': dummy_accelerator_parameters}
             assert file_in == dummy_file_in
@@ -171,7 +173,8 @@ def test_accelerator():
         assert accel.process(
             file_in=dummy_file_in, file_out=dummy_file_out, info_dict=True,
             parameters=dummy_accelerator_parameters) == dummy_process_result
-        assert accel.stop(stop_mode=dummy_stop_mode, info_dict=True) == dummy_stop_result
+        assert accel.stop(stop_mode=dummy_stop_mode,
+                          info_dict=True) == dummy_stop_result
         assert not DummyClient.running
         assert not DummyHost.running
 

@@ -10,24 +10,35 @@ class OVHHost(_OpenStackHost):
     Args:
         host_type (str): Cloud service provider name. Default to "OVH".
         config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
-            If not set, will search it in current working directory, in current
-            user "home" folder. If none found, will use default configuration values.
+            Can be Configuration instance, apyfal.storage URL, paths, file-like
+            object. If not set, will search it in current working directory,
+            in current user "home" folder. If none found, will use default
+            configuration values.
         client_id (str): OVH Access Key ID.
         secret_id (str): OVH Secret Access Key.
-        region (str): OVH region. Needs a region supporting instances with FPGA devices.
+        region (str): OVH region. Needs a region supporting instances with FPGA
+            devices.
         instance_type (str): OVH Flavor. Default defined by accelerator.
         key_pair (str): OVH Key pair. Default to 'AccelizeOVHKeyPair'.
         security_group: OVH Security group. Default to 'AccelizeSecurityGroup'.
-        instance_id (str): Instance ID of an already existing OVH nova instance to use.
-            If not specified, create a new instance.
+        instance_id (str): Instance ID of an already existing OVH nova instance
+            to use. If not specified, create a new instance.
         instance_name_prefix (str): Prefix to add to instance name.
-        host_ip (str): IP or URL address of an already existing AWS EC2 instance to use.
-            If not specified, create a new instance.
+        host_ip (str): IP or URL address of an already existing AWS EC2 instance
+            to use. If not specified, create a new instance.
         project_id (str): OVH Project
         stop_mode (str or int): Define the "stop" method behavior.
-            Default to 'term' if new instance, or 'keep' if already existing instance.
-            See "stop_mode" property for more information and possible values.
+            Default to 'term' if new instance, or 'keep' if already existing
+            instance. See "stop_mode" property for more information and possible
+            values.
+        init_config (bool or str or apyfal.configuration.Configuration or
+            file-like object): Configuration file to pass to instance on
+            initialization. This configuration file will be used as default for
+            host side accelerator.
+            If value is True, use 'config' configuration.
+            If value is a configuration use this configuration.
+            If value is None or False, don't passe any configuration file
+            (This is default behavior).
     """
     #: Provider name to use
     NAME = 'OVH'

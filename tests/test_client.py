@@ -32,7 +32,8 @@ def test_acceleratorclient_raise_for_status():
 
     # Test: Result with error
     with pytest.raises(ClientRuntimeException):
-        AcceleratorClient._raise_for_status({'app': {'status': 1, 'msg': 'error'}})
+        AcceleratorClient._raise_for_status(
+            {'app': {'status': 1, 'msg': 'error'}})
 
 
 def test_acceleratorclient_get_parameters(tmpdir):

@@ -20,6 +20,7 @@ _CACHE = dict()  # Store some cached values
 # Python 2 compatibility
 if sys.version_info[0] >= 3:
     # Python 3: redirect name to existing objects
+    fsdecode = os.fsdecode
     makedirs = os.makedirs
     ABC = abc.ABC
 
@@ -29,19 +30,20 @@ else:
     # Back port of "os.makedirs" with exists_ok
     def makedirs(name, mode=0o777, exist_ok=False):
         """
-        Super-mkdir; create a leaf directory and all intermediate ones. Works like
-        mkdir, except that any intermediate path segment (not just the rightmost)
-        will be created if it does not exist. If the target directory already
-        exists,
+        Super-mkdir; create a leaf directory and all intermediate ones.
+        Works like mkdir, except that any intermediate path segment
+        (not just the rightmost) will be created if it does not exist.
 
         Args:
             name (str): Path
             mode (int): The mode parameter is passed to os.mkdir();
                 see the os.mkdir() description for how it is interpreted.
-            exist_ok (bool): Don't raises error if target directory already exists.
+            exist_ok (bool): Don't raises error if target directory already
+                exists.
 
         Raises:
-            OSError: if exist_ok is False and if the target directory already exists.
+            OSError: if exist_ok is False and if the target directory already
+                exists.
         """
         try:
             os.makedirs(name, mode)
@@ -51,6 +53,11 @@ else:
 
     # Back port of "abc.ABC" base abstract class
     ABC = abc.ABCMeta('ABC', (object,), {})
+
+    # Missing "os.fsdecode"
+    def fsdecode(filename):
+        """Return filename unchanged"""
+        return filename
 
 
 def factory(cls, cls_type, parameter_name, exc_type):
@@ -86,9 +93,8 @@ def factory(cls, cls_type, parameter_name, exc_type):
         if cls_type_low in str(exception):
             # If ImportError for current module name, may be
             # a configuration error.
-            raise exc_type(
-                "No module '%s' for '%s' %s" % (
-                    module_name, cls_type, parameter_name))
+            raise exc_type("No module '%s' for '%s' %s" % (
+                module_name, cls_type, parameter_name))
         # ImportError of another module, raised as it
         raise
 
@@ -101,9 +107,8 @@ def factory(cls, cls_type, parameter_name, exc_type):
         except AttributeError:
             continue
     else:
-        raise exc_type(
-            "No class found in '%s' for '%s' %s" % (
-                module_name, cls_type, parameter_name))
+        raise exc_type("No class found in '%s' for '%s' %s" % (
+            module_name, cls_type, parameter_name))
 
     # Instantiates target subclass
     return object.__new__(member)
@@ -167,8 +172,10 @@ def http_session(max_retries=2, https=True):
     Instantiate HTTP session
 
     Args:
-        max_retries (int): The maximum number of retries each connection should attempt
-        https (bool): If True, enables HTTPS and HTTP support. Else only HTTP support.
+        max_retries (int): The maximum number of retries each connection should
+            attempt
+        https (bool): If True, enables HTTPS and HTTP support. Else only HTTP
+            support.
 
     Returns:
         requests.Session: Http session
@@ -245,7 +252,8 @@ def format_url(url_or_ip):
     # From "django.core.validator.URLValidator"
     url_validator = re.compile(
         r'^(?:http|ftp)s?://'  # http:// or https://
-        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
+        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+'  # domain...
+        r'(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
         r'localhost|'  # localhost...
         r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|'  # ...or ipv4
         r'\[?[A-F0-9]*:[A-F0-9:]+\]?)'  # ...or ipv6
@@ -279,18 +287,15 @@ def get_host_public_ip(max_tries=10, validation_sample=3):
 
     # Gets IP address from multiple sources and
     # checks result consistency before returning one
-    with _ThreadPoolExecutor(
-            max_workers=validation_sample) as executor:
+    with _ThreadPoolExecutor(max_workers=validation_sample) as executor:
         for _ in range(max_tries):
             # Gets address from multiple source in parallel
-            ip_addresses = [
-                executor.submit(myip)
-                for _ in range(validation_sample)]
+            ip_addresses = [executor.submit(myip)
+                            for _ in range(validation_sample)]
 
             # Checks if addresses match
-            ip_addresses = set(
-                ip_address.result()
-                for ip_address in ip_addresses)
+            ip_addresses = set(ip_address.result()
+                               for ip_address in ip_addresses)
             if len(ip_addresses) == 1:
                 ip_address = ip_addresses.pop()
                 if ip_address:
@@ -314,8 +319,7 @@ def recursive_update(to_update, update):
     if update:
         for key, value in update.items():
             if isinstance(value, collections.Mapping):
-                value = recursive_update(
-                    to_update.get(key, {}), value)
+                value = recursive_update(to_update.get(key, {}), value)
             to_update[key] = value
     return to_update
 

@@ -25,26 +25,30 @@ class CSPHost(_Host):
     Args:
         host_type (str): Cloud service provider name.
         config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
-            If not set, will search it in current working directory, in current
-            user "home" folder. If none found, will use default configuration values.
+            Can be Configuration instance, apyfal.storage URL, paths, file-like
+            object. If not set, will search it in current working directory,
+            in current user "home" folder. If none found, will use default
+            configuration values.
         client_id (str): CSP Access Key ID.
         secret_id (str): CSP Secret Access Key.
-        region (str): CSP region. Needs a region supporting instances with FPGA devices.
+        region (str): CSP region. Needs a region supporting instances with FPGA
+            devices.
         instance_type (str): CSP instance type. Default defined by accelerator.
         key_pair (str): CSP Key pair. Default to 'Accelize<HostName>KeyPair'.
         security_group: CSP Security group. Default to 'AccelizeSecurityGroup'.
-        instance_id (str): Instance ID of an already existing CSP instance to use.
-            If not specified, create a new instance.
+        instance_id (str): Instance ID of an already existing CSP instance to
+            use. If not specified, create a new instance.
         instance_name_prefix (str): Prefix to add to instance name.
-        host_ip (str): IP or URL address of an already existing CSP instance to use.
-            If not specified, create a new instance.
+        host_ip (str): IP or URL address of an already existing CSP instance to
+            use. If not specified, create a new instance.
         stop_mode (str or int): Define the "stop" method behavior.
-            Default to 'term' if new instance, or 'keep' if already existing instance.
-            See "stop_mode" property for more information and possible values.
-        init_config (bool or str or apyfal.configuration.Configuration or file-like object):
-            Configuration file to pass to instance on initialization.
-            This configuration file will be used as default for host side accelerator.
+            Default to 'term' if new instance, or 'keep' if already existing
+            instance. See "stop_mode" property for more information and possible
+            values.
+        init_config (bool or str or apyfal.configuration.Configuration or
+            file-like object): Configuration file to pass to instance on
+            initialization. This configuration file will be used as default for
+            host side accelerator.
             If value is True, use 'config' configuration.
             If value is a configuration use this configuration.
             If value is None or False, don't passe any configuration file
@@ -65,10 +69,9 @@ class CSPHost(_Host):
     # Attributes returned as dict by "info" property
     _INFO_NAMES = _Host._INFO_NAMES.copy()
     _INFO_NAMES.update({
-        'public_ip', 'private_ip', '_region', '_instance_type', '_instance_name',
-        '_key_pair', '_security_group', '_instance_id', '_instance_type_name',
-        '_region_parameters'
-    })
+        'public_ip', 'private_ip', '_region', '_instance_type',
+        '_instance_name', '_key_pair', '_security_group', '_instance_id',
+        '_instance_type_name', '_region_parameters'})
 
     # Instance user home directory
     _HOME = '/home/centos'
@@ -77,8 +80,9 @@ class CSPHost(_Host):
     _INIT_METHODS = ['_init_security_group', '_init_key_pair']
 
     def __init__(self, client_id=None, secret_id=None, region=None,
-                 instance_type=None, key_pair=None, security_group=None, instance_id=None,
-                 instance_name_prefix=None, init_config=None, **kwargs):
+                 instance_type=None, key_pair=None, security_group=None,
+                 instance_id=None, instance_name_prefix=None, init_config=None,
+                 **kwargs):
         _Host.__init__(self, **kwargs)
 
         # Default some attributes
@@ -281,8 +285,10 @@ class CSPHost(_Host):
 
         Args:
             accelerator (str): Name of the accelerator.
-            accel_parameters (dict): Can override parameters from accelerator client.
-            stop_mode (str or int): See "stop_mode" property for more information.
+            accel_parameters (dict): Can override parameters from accelerator
+                client.
+            stop_mode (str or int): See "stop_mode" property for more
+                information.
         """
         # Updates stop mode
         self.stop_mode = stop_mode
@@ -299,7 +305,8 @@ class CSPHost(_Host):
 
             # Creates and starts instance if not exists
             if self.instance_id is None:
-                _get_logger().info("Configuring %s instance...", self._host_type)
+                _get_logger().info(
+                    "Configuring %s instance...", self._host_type)
 
                 try:
                     self._create_instance()
@@ -308,7 +315,8 @@ class CSPHost(_Host):
                     raise
 
                 try:
-                    self._instance, self._instance_id = self._start_new_instance()
+                    self._instance, self._instance_id = (
+                        self._start_new_instance())
                 except _exc.HostException as exception:
                     self._stop_silently(exception)
                     raise
@@ -402,8 +410,7 @@ class CSPHost(_Host):
             apyfal.exceptions.HostRuntimeException:
                 Timeout while booting."""
         if not _utl.check_url(self._url, timeout=self.TIMEOUT):
-            raise _exc.HostRuntimeException(
-                gen_msg=('timeout', "boot"))
+            raise _exc.HostRuntimeException(gen_msg=('timeout', "boot"))
 
     def _get_instance_name(self):
         """Returns name to use as instance name
@@ -415,10 +422,8 @@ class CSPHost(_Host):
 
             self._instance_name = '_'.join(
                 name for name in (
-                    self._instance_name_prefix,
-                    'accelize', self._accelerator,
-                    _datetime.now().strftime('%y%m%d%H%M%S'))
-                if name)
+                    self._instance_name_prefix, 'accelize', self._accelerator,
+                    _datetime.now().strftime('%y%m%d%H%M%S')) if name)
 
         return self._instance_name
 
@@ -428,7 +433,8 @@ class CSPHost(_Host):
         See "stop_mode" property for more information.
 
         Args:
-            stop_mode (str or int): If not None, override current "stop_mode" value.
+            stop_mode (str or int): If not None, override current "stop_mode"
+                value.
         """
         # No instance to stop (Avoid double call with __exit__ + __del__)
         if self._instance_id is None:
@@ -458,12 +464,14 @@ class CSPHost(_Host):
         # Terminates and delete instance completely
         if stop_mode == 'term':
             self._terminate_instance()
-            _get_logger().info("Instance '%s' has been terminated", self._instance_id)
+            _get_logger().info(
+                "Instance '%s' has been terminated", self._instance_id)
 
         # Pauses instance and keep it alive
         else:
             self._pause_instance()
-            _get_logger().info("Instance '%s' has been stopped", self._instance_id)
+            _get_logger().info(
+                "Instance '%s' has been stopped", self._instance_id)
 
         # Detaches from instance
         self._instance_id = None
@@ -499,7 +507,8 @@ class CSPHost(_Host):
         except _exc.HostException:
             pass
 
-    def _set_accelerator_requirements(self, accelerator=None, accel_parameters=None):
+    def _set_accelerator_requirements(
+            self, accelerator=None, accel_parameters=None):
         """
         Configures instance with accelerator client parameters.
 
@@ -507,7 +516,8 @@ class CSPHost(_Host):
 
         Args:
             accelerator (str): Name of the accelerator
-            accel_parameters (dict): Can override parameters from accelerator client.
+            accel_parameters (dict): Can override parameters from accelerator
+                client.
 
         Raises:
             apyfal.exceptions.HostConfigurationException:
@@ -526,8 +536,8 @@ class CSPHost(_Host):
         if self._region not in parameters.keys():
             raise _exc.HostConfigurationException(
                 "Region '%s' is not supported. Available regions are: %s" % (
-                    self._region, ', '.join(
-                        region for region in parameters if region != 'accelerator')))
+                    self._region, ', '.join(region for region in parameters
+                                            if region != 'accelerator')))
 
         # Gets accelerator name
         self._accelerator = parameters['accelerator']
@@ -559,8 +569,7 @@ class CSPHost(_Host):
         _cfg.create_configuration(config).write(stream)
         stream.seek(0)
 
-        commands += [
-            "cat << EOF > %s/accelerator.conf" % self._HOME,
-            stream.read(), "EOF"]
+        commands += ["cat << EOF > %s/accelerator.conf" % self._HOME,
+                     stream.read(), "EOF"]
 
         return '\n'.join(commands).encode()

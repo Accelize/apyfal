@@ -1,6 +1,6 @@
-apyfal.storage.ovh
+apyfal.storage.aws
 ==================
 
-.. automodule:: apyfal.storage.ovh
+.. automodule:: apyfal.storage.aws
    :members:
    :inherited-members:

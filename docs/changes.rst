@@ -7,12 +7,18 @@ Changelog
 Improvements
 
 - Speed up instance configuration.
-- Move OpenStack library from ``openstacksdk`` to ``python-novaclient`` and ``python-neutronclient``.
-  This adds more precision over the OpenStach Nova host control and reduces the overall number of required dependencies.
+- Move OpenStack library from ``openstacksdk`` to ``python-novaclient`` and
+  ``python-neutronclient``. This adds more precision over the OpenStach Nova
+  host control and reduces the overall number of required dependencies.
+- ``apyfal.storage`` was improved using ``pycosio``, this imporoves
+  performance, adds support for huge cloud objects and allows
+  ``apyfal.storag.open`` to provides full featured cloud objects streams.
+- ``apyfal.storage`` now accepts path-like objects.
 
 Fixes:
 
-- ``stop`` ``stop_mode`` with OpenStack now pauses instance instead of terminates it.
+- ``stop`` ``stop_mode`` with OpenStack now pauses instance instead of
+  terminates it.
 
 1.1.0 (2018/08)
 ---------------
