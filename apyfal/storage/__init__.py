@@ -4,10 +4,16 @@
 Support I/O over different kind of storage that must
 be first registered.
 
+Theses features are provided by the "pycosio". Path are automatically handled
+with pycosio in Apyfal to provides automatic support of cloud storage.
+
 Register storage:
     Storage defined in configuration are automatically registered
     on first call. It is possible to manually register new storage
     with "register" function.
+
+The Apyfal configuration file is used to automatically register all known
+storage on start up.
 
 Storage URL format:
     All operations works with URL with format "scheme://path"
@@ -127,12 +133,12 @@ class _Storage:
 
     Args:
         storage_type (str): Type of storage.
-        config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like
-            object.
+        config (apyfal.configuration.Configuration, path-like object or
+            file-like object):
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration
             values.
+            Path-like object can be path, URL or cloud object URL.
     """
     #: Name (str), Linked to apyfal.host NAME
     NAME = None

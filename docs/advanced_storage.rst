@@ -1,14 +1,16 @@
 _Storage
 =======
 
-Apyfal storage provides the ability to use cloud storage services and other storage as a
-source and target for an accelerator.
+Apyfal storage provides the ability to use cloud storage services and other
+storage as a source and target for an accelerator.
 
 Using this feature to handle files provides some advantages:
 
-* When using Apyfal to remotely control an accelerator, all file transfers are performed on the host directly.
+* When using Apyfal to remotely control an accelerator, all file transfers are
+  performed on the host directly.
 * Apyfal storage uses simple URLs like ``str`` to define files.
-* Apyfal storage can also be used to handle basic copy or open operations on storage services files.
+* Apyfal storage can also be used to handle basic copy or open operations on
+  storage services files.
 
 Apyfal storage URL format
 -------------------------
@@ -22,7 +24,8 @@ Basic schemes
 
 Apyfal storage supports the following basic schemes.
 
-* ``file``: Local file on file system (``file`` scheme is assumed if no scheme provided). Example:
+* ``file``: Local file on file system (``file`` scheme is assumed if no scheme
+  provided). Example:
   ``file:///home/user/myfile`` or ``/home/user/myfile``
 * ``http``/``https``: File available on HTTP/HTTPS. Example:
   ``http://www.accelize.com/file`` or ``https://www.accelize.com/file``
@@ -30,31 +33,36 @@ Apyfal storage supports the following basic schemes.
 Cloud storage schemes
 ~~~~~~~~~~~~~~~~~~~~~
 
-Apyfal storage supports extra schemes for cloud storage services. In this case, the scheme is the service name or
-the provider name.
+Apyfal storage supports extra schemes for cloud storage services. In this case,
+the scheme is the service name or the provider name.
 
 Cloud storage use buckets (or containers) to hold data.
 The bucket name needs to be specified just before the file path in URL.
 
-See :doc:`api_storage` for information available storage services and the scheme to use.
+See :doc:`api_storage` for information available storage services and the scheme
+to use.
 
 Example:
 
-* ``s3://my_bucket/my_file``: File with ``my_file`` key on AWS S3 ``my_bucket`` bucket.
-* ``ovh://my_container/my_file``: File with ``my_file`` name on OVH Object Store ``my_container`` container.
+* ``s3://my_bucket/my_file``: File with ``my_file`` key on AWS S3 ``my_bucket``
+  bucket.
+* ``ovh://my_container/my_file``: File with ``my_file`` name on OVH Object Store
+  ``my_container`` container.
 
 The ``host`` scheme
 ~~~~~~~~~~~~~~~~~~~
 
-The ``host`` scheme is similar to the ``file`` scheme, but is only available when using Apyfal to control the
-accelerator remotely.
+The ``host`` scheme is similar to the ``file`` scheme, but is only available
+when using Apyfal to control the accelerator remotely.
 
 In this case:
 
-* ``file`` represents a client-side file that needs to be transferred to/from host.
+* ``file`` represents a client-side file that needs to be transferred to/from
+  host.
 * ``host`` represents a host-side file that can be used directly.
 
-For security reason, ``host`` scheme is restricted to a whitelisted list of directories on host.
+For security reason, ``host`` scheme is restricted to a whitelisted list of
+directories on host.
 This list can be modified, host side, using the ``authorized_host_dirs``
 of the ``security`` section in the configuration file.
 The only default authorized directory is ``~/shared``.
@@ -62,7 +70,8 @@ The only default authorized directory is ``~/shared``.
 Using storage with Accelerator
 ------------------------------
 
-``apyfal.Accelerator`` has native Apyfal storage URL support for file parameters:
+``apyfal.Accelerator`` has native Apyfal storage URL support for file
+parameters:
 
 .. code-block:: python
 
@@ -72,14 +81,17 @@ Using storage with Accelerator
 
        myaccel.start(datafile='my_storage://datafile')
 
-       myaccel.process(file_in='my_storage://file_in', file_out='my_storage://file_out')
+       myaccel.process(file_in='my_storage://file_in',
+                       file_out='my_storage://file_out')
 
 Basic storage operations
 ------------------------
 
-Apyfal storage provides some basic file operation functions to easily manipulate storage files:
+Apyfal storage provides some basic file operation functions to easily manipulate
+storage files:
 
-* ``apyfal.storage.open``: Open a file as file-like object. Like builtin ``open``.
+* ``apyfal.storage.open``: Open a file as file-like object. Like builtin
+  ``open``.
 * ``apyfal.storage.copy``: Copy a file between two URL. Like ``shutil.copy``.
 
 The following example shows some possible file operations:
@@ -111,16 +123,21 @@ The following example shows some possible file operations:
 Register extra storage services
 -------------------------------
 
-Cloud storage services use a login and password to secure access and can’t be accessed without them.
+Cloud storage services use a login and password to secure access and can’t be
+accessed without them.
 
-By default, storage services that are already configured as host are automatically registered with same parameters.
+By default, storage services that are already configured as host are
+automatically registered with same parameters.
 
-But, in other cases, these services need to be registered before use. Each storage needs
-a unique ``storage_type`` that will be used to register it and to access it with a URL.
+But, in other cases, these services need to be registered before use.
+Each storage needs a unique ``storage_type`` that will be used to register it
+and to access it with a URL.
 
-This can be done using the ``apyfal.storage.register`` function or with the configuration file.
+This can be done using the ``apyfal.storage.register`` function or with the
+configuration file.
 
-See :doc:`api_storage` for information on possible parameters for the targeted storage..
+See :doc:`api_storage` for information on possible parameters for the targeted
+storage.
 
 The following examples show the registration of the ``my_storage`` storage type.
 This storage needs the following parameters to be
@@ -142,8 +159,8 @@ The registration of ``my_storage`` storage is performed as follows.
 With configuration file
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The registration of ``my_storage`` storage is performed by adding a ``storage`` subsection to
-the configuration file containing storage parameters.
+The registration of ``my_storage`` storage is performed by adding a ``storage``
+subsection to the configuration file containing storage parameters.
 
 .. code-block:: ini
 

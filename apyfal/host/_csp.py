@@ -24,11 +24,12 @@ class CSPHost(_Host):
 
     Args:
         host_type (str): Cloud service provider name.
-        config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like
-            object. If not set, will search it in current working directory,
+        config (apyfal.configuration.Configuration, path-like object or
+            file-like object):
+            If not set, will search it in current working directory,
             in current user "home" folder. If none found, will use default
             configuration values.
+            Path-like object can be path, URL or cloud object URL.
         client_id (str): CSP Access Key ID.
         secret_id (str): CSP Secret Access Key.
         region (str): CSP region. Needs a region supporting instances with FPGA

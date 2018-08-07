@@ -10,10 +10,10 @@ Improvements
 - Move OpenStack library from ``openstacksdk`` to ``python-novaclient`` and
   ``python-neutronclient``. This adds more precision over the OpenStach Nova
   host control and reduces the overall number of required dependencies.
-- ``apyfal.storage`` was improved using ``pycosio``, this imporoves
+- ``apyfal.storage`` was improved using ``pycosio``, this improves
   performance, adds support for huge cloud objects and allows
   ``apyfal.storag.open`` to provides full featured cloud objects streams.
-- ``apyfal.storage`` now accepts path-like objects.
+- Apyfal now accepts path-like objects in functions that accept path.
 
 Fixes:
 

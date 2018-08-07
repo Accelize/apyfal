@@ -1,9 +1,11 @@
 JSON configuration files
 ========================
 
-This section provides more information about parameter use than that described in the :doc:`getting_started`.
+This section provides more information about parameter use than that described
+in the :doc:`getting_started`.
 
-The low-level accelerator API that runs on the FPGA host works with parameters files.
+The low-level accelerator API that runs on the FPGA host works with parameters
+files.
 
 These files are JSON files that have the following format:
 
@@ -23,7 +25,8 @@ Using ``**parameters`` argument with JSON parameters files
 ----------------------------------------------------------
 
 The ``**parameters`` argument passed to the ``start`` and ``process``
-methods, as described previously, can also be used to pass *JSON parameters files*.
+methods, as described previously, can also be used to pass *JSON parameters
+files*.
 In this case, ``**parameters`` is used as ``parameters=``
 
 Assuming ``parameters.json`` is the JSON parameters files:
@@ -46,8 +49,9 @@ existing in the dict passed to ``parameters=``.
    with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
        myaccel.start()
 
-       # Example of passing the parameter JSON file and keyword arguments at the same time
-       myaccel.process(file_in='/path/myfile1.dat', file_out='/path/result1.dat',
+       # Example of passing the parameter JSON file and keyword arguments
+       myaccel.process(file_in='/path/myfile1.dat',
+                       file_out='/path/result1.dat',
                        # Passing Path to JSON file to "parameters="
                        parameters='/path/parameters.json',
                        # Passing keywords arguments
@@ -57,7 +61,8 @@ Using JSON parameters files with the configuration file
 -------------------------------------------------------
 
 JSON parameters files can also be defined directly in ``accelerator.conf``.
-Parameters in configuration files will act as default values and will be overridden by any
-parameter passed directly to the ``start`` and ``process`` methods.
+Parameters in configuration files will act as default values and will be
+overridden by any parameter passed directly to the ``start`` and ``process``
+methods.
 
 See :doc:`configuration` for more information.

@@ -14,11 +14,12 @@ class Host(_utl.ABC):
 
     Args:
         host_type (str): Host type.
-        config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like
-            object. If not set, will search it in current working directory,
+        config (apyfal.configuration.Configuration, path-like object or
+            file-like object):
+            If not set, will search it in current working directory,
             in current user "home" folder. If none found, will use default
             configuration values.
+            Path-like object can be path, URL or cloud object URL.
         host_ip (str): IP or URL address of an already existing host to use.
             If not specified, create a new host.
         stop_mode (str or int): Define the "stop" method behavior.

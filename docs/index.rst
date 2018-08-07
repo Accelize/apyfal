@@ -4,13 +4,15 @@ Welcome to Apyfal’s Documentation!
 Overview
 --------
 
-Apyfal is a powerful and flexible toolkit that enables you to use FPGA [#fpga]_ accelerated functions.”
+Apyfal is a powerful and flexible toolkit that enables you to use FPGA [#fpga]_
+accelerated functions.”
 
 Some reasons to use Apyfal :
 
-+ Apyfal provides an abstraction layer to use the power of FPGA accelerated function in a hybrid
-  multi-cloud environment.
-+ The configuration and the provisioning is generated for the FPGA cloud context.
++ Apyfal provides an abstraction layer to use the power of FPGA accelerated
+  function in a hybrid multi-cloud environment.
++ The configuration and the provisioning is generated for the FPGA cloud
+  context.
 + Apyfal can perform acceleration directly on cloud storage files.
 + Don't like Python ? Use the REST API and generate a client in any language.
 
@@ -18,12 +20,13 @@ Some reasons to use Apyfal :
 
 Apyfal provides a variety of accelerated functions.
 
-Browse our web site `AccelStore <https://accelstore.accelize.com>`_, to discover them.
+Browse our web site `AccelStore <https://accelstore.accelize.com>`_, to
+discover them.
 
 **Basic Python code example**
 
-Accelerator API is easy to use and only needs a few lines of codes to instantiate an accelerator and its host
-and process files:
+Accelerator API is easy to use and only needs a few lines of codes to
+instantiate an accelerator and its host and process files:
 
 .. code-block:: python
 
@@ -36,8 +39,10 @@ and process files:
        myaccel.start()
 
        # Process files using FPGA accelerated function
-       myaccel.process(file_in='/path/myfile1.dat',  file_out='/path/result1.dat')
-       myaccel.process(file_in='/path/myfile2.dat',  file_out='/path/result2.dat')
+       myaccel.process(
+           file_in='/path/myfile1.dat',  file_out='/path/result1.dat')
+       myaccel.process(
+           file_in='/path/myfile2.dat',  file_out='/path/result2.dat')
 
 Features
 --------
@@ -96,4 +101,5 @@ Indices and tables
 
 .. rubric:: Footnotes
 
-.. [#fpga] FPGA is a programmable chip that can be used as a function-specialized, high-performance accelerator.
+.. [#fpga] FPGA is a programmable chip that can be used as a
+           function-specialized, high-performance accelerator.

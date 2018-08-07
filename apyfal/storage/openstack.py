@@ -13,12 +13,12 @@ class SwiftStorage(_Storage):
 
     Args:
         storage_type (str): Cloud service provider name. Default to "OpenStack".
-        config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like
-            object.
+        config (apyfal.configuration.Configuration, path-like object or
+            file-like object):
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration
             values.
+            Path-like object can be path, URL or cloud object URL.
         client_id (str): OpenStack Access Key ID.
         secret_id (str): OpenStack Secret Access Key.
         region (str): OpenStack region.

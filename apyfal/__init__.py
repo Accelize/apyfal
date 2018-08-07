@@ -45,11 +45,12 @@ class Accelerator(object):
         accelerator (str): Name of the accelerator to initialize,
             to know the accelerator list please visit
             "https://accelstore.accelize.com".
-        config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like
-            object. If not set, will search it in current working directory,
+        config (apyfal.configuration.Configuration, path-like object or
+            file-like object):
+            If not set, will search it in current working directory,
             in current user "home" folder. If none found, will use default
             configuration values.
+            Path-like object can be path, URL or cloud object URL.
         accelize_client_id (str): Accelize Client ID.
             Client ID is part of the access key generated on
             "https:/accelstore.accelize.com/user/applications".
@@ -139,18 +140,21 @@ class Accelerator(object):
             stop_mode (str or int): Host stop mode. If not None, override
                 current "stop_mode" value. See "apyfal.host.Host.stop_mode"
                 property for more information and possible values.
-            datafile (str or file-like object): Depending on the accelerator,
-                a configuration data file need to be loaded before a process
-                can be run. Can be apyfal.storage URL, paths, file-like object.
+            datafile (path-like object or file-like object): Depending on the
+                accelerator, a configuration data file need to be loaded before
+                a process can be run.
+                Path-like object can be path, URL or cloud object URL.
             info_dict (bool): If True, returns a dict containing information on
                 configuration operation.
-            parameters (str or dict): Accelerator configuration specific
+            parameters (str, path-like object or dict):
+                Accelerator configuration specific
                 parameters Can also be a full configuration parameters
                 dictionary (Or JSON equivalent as str literal or apyfal.storage
                 URL to file) Parameters dictionary override default
                 configuration values, individuals specific parameters overrides
                 parameters dictionary values. Take a look to accelerator
                 documentation for more information on possible parameters.
+                Path-like object can be path, URL or cloud object URL.
 
         Returns:
             dict: Optional, only if "info_dict" is True. AcceleratorClient
@@ -179,19 +183,23 @@ class Accelerator(object):
         Processes with accelerator.
 
         Args:
-            file_in (str or file-like object): Input file to process.
-                Can be apyfal.storage URL, paths, file-like object.
-            file_out (str or file-like object): Output processed file.
-                Can be apyfal.storage URL, paths, file-like object.
-            info_dict (bool): If True, returns a dict containing information on
-                process operation.
-            parameters (str or dict): Accelerator process specific parameters
+            file_in (path-like object or file-like object):
+                Input file to process.
+                Path-like object can be path, URL or cloud object URL.
+            file_out (path-like object or file-like object):
+                Output processed file.
+                Path-like object can be path, URL or cloud object URL.
+            parameters (path-like object, str or dict): Accelerator process
+                specific parameters
                 Can also be a full process parameters dictionary
-                (Or JSON equivalent as str literal or apyfal.storage URL to
-                file) Parameters dictionary override default configuration
+                (Or JSON equivalent as str literal) Parameters dictionary
+                override default configuration
                 values, individuals specific parameters overrides parameters
                 dictionary values. Take a look to accelerator documentation for
                 more information on possible parameters.
+                Path-like object can be path, URL or cloud object URL.
+            info_dict (bool): If True, returns a dict containing information on
+                process operation.
 
         Returns:
             dict: Result from process operation, depending used accelerator.

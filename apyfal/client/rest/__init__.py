@@ -53,11 +53,12 @@ class RESTClient(_Client):
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with
             client_id.
         host_ip (str): IP or URL address of the accelerator host.
-        config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like
-            object. If not set, will search it in current working directory,
+        config (apyfal.configuration.Configuration, path-like object or
+            file-like object):
+            If not set, will search it in current working directory,
             in current user "home" folder. If none found, will use default
             configuration values.
+            Path-like object can be path, URL or cloud object URL.
     """
 
     #: Client type
@@ -152,18 +153,21 @@ class RESTClient(_Client):
         Configures accelerator.
 
         Args:
-            datafile (str or file-like object): Depending on the accelerator,
-                a configuration data file need to be loaded before a process can
-                be run. Can be apyfal.storage URL, paths, file-like object.
+            datafile (path-like object or file-like object): Depending on the
+                accelerator, a configuration data file need to be loaded before
+                a process can be run.
+                Path-like object can be path, URL or cloud object URL.
             info_dict (bool): If True, returns a dict containing information on
                 configuration operation.
-            parameters (str or dict): Accelerator configuration specific
-                parameters. Can also be a full configuration parameters
+            parameters (str, path-like object or dict):
+                Accelerator configuration specific
+                parameters Can also be a full configuration parameters
                 dictionary (Or JSON equivalent as str literal or apyfal.storage
                 URL to file) Parameters dictionary override default
                 configuration values, individuals specific parameters overrides
                 parameters dictionary values. Take a look to accelerator
                 documentation for more information on possible parameters.
+                Path-like object can be path, URL or cloud object URL.
 
         Returns:
             dict: Optional, only if "info_dict" is True. AcceleratorClient

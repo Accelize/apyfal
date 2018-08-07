@@ -10,7 +10,8 @@ Generating REST API client in any language using OpenApi
 Accelerator REST API follow OpenApi specification and client can be generated
 for almost any language (Java, Javascript, ...)
 
--  Download and install an OpenAPI client generator (like `OpenAPI Generator`_ or `Swagger-Codegen`_).
+-  Download and install an OpenAPI client generator (like
+   `OpenAPI Generator`_ or `Swagger-Codegen`_).
 -  Download the Apyfal repository:
 
 .. code-block:: bash

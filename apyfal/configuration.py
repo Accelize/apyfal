@@ -63,10 +63,10 @@ def create_configuration(configuration_file):
     """Create a configuration instance
 
     Args:
-        configuration_file (str or Configuration or file-like object or None):
-            Configuration file path or instance.
-            Can be Configuration instance or apyfal.storage URL,
-            paths, file-like object"""
+        configuration_file(apyfal.configuration.Configuration,
+            path-like object or file-like object): Configuration to use.
+            Path-like object can be path, URL or cloud object URL.
+    """
     if isinstance(configuration_file, Configuration):
         # configuration_file is already a Configuration instance
         return configuration_file
@@ -200,10 +200,10 @@ class Configuration(_Mapping):
     an parameter value.
 
     Args:
-        configuration_file (str or file-like object or None):
-            Configuration file path.
-            Can be apyfal.storage URL, paths, file-like object.
+        configuration_file(apyfal.configuration.Configuration,
+            path-like object or file-like object):
             If None, use default values.
+            Path-like object can be path, URL or cloud object URL.
     """
     #: Default name for configuration file (Used for file detection)
     DEFAULT_CONFIG_FILE = "accelerator.conf"

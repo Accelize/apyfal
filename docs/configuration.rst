@@ -17,8 +17,8 @@ and password), which are required to unlock the accelerator:
 
 -  `Accelize credential`_
 
-Your `AccelStore account`_ also provides metering information about your accelerator
-use
+Your `AccelStore account`_ also provides metering information about your
+accelerator use
 
 Host configuration
 ~~~~~~~~~~~~~~~~~~
@@ -40,7 +40,8 @@ Using the configuration File
 You can use ``accelerator.conf`` file to provide parameters to run your
 accelerator.
 
-.. NOTE: "configuration_file.rst" is dynamically generated from "accelerator.conf".
+.. NOTE: "configuration_file.rst" is dynamically generated from
+   "accelerator.conf".
    Update directly documentation in "accelerator.conf" if needed.
 
 For more information on the configuration file, see:
@@ -60,13 +61,13 @@ Passing Parameters to Apyfal
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The use of the configuration file is not mandatory; all parameters can
-be passed directly to the API as arguments. Please read the API documentation for
-more information.
+be passed directly to the API as arguments. Please read the API documentation
+for more information.
 
 See :doc:`api` for more information.
 
-If both the configuration file and arguments are used to configure an accelerator,
-configuration by arguments override configuration file values.
+If both the configuration file and arguments are used to configure an
+accelerator, configuration by arguments override configuration file values.
 
 .. _Accelize credential: https://accelstore.accelize.com/user/applications
 .. _AccelStore account: https://accelstore.accelize.com/user/metering

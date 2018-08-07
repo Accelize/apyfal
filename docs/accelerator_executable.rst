@@ -1,9 +1,11 @@
 Accelerator CLI
 ===============
 
-On its host, accelerator uses a the ``accelerator`` CLI to communicate with FPGA.
+On its host, accelerator uses a the ``accelerator`` CLI to communicate with
+FPGA.
 
-A configured host is required to use this command. Apyfal can be used to configure an instance and access it with SSH.
+A configured host is required to use this command. Apyfal can be used to
+configure an instance and access it with SSH.
 See :doc:`getting_started` for more information.
 
 The accelerator command
@@ -16,13 +18,18 @@ It needs to be run as ``root`` (or with ``sudo``)
 It support following arguments:
 
 - ``-m``: Accelerator mode. Possibles values are:
-  ``0`` for configuration/start mode, ``1`` for process mode, ``2`` for stop mode.
-  This is equivalent to ``apyfal.Accelerator`` ``start``, ``process`` and ``stop`` methods.
-- ``-i``: Input local file path, used to pass ``datafile`` in configuration mode and ``file_in`` in process mode.
+  ``0`` for configuration/start mode, ``1`` for process mode, ``2`` for stop
+  mode.
+  This is equivalent to ``apyfal.Accelerator`` ``start``, ``process`` and
+  ``stop`` methods.
+- ``-i``: Input local file path, used to pass ``datafile`` in configuration mode
+  and ``file_in`` in process mode.
 - ``-o``: Output local file path, used to pass ``file_out`` in process mode.
-- ``-j``: JSON parameter local file path, used to pass a JSON parameters files like described in :doc:`advanced`.
+- ``-j``: JSON parameter local file path, used to pass a JSON parameters files
+  like described in :doc:`advanced`.
 - ``-p``: JSON output local file path, used to get some results in JSON format.
-- ``-v``: Verbosity level. Possible values: from ``0`` (Full verbosity) to ``4`` (Less verbosity).
+- ``-v``: Verbosity level. Possible values: from ``0`` (Full verbosity) to ``4``
+  (Less verbosity).
 
 .. code-block:: bash
 
@@ -35,7 +42,8 @@ It support following arguments:
 Metering services
 -----------------
 
-For use accelerator command, metering services needs to be started. This should be the case by default.
+For use accelerator command, metering services needs to be started.
+This should be the case by default.
 
 Theses commands starts services:
 
