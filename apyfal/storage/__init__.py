@@ -215,3 +215,28 @@ class _Storage:
         return _pycosio.register(
             storage=self.STORAGE_NAME, extra_url_prefix=self.EXTRA_URL_PREFIX,
             storage_parameters=storage_parameters)
+
+
+# Automatically registers known storage from configuration
+def _auto_register():
+    """Registers from configuration"""
+    # Get configuration
+    config = _cfg.Configuration()
+
+    # Finds possibles storage
+    to_register = set()
+    to_register.add(config['host']['host_type'])
+    for section in config:
+        if section.startswith('host.') or section.startswith('storage.'):
+            to_register.add(section.split('.', 1)[1])
+
+    # Tries to register storage
+    for storage_type in to_register:
+        try:
+            register(storage_type=storage_type, config=config)
+        except (ImportError, _exc.AcceleratorException):
+            continue
+
+
+_auto_register()
+del _auto_register
