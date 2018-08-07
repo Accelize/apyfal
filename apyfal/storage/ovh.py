@@ -8,7 +8,7 @@ class OVHStorage(_SwiftStorage):
     """OVH Object Store
 
     Storage URL:
-        - "https://Region.cloud.ovh.net/v1/ProjectID/Container/Object"
+        - "https://storage.Region.cloud.ovh.net/v1/AUTH_ProjectID/Container/Object"
         - "ovh://Container/Object"
 
     Args:
