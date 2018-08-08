@@ -49,6 +49,3 @@ class OVHHost(_OpenStackHost):
 
     #: OVH OpenStack auth-URL
     OPENSTACK_AUTH_URL = 'https://auth.cloud.ovh.net/'
-
-    #: OVH OpenStack interface
-    OPENSTACK_INTERFACE = 'public'

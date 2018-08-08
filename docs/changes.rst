@@ -4,16 +4,21 @@ Changelog
 1.2.0 (2018/09)
 ---------------
 
-Improvements
+Hosts improvements
 
 - Speed up instance configuration.
 - Move OpenStack library from ``openstacksdk`` to ``python-novaclient`` and
   ``python-neutronclient``. This adds more precision over the OpenStach Nova
   host control and reduces the overall number of required dependencies.
+
+Storage improvements
+
 - ``apyfal.storage`` was improved using ``pycosio``, this improves
   performance, adds support for huge cloud objects and allows
-  ``apyfal.storag.open`` to provides full featured cloud objects streams.
-- Apyfal now accepts path-like objects in functions that accept path.
+  ``apyfal.storage.open`` to provides full featured cloud objects streams.
+- Apyfal now accepts path-like objects in functions that accept paths or URLs.
+- ``apyfal.storage`` now supports disabling SSL/HTTPS to improve transfer
+  performance at the cost of security.
 
 Fixes:
 

@@ -61,6 +61,13 @@ def test_register():
             with pytest.raises(StorageConfigurationException):
                 srg.register(storage_type, config=config, client_id=user)
 
+        # SSL option
+        assert DummyStorage()._ssl is True
+        assert DummyStorage(ssl=True)._ssl is True
+        assert DummyStorage(ssl='True')._ssl is True
+        assert DummyStorage(ssl=False)._ssl is False
+        assert DummyStorage(ssl='False')._ssl is False
+
     # Restore pycosio
     finally:
         pycosio.register = pycosio_register

@@ -19,6 +19,9 @@ class OVHStorage(_SwiftStorage):
             user "home" folder. If none found, will use default configuration
             values.
             Path-like object can be path, URL or cloud object URL.
+        ssl (bool): If True (default) allow SSL for transfer,
+            else tries to disable it. Disabling SSL can improve performance,
+            but makes connection insecure.
         client_id (str): OVH Access Key ID.
         secret_id (str): OVH Secret Access Key.
         region (str): OVH region.

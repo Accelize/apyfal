@@ -79,7 +79,6 @@ class OpenStackHost(_CSPHost):
             instance to use. If not specified, create a new instance.
         project_id (str): OpenStack Project
         auth_url (str): OpenStack auth-URL
-        interface (str): OpenStack interface
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing
             instance. See "stop_mode" property for more information and possible
@@ -108,17 +107,13 @@ class OpenStackHost(_CSPHost):
     # Default OpenStack auth-URL to use (str)
     OPENSTACK_AUTH_URL = None
 
-    # Default Interface to use (str)
-    OPENSTACK_INTERFACE = None
-
     _INFO_NAMES = _CSPHost._INFO_NAMES.copy()
-    _INFO_NAMES.update({'_project_id', '_auth_url', '_interface'})
+    _INFO_NAMES.update({'_project_id', '_auth_url'})
 
     _INIT_METHODS = list(_CSPHost._INIT_METHODS)
     _INIT_METHODS.append('_init_image')
 
-    def __init__(self, project_id=None, auth_url=None, interface=None,
-                 **kwargs):
+    def __init__(self, project_id=None, auth_url=None, **kwargs):
         _CSPHost.__init__(self, **kwargs)
 
         # OpenStack specific arguments
@@ -129,12 +124,8 @@ class OpenStackHost(_CSPHost):
             auth_url or section['auth_url'] or
             self.OPENSTACK_AUTH_URL)
 
-        self._interface = (
-            interface or section['interface'] or
-            self.OPENSTACK_INTERFACE)
-
         # Checks mandatory configuration values
-        self._check_arguments('project_id', 'auth_url', 'interface')
+        self._check_arguments('project_id', 'auth_url')
 
         # Load session
         self._session = _NovaClient(

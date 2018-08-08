@@ -55,7 +55,7 @@ PACKAGE_INFO = dict(
         # CSP specific requirements
         'AWS': ['boto3', 'pycosio[s3]'],
         'OpenStack': ['python-novaclient', 'python-neutronclient',
-                      'pycosio[swift]']},
+                      'pycosio[swift]', 'pyOpenSSL']},
     setup_requires=['setuptools'],
     tests_require=['pytest'],
     packages=find_packages(exclude=['docs', 'tests', 'rest_api']),

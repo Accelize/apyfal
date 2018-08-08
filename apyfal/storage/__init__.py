@@ -139,6 +139,11 @@ class _Storage:
             user "home" folder. If none found, will use default configuration
             values.
             Path-like object can be path, URL or cloud object URL.
+        ssl (bool): If True (default) allow SSL for transfer,
+            else tries to disable it. Disabling SSL can improve performance,
+            but makes connection insecure.
+        client_id (str): Storage access key ID.
+        secret_id (str): Storage secret access Key.
     """
     #: Name (str), Linked to apyfal.host NAME
     NAME = None
@@ -170,12 +175,14 @@ class _Storage:
             _exc.StorageConfigurationException)
 
     def __init__(self, storage_type=None, config=None,
-                 client_id=None, secret_id=None, **_):
+                 client_id=None, secret_id=None, ssl=None, **_):
         self._storage_type = storage_type or self.STORAGE_NAME
         self._config = _cfg.create_configuration(config)
 
         self._client_id = self._from_config('client_id', client_id)
         self._secret_id = self._from_config('secret_id', secret_id)
+        self._ssl = False if (
+            (self._from_config('ssl', ssl)) in ('False', False)) else True
 
     def _from_config(self, key, value=None):
         """Get value from configuration file.
@@ -184,14 +191,17 @@ class _Storage:
 
         Args:
             key (str): Key to find
-            value (str): If specified and not None, return this value.
+            value: If specified and not None, return this value.
 
         Returns:
             str: value
         """
-        return (value or
-                self._config['storage.%s' % self.STORAGE_NAME][key] or
-                self._config['host.%s' % self.NAME or self.STORAGE_NAME][key])
+        for candidat in (
+                value, self._config['storage.%s' % self._storage_type][key],
+                self._config['storage.%s' % self.STORAGE_NAME][key],
+                self._config['host.%s' % self.NAME or self.STORAGE_NAME][key]):
+            if candidat is not None:
+                return candidat
 
     def _update_parameter(self, parameters):
         """Update parameter template with attributes values.
