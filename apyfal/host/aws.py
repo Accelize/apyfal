@@ -198,8 +198,9 @@ class AWSHost(_CSPHost):
             _get_logger().info(_utl.gen_msg('created_named', 'policy', policy))
 
         iam_client = self._session.client('iam')
-        response = iam_client.list_policies(
-            Scope='Local', OnlyAttached=False, MaxItems=100)
+        with _exception_handler():
+            response = iam_client.list_policies(
+                Scope='Local', OnlyAttached=False, MaxItems=100)
         for policy_item in response['Policies']:
             if policy_item['PolicyName'] == policy:
                 self._policy = policy_item['Arn']
@@ -230,7 +231,8 @@ class AWSHost(_CSPHost):
             _get_logger().info(_utl.gen_msg('created_named', 'IAM role', role))
 
         iam_client = self._session.client('iam')
-        arn = iam_client.get_role(RoleName=self._role)['Role']['Arn']
+        with _exception_handler():
+            arn = iam_client.get_role(RoleName=self._role)['Role']['Arn']
 
         return arn
 
@@ -462,7 +464,9 @@ class AWSHost(_CSPHost):
             kwargs['UserData'] = user_data
 
         # Create instance
-        instance = self._session.resource('ec2').create_instances(**kwargs)[0]
+        with _exception_handler():
+            instance = self._session.resource('ec2').create_instances(
+                **kwargs)[0]
 
         return instance, instance.id
 
@@ -487,7 +491,8 @@ class AWSHost(_CSPHost):
 
         # If instance stopped, starts it
         if status == self.STATUS_STOPPED:
-            self._instance.start()
+            with _exception_handler():
+                self._instance.start()
 
         # If another status, raises error
         elif status != self.STATUS_RUNNING:
@@ -499,11 +504,13 @@ class AWSHost(_CSPHost):
         Terminate and delete instance.
         """
         if self._instance is not None:
-            return self._instance.terminate()
+            with _exception_handler():
+                return self._instance.terminate()
 
     def _pause_instance(self):
         """
         Pause instance.
         """
         if self._instance is not None:
-            return self._instance.stop()
+            with _exception_handler():
+                return self._instance.stop()
