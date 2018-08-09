@@ -345,8 +345,13 @@ class OpenStackHost(_CSPHost):
         Args:
             status (str): Status of the instance.
         """
-        if status.lower() != self.STATUS_RUNNING:
-            with _exception_handler(gen_msg=('unable_to', "start")):
+        if status == self.STATUS_RUNNING:
+            return
+
+        with _exception_handler(gen_msg=('unable_to', "start")):
+            if status == self.STATUS_STOPPED:
+                self._session.servers.unpause(self._instance)
+            else:
                 self._session.servers.start(self._instance)
 
     def _terminate_instance(self):
