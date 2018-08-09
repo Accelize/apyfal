@@ -769,12 +769,18 @@ def test_csphost_user_data(tmpdir):
     class DummyCSP(get_dummy_csp_class()):
         """Dummy CSP"""
 
-    content = ("[dummy]\n"
-               "dummy1 = dummy1\n"
-               "dummy2 = dummy2\n")
+    config_content = ("[dummy]\n"
+                      "dummy1 = dummy1\n"
+                      "dummy2 = dummy2\n")
     config_file = tmpdir.join('dummy.conf')
-    config_file.write(content)
+    config_file.write(config_content)
     config = Configuration(str(config_file))
+
+    script_content = ("#!/usr/bin/env bash\n"
+                      "script line 1\n"
+                      "script line 2")
+    script_file = tmpdir.join('dummy.sh')
+    script_file.write(script_content)
 
     # No user data
     assert DummyCSP(
@@ -784,13 +790,18 @@ def test_csphost_user_data(tmpdir):
     # Get user data
     user_data = DummyCSP(
         client_id='client_id', secret_id='secret_id',
-        region='region', init_config=config)._user_data.decode()
+        region='region', init_config=config,
+        init_script=str(script_file))._user_data.decode()
 
     # Check shebang
-    assert user_data.startswith('#!')
+    assert user_data.count('#!') == 1
 
     # Check configuration file presence
-    for line in content.splitlines():
+    for line in config_content.splitlines():
+        assert line in user_data
+
+    # Check script file presence
+    for line in script_content.splitlines()[1:]:
         assert line in user_data
 
     # Check path

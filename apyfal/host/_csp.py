@@ -16,6 +16,7 @@ from apyfal.host import Host as _Host
 import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
 import apyfal._utilities as _utl
+import apyfal.storage as _srg
 from apyfal._utilities import get_logger as _get_logger
 
 
@@ -46,14 +47,17 @@ class CSPHost(_Host):
             Default to 'term' if new instance, or 'keep' if already existing
             instance. See "stop_mode" property for more information and possible
             values.
-        init_config (bool or str or apyfal.configuration.Configuration or
-            file-like object): Configuration file to pass to instance on
+        init_config (bool or apyfal.configuration.Configuration,
+            path-like object or file-like object):
+            Configuration file to pass to instance on
             initialization. This configuration file will be used as default for
             host side accelerator.
             If value is True, use 'config' configuration.
             If value is a configuration use this configuration.
             If value is None or False, don't passe any configuration file
             (This is default behavior).
+        init_script (path-like object or file-like object): A bash script
+            to execute on instance startup.
     """
     #: Instance status when running
     STATUS_RUNNING = 'running'
@@ -83,7 +87,7 @@ class CSPHost(_Host):
     def __init__(self, client_id=None, secret_id=None, region=None,
                  instance_type=None, key_pair=None, security_group=None,
                  instance_id=None, instance_name_prefix=None, init_config=None,
-                 **kwargs):
+                 init_script=None, **kwargs):
         _Host.__init__(self, **kwargs)
 
         # Default some attributes
@@ -121,6 +125,7 @@ class CSPHost(_Host):
             ('keep' if instance_id or kwargs.get('host_ip') else 'term'))
 
         self._init_config = init_config or section['init_config']
+        self._init_script = init_script or section['init_script']
 
         # Checks mandatory configuration values
         self._check_arguments('region')
@@ -556,21 +561,34 @@ class CSPHost(_Host):
         Returns:
             str: shell script.
         """
-        if self._init_config is None:
+        if self._init_config is None and self._init_script is None:
             return None
-
-        config = (self._config if self._init_config is True else
-                  self._init_config)
 
         # Initialize file with shebang
         commands = ["#!/usr/bin/env bash"]
 
-        # Write default configuration file
-        stream = _StringIO()
-        _cfg.create_configuration(config).write(stream)
-        stream.seek(0)
+        # Get configuration file
+        if self._init_config:
+            config = (self._config if self._init_config is True else
+                      self._init_config)
 
-        commands += ["cat << EOF > %s/accelerator.conf" % self._HOME,
-                     stream.read(), "EOF"]
+            # Write default configuration file
+            stream = _StringIO()
+            _cfg.create_configuration(config).write(stream)
+            stream.seek(0)
+
+            commands += ["cat << EOF > %s/accelerator.conf" % self._HOME,
+                         stream.read(), "EOF\n"]
+
+        # Get bash script
+        if self._init_script:
+            with _srg.open(self._init_script, 'rt') as script:
+                lines = script.read().strip().splitlines()
+
+            if lines[0].startswith("#!"):
+                # Remove shebang
+                lines = lines[1:]
+
+            commands.extend(lines)
 
         return '\n'.join(commands).encode()

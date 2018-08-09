@@ -32,6 +32,6 @@ class S3Storage(_Storage):
     DOC_URL = "https://aws.amazon.com"
 
     #: Storage parameters template
-    STORAGE_PARAMETERS = {'client': {
+    STORAGE_PARAMETERS = {'session': {
         'aws_access_key_id': 'self._client_id',
         'aws_secret_access_key': 'self._secret_id'}}
