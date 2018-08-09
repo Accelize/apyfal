@@ -13,9 +13,11 @@ def test_acceleratorclient_new_init():
     from apyfal.client.rest import RESTClient
 
     # Test: Subclass selection
-    assert isinstance(
-        AcceleratorClient('dummy_accelerator', client_type='REST'),
-        RESTClient)
+    client = AcceleratorClient('dummy_accelerator', client_type='REST')
+    assert isinstance(client, RESTClient)
+
+    # Test: repr
+    assert repr(client) == str(client)
 
 
 def test_acceleratorclient_raise_for_status():

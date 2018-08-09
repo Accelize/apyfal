@@ -111,6 +111,13 @@ class Accelerator(object):
     def __del__(self):
         self.stop()
 
+    def __str__(self):
+        return "<%s.%s client=(%s) host=(%s)>" % (
+            self.__class__.__module__, self.__class__.__name__,
+            str(self._client).strip('<>'), str(self._host).strip('<>'))
+
+    __repr__ = __str__
+
     @property
     def client(self):
         """

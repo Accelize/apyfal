@@ -86,6 +86,12 @@ class Host(_utl.ABC):
     def __del__(self):
         self.stop()
 
+    def __str__(self):
+        return "<%s.%s type='%s'>" % (
+            self.__class__.__module__, self.__class__.__name__, self._host_type)
+
+    __repr__ = __str__
+
     @property
     def host_type(self):
         """

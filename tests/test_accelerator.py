@@ -178,6 +178,9 @@ def test_accelerator():
         assert not DummyClient.running
         assert not DummyHost.running
 
+        # repr
+        assert repr(accel) == str(accel)
+
         # Using existing IP
         accel = Accelerator(
             dummy_accelerator, host_type=dummy_host_type, host_ip=dummy_url)

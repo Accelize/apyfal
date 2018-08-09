@@ -40,7 +40,10 @@ def test_csphost_new_init():
         Host(host_type="_csp")
 
     # Test: direct instantiation of subclass without specify host_type
-    OVHHost(**kwargs)
+    host = OVHHost(**kwargs)
+
+    # Test: repr
+    assert repr(host) == str(host)
 
     # Test: Instantiation with missing mandatory arguments
     with pytest.raises(HostConfigurationException):

@@ -136,6 +136,13 @@ class CSPHost(_Host):
                 "Need at least 'client_id', 'instance_id' or 'host_ip' "
                 "argument. See documentation for more information.")
 
+    def __str__(self):
+        return "<%s.%s type='%s' name='%s' ID='%s'>" % (
+            self.__class__.__module__, self.__class__.__name__,
+            self._host_type, self._get_instance_name(), self._instance_id)
+
+    __repr__ = __str__
+
     @property
     def public_ip(self):
         """
@@ -214,7 +221,7 @@ class CSPHost(_Host):
         Returns:
             str: Name
         """
-        return self._instance_name
+        return self._get_instance_name()
 
     @_abstractmethod
     def _check_credential(self):

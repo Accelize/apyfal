@@ -4,19 +4,22 @@ Changelog
 1.2.0 (2018/09)
 ---------------
 
-Hosts improvements
+General improvements
 
-- Speed up instance configuration.
 - Move OpenStack library from ``openstacksdk`` to ``python-novaclient`` and
   ``python-neutronclient``. This adds more precision over the OpenStach Nova
   host control and reduces the overall number of required dependencies.
+- Accelerator, Host and clients now have a proper string representation.
+- Speed up cloud host configuration.
+- Host now support the ``init_script`` argument to pass a custom bash script
+  on instance startup.
+- Apyfal now accepts path-like objects as path/URL arguments.
 
 Storage improvements
 
 - ``apyfal.storage`` was improved using ``pycosio``, this improves
   performance, adds support for huge cloud objects and allows
   ``apyfal.storage.open`` to provides full featured cloud objects streams.
-- Apyfal now accepts path-like objects in functions that accept paths or URLs.
 - ``apyfal.storage`` now supports disabling SSL/HTTPS to improve transfer
   performance at the cost of security.
 
@@ -79,8 +82,3 @@ Known Issues:
 
 - All communication between client and host accelerator is in unencrypted plain text.
 - Using ``start`` is mandatory when connecting to an already existing instance.
-
-OpenStack only:
-~~~~~~~~~~~~~~~
-
-- Configuration file is not properly passed to the instance with ``init_config`` argument.

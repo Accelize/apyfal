@@ -21,7 +21,11 @@ def test_host_init():
         Host(host_type="no_existing_csp")
 
     # Test: Instantiation of without specify host_type
-    assert Host(config=config).__class__ is Host
+    host = Host(config=config)
+    assert host.__class__ is Host
+
+    # Test: repr
+    assert repr(host) == str(host)
 
     # Test: Passing host_ip
     url = 'http://127.0.0.1'
