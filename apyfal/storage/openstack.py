@@ -19,9 +19,8 @@ class SwiftStorage(_Storage):
             user "home" folder. If none found, will use default configuration
             values.
             Path-like object can be path, URL or cloud object URL.
-        ssl (bool): If True (default) allow SSL for transfer,
-            else tries to disable it. Disabling SSL can improve performance,
-            but makes connection insecure.
+        unsecure (bool): if True (default) disables TLS/SSL/HTTPS for transfer.
+            This can improve performance, but makes connection insecure.
         client_id (str): OpenStack Access Key ID.
         secret_id (str): OpenStack Secret Access Key.
         region (str): OpenStack region.
@@ -48,8 +47,7 @@ class SwiftStorage(_Storage):
             'auth_version': '3',
             'os_options': {
                 'region_name': 'self._region',
-                'project_id': 'self._project_id'},
-            'ssl_compression': 'self._ssl'}
+                'project_id': 'self._project_id'}}
 
     def __init__(self, region=None, project_id=None, auth_url=None, **kwargs):
         _Storage.__init__(self, **kwargs)

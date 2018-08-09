@@ -17,9 +17,8 @@ class S3Storage(_Storage):
             user "home" folder. If none found, will use default configuration
             values.
             Path-like object can be path, URL or cloud object URL.
-        ssl (bool): If True (default) allow SSL for transfer,
-            else tries to disable it. Disabling SSL can improve performance,
-            but makes connection insecure.
+        unsecure (bool): if True (default) disables TLS/SSL/HTTPS for transfer.
+            This can improve performance, but makes connection insecure.
         client_id (str): AWS Access Key ID.
         secret_id (str): AWS Secret Access Key.
     """
@@ -35,5 +34,4 @@ class S3Storage(_Storage):
     #: Storage parameters template
     STORAGE_PARAMETERS = {'client': {
         'aws_access_key_id': 'self._client_id',
-        'aws_secret_access_key': 'self._secret_id',
-        'use_ssl': 'self._ssl'}}
+        'aws_secret_access_key': 'self._secret_id'}}

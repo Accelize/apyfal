@@ -37,7 +37,8 @@ def test_register():
             'params': {'password': 'self._secret_id',
                        'arg1': 'arg1'}}
 
-    def register(storage=None, extra_url_prefix=None, storage_parameters=None):
+    def register(storage=None, extra_url_prefix=None, storage_parameters=None,
+                 **_):
         """Dummy pycosio.register"""
         assert storage == storage_name
         assert extra_url_prefix == DummyStorage.EXTRA_URL_PREFIX
@@ -62,11 +63,11 @@ def test_register():
                 srg.register(storage_type, config=config, client_id=user)
 
         # SSL option
-        assert DummyStorage()._ssl is True
-        assert DummyStorage(ssl=True)._ssl is True
-        assert DummyStorage(ssl='True')._ssl is True
-        assert DummyStorage(ssl=False)._ssl is False
-        assert DummyStorage(ssl='False')._ssl is False
+        assert DummyStorage()._unsecure is False
+        assert DummyStorage(unsecure=True)._unsecure is True
+        assert DummyStorage(unsecure='True')._unsecure is True
+        assert DummyStorage(unsecure=False)._unsecure is False
+        assert DummyStorage(unsecure='False')._unsecure is False
 
     # Restore pycosio
     finally:

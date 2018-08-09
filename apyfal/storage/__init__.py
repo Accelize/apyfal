@@ -139,9 +139,8 @@ class _Storage:
             user "home" folder. If none found, will use default configuration
             values.
             Path-like object can be path, URL or cloud object URL.
-        ssl (bool): If True (default) allow SSL for transfer,
-            else tries to disable it. Disabling SSL can improve performance,
-            but makes connection insecure.
+        unsecure (bool): if True (default) disables TLS/SSL/HTTPS for transfer.
+            This can improve performance, but makes connection insecure.
         client_id (str): Storage access key ID.
         secret_id (str): Storage secret access Key.
     """
@@ -175,14 +174,14 @@ class _Storage:
             _exc.StorageConfigurationException)
 
     def __init__(self, storage_type=None, config=None,
-                 client_id=None, secret_id=None, ssl=None, **_):
+                 client_id=None, secret_id=None, unsecure=None, **_):
         self._storage_type = storage_type or self.STORAGE_NAME
         self._config = _cfg.create_configuration(config)
 
         self._client_id = self._from_config('client_id', client_id)
         self._secret_id = self._from_config('secret_id', secret_id)
-        self._ssl = False if (
-            (self._from_config('ssl', ssl)) in ('False', False)) else True
+        self._unsecure = True if ((self._from_config(
+            'unsecure', unsecure)) in ('True', True)) else False
 
     def _from_config(self, key, value=None):
         """Get value from configuration file.
@@ -224,7 +223,7 @@ class _Storage:
         self._update_parameter(storage_parameters)
         return _pycosio.register(
             storage=self.STORAGE_NAME, extra_url_prefix=self.EXTRA_URL_PREFIX,
-            storage_parameters=storage_parameters)
+            storage_parameters=storage_parameters, unsecure=self._unsecure)
 
 
 # Automatically registers known storage from configuration
