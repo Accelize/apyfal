@@ -3,7 +3,6 @@
 
 from abc import abstractmethod as _abstractmethod
 from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor
-from datetime import datetime as _datetime
 
 try:
     # Python 2
@@ -84,10 +83,14 @@ class CSPHost(_Host):
     # Initialization methods
     _INIT_METHODS = ['_init_security_group', '_init_key_pair']
 
+    # Value to show in repr
+    _REPR = list(_Host._REPR)
+    _REPR.append(('ID', '_instance_id'))
+
     def __init__(self, client_id=None, secret_id=None, region=None,
                  instance_type=None, key_pair=None, security_group=None,
-                 instance_id=None, instance_name_prefix=None, init_config=None,
-                 init_script=None, **kwargs):
+                 instance_id=None, init_config=None, init_script=None,
+                 **kwargs):
         _Host.__init__(self, **kwargs)
 
         # Default some attributes
@@ -96,7 +99,6 @@ class CSPHost(_Host):
         self._config_env = {}
         self._image_id = None
         self._image_name = None
-        self._instance_name = None
         self._instance_type = None
         self._instance_type_name = None
         self._region_parameters = None
@@ -108,9 +110,6 @@ class CSPHost(_Host):
         self._region = region or section['region']
         self._instance_type = instance_type or section['instance_type']
         self._instance_id = instance_id or section['instance_id']
-        self._instance_name_prefix = (
-                instance_name_prefix or
-                section['instance_name_prefix'] or '')
 
         self._key_pair = (
             key_pair or section['key_pair'] or
@@ -135,13 +134,6 @@ class CSPHost(_Host):
             raise _exc.HostConfigurationException(
                 "Need at least 'client_id', 'instance_id' or 'host_ip' "
                 "argument. See documentation for more information.")
-
-    def __str__(self):
-        return "<%s.%s type='%s' name='%s' ID='%s'>" % (
-            self.__class__.__module__, self.__class__.__name__,
-            self._host_type, self._get_instance_name(), self._instance_id)
-
-    __repr__ = __str__
 
     @property
     def public_ip(self):
@@ -212,16 +204,6 @@ class CSPHost(_Host):
             str: ID
         """
         return self._instance_id
-
-    @property
-    def instance_name(self):
-        """
-        Name of the current instance.
-
-        Returns:
-            str: Name
-        """
-        return self._get_instance_name()
 
     @_abstractmethod
     def _check_credential(self):
@@ -424,21 +406,6 @@ class CSPHost(_Host):
                 Timeout while booting."""
         if not _utl.check_url(self._url, timeout=self.TIMEOUT):
             raise _exc.HostRuntimeException(gen_msg=('timeout', "boot"))
-
-    def _get_instance_name(self):
-        """Returns name to use as instance name
-
-        Returns:
-            str: name with format
-                'Accelize_<AcceleratorName>_<DateTime>'"""
-        if self._instance_name is None:
-
-            self._instance_name = '_'.join(
-                name for name in (
-                    self._instance_name_prefix, 'accelize', self._accelerator,
-                    _datetime.now().strftime('%y%m%d%H%M%S')) if name)
-
-        return self._instance_name
 
     def stop(self, stop_mode=None):
         """

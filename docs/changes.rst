@@ -6,6 +6,8 @@ Changelog
 
 General improvements
 
+- Add ``apyfal.iter_accelerator`` function to iterates over all existing
+  accelerators for a configuration.
 - Move OpenStack library from ``openstacksdk`` to ``python-novaclient`` and
   ``python-neutronclient``. This adds more precision over the OpenStach Nova
   host control and reduces the overall number of required dependencies.

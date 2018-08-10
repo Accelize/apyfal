@@ -517,3 +517,29 @@ class AWSHost(_CSPHost):
         if self._instance is not None:
             with _exception_handler():
                 return self._instance.stop()
+
+    def _iter_hosts(self):
+        """
+        Iterates over accelerator hosts of current type.
+
+        Returns:
+            generator of dict: dicts contains attributes values of the host.
+        """
+        ec2_resource = self._session.resource('ec2')
+
+        # List running instances
+        with _exception_handler():
+            for instance in ec2_resource.instances.filter(
+                    Filters=[{'Name': 'instance-state-name',
+                              'Values': ['running']}]):
+                yield dict(
+                    instance_id=instance.id,
+                    instance_type=instance.instance_type,
+                    private_ip=instance.private_ip_address,
+                    public_ip=instance.public_ip_address,
+                    instance_name=[instance.tags[index]['Value']
+                                   for index in range(len(instance.tags))
+                                   if instance.tags[index]['Key'] == 'Name'][0],
+                    security_group=instance.security_groups[0]['GroupName'],
+                    image_id=instance.image_id,
+                    key_pair=instance.key_name)

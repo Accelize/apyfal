@@ -19,6 +19,7 @@ limitations under the License.
 __version__ = "1.2.0"
 __copyright__ = "Copyright 2018 Accelize"
 __licence__ = "Apache 2.0"
+__all__ = ['Accelerator', 'iter_accelerators', 'get_logger']
 
 from sys import version_info as _py
 if (_py[0] < 2) or (_py[0] == 2 and _py[1] < 7) or (_py[0] == 3 and _py[1] < 4):
@@ -30,6 +31,7 @@ import apyfal.client as _clt
 import apyfal.exceptions as _exc
 import apyfal.configuration as _cfg
 from apyfal._utilities import get_logger as _get_logger
+from apyfal._iterators import iter_accelerators
 
 
 # Makes get_logger available here for easy access

@@ -368,3 +368,11 @@ class OpenStackHost(_CSPHost):
         """
         with _exception_handler(gen_msg=('unable_to', "pause")):
             self._session.servers.pause(self._instance)
+
+    def _iter_hosts(self):
+        """
+        Iterates over accelerator hosts of current type.
+
+        Returns:
+            generator of dict: dicts contains attributes values of the host.
+        """

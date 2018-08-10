@@ -37,3 +37,7 @@ def test_host_init():
     host = Host(config=config)
     with pytest.raises(HostConfigurationException):
         host.start()
+
+    # Test: iter_hosts
+    assert list(host.iter_hosts()) == []
+

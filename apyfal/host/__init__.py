@@ -1,5 +1,8 @@
 # coding=utf-8
 """FPGA Host"""
+from abc import abstractmethod as _abstractmethod
+from datetime import datetime as _datetime
+import re as _re
 
 import apyfal.configuration as _cfg
 import apyfal.exceptions as _exc
@@ -42,6 +45,9 @@ class Host(_utl.ABC):
     # Attributes returned as dict by "info" property
     _INFO_NAMES = {'_host_type', '_stop_mode', '_url'}
 
+    # Value to show in repr
+    _REPR = [('type', '_host_type'), ('name', '_instance_name')]
+
     def __new__(cls, *args, **kwargs):
         # If call from a subclass, instantiate this subclass directly
         if cls is not Host:
@@ -57,13 +63,14 @@ class Host(_utl.ABC):
             cls, host_type, 'host_type', _exc.HostConfigurationException)
 
     def __init__(self, host_type=None, config=None, host_ip=None,
-                 stop_mode=None, **_):
+                 stop_mode=None, instance_name_prefix=None, **_):
 
         # Default some attributes
         self._accelerator = None
         self._stop_mode = None
         self._config_env = None
         self._config_section = 'host.%s' % self.NAME if self.NAME else 'host'
+        self._instance_name = None
 
         # Read configuration from file
         self._config = _cfg.create_configuration(config)
@@ -77,6 +84,9 @@ class Host(_utl.ABC):
             stop_mode or section['stop_mode'] or
             ('keep' if host_ip else 'term'))
 
+        self._instance_name_prefix = (instance_name_prefix or
+                                      section['instance_name_prefix'] or '')
+
     def __enter__(self):
         return self
 
@@ -87,8 +97,11 @@ class Host(_utl.ABC):
         self.stop()
 
     def __str__(self):
-        return "<%s.%s type='%s'>" % (
-            self.__class__.__module__, self.__class__.__name__, self._host_type)
+        return "<%s.%s %s>" % (
+            self.__class__.__module__, self.__class__.__name__, ' '.join(
+                "%s='%s'" % (name, getattr(self, attr))
+                for name, attr in self._REPR
+                if getattr(self, attr) is not None))
 
     __repr__ = __str__
 
@@ -112,6 +125,16 @@ class Host(_utl.ABC):
         """
         # Returns URL
         return self._url
+
+    @property
+    def instance_name(self):
+        """
+        Name of the current host instance.
+
+        Returns:
+            str: Name
+        """
+        return self._get_instance_name()
 
     @property
     def stop_mode(self):
@@ -288,3 +311,68 @@ class Host(_utl.ABC):
             args[0] = '%s, please refer to: %s' % (
                 args[0].rstrip('.'), cls.DOC_URL)
             exception.args = tuple(args)
+
+    def _get_instance_name(self):
+        """Returns name to use as instance name
+
+        Returns:
+            str: name with format
+                'Accelize_<AcceleratorName>_<DateTime>'"""
+        if self._instance_name is None:
+
+            self._instance_name = '_'.join(
+                name for name in (
+                    self._instance_name_prefix, 'accelize', self._accelerator,
+                    _datetime.now().strftime('%y%m%d%H%M%S')) if name)
+
+        return self._instance_name
+
+    def _iter_hosts(self):
+        """
+        Iterates over accelerator hosts of current type.
+
+        Returns:
+            generator of dict: dicts contains attributes values of the host.
+        """
+        # Empty generator by default
+        return iter(())
+
+    def iter_hosts(self, instance_name_prefix=True):
+        """
+        Iterates over accelerator hosts of current type.
+
+        Args:
+            instance_name_prefix (bool or str): If True,
+                use "instance_name_prefix" from configuration, if False
+                don't filter by prefix, if str, uses this str as prefix
+
+        Returns:
+            generator of dict: dicts contains attributes values of the host.
+        """
+        # Use configuration prefix
+        if instance_name_prefix is True:
+            instance_name_prefix = self._instance_name_prefix + '_'
+
+        # Show instances with all prefixes
+        elif instance_name_prefix is False:
+            instance_name_prefix = '.*'
+
+        # Uses specified prefix
+        else:
+            instance_name_prefix += '_'
+
+        # Get name validator
+        match = _re.compile(
+            '%saccelize_\w*_\d{12}' % instance_name_prefix).match
+
+        # Validates and yield hosts
+        for host in self._iter_hosts():
+            name = host['instance_name']
+            result = match(name)
+            if result and result.end() - result.start() == len(name):
+                if 'public_ip' in host:
+                    host['url'] = _utl.format_url(host['public_ip'])
+                host['host_type'] = self._host_type
+                host['accelerator'] = host['instance_name'].split(
+                    'accelize_', 1)[1].rsplit('_', 1)[0]
+                yield host
