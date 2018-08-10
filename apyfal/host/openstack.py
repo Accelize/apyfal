@@ -376,3 +376,16 @@ class OpenStackHost(_CSPHost):
         Returns:
             generator of dict: dicts contains attributes values of the host.
         """
+        with _exception_handler():
+            for instance in self._session.servers.list():
+                yield dict(
+                    instance_id=instance.id,
+                    instance_type=instance.flavor['id'],
+                    public_ip=[
+                        address['addr'] for address in
+                        list(instance.addresses.values())[0]
+                        if address['version'] == 4][0],
+                    instance_name=instance.name,
+                    security_group=instance.security_groups[0]['name'],
+                    image_id=instance.image['id'],
+                    key_pair=instance.key_name)
