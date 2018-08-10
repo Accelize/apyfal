@@ -17,6 +17,7 @@ class _LazyClass:
         # Set privates variables locally
         if name.startswith('_'):
             object.__setattr__(self, name, value)
+            return
 
         # Tries to set other names on real accelerator
         setattr(self._get_accelerator_object(True), name, value)
@@ -73,7 +74,8 @@ class _LazyAccelerator(_LazyClass):
 
         # Get accelerator keyword arguments
         self._accelerator_kwargs = dict(
-            accelerator=host_properties['accelerator'], config=config)
+            accelerator=host_properties['accelerator'], config=config,
+            stop_mode='keep', host_type=host_properties['host_type'])
         if 'instance_id' in host_properties:
             self._accelerator_kwargs[
                 'instance_id'] = host_properties['instance_id']
