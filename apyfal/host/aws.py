@@ -527,19 +527,22 @@ class AWSHost(_CSPHost):
         """
         ec2_resource = self._session.resource('ec2')
 
-        # List running instances
         with _exception_handler():
             for instance in ec2_resource.instances.filter(
                     Filters=[{'Name': 'instance-state-name',
                               'Values': ['running']}]):
-                yield dict(
-                    instance_id=instance.id,
-                    instance_type=instance.instance_type,
-                    private_ip=instance.private_ip_address,
-                    public_ip=instance.public_ip_address,
-                    instance_name=[instance.tags[index]['Value']
-                                   for index in range(len(instance.tags))
-                                   if instance.tags[index]['Key'] == 'Name'][0],
-                    security_group=instance.security_groups[0]['GroupName'],
-                    image_id=instance.image_id,
-                    key_pair=instance.key_name)
+                instance_name = [instance.tags[index]['Value']
+                                 for index in range(len(instance.tags))
+                                 if instance.tags[index]['Key'] == 'Name'][0]
+
+                # Yields only matching accelerator instances
+                if self._is_accelerator_host(instance_name):
+                    yield dict(
+                        instance_id=instance.id,
+                        instance_type=instance.instance_type,
+                        private_ip=instance.private_ip_address,
+                        public_ip=instance.public_ip_address,
+                        instance_name=instance_name,
+                        security_group=instance.security_groups[0]['GroupName'],
+                        image_id=instance.image_id,
+                        key_pair=instance.key_name)
