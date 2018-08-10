@@ -1,6 +1,7 @@
 # coding=utf-8
 """Accelerator iterators"""
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 from apyfal.host import Host
 import apyfal.configuration as _cfg
@@ -120,6 +121,42 @@ class _LazyAccelerator(_LazyClass):
         return self._accelerator_object
 
 
+def _is_valid(host_dict, filters):
+    """Validates host.
+
+    Args:
+        host_dict (dict): Host
+        filters (dict): Dict of re.match filters.
+
+    Returns:
+        bool: True if host is valid
+    """
+    for key, match in filters.items():
+        if not match(host_dict[key]):
+            return False
+    return True
+
+
+def _get_host_iter(host_type, config, instance_name_prefix):
+    """
+    Get hosts generator for the specified host_type
+
+    Args:
+        host_type (str): host type
+        config (apyfal.configuration.Configuration): Configuration.
+        instance_name_prefix (bool or str): see iter_accelerators
+            instance_name_prefix
+
+    Returns:
+        generator: Hosts generator
+    """
+    try:
+        return Host(host_type=host_type, config=config).iter_hosts(
+            instance_name_prefix)
+    except _exc.HostException:
+        return iter(())
+
+
 def iter_accelerators(config=None, instance_name_prefix=True, **filters):
     """
     Iterates over accelerators.
@@ -147,20 +184,6 @@ def iter_accelerators(config=None, instance_name_prefix=True, **filters):
     for attr, pattern in filters.items():
         filters[attr] = re.compile(pattern).match
 
-    def is_valid(host_dict):
-        """Validates host.
-
-        Args:
-            host_dict (dict): Host
-
-        Returns:
-            bool: True if host is valid
-        """
-        for key, match in filters:
-            if not match(host_dict[key]):
-                return False
-        return True
-
     host_type_match = filters.get('host_type')
 
     # List available host_types
@@ -172,29 +195,15 @@ def iter_accelerators(config=None, instance_name_prefix=True, **filters):
             if host_type_match is None or host_type_match(host_type):
                 host_types.add(host_type)
 
-    # Yield accelerators for each host_type
-    for host_type in host_types:
-        # Instantiates basic host to use it as searcher
-        try:
-            searcher = Host(host_type=host_type, config=config)
-        except (_exc.HostException, TypeError):
-            continue
+    # Gets information for each host_type
+    futures = []
+    with ThreadPoolExecutor() as executor:
+        for host_type in host_types:
+            futures.append(executor.submit(
+                _get_host_iter, host_type, config, instance_name_prefix))
 
-        # Caches repr base
-        repr = "<%s.%s" % (searcher.__class__.__module__,
-                           searcher.__class__.__name__) + ' %s>'
-        repr_list = [(name, attr.lstrip('_')) for name, attr in searcher._REPR]
-
-        # Iterates over hosts found for this host_type
-        for host in searcher.iter_hosts(instance_name_prefix):
-            # Filters host
-            if not is_valid(host):
-                continue
-
-            # Adds host repr
-            host['_repr'] = repr % (' '.join(
-                "%s='%s'" % (name, host.get(attr)) for name, attr in repr_list
-                if host.get(attr) is not None))
-
-            # Yields lazy accelerators
-            yield _LazyAccelerator(host_properties=host, config=config)
+    # Yields lazy accelerators that match filters
+    for future in futures:
+        for host in future.result():
+            if _is_valid(host, filters):
+                yield _LazyAccelerator(host_properties=host, config=config)

@@ -349,30 +349,45 @@ class Host(_utl.ABC):
         Returns:
             generator of dict: dicts contains attributes values of the host.
         """
-        # Use configuration prefix
+        # Configure prefix filtering
         if instance_name_prefix is True:
+            # Use configuration prefix
             instance_name_prefix = self._instance_name_prefix + '_'
 
-        # Show instances with all prefixes
         elif instance_name_prefix is False:
+            # Show instances with all prefixes
             instance_name_prefix = '.*'
 
-        # Uses specified prefix
         else:
+            # Uses specified prefix
             instance_name_prefix += '_'
 
         # Get name validator
         match = _re.compile(
             '%saccelize_\w*_\d{12}' % instance_name_prefix).match
 
+        # Get repr base information
+        repr_base = "<%s.%s" % (self.__class__.__module__,
+                                self.__class__.__name__) + ' %s>'
+        repr_list = [(name, attr.lstrip('_')) for name, attr in self._REPR]
+
         # Validates and yield hosts
         for host in self._iter_hosts():
             name = host['instance_name']
             result = match(name)
             if result and result.end() - result.start() == len(name):
-                if 'public_ip' in host:
-                    host['url'] = _utl.format_url(host['public_ip'])
+
+                # Completes host information
                 host['host_type'] = self._host_type
                 host['accelerator'] = host['instance_name'].split(
                     'accelize_', 1)[1].rsplit('_', 1)[0]
+                if 'public_ip' in host:
+                    host['url'] = _utl.format_url(host['public_ip'])
+
+                # Adds host repr
+                host['_repr'] = repr_base % (' '.join(
+                    "%s='%s'" % (name, host.get(attr)) for name, attr in
+                    repr_list
+                    if host.get(attr) is not None))
+
                 yield host
