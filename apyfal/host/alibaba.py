@@ -28,23 +28,29 @@ class AlibabaCSP(_CSPHost):
 
     Args:
         host_type (str): Cloud service provider name. (Default to "Alibaba").
-        config (str or apyfal.configuration.Configuration or file-like object):
-            Can be Configuration instance, apyfal.storage URL, paths, file-like object.
-            If not set, will search it in current working directory, in current
-            user "home" folder. If none found, will use default configuration values.
+        config (apyfal.configuration.Configuration, path-like object or
+            file-like object):
+            If not set, will search it in current working directory,
+            in current user "home" folder. If none found, will use default
+            configuration values.
+            Path-like object can be path, URL or cloud object URL.
         client_id (str): Alibaba Access Key ID.
         secret_id (str): Alibaba Secret Access Key.
-        region (str): Alibaba region. Needs a region supporting instances with FPGA devices.
-        instance_type (str): Alibaba instance type. Default defined by accelerator.
+        region (str): Alibaba region. Needs a region supporting instances with
+            FPGA devices.
+        instance_type (str): Alibaba instance type.
+            Default defined by accelerator.
         key_pair (str): Alibaba Key pair. Default to 'AccelizeAlibabaKeyPair'.
-        security_group: Alibaba Security group. Default to 'AccelizeSecurityGroup'.
-        instance_id (str): Instance ID of an already existing Alibaba ECS instance to use.
-            If not specified, create a new instance.
-        instance_ip (str): IP or URL address of an already existing Alibaba ECS instance to use.
-            If not specified, create a new instance.
+        security_group: Alibaba Security group.
+            Default to'AccelizeSecurityGroup'.
+        instance_id (str): Instance ID of an already existing Alibaba ECS
+            instance to use. If not specified, create a new instance.
+        instance_ip (str): IP or URL address of an already existing Alibaba ECS
+            instance to use. If not specified, create a new instance.
         stop_mode (str or int): Define the "stop" method behavior.
-            Default to 'term' if new instance, or 'keep' if already existing instance.
-            See "stop_mode" property for more information and possible values.
+            Default to 'term' if new instance, or 'keep' if already existing
+            instance. See "stop_mode" property for more information and possible
+            values.
     """
     #: Provider name
     NAME = "Alibaba"
@@ -153,11 +159,13 @@ class AlibabaCSP(_CSPHost):
         Getting status information seem to not always return an up to
         date information and is not reliable to perform requests without error.
 
-        see "AlibabaCSP._request" for more information on requests and parameters.
+        see "AlibabaCSP._request" for more information on requests and
+        parameters.
 
         Args:
             action_name (str): Action name.
-            status_desc (str): Status name for description (starting, stopping, ...)
+            status_desc (str): Status name for description
+                (starting, stopping, ...)
             parameters: Request extra parameters.
 
         Returns:
@@ -169,14 +177,15 @@ class AlibabaCSP(_CSPHost):
                 # Tries to execute requests
                 try:
                     return self._request(
-                        action_name, error_code_filter='IncorrectInstanceStatus',
-                        InstanceId=instance_id,
-                        **parameters)
+                        action_name,
+                        error_code_filter='IncorrectInstanceStatus',
+                        InstanceId=instance_id, **parameters)
 
                 # If incorrect instance status, waits and retries
                 except _acs_exceptions.ServerException:
                     if timeout.reached():
-                        raise _exc.HostRuntimeException(gen_msg=('timeout', status_desc))
+                        raise _exc.HostRuntimeException(gen_msg=(
+                            'timeout', status_desc))
 
     def _get_public_ip(self):
         """
