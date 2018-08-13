@@ -45,12 +45,24 @@ class AlibabaCSP(_CSPHost):
             Default to'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing Alibaba ECS
             instance to use. If not specified, create a new instance.
-        instance_ip (str): IP or URL address of an already existing Alibaba ECS
+        instance_name_prefix (str): Prefix to add to instance name.
+        host_ip (str): IP or URL address of an already existing Alibaba ECS
             instance to use. If not specified, create a new instance.
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing
             instance. See "stop_mode" property for more information and possible
             values.
+        init_config (bool or apyfal.configuration.Configuration,
+            path-like object or file-like object):
+            Configuration file to pass to instance on
+            initialization. This configuration file will be used as default for
+            host side accelerator.
+            If value is True, use 'config' configuration.
+            If value is a configuration use this configuration.
+            If value is None or False, don't passe any configuration file
+            (This is default behavior).
+        init_script (path-like object or file-like object): A bash script
+            to execute on instance startup.
     """
     #: Provider name
     NAME = "Alibaba"
@@ -271,14 +283,13 @@ class AlibabaCSP(_CSPHost):
             if key_pair_name.lower() == lower_name:
                 # Update key pair name
                 self._key_pair = key_pair_name
-                return True
+                return
 
         # Key pair don't exists, creates it
         response = self._request(
             'CreateKeyPair', KeyPairName=self._key_pair)
 
         _utl.create_key_pair_file(self._key_pair, response['PrivateKeyBody'])
-        return False
 
     def _init_security_group(self):
         """
@@ -312,17 +323,13 @@ class AlibabaCSP(_CSPHost):
         rules = list()
         for port in self.ALLOW_PORTS:
             rules.append(dict(
-                Priority=1,
-                IpProtocol='tcp',
-                PortRange='%s/%s' % (port, port),
-                SourceCidrIp=public_ip
-            ))
+                Priority=1, IpProtocol='tcp', PortRange='%s/%s' % (port, port),
+                SourceCidrIp=public_ip))
 
         for rule in rules:
             self._request(
                 'AuthorizeSecurityGroup',
-                SecurityGroupId=self._security_group_id,
-                **rule)
+                SecurityGroupId=self._security_group_id, **rule)
 
         _get_logger().info(
             _utl.gen_msg('authorized_ip', public_ip, self._security_group))
