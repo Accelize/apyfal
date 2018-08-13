@@ -198,7 +198,7 @@ def iter_accelerators(config=None, instance_name_prefix=True, **filters):
 
     # Gets information for each host_type
     futures = []
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=len(host_types)) as executor:
         for host_type in host_types:
             futures.append(executor.submit(
                 _get_host_iter, host_type, config, instance_name_prefix))
