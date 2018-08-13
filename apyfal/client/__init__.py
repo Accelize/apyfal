@@ -122,9 +122,9 @@ class AcceleratorClient(_utl.ABC):
         self.stop()
 
     def __str__(self):
-        return "<%s.%s accelerator='%s'%s>" % (
+        return "<%s.%s accelerator='%s' type='%s'%s>" % (
             self.__class__.__module__, self.__class__.__name__, self._name,
-            " url='%s'" % self._url if self._url else '')
+            self._client_type, " url='%s'" % self._url if self._url else '')
 
     __repr__ = __str__
 

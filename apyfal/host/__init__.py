@@ -1,6 +1,5 @@
 # coding=utf-8
 """FPGA Host"""
-from abc import abstractmethod as _abstractmethod
 from datetime import datetime as _datetime
 import re as _re
 

@@ -38,7 +38,7 @@ class _LazyClass:
             return getattr(self._get_accelerator_object(True), item)
 
     def __str__(self):
-        return self._properties['_repr']
+        return str(self._get_accelerator_object() or self._properties['_repr'])
 
     __repr__ = __str__
 
@@ -159,7 +159,7 @@ def _get_host_iter(host_type, config, instance_name_prefix):
 
 def iter_accelerators(config=None, instance_name_prefix=True, **filters):
     """
-    Iterates over accelerators.
+    Iterates over all accelerators available on remote hosts.
 
     Args:
         config (apyfal.configuration.Configuration, path-like object or
@@ -169,13 +169,13 @@ def iter_accelerators(config=None, instance_name_prefix=True, **filters):
             configuration values.
             Path-like object can be path, URL or cloud object URL.
         instance_name_prefix (bool or str): If True,
-            use "instance_name_prefix" from configuration, if False
-            don't filter by prefix, if str, uses this str as prefix
+            use "instance_name_prefix" from configuration; if False
+            don't filter by prefix; if str, uses this str as prefix
         filters: Arguments names are host properties to filter,
             values are regular expressions.
 
     Returns:
-        generator: Accelerator generator
+        generator: Accelerators generator
     """
     # Get configuration
     config = _cfg.create_configuration(config)
