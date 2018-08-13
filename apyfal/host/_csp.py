@@ -84,6 +84,7 @@ class CSPHost(_Host):
     _INIT_METHODS = ['_init_security_group', '_init_key_pair']
 
     # Value to show in repr
+    # Python 2 don't .copy() on list
     _REPR = list(_Host._REPR)
     _REPR.append(('ID', '_instance_id'))
 

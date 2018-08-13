@@ -17,7 +17,8 @@ class _LazyClass:
     def __setattr__(self, name, value):
         # Set privates variables locally
         if name.startswith('_'):
-            object.__setattr__(self, name, value)
+            # Python 2 don't support object.__setattr__(self, name, value)
+            self.__dict__[name] = value
             return
 
         # Tries to set other names on real accelerator

@@ -38,6 +38,52 @@ def test_host_init():
     with pytest.raises(HostConfigurationException):
         host.start()
 
-    # Test: iter_hosts
-    assert list(host.iter_hosts()) == []
+    # Test: iter_hosts empty default
+    assert list(host._iter_hosts()) == []
 
+    # Test: iter_hosts with proper _iter_host
+    def _iter_hosts():
+        """dummy iter_host"""
+        for index in range(2):
+            yield dict(
+                public_ip='127.0.0.1',
+                instance_name='prefix_accelize_pytest%d_000000000000' % index)
+
+    host._iter_hosts = _iter_hosts
+    assert list(host.iter_hosts()) == [{
+        'public_ip': '127.0.0.1',
+        'instance_name': 'prefix_accelize_pytest%d_000000000000' % index,
+        'accelerator': 'pytest%d' % index,
+        'url': 'http://127.0.0.1',
+        'host_type': host.host_type,
+        '_repr': ("<apyfal.host.Host name='prefix_accelize_"
+                  "pytest%d_000000000000'>") % index} for index in range(2)]
+
+    # Test: iter_hosts instance_name_prefix
+    prefix = 'prefix'
+    host = Host(config=config, instance_name_prefix=prefix)
+    assert host._instance_name_prefix == prefix
+    assert host._instance_name_match is None
+
+    list(host.iter_hosts(instance_name_prefix=True))
+    assert host._instance_name_match is not None
+    assert not host._is_accelerator_host('accelize_pytest_000000000000')
+    assert not host._is_accelerator_host('other_accelize_pytest_000000000000')
+    assert host._is_accelerator_host('prefix_accelize_pytest_000000000000')
+
+    list(host.iter_hosts(instance_name_prefix=False))
+    assert host._is_accelerator_host('accelize_pytest_000000000000')
+    assert host._is_accelerator_host('other_accelize_pytest_000000000000')
+    assert host._is_accelerator_host('prefix_accelize_pytest_000000000000')
+
+    list(host.iter_hosts(instance_name_prefix='other'))
+    assert not host._is_accelerator_host('accelize_pytest_000000000000')
+    assert host._is_accelerator_host('other_accelize_pytest_000000000000')
+    assert not host._is_accelerator_host('prefix_accelize_pytest_000000000000')
+
+    # Test: not instance names
+    list(host.iter_hosts(instance_name_prefix=False))
+    assert not host._is_accelerator_host('pytest_000000000000')
+    assert not host._is_accelerator_host('accelize_000000000000')
+    assert not host._is_accelerator_host('accelize_prefix')
+    assert not host._is_accelerator_host('accelize_prefix_000')
