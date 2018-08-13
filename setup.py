@@ -62,8 +62,11 @@ PACKAGE_INFO = dict(
     include_package_data=True,
     zip_safe=True,
     command_options={},
-    cmdclass={}
-)
+    cmdclass={},
+    entry_points={
+        'console_scripts':
+            ['apyfal=apyfal.__main__:_run_command']}
+    )
 
 # Add OpenStack sub extra:
 PACKAGE_INFO['extras_require']['OVH'] = PACKAGE_INFO[
