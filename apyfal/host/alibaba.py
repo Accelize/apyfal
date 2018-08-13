@@ -396,3 +396,29 @@ class AlibabaCSP(_CSPHost):
         if self._status() != self.STATUS_STOPPED:
             self._instance_request(
                 'StopInstance', status_desc='stopping', ForceStop=force_stop)
+
+    def _iter_hosts(self):
+        """
+        Iterates over accelerator hosts of current type.
+
+        Returns:
+            generator of dict: dicts contains attributes values of the host.
+        """
+        for instance in self._request(
+                'DescribeInstances', Status=self.STATUS_RUNNING)[
+                'Instances']['Instance']:
+
+            instance_name = instance['InstanceName']
+
+            # Yields only matching accelerator instances
+            if self._is_accelerator_host(instance_name):
+                yield dict(
+                    instance_id=instance['InstanceId'],
+                    instance_type=instance['InstanceType'],
+                    private_ip=instance[
+                        'VpcAttributes']['PrivateIpAddress']['IpAddress'][0],
+                    public_ip=instance['PublicIpAddress']['IpAddress'][0],
+                    instance_name=instance_name,
+                    security_group=instance[
+                        'SecurityGroupIds']['SecurityGroupId'][0],
+                    image_id=instance['ImageId'])
