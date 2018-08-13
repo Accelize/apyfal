@@ -427,9 +427,8 @@ class CSPHost(_Host):
 
         # Keep instance alive
         if stop_mode == 'keep':
-            import warnings
-            warnings.warn(
-                "Instance '%s' is still running" % self.instance_id, Warning)
+            _get_logger().warning(
+                "Instance '%s' is still running" % self.instance_id)
             return
 
         # Checks if instance to stop
