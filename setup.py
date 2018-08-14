@@ -54,12 +54,12 @@ PACKAGE_INFO = dict(
 
         # CSP specific requirements
         'Alibaba': [
-            'pyopenssl', 'oss2',
+            'pyopenssl', 'pycosio[oss]',
             'aliyun-python-sdk-core; python_version == "2.7"',
             'aliyun-python-sdk-core-v3; python_version >= "3.4"'],
         'AWS': ['boto3', 'pycosio[s3]'],
         'OpenStack': ['python-novaclient', 'python-neutronclient',
-                      'pycosio[swift]', 'pyOpenSSL']},
+                      'pycosio[swift]', 'pyopenssl']},
     setup_requires=['setuptools'],
     tests_require=['pytest'],
     packages=find_packages(exclude=['docs', 'tests', 'rest_api']),
