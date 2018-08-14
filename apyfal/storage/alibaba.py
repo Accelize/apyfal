@@ -36,10 +36,11 @@ class OSSStorage(_Storage):
     STORAGE_PARAMETERS = {'session': {
         'access_key_id': 'self._client_id',
         'access_key_secret': 'self._secret_id',
-        'region': 'self._region'}}
+        'endpoint': 'self._endpoint'}}
 
-    def __init__(self, region=None, **kwargs):
-        _Storage.__init__(self, **kwargs)
+    def __init__(self, region=None, unsecure=None, **kwargs):
+        _Storage.__init__(self, unsecure=unsecure, **kwargs)
 
         # Read configuration
-        self._region = self._from_config('region', region)
+        self._endpoint = 'http%s://oss-%s.aliyuncs.com' % (
+            '' if unsecure else 's', self._from_config('region', region))
