@@ -45,7 +45,7 @@ class AlibabaCSP(_CSPHost):
             Default to'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing Alibaba ECS
             instance to use. If not specified, create a new instance.
-        instance_name_prefix (str): Prefix to add to instance name.
+        host_name_prefix (str): Prefix to add to instance name.
         host_ip (str): IP or URL address of an already existing Alibaba ECS
             instance to use. If not specified, create a new instance.
         stop_mode (str or int): Define the "stop" method behavior.
@@ -358,7 +358,7 @@ class AlibabaCSP(_CSPHost):
             ImageId=self._image_id,
             InstanceType=self._instance_type,
             SecurityGroupId=self._security_group_id,
-            InstanceName=self._get_instance_name(),
+            InstanceName=self._get_host_name(),
             Description=_utl.gen_msg('accelize_generated'),
             InternetMaxBandwidthOut=max_bandwidth
         )
@@ -424,17 +424,17 @@ class AlibabaCSP(_CSPHost):
                 'DescribeInstances', Status=self.STATUS_RUNNING)[
                 'Instances']['Instance']:
 
-            instance_name = instance['InstanceName']
+            host_name = instance['InstanceName']
 
             # Yields only matching accelerator instances
-            if self._is_accelerator_host(instance_name):
+            if self._is_accelerator_host(host_name):
                 yield dict(
                     instance_id=instance['InstanceId'],
                     instance_type=instance['InstanceType'],
                     private_ip=instance[
                         'VpcAttributes']['PrivateIpAddress']['IpAddress'][0],
                     public_ip=instance['PublicIpAddress']['IpAddress'][0],
-                    instance_name=instance_name,
+                    host_name=host_name,
                     security_group=instance[
                         'SecurityGroupIds']['SecurityGroupId'][0],
                     image_id=instance['ImageId'])

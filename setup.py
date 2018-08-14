@@ -7,7 +7,7 @@ run "./setup.py --help-commands" for help.
 from datetime import datetime
 from os import makedirs, chdir, environ
 from os.path import dirname, abspath, join, isfile, isdir
-from sys import argv, version_info
+from sys import argv
 
 from setuptools import setup, find_packages, Command
 
@@ -59,7 +59,7 @@ PACKAGE_INFO = dict(
             'aliyun-python-sdk-core-v3; python_version >= "3.4"'],
         'AWS': ['boto3', 'pycosio[s3]'],
         'OpenStack': ['python-novaclient', 'python-neutronclient',
-                      'pycosio[swift]', 'pyopenssl']},
+                      'pycosio[swift]', 'pyOpenSSL']},
     setup_requires=['setuptools'],
     tests_require=['pytest'],
     packages=find_packages(exclude=['docs', 'tests', 'rest_api']),
