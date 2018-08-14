@@ -2,23 +2,23 @@
 """Data storage I/O
 
 Support I/O over different kind of storage that must
-be first registered.
+be first mounted.
 
 Theses features are provided by the "pycosio". Path are automatically handled
 with pycosio in Apyfal to provides automatic support of cloud storage.
 
-Register storage:
-    Storage defined in configuration are automatically registered
-    on first call. It is possible to manually register new storage
-    with "register" function.
+Mount storage:
+    Storage defined in configuration are automatically mounted
+    on first call. It is possible to manually mount new storage
+    with "mount" function.
 
-The Apyfal configuration file is used to automatically register all known
+The Apyfal configuration file is used to automatically mount all known
 storage on start up.
 
 Storage URL format:
     All operations works with URL with format "scheme://path"
 
-    Common schemes are (Registered by default):
+    Common schemes are (mounted by default):
 
     - "file://" or no scheme: Client local file.
     - "host://": Host local file (Available only on REST client).
@@ -78,15 +78,15 @@ def copy(source, destination):
     _pycosio.copy(source, destination)
 
 
-def register(storage_type, **parameters):
-    """Register a new storage.
+def mount(storage_type, **parameters):
+    """Mount a new storage.
 
     Args:
         storage_type (str): storage type
         parameters: storage parameters
             (see targeted storage class for more information)
     """
-    _Storage(storage_type=storage_type, **parameters).register()
+    _Storage(storage_type=storage_type, **parameters).mount()
 
 
 def parse_url(url, host=True):
@@ -217,35 +217,35 @@ class _Storage:
             elif isinstance(value, str) and value.startswith('self.'):
                 parameters[key] = getattr(self, value.split('.', 1)[1])
 
-    def register(self):
-        """Register storage."""
+    def mount(self):
+        """Mount storage."""
         storage_parameters = _deepcopy(self.STORAGE_PARAMETERS)
         self._update_parameter(storage_parameters)
-        return _pycosio.register(
+        return _pycosio.mount(
             storage=self.STORAGE_NAME, extra_url_prefix=self.EXTRA_URL_PREFIX,
             storage_parameters=storage_parameters, unsecure=self._unsecure)
 
 
-# Automatically registers known storage from configuration
-def _auto_register():
-    """Registers from configuration"""
+# Automatically mounts known storage from configuration
+def _auto_mount():
+    """mounts from configuration"""
     # Get configuration
     config = _cfg.Configuration()
 
     # Finds possibles storage
-    to_register = set()
-    to_register.add(config['host']['host_type'])
+    to_mount = set()
+    to_mount.add(config['host']['host_type'])
     for section in config:
         if section.startswith('host.') or section.startswith('storage.'):
-            to_register.add(section.split('.', 1)[1])
+            to_mount.add(section.split('.', 1)[1])
 
-    # Tries to register storage
-    for storage_type in to_register:
+    # Tries to mount storage
+    for storage_type in to_mount:
         try:
-            register(storage_type=storage_type, config=config)
+            mount(storage_type=storage_type, config=config)
         except (ImportError, _exc.AcceleratorException):
             continue
 
 
-_auto_register()
-del _auto_register
+_auto_mount()
+del _auto_mount
