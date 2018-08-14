@@ -1,4 +1,4 @@
-_Storage
+Storage
 =======
 
 Apyfal storage provides the ability to use cloud storage services and other
