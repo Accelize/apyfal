@@ -74,7 +74,7 @@ class OpenStackHost(_CSPHost):
             Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing OpenStack nova
             instance to use. If not specified, create a new instance.
-        instance_name_prefix (str): Prefix to add to instance name.
+        host_name_prefix (str): Prefix to add to instance name.
         host_ip (str): IP or URL address of an already existing OpenStack nova
             instance to use. If not specified, create a new instance.
         project_id (str): OpenStack Project
@@ -332,7 +332,7 @@ class OpenStackHost(_CSPHost):
             image = self._session.glance.find_image(self._image_id)
             flavor = self._session.flavors.get(self._instance_type)
             instance = self._session.servers.create(
-                name=self._get_instance_name(), image=image, flavor=flavor,
+                name=self._get_host_name(), image=image, flavor=flavor,
                 key_name=self._key_pair, security_groups=[self._security_group],
                 userdata=self._user_data)
 
@@ -378,10 +378,10 @@ class OpenStackHost(_CSPHost):
         """
         with _exception_handler():
             for instance in self._session.servers.list():
-                instance_name = instance.name
+                host_name = instance.name
 
                 # Yields only matching accelerator instances
-                if self._is_accelerator_host(instance_name):
+                if self._is_accelerator_host(host_name):
                     yield dict(
                         instance_id=instance.id,
                         instance_type=instance.flavor['id'],
@@ -389,7 +389,7 @@ class OpenStackHost(_CSPHost):
                             address['addr'] for address in
                             list(instance.addresses.values())[0]
                             if address['version'] == 4][0],
-                        instance_name=instance_name,
+                        host_name=host_name,
                         security_group=instance.security_groups[0]['name'],
                         image_id=instance.image['id'],
                         key_pair=instance.key_name)

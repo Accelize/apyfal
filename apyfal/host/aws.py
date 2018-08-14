@@ -82,7 +82,7 @@ class AWSHost(_CSPHost):
         security_group: AWS Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing AWS EC2 instance
             to use. If not specified, create a new instance.
-        instance_name_prefix (str): Prefix to add to instance name.
+        host_name_prefix (str): Prefix to add to instance name.
         host_ip (str): IP or URL address of an already existing AWS EC2 instance
             to use. If not specified, create a new instance.
         role (str): AWS IAM role. Generated to allow instance to load AGFI
@@ -458,7 +458,7 @@ class AWSHost(_CSPHost):
             TagSpecifications=[{'ResourceType': 'instance', 'Tags': [
                 {'Key': 'Generated',
                  'Value': _utl.gen_msg('accelize_generated')},
-                {'Key': 'Name', 'Value': self._get_instance_name()}]}],
+                {'Key': 'Name', 'Value': self._get_host_name()}]}],
             MinCount=1, MaxCount=1,)
 
         # Optional arguments
@@ -531,18 +531,18 @@ class AWSHost(_CSPHost):
             for instance in ec2_resource.instances.filter(
                     Filters=[{'Name': 'instance-state-name',
                               'Values': ['running']}]):
-                instance_name = [instance.tags[index]['Value']
-                                 for index in range(len(instance.tags))
-                                 if instance.tags[index]['Key'] == 'Name'][0]
+                host_name = [instance.tags[index]['Value']
+                             for index in range(len(instance.tags))
+                             if instance.tags[index]['Key'] == 'Name'][0]
 
                 # Yields only matching accelerator instances
-                if self._is_accelerator_host(instance_name):
+                if self._is_accelerator_host(host_name):
                     yield dict(
                         instance_id=instance.id,
                         instance_type=instance.instance_type,
                         private_ip=instance.private_ip_address,
                         public_ip=instance.public_ip_address,
-                        instance_name=instance_name,
+                        host_name=host_name,
                         security_group=instance.security_groups[0]['GroupName'],
                         image_id=instance.image_id,
                         key_pair=instance.key_name)

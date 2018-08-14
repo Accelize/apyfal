@@ -22,6 +22,7 @@ class Host(_utl.ABC):
             in current user "home" folder. If none found, will use default
             configuration values.
             Path-like object can be path, URL or cloud object URL.
+        host_name_prefix (str): Prefix to add to host name.
         host_ip (str): IP or URL address of an already existing host to use.
             If not specified, create a new host.
         stop_mode (str or int): Define the "stop" method behavior.
@@ -42,10 +43,10 @@ class Host(_utl.ABC):
     TIMEOUT = 420.0
 
     # Attributes returned as dict by "info" property
-    _INFO_NAMES = {'_host_type', '_stop_mode', '_url'}
+    _INFO_NAMES = {'_host_type', '_stop_mode', '_url', '_host_name'}
 
     # Value to show in repr
-    _REPR = [('type', '_host_type'), ('name', '_instance_name')]
+    _REPR = [('type', '_host_type'), ('name', '_host_name')]
 
     def __new__(cls, *args, **kwargs):
         # If call from a subclass, instantiate this subclass directly
@@ -62,15 +63,15 @@ class Host(_utl.ABC):
             cls, host_type, 'host_type', _exc.HostConfigurationException)
 
     def __init__(self, host_type=None, config=None, host_ip=None,
-                 stop_mode=None, instance_name_prefix=None, **_):
+                 stop_mode=None, host_name_prefix=None, **_):
 
         # Default some attributes
         self._accelerator = None
         self._stop_mode = None
         self._config_env = None
         self._config_section = 'host.%s' % self.NAME if self.NAME else 'host'
-        self._instance_name = None
-        self._instance_name_match = None
+        self._host_name = None
+        self._host_name_match = None
 
         # Read configuration from file
         self._config = _cfg.create_configuration(config)
@@ -84,8 +85,8 @@ class Host(_utl.ABC):
             stop_mode or section['stop_mode'] or
             ('keep' if host_ip else 'term'))
 
-        self._instance_name_prefix = (instance_name_prefix or
-                                      section['instance_name_prefix'] or '')
+        self._host_name_prefix = (host_name_prefix or
+                                      section['host_name_prefix'] or '')
 
     def __enter__(self):
         return self
@@ -127,14 +128,14 @@ class Host(_utl.ABC):
         return self._url
 
     @property
-    def instance_name(self):
+    def host_name(self):
         """
-        Name of the current host instance.
+        Name of the current host.
 
         Returns:
             str: Name
         """
-        return self._get_instance_name()
+        return self._get_host_name()
 
     @property
     def stop_mode(self):
@@ -299,9 +300,9 @@ class Host(_utl.ABC):
             cls.NAME if include_host else '', parameter_name)
 
     @classmethod
-    def _add_csp_help_to_exception_message(cls, exception):
+    def _add_help_to_exception_message(cls, exception):
         """
-        Improve exception message by adding CSP help indication.
+        Improve exception message by adding host specific help indication.
 
         Args:
             exception (Exception): exception.
@@ -312,20 +313,20 @@ class Host(_utl.ABC):
                 args[0].rstrip('.'), cls.DOC_URL)
             exception.args = tuple(args)
 
-    def _get_instance_name(self):
-        """Returns name to use as instance name
+    def _get_host_name(self):
+        """Returns name to use as host name
 
         Returns:
             str: name with format
-                'Accelize_<AcceleratorName>_<DateTime>'"""
-        if self._instance_name is None:
+                '<Prefix>_accelize_<AcceleratorName>_<DateTime>'"""
+        if self._host_name is None:
 
-            self._instance_name = '_'.join(
+            self._host_name = '_'.join(
                 name for name in (
-                    self._instance_name_prefix, 'accelize', self._accelerator,
+                    self._host_name_prefix, 'accelize', self._accelerator,
                     _datetime.now().strftime('%y%m%d%H%M%S')) if name)
 
-        return self._instance_name
+        return self._host_name
 
     def _iter_hosts(self):
         """
@@ -337,50 +338,50 @@ class Host(_utl.ABC):
         # Empty generator by default
         return iter(())
 
-    def _is_accelerator_host(self, instance_name):
+    def _is_accelerator_host(self, host_name):
         """
         Checks if host is an accelerator host.
 
         Only indented to be run from "_iter_hosts".
 
         Args:
-            instance_name (str): Instance name
+            host_name (str): Host name
 
         Returns:
             bool: True if accelerator host.
         """
-        result = self._instance_name_match(instance_name)
-        if result and result.end() - result.start() == len(instance_name):
+        result = self._host_name_match(host_name)
+        if result and result.end() - result.start() == len(host_name):
             return True
         return False
 
-    def iter_hosts(self, instance_name_prefix=True):
+    def iter_hosts(self, host_name_prefix=True):
         """
         Iterates over accelerator hosts of current type.
 
         Args:
-            instance_name_prefix (bool or str): If True,
-                use "instance_name_prefix" from configuration, if False
+            host_name_prefix (bool or str): If True,
+                use "host_name_prefix" from configuration, if False
                 don't filter by prefix, if str, uses this str as prefix
 
         Returns:
             generator of dict: dicts contains attributes values of the host.
         """
         # Prepares name validator
-        if instance_name_prefix is True:
+        if host_name_prefix is True:
             # Use configuration prefix
-            instance_name_prefix = self._instance_name_prefix
+            host_name_prefix = self._host_name_prefix
 
-        elif instance_name_prefix is False:
+        elif host_name_prefix is False:
             # Show instances with all prefixes
-            instance_name_prefix = '.*'
+            host_name_prefix = '.*'
 
-        if instance_name_prefix not in ('', '.*'):
+        if host_name_prefix not in ('', '.*'):
             # Adds separator
-            instance_name_prefix += '_'
+            host_name_prefix += '_'
 
-        self._instance_name_match = _re.compile(
-            '%saccelize_\w*_\d{12}' % instance_name_prefix).match
+        self._host_name_match = _re.compile(
+            '%saccelize_\w*_\d{12}' % host_name_prefix).match
 
         # Prepares repr base information
         repr_base = "<%s.%s" % (self.__class__.__module__,
@@ -392,7 +393,7 @@ class Host(_utl.ABC):
 
             # Completes host information
             host['host_type'] = self._host_type
-            host['accelerator'] = host['instance_name'].split(
+            host['accelerator'] = host['host_name'].split(
                 'accelize_', 1)[1].rsplit('_', 1)[0]
             if 'public_ip' in host:
                 host['url'] = _utl.format_url(host['public_ip'])

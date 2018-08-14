@@ -77,7 +77,7 @@ def test_iter_accelerators():
     dummy_config['host.include_errored']['key'] = '0'
     dummy_config['host.exclude']['key'] = '0'
     dummy_prefix = 'prefix'
-    dummy_filters = dict(host_type='include_*', instance_name='0')
+    dummy_filters = dict(host_type='include_*', host_name='0')
 
     # Mocks Host
     class Host:
@@ -90,11 +90,11 @@ def test_iter_accelerators():
             if 'errored' in host_type:
                 raise HostRuntimeException('Error')
 
-        def iter_hosts(self, instance_name_prefix):
+        def iter_hosts(self, host_name_prefix):
             """Checks arguments and yields fake values"""
-            assert instance_name_prefix == dummy_prefix
+            assert host_name_prefix == dummy_prefix
             for host in range(2):
-                yield dict(host_type=self.host_type, instance_name=str(host),
+                yield dict(host_type=self.host_type, host_name=str(host),
                            accelerator='accelerator', _repr='_repr')
 
     apyfal_host_host = apyfal.host.Host
@@ -104,7 +104,7 @@ def test_iter_accelerators():
     # Tests
     try:
         result = list(iter_accelerators(
-            config=dummy_config, instance_name_prefix=dummy_prefix,
+            config=dummy_config, host_name_prefix=dummy_prefix,
             **dummy_filters))
         assert len(result) == 2
         for index, item in enumerate(result):

@@ -383,13 +383,12 @@ class Configuration(_Mapping):
         configuration files to current ones.
         """
         sections_changes = {'csp': 'host'}
-        parameters_changes = {
-            'csp': {
-                'ssh_key': 'key_pair',
-                'provider': 'host_type',
-                'instance_ip': 'host_ip'
-            }
-        }
+        parameters_changes = {'csp': {
+            'ssh_key': 'key_pair',
+            'provider': 'host_type',
+            'instance_ip': 'host_ip',
+            'host_name_prefix': 'host_name_prefix'}}
+
         # Fix sections
         for old, new in sections_changes.items():
             # Section to fix not exists

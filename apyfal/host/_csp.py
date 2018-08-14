@@ -39,7 +39,7 @@ class CSPHost(_Host):
         security_group: CSP Security group. Default to 'AccelizeSecurityGroup'.
         instance_id (str): Instance ID of an already existing CSP instance to
             use. If not specified, create a new instance.
-        instance_name_prefix (str): Prefix to add to instance name.
+        host_name_prefix (str): Prefix to add to instance name.
         host_ip (str): IP or URL address of an already existing CSP instance to
             use. If not specified, create a new instance.
         stop_mode (str or int): Define the "stop" method behavior.
@@ -74,7 +74,7 @@ class CSPHost(_Host):
     _INFO_NAMES = _Host._INFO_NAMES.copy()
     _INFO_NAMES.update({
         'public_ip', 'private_ip', '_region', '_instance_type',
-        '_instance_name', '_key_pair', '_security_group', '_instance_id',
+        '_key_pair', '_security_group', '_instance_id',
         '_instance_type_name', '_region_parameters'})
 
     # Instance user home directory
@@ -479,7 +479,7 @@ class CSPHost(_Host):
         """
         # Augment exception message
         if exception is not None:
-            self._add_csp_help_to_exception_message(exception)
+            self._add_help_to_exception_message(exception)
 
         # Force stop instance, ignore exception if any
         try:

@@ -138,27 +138,27 @@ def _is_valid(host_dict, filters):
     return True
 
 
-def _get_host_iter(host_type, config, instance_name_prefix):
+def _get_host_iter(host_type, config, host_name_prefix):
     """
     Get hosts generator for the specified host_type
 
     Args:
         host_type (str): host type
         config (apyfal.configuration.Configuration): Configuration.
-        instance_name_prefix (bool or str): see iter_accelerators
-            instance_name_prefix
+        host_name_prefix (bool or str): see iter_accelerators
+            host_name_prefix
 
     Returns:
         generator: Hosts generator
     """
     try:
         return Host(host_type=host_type, config=config).iter_hosts(
-            instance_name_prefix)
+            host_name_prefix)
     except _exc.HostException:
         return iter(())
 
 
-def iter_accelerators(config=None, instance_name_prefix=True, **filters):
+def iter_accelerators(config=None, host_name_prefix=True, **filters):
     """
     Iterates over all accelerators available on remote hosts.
 
@@ -169,8 +169,8 @@ def iter_accelerators(config=None, instance_name_prefix=True, **filters):
             in current user "home" folder. If none found, will use default
             configuration values.
             Path-like object can be path, URL or cloud object URL.
-        instance_name_prefix (bool or str): If True,
-            use "instance_name_prefix" from configuration; if False
+        host_name_prefix (bool or str): If True,
+            use "host_name_prefix" from configuration; if False
             don't filter by prefix; if str, uses this str as prefix
         filters: Arguments names are host properties to filter,
             values are regular expressions.
@@ -201,7 +201,7 @@ def iter_accelerators(config=None, instance_name_prefix=True, **filters):
     with ThreadPoolExecutor(max_workers=len(host_types)) as executor:
         for host_type in host_types:
             futures.append(executor.submit(
-                _get_host_iter, host_type, config, instance_name_prefix))
+                _get_host_iter, host_type, config, host_name_prefix))
 
     # Yields lazy accelerators that match filters
     for future in futures:
