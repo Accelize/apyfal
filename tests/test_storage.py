@@ -7,14 +7,14 @@ from uuid import uuid4 as uuid
 import pytest
 
 
-def test_register():
-    """Tests register"""
+def test_mount():
+    """Tests mount"""
     import apyfal.storage as srg
     from apyfal.configuration import Configuration
     from apyfal.exceptions import StorageConfigurationException
     import pycosio
 
-    # Mock _Storage and pycosio.register
+    # Mock _Storage and pycosio.mount
     storage_type = 'dummy_storage'
     storage_name = 'dummy_name'
     user = 'dummy_user'
@@ -24,7 +24,7 @@ def test_register():
             'arg0': 'arg0',
             'params': {'password': password,
                        'arg1': 'arg1'}}
-    registered = []
+    mounted = []
 
     class DummyStorage(srg._Storage):
         """Dummy storage"""
@@ -37,30 +37,30 @@ def test_register():
             'params': {'password': 'self._secret_id',
                        'arg1': 'arg1'}}
 
-    def register(storage=None, extra_url_prefix=None, storage_parameters=None,
+    def mount(storage=None, extra_url_prefix=None, storage_parameters=None,
                  **_):
-        """Dummy pycosio.register"""
+        """Dummy pycosio.mount"""
         assert storage == storage_name
         assert extra_url_prefix == DummyStorage.EXTRA_URL_PREFIX
         assert storage_parameters == excepted_storage_parameters
-        registered.append(storage)
+        mounted.append(storage)
 
-    pycosio_register = pycosio.register
-    pycosio.register = register
+    pycosio_mount = pycosio.mount
+    pycosio.mount = mount
 
     # Tests
     try:
-        # Register
-        assert not registered
+        # Mount
+        assert not mounted
         config = Configuration()
         config['host.%s' % storage_type]['secret_id'] = password
-        DummyStorage(config=config, client_id=user).register()
-        assert registered == [storage_name]
+        DummyStorage(config=config, client_id=user).mount()
+        assert mounted == [storage_name]
 
-        # Register with no class available
+        # Mount with no class available
         if version_info[0] > 2:
             with pytest.raises(StorageConfigurationException):
-                srg.register(storage_type, config=config, client_id=user)
+                srg.mount(storage_type, config=config, client_id=user)
 
         # SSL option
         assert DummyStorage()._unsecure is False
@@ -71,7 +71,7 @@ def test_register():
 
     # Restore pycosio
     finally:
-        pycosio.register = pycosio_register
+        pycosio.mount = pycosio_mount
 
 
 def test_parse_url():
@@ -143,7 +143,7 @@ def run_full_real_test_sequence(storage_type, tmpdir):
         storage_type (str): Bucket storage_type.
         tmpdir (object): tmpdir Pytest fixture
     """
-    from apyfal.storage import _Storage, copy, register
+    from apyfal.storage import _Storage, copy, mount
 
     # Skip if no correct configuration with this host_type
     if not _Storage(storage_type=storage_type)._client_id:
@@ -160,8 +160,8 @@ def run_full_real_test_sequence(storage_type, tmpdir):
     tmp_dst = tmpdir.join('dst.txt')
     tmp_dst_path = str(tmp_dst)
 
-    # Register bucket
-    storage = register(storage_type)
+    # Mount bucket
+    storage = mount(storage_type)
     storage_dir = ('%stestaccelizestorage/apyfal_testing/' %
                    storage.EXTRA_URL_PREFIX)
 

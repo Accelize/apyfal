@@ -120,31 +120,31 @@ The following example shows some possible file operations:
     # Download a file from internet to storage
     copy('http://www.accelize.com/file', 'my_storage://my_file')
 
-Register extra storage services
--------------------------------
+Mount extra storage services
+----------------------------
 
 Cloud storage services use a login and password to secure access and can’t be
 accessed without them.
 
 By default, storage services that are already configured as host are
-automatically registered with same parameters.
+automatically mounted with same parameters.
 
-But, in other cases, these services need to be registered before use.
-Each storage needs a unique ``storage_type`` that will be used to register it
+But, in other cases, these services need to be mounted before use.
+Each storage needs a unique ``storage_type`` that will be used to mount it
 and to access it with a URL.
 
-This can be done using the ``apyfal.storage.register`` function or with the
+This can be done using the ``apyfal.storage.mount`` function or with the
 configuration file.
 
 See :doc:`api_storage` for information on possible parameters for the targeted
 storage.
 
 The following examples show the registration of the ``my_storage`` storage type.
-This storage needs the following parameters to be
-registered: ``client_id`` and ``secret_id``.
+This storage needs the following parameters to be mounted:
+``client_id`` and ``secret_id``.
 
-With register function
-~~~~~~~~~~~~~~~~~~~~~~
+With mount function
+~~~~~~~~~~~~~~~~~~~
 
 The registration of ``my_storage`` storage is performed as follows.
 
@@ -152,9 +152,9 @@ The registration of ``my_storage`` storage is performed as follows.
 
     import apyfal.storage
 
-    # Register "my_provider.my_bucket" storage
-    apyfal.storage.register(storage_type='my_storage',
-                            client_id='my_client_id', secret_id='my_secret_id')
+    # Mount "my_provider.my_bucket" storage
+    apyfal.storage.mount(storage_type='my_storage',
+                         client_id='my_client_id', secret_id='my_secret_id')
 
 With configuration file
 ~~~~~~~~~~~~~~~~~~~~~~~
