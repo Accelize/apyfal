@@ -33,10 +33,10 @@ class OSSStorage(_Storage):
     DOC_URL = "https://www.alibabacloud.com"
 
     #: Storage parameters template
-    STORAGE_PARAMETERS = {'session': {
+    STORAGE_PARAMETERS = {
         'access_key_id': 'self._client_id',
         'access_key_secret': 'self._secret_id',
-        'endpoint': 'self._endpoint'}}
+        'endpoint': 'self._endpoint'}
 
     def __init__(self, region=None, unsecure=None, **kwargs):
         _Storage.__init__(self, unsecure=unsecure, **kwargs)
