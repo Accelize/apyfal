@@ -334,12 +334,6 @@ class AlibabaCSP(_CSPHost):
         _get_logger().info(
             _utl.gen_msg('authorized_ip', public_ip, self._security_group))
 
-    def _create_instance(self):
-        """
-        Initializes and creates instance.
-        """
-        self._init_security_group()
-
     def _start_new_instance(self):
         """
         Starts a new instance.
@@ -360,8 +354,8 @@ class AlibabaCSP(_CSPHost):
             SecurityGroupId=self._security_group_id,
             InstanceName=self._get_host_name(),
             Description=_utl.gen_msg('accelize_generated'),
-            InternetMaxBandwidthOut=max_bandwidth
-        )
+            InternetMaxBandwidthOut=max_bandwidth,
+            KeyPairName=self._key_pair)
 
         # Handles user data
         user_data = self._user_data
@@ -437,4 +431,5 @@ class AlibabaCSP(_CSPHost):
                     host_name=host_name,
                     security_group=instance[
                         'SecurityGroupIds']['SecurityGroupId'][0],
-                    image_id=instance['ImageId'])
+                    image_id=instance['ImageId'],
+                    key_pair=instance['KeyPairName'])
