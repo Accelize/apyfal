@@ -1,7 +1,8 @@
 # coding=utf-8
 """Accelerator iterators"""
-import re
 from concurrent.futures import ThreadPoolExecutor
+from itertools import chain
+import re
 
 from apyfal.host import Host
 import apyfal.configuration as _cfg
@@ -152,9 +153,14 @@ def _get_host_iter(host_type, config, host_name_prefix):
         generator: Hosts generator
     """
     try:
-        return Host(host_type=host_type, config=config).iter_hosts(
+        # Gets generator
+        generator = Host(host_type=host_type, config=config).iter_hosts(
             host_name_prefix)
-    except _exc.HostException:
+
+        # Initializes generator and returns it
+        return chain((next(generator),), generator)
+
+    except (_exc.HostException, StopIteration):
         return iter(())
 
 
