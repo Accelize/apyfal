@@ -3,7 +3,8 @@
 
 import abc
 import collections
-from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor
+from concurrent.futures import (ThreadPoolExecutor as _ThreadPoolExecutor,
+                                as_completed as as_completed)
 from contextlib import contextmanager
 from importlib import import_module
 import os
@@ -295,7 +296,7 @@ def get_host_public_ip(max_tries=10, validation_sample=3):
 
             # Checks if addresses match
             ip_addresses = set(ip_address.result()
-                               for ip_address in ip_addresses)
+                               for ip_address in as_completed(ip_addresses))
             if len(ip_addresses) == 1:
                 ip_address = ip_addresses.pop()
                 if ip_address:

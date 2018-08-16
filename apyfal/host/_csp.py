@@ -2,7 +2,8 @@
 """Cloud Service Providers"""
 
 from abc import abstractmethod as _abstractmethod
-from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor
+from concurrent.futures import (ThreadPoolExecutor as _ThreadPoolExecutor,
+                                wait as _wait)
 
 try:
     # Python 2
@@ -359,8 +360,7 @@ class CSPHost(_Host):
                 futures.append(executor.submit(getattr(self, method)))
 
         # Wait completion
-        for future in futures:
-            future.result()
+        _wait(futures)
 
     @_abstractmethod
     def _start_new_instance(self):

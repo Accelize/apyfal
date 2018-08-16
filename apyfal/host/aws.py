@@ -1,7 +1,8 @@
 # coding=utf-8
 """Amazon Web Services EC2"""
 
-from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor
+from concurrent.futures import (ThreadPoolExecutor as _ThreadPoolExecutor,
+                                wait as _wait)
 from contextlib import contextmanager as _contextmanager
 from copy import deepcopy as _deepcopy
 from json import dumps as _json_dumps
@@ -435,8 +436,7 @@ class AWSHost(_CSPHost):
             futures.append(executor.submit(self._attach_role_policy))
 
         # Wait completion
-        for future in futures:
-            future.result()
+        _wait(futures)
 
         # Sets AGFI
         self._config_env = {'AGFI': self._region_parameters['fpgaimage']}

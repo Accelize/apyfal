@@ -1,6 +1,6 @@
 # coding=utf-8
 """Accelerator iterators"""
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from itertools import chain
 import re
 
@@ -210,7 +210,7 @@ def iter_accelerators(config=None, host_name_prefix=True, **filters):
                 _get_host_iter, host_type, config, host_name_prefix))
 
     # Yields lazy accelerators that match filters
-    for future in futures:
+    for future in as_completed(futures):
         for host in future.result():
             if _is_valid(host, filters):
                 yield _LazyAccelerator(host_properties=host, config=config)
