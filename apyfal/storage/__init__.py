@@ -30,6 +30,8 @@ Storage URL format:
 
 See target storage class documentation for more information.
 """
+from concurrent.futures import (
+    ThreadPoolExecutor as _ThreadPoolExecutor, wait as _wait)
 from contextlib import contextmanager as _contextmanager
 from copy import deepcopy as _deepcopy
 
@@ -240,11 +242,15 @@ def _auto_mount():
             to_mount.add(section.split('.', 1)[1])
 
     # Tries to mount storage
-    for storage_type in to_mount:
-        try:
-            mount(storage_type=storage_type, config=config)
-        except (ImportError, _exc.AcceleratorException):
-            continue
+    futures = []
+    with _ThreadPoolExecutor(max_workers=len(to_mount)) as executor:
+        for storage_type in to_mount:
+            try:
+                storage = _Storage(storage_type=storage_type, config=config)
+            except (ImportError, _exc.AcceleratorException):
+                continue
+            futures.append(executor.submit(storage.mount))
+        _wait(futures)
 
 
 _auto_mount()
