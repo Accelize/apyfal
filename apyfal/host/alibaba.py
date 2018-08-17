@@ -1,6 +1,8 @@
 # coding=utf-8
 """Alibaba Cloud ECS"""
 from base64 import b64encode as _b64encode
+from concurrent.futures import (ThreadPoolExecutor as _ThreadPoolExecutor,
+                                as_completed as _as_completed)
 import json as _json
 from uuid import uuid1 as _uuid
 
@@ -17,7 +19,9 @@ from apyfal._utilities import get_logger as _get_logger
 _acs_request.set_default_protocol_type("https")
 
 #: Alibaba Cloud API version (Key is subdomain name, value is API version)
-API_VERSION = {'ecs': '2014-05-26'}
+API_VERSION = {'ecs': '2014-05-26',
+               'ram': '2015-05-01',
+               'sts': '2015-04-01'}
 
 #: Alibaba Cloud API main domain
 MAIN_DOMAIN = 'aliyuncs.com'
@@ -48,6 +52,8 @@ class AlibabaCSP(_CSPHost):
         host_name_prefix (str): Prefix to add to instance name.
         host_ip (str): IP or URL address of an already existing Alibaba ECS
             instance to use. If not specified, create a new instance.
+        role (str): Alibaba RAM role. Generated to allow instance to load
+            FPGA bitstream and access to OSS. Default to 'AccelizeRole'.
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing
             instance. See "stop_mode" property for more information and possible
@@ -73,11 +79,17 @@ class AlibabaCSP(_CSPHost):
     STATUS_RUNNING = 'Running'
     STATUS_STOPPED = 'Stopped'
 
-    def __init__(self, **kwargs):
+    _INFO_NAMES = _CSPHost._INFO_NAMES.copy()
+    _INFO_NAMES.update(['_role', '_policy'])
+
+    def __init__(self, role=None, **kwargs):
         _CSPHost.__init__(self, **kwargs)
 
         # Default some attributes
         self._security_group_id = None
+        self._role = (role or self._config[self._config_section]['role'] or
+                      self._default_parameter_value('Role'))
+        self._policy = self._default_parameter_value('Policy')
 
         # ClientToken guarantee idempotence of requests
         self._client_token = str(_uuid())
@@ -293,7 +305,7 @@ class AlibabaCSP(_CSPHost):
 
     def _init_security_group(self):
         """
-        Initialize CSP security group.
+        Initialize security group.
         """
         response = self._request('DescribeSecurityGroups')
 
@@ -334,6 +346,84 @@ class AlibabaCSP(_CSPHost):
         _get_logger().info(
             _utl.gen_msg('authorized_ip', public_ip, self._security_group))
 
+    def _init_role(self):
+        """
+        Initialize RAM role.
+
+        This role allow to perform actions defined by policy.
+        """
+        assume_role_policy_document = _json.dumps({
+            "Version": "1", "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": "ecs.aliyuncs.com"},
+                "Action": "sts:AssumeRole"}]})
+
+        self._request(
+            'CreateRole', domain='ram', RoleName=self._role,
+            AssumeRolePolicyDocument=assume_role_policy_document,
+            Description=_utl.gen_msg('accelize_generated'))
+
+        _get_logger().info(_utl.gen_msg(
+            'created_named', 'RAM role', self._role))
+
+    def _init_policy(self):
+        """
+        Initialize RAM policy.
+
+        This policy allow instance to:
+            - Load FPGA bitstream.
+            - Access to OSS buckets objects for read and write.
+        """
+        policy_document = _json.dumps({
+            "Version": "1", "Statement": [
+                # Grant FPGA access
+                # TODO:
+
+                # Grant OSS access
+                {"Effect": "Allow", "Resource": ["acs:oss:*:*:*"],
+                 "Action": ["oss:PutObject", "oss:GetObject"]}]})
+
+        self._request(
+            'CreatePolicy', domain='ram', PolicyName=self._policy,
+            PolicyDocument=policy_document,
+            Description=_utl.gen_msg('accelize_generated'))
+
+        _get_logger().info(_utl.gen_msg(
+            'created_named', 'RAM policy', self._policy))
+
+    def _attach_role_policy(self):
+        """
+        Attach RAM policy to RAM role.
+        """
+        self._request(
+            'CreatePolicy', domain='ram', PolicyType='custom',
+            PolicyName=self._policy, RoleName=self._role)
+
+        _get_logger().info(_utl.gen_msg(
+            'attached_to', 'RAM policy', self._policy,
+            'RAM role', self._role))
+
+    def _create_instance(self):
+        """
+        Initialize and create instance.
+        """
+        futures = []
+        with _ThreadPoolExecutor(max_workers=5) as executor:
+            # Run configuration in parallel
+            policy = executor.submit(self._init_policy)
+            role = executor.submit(self._init_role)
+            for method in (self._init_key_pair, self._init_security_group):
+                futures.append(executor.submit(method))
+
+            # Wait that role and policy are completed to attach them
+            for future in _as_completed((policy, role)):
+                future.result()
+            futures.append(executor.submit(self._attach_role_policy))
+
+        # Wait completion
+        for future in _as_completed(futures):
+            future.result()
+
     def _start_new_instance(self):
         """
         Starts a new instance.
@@ -349,13 +439,12 @@ class AlibabaCSP(_CSPHost):
 
         # Prepares args:
         kwargs = dict(
-            ImageId=self._image_id,
-            InstanceType=self._instance_type,
+            ImageId=self._image_id, InstanceType=self._instance_type,
             SecurityGroupId=self._security_group_id,
             InstanceName=self._get_host_name(),
             Description=_utl.gen_msg('accelize_generated'),
             InternetMaxBandwidthOut=max_bandwidth,
-            KeyPairName=self._key_pair)
+            KeyPairName=self._key_pair, RamRoleName=self._role)
 
         # Handles user data
         user_data = self._user_data

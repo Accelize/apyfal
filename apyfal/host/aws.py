@@ -121,7 +121,7 @@ class AWSHost(_CSPHost):
         # Get AWS specific arguments
         self._role = (role or self._config[self._config_section]['role'] or
                       self._default_parameter_value('Role'))
-        self._policy = None
+        self._policy_arn = None
         self._instance_profile_name = 'AccelizeLoadFPGA'
 
         # Load session
@@ -181,7 +181,7 @@ class AWSHost(_CSPHost):
             str: 'policy'
         """
         # Create a policy
-        policy = 'AccelizePolicy'
+        policy = self._default_parameter_value('Policy')
         policy_document = _json_dumps({
             "Version": "2012-10-17", "Statement": [
 
@@ -209,7 +209,7 @@ class AWSHost(_CSPHost):
                 Scope='Local', OnlyAttached=False, MaxItems=100)
         for policy_item in response['Policies']:
             if policy_item['PolicyName'] == policy:
-                self._policy = policy_item['Arn']
+                self._policy_arn = policy_item['Arn']
                 # 'policy' returns str is used set future object ID
                 return 'policy'
 
@@ -245,10 +245,10 @@ class AWSHost(_CSPHost):
 
         with _exception_handler(filter_error_codes='EntityAlreadyExists'):
             iam_client.attach_role_policy(
-                PolicyArn=self._policy, RoleName=self._role)
+                PolicyArn=self._policy_arn, RoleName=self._role)
 
             _get_logger().info(_utl.gen_msg(
-                'attached_to', 'IAM policy', self._policy,
+                'attached_to', 'IAM policy', self._policy_arn,
                 'IAM role', self._role))
 
     def _init_instance_profile(self):
