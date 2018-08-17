@@ -173,7 +173,7 @@ class OpenStackHost(_CSPHost):
 
     def _init_security_group(self):
         """
-        Initialize CSP security group.
+        Initialize security group.
         """
         # Connect to Neutron using same authentication session
         neutron = _NeutronClient(session=self._session.client.session,

@@ -11,6 +11,7 @@ New features
 - Apyfal can now be used locally on host (like accelerator executable).
 - Add ``apyfal.iter_accelerator`` function to iterates over all existing
   accelerators for a configuration.
+- Add Alibaba Cloud support.
 
 General improvements
 

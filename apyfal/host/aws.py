@@ -85,7 +85,7 @@ class AWSHost(_CSPHost):
         host_ip (str): IP or URL address of an already existing AWS EC2 instance
             to use. If not specified, create a new instance.
         role (str): AWS IAM role. Generated to allow instance to load AGFI
-            (FPGA bitstream). Default to 'AccelizeRole'.
+            (FPGA bitstream) and access to S3. Default to 'AccelizeRole'.
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing
             instance. See "stop_mode" property for more information and possible
@@ -171,11 +171,11 @@ class AWSHost(_CSPHost):
 
     def _init_policy(self):
         """
-        Initialize policy.
+        Initialize IAM policy.
 
         This policy allow instance to:
             - Load FPGA bitstream.
-            - Access to S3 buckets objects  for read and write.
+            - Access to S3 buckets objects for read and write.
 
         Returns:
             str: 'policy'
@@ -214,7 +214,7 @@ class AWSHost(_CSPHost):
                 return 'policy'
 
         raise _exc.HostConfigurationException(
-            gen_msg=('created_failed_named', 'policy', policy))
+            gen_msg=('created_failed_named', 'IAM policy', policy))
 
     def _init_role(self):
         """
@@ -239,7 +239,7 @@ class AWSHost(_CSPHost):
 
     def _attach_role_policy(self):
         """
-        Attach policy to IAM role.
+        Attach IAM policy to IAM role.
         """
         iam_client = self._session.client('iam')
 
@@ -248,11 +248,12 @@ class AWSHost(_CSPHost):
                 PolicyArn=self._policy, RoleName=self._role)
 
             _get_logger().info(_utl.gen_msg(
-                'attached_to', 'policy', self._policy, 'IAM role', self._role))
+                'attached_to', 'IAM policy', self._policy,
+                'IAM role', self._role))
 
     def _init_instance_profile(self):
         """
-        Initialize instance profile.
+        Initialize IAM instance profile.
 
         This instance_profile allow to perform actions defined by role.
         """
@@ -264,12 +265,12 @@ class AWSHost(_CSPHost):
                 InstanceProfileName=self._instance_profile_name)
 
             _get_logger().info(_utl.gen_msg(
-                'created_named', 'instance profile',
+                'created_named', 'IAM instance profile',
                 self._instance_profile_name))
 
     def _attach_instance_profile_role(self):
         """
-        Attach IAM role to instance profile.
+        Attach IAM role to IAM instance profile.
         """
         iam_client = self._session.client('iam')
 
@@ -283,24 +284,24 @@ class AWSHost(_CSPHost):
                             RoleName=self._role)
                         break
 
-                    # Some time, instance_profile is nt ready immediately
+                    # Some time, instance_profile is not ready immediately
                     except _ClientError as exception:
                         if (exception.response['Error']['Code'] ==
                                 'NoSuchEntityException'):
                             if timeout.reached():
                                 raise _exc.HostRuntimeException(gen_msg=(
                                     'timeout',
-                                    'instance_profile and role attachment'))
+                                    'IAM instance_profile and role attachment'))
                             continue
                         raise
 
             _get_logger().info(_utl.gen_msg(
-                'attached_to', 'role', self._role, 'instance profile',
+                'attached_to', 'IAM role', self._role, 'IAM instance profile',
                 self._instance_profile_name))
 
     def _init_security_group(self):
         """
-        Initialize CSP security group.
+        Initialize security group.
         """
         # Get list of security groups
         # Checks if Key pairs exists, like for key pairs
