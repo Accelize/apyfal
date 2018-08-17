@@ -34,6 +34,7 @@ from concurrent.futures import (
     ThreadPoolExecutor as _ThreadPoolExecutor, wait as _wait)
 from contextlib import contextmanager as _contextmanager
 from copy import deepcopy as _deepcopy
+from sys import version_info as _py
 
 import pycosio as _pycosio
 
@@ -242,6 +243,16 @@ def _auto_mount():
             to_mount.add(section.split('.', 1)[1])
 
     # Tries to mount storage
+    if _py[0] == 2:
+        # On Python 2: Seem to have a deadlock on import if use of
+        # ThreadPoolExecutor
+        for storage_type in to_mount:
+            try:
+                mount(storage_type=storage_type, config=config)
+            except (ImportError, _exc.AcceleratorException):
+                continue
+        return
+
     futures = []
     with _ThreadPoolExecutor(max_workers=len(to_mount)) as executor:
         for storage_type in to_mount:
