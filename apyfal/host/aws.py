@@ -2,10 +2,9 @@
 """Amazon Web Services EC2"""
 
 from concurrent.futures import (ThreadPoolExecutor as _ThreadPoolExecutor,
-                                wait as _wait)
+                                as_completed as _as_completed)
 from contextlib import contextmanager as _contextmanager
 from json import dumps as _json_dumps
-import time as _time
 
 import boto3 as _boto3
 from botocore.exceptions import ClientError as _ClientError
@@ -123,6 +122,7 @@ class AWSHost(_CSPHost):
         self._role = (role or self._config[self._config_section]['role'] or
                       self._default_parameter_value('Role'))
         self._policy = None
+        self._instance_profile_name = 'AccelizeLoadFPGA'
 
         # Load session
         self._session = _boto3.session.Session(
@@ -176,6 +176,9 @@ class AWSHost(_CSPHost):
         This policy allow instance to:
             - Load FPGA bitstream.
             - Access to S3 buckets objects  for read and write.
+
+        Returns:
+            str: 'policy'
         """
         # Create a policy
         policy = 'AccelizePolicy'
@@ -207,7 +210,8 @@ class AWSHost(_CSPHost):
         for policy_item in response['Policies']:
             if policy_item['PolicyName'] == policy:
                 self._policy = policy_item['Arn']
-                return
+                # 'policy' returns str is used set future object ID
+                return 'policy'
 
         raise _exc.HostConfigurationException(
             gen_msg=('created_failed_named', 'policy', policy))
@@ -233,12 +237,6 @@ class AWSHost(_CSPHost):
 
             _get_logger().info(_utl.gen_msg('created_named', 'IAM role', role))
 
-        iam_client = self._session.client('iam')
-        with _exception_handler():
-            arn = iam_client.get_role(RoleName=self._role)['Role']['Arn']
-
-        return arn
-
     def _attach_role_policy(self):
         """
         Attach policy to IAM role.
@@ -261,24 +259,44 @@ class AWSHost(_CSPHost):
         iam_client = self._session.client('iam')
 
         # Create instance profile
-        instance_profile_name = 'AccelizeLoadFPGA'
         with _exception_handler(filter_error_codes='EntityAlreadyExists'):
             iam_client.create_instance_profile(
-                InstanceProfileName=instance_profile_name)
+                InstanceProfileName=self._instance_profile_name)
 
             _get_logger().info(_utl.gen_msg(
-                'created_object', 'instance profile', instance_profile_name))
+                'created_named', 'instance profile',
+                self._instance_profile_name))
 
-            _time.sleep(5)
+    def _attach_instance_profile_role(self):
+        """
+        Attach IAM role to instance profile.
+        """
+        iam_client = self._session.client('iam')
 
         # Attach role to instance profile
         with _exception_handler(filter_error_codes='LimitExceeded'):
-            iam_client.add_role_to_instance_profile(
-                InstanceProfileName=instance_profile_name, RoleName=self._role)
+            with _utl.Timeout(self.TIMEOUT) as timeout:
+                while True:
+                    try:
+                        iam_client.add_role_to_instance_profile(
+                            InstanceProfileName=self._instance_profile_name,
+                            RoleName=self._role)
+                        break
+
+                    # Some time, instance_profile is nt ready immediately
+                    except _ClientError as exception:
+                        if (exception.response['Error']['Code'] ==
+                                'NoSuchEntityException'):
+                            if timeout.reached():
+                                raise _exc.HostRuntimeException(gen_msg=(
+                                    'timeout',
+                                    'instance_profile and role attachment'))
+                            continue
+                        raise
 
             _get_logger().info(_utl.gen_msg(
                 'attached_to', 'role', self._role, 'instance profile',
-                instance_profile_name))
+                self._instance_profile_name))
 
     def _init_security_group(self):
         """
@@ -401,17 +419,21 @@ class AWSHost(_CSPHost):
             # Run configuration in parallel
             policy = executor.submit(self._init_policy)
             role = executor.submit(self._init_role)
-            for method in (self._init_key_pair, self._init_instance_profile,
-                           self._init_security_group):
+            instance_profile = executor.submit(self._init_instance_profile)
+            for method in (self._init_key_pair, self._init_security_group):
                 futures.append(executor.submit(method))
 
-            # Wait that role and policy are completed to attach them
-            role.result()
-            policy.result()
-            futures.append(executor.submit(self._attach_role_policy))
+            # Wait that role, instance_profile and policy are completed
+            # to attach them
+            for future in _as_completed((policy, instance_profile)):
+                role.result()
+                futures.append(executor.submit(
+                    self._attach_role_policy if future.result() == 'policy' else
+                    self._attach_instance_profile_role))
 
         # Wait completion
-        _wait(futures)
+        for future in _as_completed(futures):
+            future.result()
 
     def _start_new_instance(self):
         """

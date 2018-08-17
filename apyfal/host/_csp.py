@@ -3,7 +3,7 @@
 
 from abc import abstractmethod as _abstractmethod
 from concurrent.futures import (ThreadPoolExecutor as _ThreadPoolExecutor,
-                                wait as _wait)
+                                as_completed as _as_completed)
 
 try:
     # Python 2
@@ -358,7 +358,8 @@ class CSPHost(_Host):
                 futures.append(executor.submit(getattr(self, method)))
 
         # Wait completion
-        _wait(futures)
+        for future in _as_completed(futures):
+            future.result()
 
     @_abstractmethod
     def _start_new_instance(self):
