@@ -95,7 +95,8 @@ class AlibabaCSP(_CSPHost):
         self._client_token = str(_uuid())
 
     def _request(self, action_name, domain='ecs',
-                 error_code_filter=None, exception_message=None, **parameters):
+                 error_code_filter=None, error_code_ignore=None,
+                 exception_message=None, **parameters):
         """
         Performs a request on Alibaba cloud.
 
@@ -105,6 +106,8 @@ class AlibabaCSP(_CSPHost):
             error_code_filter (str or tuple of str): Filter error codes and
                 raise original exception if found. Else raise
                 apyfal.exceptions.HostException subclass)
+            error_code_ignore (str or tuple of str): Error codes to ignore and
+                continue.
             exception_message (str): Exception message if exception to raise.
             parameters: request parameters
 
@@ -149,6 +152,15 @@ class AlibabaCSP(_CSPHost):
             error_msg = acs_exception.get_error_msg()
 
             # Filters error codes to re-raise as it.
+            if error_code_ignore:
+                # Forces filter as tuple object
+                if isinstance(error_code_ignore, str):
+                    error_code_ignore = (error_code_ignore,)
+
+                for code in error_code_ignore:
+                    if error_code.startswith(code):
+                        return
+
             if error_code_filter:
                 # Forces filter as tuple object
                 if isinstance(error_code_filter, str):
@@ -358,13 +370,14 @@ class AlibabaCSP(_CSPHost):
                 "Principal": {"Service": "ecs.aliyuncs.com"},
                 "Action": "sts:AssumeRole"}]})
 
-        self._request(
-            'CreateRole', domain='ram', RoleName=self._role,
-            AssumeRolePolicyDocument=assume_role_policy_document,
-            Description=_utl.gen_msg('accelize_generated'))
+        if self._request(
+                'CreateRole', domain='ram', RoleName=self._role,
+                AssumeRolePolicyDocument=assume_role_policy_document,
+                Description=_utl.gen_msg('accelize_generated'),
+                error_code_ignore='EntityAlreadyExists'):
 
-        _get_logger().info(_utl.gen_msg(
-            'created_named', 'RAM role', self._role))
+            _get_logger().info(_utl.gen_msg(
+                'created_named', 'RAM role', self._role))
 
     def _init_policy(self):
         """
@@ -376,32 +389,40 @@ class AlibabaCSP(_CSPHost):
         """
         policy_document = _json.dumps({
             "Version": "1", "Statement": [
-                # Grant FPGA access
-                # TODO:
-
+                # Grant FPGA access ()
+                # TODO: Copied from "faasPolicy" check it,
+                #       should be FAAS (aliyunsdkfaas)
+                {"Effect": "Allow", "Resource": ["acs:ecs:*:*:*"],
+                 "Action": ["ecs:DescribeInstances", "ecs:DescribeImages"]},
+                {"Effect": "Allow", "Resource": ["acs:kms:*:*:*"],
+                 "Action": ["kms:Decrypt", "kms:GenerateDataKey",
+                            "kms:DescribeKey"]},
                 # Grant OSS access
                 {"Effect": "Allow", "Resource": ["acs:oss:*:*:*"],
-                 "Action": ["oss:PutObject", "oss:GetObject"]}]})
+                 "Action": ["oss:PutObject", "oss:GetObject", "oss:ListObjects",
+                            "oss:ListBuckets"]}]})
 
-        self._request(
-            'CreatePolicy', domain='ram', PolicyName=self._policy,
-            PolicyDocument=policy_document,
-            Description=_utl.gen_msg('accelize_generated'))
+        if self._request(
+                'CreatePolicy', domain='ram', PolicyName=self._policy,
+                PolicyDocument=policy_document,
+                Description=_utl.gen_msg('accelize_generated'),
+                error_code_ignore='EntityAlreadyExists'):
 
-        _get_logger().info(_utl.gen_msg(
-            'created_named', 'RAM policy', self._policy))
+            _get_logger().info(_utl.gen_msg(
+                'created_named', 'RAM policy', self._policy))
 
     def _attach_role_policy(self):
         """
         Attach RAM policy to RAM role.
         """
-        self._request(
-            'CreatePolicy', domain='ram', PolicyType='custom',
-            PolicyName=self._policy, RoleName=self._role)
+        if self._request(
+                'AttachPolicyToRole', domain='ram', PolicyType='Custom',
+                PolicyName=self._policy, RoleName=self._role,
+                error_code_ignore='EntityAlreadyExists'):
 
-        _get_logger().info(_utl.gen_msg(
-            'attached_to', 'RAM policy', self._policy,
-            'RAM role', self._role))
+            _get_logger().info(_utl.gen_msg(
+                'attached_to', 'RAM policy', self._policy,
+                'RAM role', self._role))
 
     def _create_instance(self):
         """

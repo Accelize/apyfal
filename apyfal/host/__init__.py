@@ -372,7 +372,15 @@ class Host(_utl.ABC):
 
             self._host_name = '_'.join(
                 name for name in (
-                    self._host_name_prefix, 'accelize', self._accelerator,
+                    # Add user and "accelize" prefix
+                    self._host_name_prefix, 'accelize',
+
+                    # Name is based on accelerator Name
+                    # '@' is used in some testing configurations but is a
+                    # forbidden character for name on some host types
+                    self._accelerator.replace('@', '_'),
+
+                    # Add date and time to have unique name
                     _datetime.now().strftime('%y%m%d%H%M%S')) if name)
 
         return self._host_name

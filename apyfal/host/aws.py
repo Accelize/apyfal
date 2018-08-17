@@ -193,7 +193,8 @@ class AWSHost(_CSPHost):
 
                 # Grant S3 buckets access
                 {"Sid": "AllowS3Access", "Effect": "Allow",
-                 "Action": ["s3:GetObject", "s3:PutObject"],
+                 "Action": ["s3:GetObject", "s3:PutObject",
+                            "s3:ListBucket", "s3:ListAllMyBuckets"],
                  "Resource": ["arn:aws:s3:::*"]}]})
 
         iam_client = self._session.client('iam')

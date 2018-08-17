@@ -387,7 +387,7 @@ class Configuration(_Mapping):
             'ssh_key': 'key_pair',
             'provider': 'host_type',
             'instance_ip': 'host_ip',
-            'host_name_prefix': 'host_name_prefix'}}
+            'instance_name_prefix': 'host_name_prefix'}}
 
         # Fix sections
         for old, new in sections_changes.items():
