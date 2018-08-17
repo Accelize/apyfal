@@ -6,18 +6,6 @@ Requirements
 
 Supported Python versions: 2.7, 3.4, 3.5, 3.6, 3.7
 
-Required Python Packages:
-
--  ``Request``, ``urllib3``, ``six``, ``certifi``, ``python-dateutil``,
-   ``ipgetter``, ``pycosio``
--  ``pip`` and ``setuptools``: For package installation
--  ``aliyun-python-sdk-core`` (Optional): Required for Alibaba.
--  ``pyopenssl`` (Optional): Required for Alibaba.
--  ``boto3`` (Optional): Required for AWS.
--  ``python-novaclient`` and ``python-neutronclient`` (Optional):
-   Required for OpenStack and OVH.
--  ``pycurl`` (Optional): Improve upload performance and file size limit.
-
 Linux
 ~~~~~
 
