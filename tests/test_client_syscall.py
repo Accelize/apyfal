@@ -300,57 +300,56 @@ def test_syscall_init_metering(tmpdir):
     try:
         client_id = 'dummy_client_id'
         client_secret = 'dummy_client_secret'
-        agfi = 'dummy_agfi'
+        fpga_image = 'dummy_FPGA'
 
         # Already configured and cached
         client._metering_env = {
             'client_id': client_id,
-            'client_secret': client_secret,
-            'AGFI': None}
-        client._init_metering({'env': {
+            'client_secret': client_secret}
+        client._init_metering({
             'client_id': client_id,
-            'client_secret': client_secret}})
+            'client_secret': client_secret})
         assert not metering_client_config.check()
         assert not metering_credentials.check()
 
         # Already configured after config file verification
-        metering_client_config.write('AFI=%s' % agfi)
+        metering_client_config.write('fpgaimage=%s' % fpga_image)
         client._metering_env = {
             'client_id': client_id,
             'client_secret': client_secret,
-            'AGFI': agfi}
-        client._init_metering({'env': {
+            'fpgaimage': fpga_image}
+        client._init_metering({
             'client_id': client_id,
-            'client_secret': client_secret}})
+            'client_secret': client_secret})
         assert not metering_credentials.check()
 
         # Not configured and no credentials
         client._metering_env = None
         with pytest.raises(ClientAuthenticationException):
-            client._init_metering({'env': {}})
+            client._init_metering({})
 
         # Already configured in files
         client._metering_env = None
         metering_credentials.write(json.dumps({
             'client_id': client_id,
             'client_secret': client_secret}))
-        client._init_metering({'env': {}})
+        client._init_metering({})
         assert client._metering_env == {
             'client_id': client_id,
             'client_secret': client_secret,
-            'AGFI': agfi}
+            'fpgaimage': fpga_image}
 
         # Needs reconfiguration
         new_client_id = 'new_client_id'
-        new_agfi = 'new_agfi'
+        new_fpga_image = 'new_fpga_image'
         client._metering_env = None
-        client._init_metering({'env': {
+        client._init_metering({
             'client_id': new_client_id,
-            'AGFI': new_agfi}})
+            'fpgaimage': new_fpga_image})
         assert client._metering_env == {
             'client_id': new_client_id,
             'client_secret': client_secret,
-            'AGFI': new_agfi}
+            'fpgaimage': new_fpga_image}
         assert json.loads(metering_credentials.read()) == {
             'client_id': new_client_id,
             'client_secret': client_secret}
@@ -371,7 +370,7 @@ def test_syscall_client_start_process_stop():
     # Mock some client methods
     dummy_file_in = 'file_in'
     dummy_file_out = 'file_out'
-    dummy_parameters = {'params': 'params'}
+    dummy_parameters = {'params': 'params', 'env': {}}
     dummy_response = {'response': 'response'}
     expected_args = {}
 

@@ -1,5 +1,6 @@
 # coding=utf-8
 """FPGA Host"""
+from copy import deepcopy as _deepcopy
 from datetime import datetime as _datetime
 import re as _re
 
@@ -68,7 +69,7 @@ class Host(_utl.ABC):
         # Default some attributes
         self._accelerator = None
         self._stop_mode = None
-        self._config_env = None
+        self._config_env = {}
         self._config_section = 'host.%s' % self.NAME if self.NAME else 'host'
         self._host_name = None
         self._host_name_match = None
@@ -236,15 +237,63 @@ class Host(_utl.ABC):
                 value.
         """
 
-    def get_configuration_env(self, **_):
+    def _set_accelerator_requirements(
+            self, accelerator=None, accel_parameters=None):
+        """
+        Configures instance with accelerator client parameters.
+
+        Needs "accel_client" or "accel_parameters".
+
+        Args:
+            accelerator (str): Name of the accelerator
+            accel_parameters (dict): Can override parameters from accelerator
+                client.
+
+        Raises:
+            apyfal.exceptions.HostConfigurationException:
+                Parameters are not valid..
+        """
+        # Gets parameters
+        parameters = dict()
+        if accelerator is not None:
+            parameters.update(self._config.get_host_requirements(
+                self._host_type, accelerator))
+
+        if accel_parameters is not None:
+            parameters.update(accel_parameters)
+
+        # Gets accelerator name
+        self._accelerator = parameters.pop('accelerator')
+
+        # Gets parameters for current region
+        self._config_env = parameters
+
+    def get_configuration_env(self, **config_env):
         """
         Return environment to pass to
-        "apyfal.client.AcceleratorClient.start" "host_env" argument.
+        "apyfal.accelerator.AcceleratorClient.start"
+        "csp_env" argument.
+
+        Args:
+            config_env: Overwrites environment values.
 
         Returns:
             dict: Configuration environment.
         """
-        return self._config_env
+        if not config_env:
+            # Returns default environment
+            return self._config_env
+
+        current_env = _deepcopy(self._config_env)
+        current_env.update(config_env)
+
+        # Old name backward compatibility
+        try:
+            current_env['fpgaimage'] = config_env['AGFI']
+        except KeyError:
+            pass
+
+        return current_env
 
     @classmethod
     def _host_type_from_config(cls, host_type, config):

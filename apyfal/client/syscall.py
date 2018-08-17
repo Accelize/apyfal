@@ -99,7 +99,7 @@ class SysCallClient(_Client):
             dict: response.
         """
         # Initialize metering
-        self._init_metering(parameters)
+        self._init_metering(parameters['env'])
 
         # Run and return response
         return self._run_executable(
@@ -207,22 +207,18 @@ class SysCallClient(_Client):
             _remove(output_json)
             return response
 
-    def _init_metering(self, parameters):
+    def _init_metering(self, config_env):
         """Initialize metering services.
 
         Args:
-            parameters (dict): start parameters.
+            config_env (dict): Host configuration environment.
         """
-        new_env = {
-            key: parameters['env'].get(key) for key in
-            ('AGFI', 'client_id', 'client_secret')}
-
-        # Cached value match with new env: Already configured
-        if new_env == self._metering_env:
+        # Cached value match with argument: Already configured
+        if config_env == self._metering_env:
             return
 
-        # Get current configuration
-        cur_env = {key: None for key in new_env}
+        # Get current configuration from files
+        cur_env = {}
         if _exists(_cfg.METERING_CREDENTIALS):
             # Get current credentials
             with open(_cfg.METERING_CREDENTIALS, 'rt') as file:
@@ -233,23 +229,23 @@ class SysCallClient(_Client):
             with open(_cfg.METERING_CLIENT_CONFIG, 'rt') as file:
                 for line in file:
                     key, value = line.strip().split('=')
-                    if key == 'AFI':
-                        cur_env['AGFI'] = value
-                        break
+                    cur_env[key.strip()] = value.strip()
 
-        full_env = {
-            key: new_env.get(key) or cur_env.get(key)
-            for key in new_env}
+        # Set full environment
+        full_env = cur_env.copy()
+        for key, value in config_env.items():
+            if value is not None:
+                full_env[key] = value
 
-        # Cached value match with full env: Already configured
+        # Cached value match with full environment: Already configured
         if full_env == self._metering_env:
             return
 
         # Checks if credentials needs to be updated
         update_credentials = (
-                'client_id' in new_env and
-                (new_env['client_id'] != cur_env['client_id'] or
-                 new_env['client_secret'] != cur_env['client_secret']))
+                'client_id' in config_env and
+                (config_env['client_id'] != cur_env.get('client_id') or
+                 config_env['client_secret'] != cur_env.get('client_secret')))
 
         if update_credentials:
             # Update credential in config
@@ -260,17 +256,19 @@ class SysCallClient(_Client):
                     cred_key]
 
             # Checks if credentials are valid
-            new_env['access_token'] = self._config.access_token
+            config_env['access_token'] = self._config.access_token
 
-        elif cur_env['client_id'] is None:
+        elif cur_env.get('client_id') is None:
             # No credentials
             raise _exc.ClientAuthenticationException(gen_msg='no_credentials')
 
-        # Checks if AGFI needs to be updated
-        update_agfi = (new_env['AGFI'] and new_env['AGFI'] != cur_env['AGFI'])
+        # Checks if FPGA parameters needs to be updated
+        update_fpga = any(
+            config_env.get(key) != cur_env.get(key) for key in
+            config_env if key not in ('client_id', 'client_secret'))
 
         # All is already up to date: caches values
-        if not update_agfi or not update_credentials:
+        if not update_fpga or not update_credentials:
             self._metering_env = full_env
             return
 
@@ -292,10 +290,12 @@ class SysCallClient(_Client):
                         key: full_env[key] for key in (
                         'client_id', 'client_secret')}, credential_file)
 
-            # AGFI
-            if update_agfi:
-                _call(['sudo', 'echo', '"AFI=%s"' % full_env['AGFI'], '>',
-                       _cfg.METERING_CLIENT_CONFIG])
+            # FPGA
+            if update_fpga:
+                _call(['sudo', 'cat', '<< EOF > ', _cfg.METERING_CLIENT_CONFIG,
+                       '\n'.join('%s=%s' % (key, full_env[key])
+                                 for key in full_env if key
+                                 not in ('client_id', 'client_secret')), "EOF"])
 
         # Restart services
         finally:

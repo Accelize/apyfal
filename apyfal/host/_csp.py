@@ -98,12 +98,10 @@ class CSPHost(_Host):
         # Default some attributes
         self._session = None
         self._instance = None
-        self._config_env = {}
         self._image_id = None
         self._image_name = None
         self._instance_type = None
         self._instance_type_name = None
-        self._region_parameters = None
 
         # Read configuration from file
         section = self._config[self._config_section]
@@ -487,8 +485,7 @@ class CSPHost(_Host):
         except _exc.HostException:
             pass
 
-    def _set_accelerator_requirements(
-            self, accelerator=None, accel_parameters=None):
+    def _set_accelerator_requirements(self, *args, **kwargs):
         """
         Configures instance with accelerator client parameters.
 
@@ -501,31 +498,28 @@ class CSPHost(_Host):
 
         Raises:
             apyfal.exceptions.HostConfigurationException:
-                Parameters are not valid..
+                Parameters are not valid.
         """
-        # Gets parameters
-        parameters = dict()
-        if accelerator is not None:
-            parameters.update(self._config.get_host_requirements(
-                self._host_type, accelerator))
+        _Host._set_accelerator_requirements(self, *args, **kwargs)
 
-        if accel_parameters is not None:
-            parameters.update(accel_parameters)
-
-        # Checks if region is valid
-        if self._region not in parameters.keys():
+        # For CSP, config env are in a region sub category
+        if self._region not in self._config_env.keys():
             raise _exc.HostConfigurationException(
                 "Region '%s' is not supported. Available regions are: %s" % (
-                    self._region, ', '.join(region for region in parameters
-                                            if region != 'accelerator')))
+                    self._region, ', '.join(
+                        region for region in self._config_env
+                        if region != 'accelerator')))
+        self._config_env = self._config_env[self._region]
 
-        # Gets accelerator name
-        self._accelerator = parameters['accelerator']
+        # Gets some CSP configuration values from environment
+        self._image_id = self._config_env.pop('image')
+        self._instance_type = self._config_env.pop('instancetype')
 
-        # Gets parameters for current region
-        self._region_parameters = parameters[self._region]
-        self._image_id = self._region_parameters['image']
-        self._instance_type = self._region_parameters['instancetype']
+        # Sets AGFI backward compatibility
+        try:
+            self._config_env['AGFI'] = self._config_env['fpgaimage']
+        except KeyError:
+            pass
 
     @property
     def _user_data(self):

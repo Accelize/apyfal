@@ -1,5 +1,6 @@
 # coding=utf-8
 """apyfal.host._csp tests"""
+from copy import deepcopy
 import gc
 import time
 
@@ -576,8 +577,9 @@ def test_csphost_set_accelerator_requirements():
     region = "dummy_region"
     image_id = "dummy_image_id"
     instance_type = "dummy_instance_type"
-    config_env = "dummy_config_env"
+    config_env = {"dummy_config_env": None}
     region_parameters = {'image': image_id, 'instancetype': instance_type}
+    region_parameters.update(config_env)
     dummy_accelerator = "dummy_accelerator"
     accel_parameters = {region: region_parameters,
                         'accelerator': dummy_accelerator}
@@ -591,7 +593,7 @@ def test_csphost_set_accelerator_requirements():
         assert accelerator == dummy_accelerator
 
         # Returns fake value
-        return accel_parameters
+        return deepcopy(accel_parameters)
 
     configuration_get_host_requirements = Configuration.get_host_requirements
     Configuration.get_host_requirements = get_host_requirements
@@ -600,8 +602,8 @@ def test_csphost_set_accelerator_requirements():
         # Test: Everything is OK
         csp = get_dummy_csp_class()(
             region=region, client_id='dummy_client_id')
-        csp._config_env = config_env
-        csp._set_accelerator_requirements(accel_parameters=accel_parameters)
+        csp._set_accelerator_requirements(
+            accel_parameters=deepcopy(accel_parameters))
         assert csp._image_id == image_id
         assert csp._instance_type == instance_type
         assert csp.get_configuration_env() == config_env
@@ -609,7 +611,7 @@ def test_csphost_set_accelerator_requirements():
         assert dummy_accelerator in csp._get_host_name()
         assert dummy_accelerator in csp.host_name
 
-        # Test: Pass accelerator
+        # Test: Pass accelerator and custom FPGA image
         csp = get_dummy_csp_class()(
             host_type=dummy_host_type, region=region,
             client_id='dummy_client_id')
@@ -621,6 +623,14 @@ def test_csphost_set_accelerator_requirements():
         assert csp._accelerator == dummy_accelerator
         assert dummy_accelerator in csp._get_host_name()
 
+        # Test pass environment parameters
+        new_config_env = config_env.copy()
+        new_config_env['AGFI'] = new_config_env['fpgaimage'] = 'fpgaimage'
+        assert csp.get_configuration_env(AGFI='fpgaimage') == new_config_env
+        new_config_env = config_env.copy()
+        new_config_env['param'] = 'param'
+        assert csp.get_configuration_env(param='param') == new_config_env
+
         # Test: Region not found
         accel_parameters = {'another_region': region_parameters,
                             'accelerator': dummy_accelerator}
@@ -629,7 +639,8 @@ def test_csphost_set_accelerator_requirements():
 
     # Revert configuration method
     finally:
-        Configuration.get_host_requirements = configuration_get_host_requirements
+        Configuration.get_host_requirements = \
+            configuration_get_host_requirements
 
 
 def import_from_generic_test(host_type, **kwargs):

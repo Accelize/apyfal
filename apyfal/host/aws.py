@@ -4,7 +4,6 @@
 from concurrent.futures import (ThreadPoolExecutor as _ThreadPoolExecutor,
                                 wait as _wait)
 from contextlib import contextmanager as _contextmanager
-from copy import deepcopy as _deepcopy
 from json import dumps as _json_dumps
 import time as _time
 
@@ -393,30 +392,6 @@ class AWSHost(_CSPHost):
                         filter_error_codes='InvalidInstanceID.NotFound'):
                     return self._instance.state["Name"]
 
-    def get_configuration_env(self, **kwargs):
-        """
-        Return environment to pass to
-        "apyfal.accelerator.AcceleratorClient.start"
-        "csp_env" argument.
-
-        Args:
-            kwargs:
-
-        Returns:
-            dict: Configuration environment.
-        """
-        current_env = _deepcopy(self._config_env)
-
-        try:
-            current_env['AGFI'] = kwargs['AGFI']
-        except KeyError:
-            pass
-        else:
-            import warnings
-            warnings.warn(
-                "Overwrite AGFI factory requirements with custom configuration")
-        return current_env
-
     def _create_instance(self):
         """
         Initialize and create instance.
@@ -437,9 +412,6 @@ class AWSHost(_CSPHost):
 
         # Wait completion
         _wait(futures)
-
-        # Sets AGFI
-        self._config_env = {'AGFI': self._region_parameters['fpgaimage']}
 
     def _start_new_instance(self):
         """
