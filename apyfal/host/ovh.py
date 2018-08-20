@@ -43,6 +43,9 @@ class OVHHost(_OpenStackHost):
             (This is default behavior).
         init_script (path-like object or file-like object): A bash script
             to execute on instance startup.
+        ssl_cert_crt, ssl_cert_key (path-like object or file-like object):
+            Private ".key" and public ".crt" keys files of the SSL certificate
+            used to provides HTTPS.
     """
     #: Provider name to use
     NAME = 'OVH'

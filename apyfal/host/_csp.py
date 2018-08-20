@@ -58,6 +58,9 @@ class CSPHost(_Host):
             (This is default behavior).
         init_script (path-like object or file-like object): A bash script
             to execute on instance startup.
+        ssl_cert_crt, ssl_cert_key (path-like object or file-like object):
+            Private ".key" and public ".crt" keys files of the SSL certificate
+            used to provides HTTPS.
     """
     #: Instance status when running
     STATUS_RUNNING = 'running'
@@ -69,7 +72,7 @@ class CSPHost(_Host):
     STATUS_ERROR = 'error'
 
     #: Allowed ports for instance access
-    ALLOW_PORTS = [22, 80]
+    ALLOW_PORTS = [22, 80, 443]
 
     # Attributes returned as dict by "info" property
     _INFO_NAMES = _Host._INFO_NAMES.copy()
@@ -80,6 +83,10 @@ class CSPHost(_Host):
 
     # Instance user home directory
     _HOME = '/home/centos'
+
+    # Instance SSL certificate
+    _SSL_CERT_CRT = '/etc/nginx/apyfal_cert.crt'
+    _SSL_CERT_KEY = '/etc/nginx/apyfal_cert.key'
 
     # Initialization methods
     _INIT_METHODS = ['_init_security_group', '_init_key_pair']
@@ -92,7 +99,7 @@ class CSPHost(_Host):
     def __init__(self, client_id=None, secret_id=None, region=None,
                  instance_type=None, key_pair=None, security_group=None,
                  instance_id=None, init_config=None, init_script=None,
-                 **kwargs):
+                 ssl_cert_crt=None, ssl_cert_key=None, **kwargs):
         _Host.__init__(self, **kwargs)
 
         # Default some attributes
@@ -125,6 +132,16 @@ class CSPHost(_Host):
 
         self._init_config = init_config or section['init_config']
         self._init_script = init_script or section['init_script']
+
+        ssl_cert_crt = ssl_cert_crt or section['ssl_cert_crt']
+        ssl_cert_key = ssl_cert_key or section['ssl_cert_key']
+        if ssl_cert_crt and ssl_cert_key:
+            self._ssl_cert = ssl_cert_crt, ssl_cert_key
+        elif ssl_cert_crt or ssl_cert_key:
+            raise _exc.HostConfigurationException(
+                "Both 'ssl_cert_crt' and 'ssl_cert_key' are required")
+        else:
+            self._ssl_cert = None
 
         # Checks mandatory configuration values
         self._check_arguments('region')
@@ -530,13 +547,14 @@ class CSPHost(_Host):
         Returns:
             str: shell script.
         """
-        if self._init_config is None and self._init_script is None:
+        if (self._init_config is None and self._init_script is None and
+                self._ssl_cert is None):
             return None
 
-        # Initialize file with shebang
+        # Initializes file with shebang
         commands = ["#!/usr/bin/env bash"]
 
-        # Get configuration file
+        # Gets configuration file
         if self._init_config:
             config = (self._config if self._init_config is True else
                       self._init_config)
@@ -549,7 +567,16 @@ class CSPHost(_Host):
             commands += ["cat << EOF > %s/accelerator.conf" % self._HOME,
                          stream.read(), "EOF\n"]
 
-        # Get bash script
+        # Gets SSL certificate
+        if self._ssl_cert:
+            ssl_crt_path, ssl_key_path = self._ssl_cert
+            for src, dst in ((ssl_crt_path, self._SSL_CERT_CRT),
+                             (ssl_key_path, self._SSL_CERT_KEY)):
+                with _srg.open(src, 'rt') as src_file:
+                    commands += [
+                        "cat << EOF > %s" % dst, src_file.read(), "EOF\n"]
+
+        # Gets bash script
         if self._init_script:
             with _srg.open(self._init_script, 'rt') as script:
                 lines = script.read().strip().splitlines()

@@ -778,6 +778,7 @@ def run_full_real_test_sequence(host_type, environment,
 def test_csphost_user_data(tmpdir):
     """Tests Host._user_data"""
     from apyfal.configuration import Configuration
+    from apyfal.exceptions import HostConfigurationException
 
     # Mock CSP class
     class DummyCSP(get_dummy_csp_class()):
@@ -795,6 +796,14 @@ def test_csphost_user_data(tmpdir):
                       "script line 2")
     script_file = tmpdir.join('dummy.sh')
     script_file.write(script_content)
+
+    ssl_crt_content = "public_key"
+    ssl_crt_file = tmpdir.join('dummy.crt')
+    ssl_crt_file.write(ssl_crt_content)
+
+    ssl_key_content = "private_key"
+    ssl_key_file = tmpdir.join('dummy.key')
+    ssl_key_file.write(ssl_key_content)
 
     # No user data
     assert DummyCSP(
@@ -820,3 +829,18 @@ def test_csphost_user_data(tmpdir):
 
     # Check path
     assert DummyCSP._HOME in user_data
+
+    # Certificate
+    user_data = DummyCSP(
+        client_id='client_id', secret_id='secret_id',
+        region='region', ssl_cert_crt=str(ssl_crt_file),
+        ssl_cert_key=str(ssl_key_file))._user_data.decode()
+
+    assert ssl_key_content in user_data
+    assert ssl_crt_content in user_data
+    assert DummyCSP._SSL_CERT_CRT in user_data
+    assert DummyCSP._SSL_CERT_KEY in user_data
+
+    with pytest.raises(HostConfigurationException):
+        DummyCSP(client_id='client_id', secret_id='secret_id',
+                 region='region', ssl_cert_key=str(ssl_key_file))

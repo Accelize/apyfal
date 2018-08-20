@@ -12,6 +12,8 @@ New features
 - Add ``apyfal.iter_accelerator`` function to iterates over all existing
   accelerators for a configuration.
 - Add Alibaba Cloud support.
+- It is now possible to pass a SSL/TLS certificates to host instance to enable
+  HTTPS.
 
 General improvements
 
@@ -47,6 +49,7 @@ Fixes:
  provided.
 - ``stop`` ``stop_mode`` with OpenStack now pauses instance instead of
   terminates it.
+- Exception on AWS IAM policy first creation.
 
 Deprecations:
 
@@ -76,6 +79,4 @@ Features of the 1.0.0 version:
 Known Issues:
 -------------
 
-- All communication between client and host accelerator is in unencrypted plain
-  text.
 - Using ``start`` is mandatory when connecting to an already existing instance.
