@@ -169,8 +169,7 @@ def iter_accelerators(config=None, host_name_prefix=True, **filters):
     Iterates over all accelerators available on remote hosts.
 
     Args:
-        config (apyfal.configuration.Configuration, path-like object or
-            file-like object):
+        config (apyfal.configuration.Configuration, path-like object or file-like object):
             If not set, will search it in current working directory,
             in current user "home" folder. If none found, will use default
             configuration values.

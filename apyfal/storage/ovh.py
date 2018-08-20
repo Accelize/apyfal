@@ -13,8 +13,7 @@ class OVHStorage(_SwiftStorage):
 
     Args:
         storage_type (str): Cloud service provider name. Default to "OVH".
-        config (apyfal.configuration.Configuration, path-like object or
-            file-like object):
+        config (apyfal.configuration.Configuration, path-like object or file-like object):
             If not set, will search it in current working directory, in current
             user "home" folder. If none found, will use default configuration
             values.

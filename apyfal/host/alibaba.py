@@ -54,8 +54,7 @@ class AlibabaCSP(_CSPHost):
 
     Args:
         host_type (str): Cloud service provider name. (Default to "Alibaba").
-        config (apyfal.configuration.Configuration, path-like object or
-            file-like object):
+        config (apyfal.configuration.Configuration, path-like object or file-like object):
             If not set, will search it in current working directory,
             in current user "home" folder. If none found, will use default
             configuration values.
@@ -80,8 +79,7 @@ class AlibabaCSP(_CSPHost):
             Default to 'term' if new instance, or 'keep' if already existing
             instance. See "stop_mode" property for more information and possible
             values.
-        init_config (bool or apyfal.configuration.Configuration,
-            path-like object or file-like object):
+        init_config (bool or apyfal.configuration.Configuration, path-like object or file-like object):
             Configuration file to pass to instance on
             initialization. This configuration file will be used as default for
             host side accelerator.
@@ -91,9 +89,12 @@ class AlibabaCSP(_CSPHost):
             (This is default behavior).
         init_script (path-like object or file-like object): A bash script
             to execute on instance startup.
-        ssl_cert_crt, ssl_cert_key (path-like object or file-like object):
-            Private ".key" and public ".crt" keys files of the SSL certificate
-            used to provides HTTPS.
+        ssl_cert_crt (path-like object or file-like object):
+            Public ".crt" key file of the SSL certificate used to provides
+            HTTPS.
+        ssl_cert_key (path-like object or file-like object):
+            Private ".key" key file of the SSL certificate used to provides
+            HTTPS.
     """
     #: Provider name
     NAME = "Alibaba"

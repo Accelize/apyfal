@@ -63,8 +63,8 @@ def create_configuration(configuration_file):
     """Create a configuration instance
 
     Args:
-        configuration_file(apyfal.configuration.Configuration,
-            path-like object or file-like object): Configuration to use.
+        configuration_file (apyfal.configuration.Configuration, path-like object or file-like object):
+            Configuration to use.
             Path-like object can be path, URL or cloud object URL.
     """
     if isinstance(configuration_file, Configuration):
@@ -200,8 +200,7 @@ class Configuration(_Mapping):
     an parameter value.
 
     Args:
-        configuration_file(apyfal.configuration.Configuration,
-            path-like object or file-like object):
+        configuration_file (apyfal.configuration.Configuration, path-like object or file-like object):
             If None, use default values.
             Path-like object can be path, URL or cloud object URL.
     """

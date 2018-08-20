@@ -53,8 +53,7 @@ class RESTClient(_Client):
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with
             client_id.
         host_ip (str): IP or URL address of the accelerator host.
-        config (apyfal.configuration.Configuration, path-like object or
-            file-like object):
+        config (apyfal.configuration.Configuration, path-like object or file-like object):
             If not set, will search it in current working directory,
             in current user "home" folder. If none found, will use default
             configuration values.

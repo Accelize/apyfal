@@ -66,8 +66,7 @@ class SysCallClient(_Client):
             "https:/accelstore.accelize.com/user/applications".
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with
             client_id.
-        config (apyfal.configuration.Configuration, path-like object or
-            file-like object):
+        config (apyfal.configuration.Configuration, path-like object or file-like object):
             If not set, will search it in current working directory,
             in current user "home" folder. If none found, will use default
             configuration values.
