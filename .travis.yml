@@ -5,6 +5,12 @@ python:
     - "3.4"
     - "3.5"
     - "3.6"
+matrix:
+  # Python 3.7 actually needs this matrix
+  include:
+    - python: 3.7
+      dist: xenial
+      sudo: true
 
 install:
     # Python environment
