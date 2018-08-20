@@ -37,6 +37,8 @@ By default, Apyfal creates a security group that allows only the machine used
 to generate the host instance to access it using SSH and HTTP/HTTPS
 (ports ``22``, ``80`` and ``443``).
 
+A custom security group can be used using the ``security_group`` argument.
+
 Before host instantiation, the range of ports can be modified in the
 ``ALLOW_PORTS`` host class attribute.
 
@@ -49,7 +51,7 @@ Apyfal allows to process file that are stored locally on host instance.
 By default, this is limited to an unique directory for security reason.
 
 This behavior can be change with the ``authorized_host_dirs`` parameter of
-the ``security`` section in the configuration file.
+the ``security`` section in the host side configuration file.
 
 See :doc:`advanced_storage` for more information.
 
