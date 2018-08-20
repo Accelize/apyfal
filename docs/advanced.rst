@@ -7,3 +7,4 @@ Advanced use
    advanced_storage
    advanced_configuration_json
    advanced_security
+   advanced_multi_accelerator
