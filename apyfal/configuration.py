@@ -207,6 +207,9 @@ class Configuration(_Mapping):
     #: Default name for configuration file (Used for file detection)
     DEFAULT_CONFIG_FILE = "accelerator.conf"
 
+    # Request timeout
+    _REQUEST_TIMEOUT = 10
+
     def __init__(self, configuration_file=None):
         _Mapping.__init__(self)
 
@@ -300,7 +303,7 @@ class Configuration(_Mapping):
             response = _utl.http_session().post(
                 METERING_SERVER + '/o/token/',
                 data={"grant_type": "client_credentials"},
-                auth=(client_id, secret_id))
+                auth=(client_id, secret_id), timeout=self._REQUEST_TIMEOUT)
 
             if response.status_code != 200:
                 raise _exc.ClientAuthenticationException(exc=response.text)
@@ -327,7 +330,7 @@ class Configuration(_Mapping):
 
         response = _utl.http_session().get(
             METERING_SERVER + '/auth/getlastcspconfiguration/',
-            headers=headers)
+            headers=headers, timeout=self._REQUEST_TIMEOUT)
         response.raise_for_status()
         response_config = _json.loads(response.text)
 
