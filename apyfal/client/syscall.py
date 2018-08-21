@@ -291,10 +291,11 @@ class SysCallClient(_Client):
 
             # FPGA
             if update_fpga:
-                _call(['sudo', 'cat', '<< EOF > ', _cfg.METERING_CLIENT_CONFIG,
-                       '\n'.join('%s=%s' % (key, full_env[key])
-                                 for key in full_env if key
-                                 not in ('client_id', 'client_secret')), "EOF"])
+                _call(['sudo', 'cat', '<< EOF > %s\n' %
+                       _cfg.METERING_CLIENT_CONFIG, '\n'.join(
+                            '%s=%s' % (key, full_env[key])
+                            for key in full_env if key
+                            not in ('client_id', 'client_secret')), "\nEOF"])
 
         # Restart services
         finally:
