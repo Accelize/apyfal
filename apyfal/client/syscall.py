@@ -261,13 +261,13 @@ class SysCallClient(_Client):
             # No credentials
             raise _exc.ClientAuthenticationException(gen_msg='no_credentials')
 
-        # Checks if FPGA parameters needs to be updated
-        update_fpga = any(
+        # Checks if configuration needs to be updated
+        update_config = any(
             config_env.get(key) != cur_env.get(key) for key in
             config_env if key not in ('client_id', 'client_secret'))
 
         # All is already up to date: caches values
-        if not update_fpga or not update_credentials:
+        if not update_config or not update_credentials:
             self._metering_env = full_env
             return
 
@@ -283,19 +283,18 @@ class SysCallClient(_Client):
 
             # Credentials
             if update_credentials:
-                _call(['sudo', 'chmod', 'a+wr', _cfg.METERING_CREDENTIALS])
                 with open(_cfg.METERING_CREDENTIALS, 'wt') as credential_file:
                     _json.dump({
                         key: full_env[key] for key in (
                         'client_id', 'client_secret')}, credential_file)
 
-            # FPGA
-            if update_fpga:
-                _call(['sudo', 'cat', '<< EOF > %s\n' %
-                       _cfg.METERING_CLIENT_CONFIG, '\n'.join(
-                            '%s=%s' % (key, full_env[key])
-                            for key in full_env if key
-                            not in ('client_id', 'client_secret')), "\nEOF"])
+            # Configuration
+            if update_config:
+                with open(_cfg.METERING_CLIENT_CONFIG, 'wt') as config_file:
+                    config_file.write('\n'.join(
+                        '%s=%s' % (key, full_env[key])
+                        for key in full_env if key
+                        not in ('client_id', 'client_secret')))
 
         # Restart services
         finally:
