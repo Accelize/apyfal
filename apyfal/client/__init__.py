@@ -363,7 +363,7 @@ class AcceleratorClient(_utl.ABC):
             pass
         else:
             # Reads JSON parameter from file or literal
-            if isinstance(json_parameters, str):
+            if not isinstance(json_parameters, dict):
                 # JSON literal
                 if json_parameters.rstrip().startswith('{'):
                     json_parameters = _json.loads(json_parameters)
