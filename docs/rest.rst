@@ -42,5 +42,5 @@ REST API Documentation
 
 .. raw:: html
 
-    <redoc spec-url='./_downloads/input_spec.json' hide-hostname no-auto-auth hide-loading ></redoc>
+    <redoc spec-url='./_downloads/input_spec.json' hide-hostname no-auto-auth hide-loading path-in-middle-panel></redoc>
     <script src="https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js"></script>
