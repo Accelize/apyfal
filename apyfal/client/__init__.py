@@ -243,7 +243,7 @@ class AcceleratorClient(_utl.ABC):
 
         # Get result from response
         try:
-            result = response['app'].pop('specific')
+            result = response['app']['specific']
         except KeyError:
             result = dict()
 
