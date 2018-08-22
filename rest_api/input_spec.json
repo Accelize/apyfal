@@ -1,13 +1,12 @@
 {  
    "swagger":"2.0",
    "info":{  
-      "title":"Accelize Accelerator WS",
+      "title":"Accelize Accelerator REST API",
       "description":"",
       "version":"1.0"
    },
-   "host":"www.accelize.com",
-   "schemes":[  
-      "http"
+   "schemes":[
+      "http", "https"
    ],
    "paths":{  
       "/v1.0/configuration/":{  
