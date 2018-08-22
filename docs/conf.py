@@ -159,7 +159,7 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon',
 source_suffix = '.rst'
 master_doc = 'index'
 language = 'en'
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'accelerator_rest_api']
 pygments_style = 'default'
 
 
