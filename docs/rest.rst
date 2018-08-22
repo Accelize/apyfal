@@ -36,3 +36,11 @@ for almost any language (Java, Javascript, ...)
 
 .. _OpenAPI Generator: https://github.com/OpenAPITools/openapi-generator
 .. _Swagger-Codegen: https://github.com/swagger-api/swagger-codegen
+
+REST API Documentation
+----------------------
+
+.. raw:: html
+
+    <redoc spec-url='./_downloads/input_spec.json' hide-hostname no-auto-auth hide-loading ></redoc>
+    <script src="https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js"></script>
