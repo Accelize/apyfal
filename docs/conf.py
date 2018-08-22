@@ -137,7 +137,7 @@ generates_cli_help('cli_help.rst')
 # -- Dynamically generates documentation for REST API help -------------------
 
 redoc = [{'name': 'Accelerator REST API', 'page': 'accelerator_rest_api',
-          'spec': '../rest_api/input_spec.json', 'embed': True,
+          'spec': '../rest_api/input_spec.json',
           'opts': {'hide-hostname': True, 'hide-loading': True,
                    'expand-responses': [200],}}]
 
