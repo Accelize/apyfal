@@ -4,8 +4,9 @@ Accelerator REST API
 It is possible to use accelerators using the REST API instead of Python
 Apyfal. But, note that in this case, host configuration is not supported.
 
-- `Accelerator REST API Documentation <./_static/accelerator_rest_api.html>`_
-- :download:`Accelerator OpenAPI specification <../rest_api/input_spec.json>`
+The Accelerator REST API follow rhe OpenApi specification:
+
+* :download:`Accelerator OpenAPI specification <../rest_api/input_spec.json>`
 
 Generating REST API client in any language using OpenApi
 --------------------------------------------------------
@@ -37,10 +38,11 @@ for almost any language (Java, Javascript, ...)
 .. _OpenAPI Generator: https://github.com/OpenAPITools/openapi-generator
 .. _Swagger-Codegen: https://github.com/swagger-api/swagger-codegen
 
-REST API Documentation
+OpenApi Documentation
 ----------------------
 
 .. raw:: html
 
-    <redoc spec-url='./_downloads/input_spec.json' hide-hostname no-auto-auth hide-loading path-in-middle-panel></redoc>
+    <redoc spec-url='./_downloads/input_spec.json' hide-hostname no-auto-auth hide-loading path-in-middle-panel
+    theme="{menu: {width: '0px' },{rightPanel: {width: '0px' }}}"></redoc>
     <script src="https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js"></script>
