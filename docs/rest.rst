@@ -33,3 +33,8 @@ for almost any language (Java, Javascript, ...)
 
 .. _OpenAPI Generator: https://github.com/OpenAPITools/openapi-generator
 .. _Swagger-Codegen: https://github.com/swagger-api/swagger-codegen
+
+
+`Accelerator OpenAPI Documentation <./_static/accelerator_rest_api.html>`_
+
+:download:`Accelerator OpenAPI specification <../rest_api/input_spec.json>`
