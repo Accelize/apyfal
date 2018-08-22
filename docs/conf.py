@@ -134,14 +134,6 @@ def generates_cli_help(rst_path):
 
 generates_cli_help('cli_help.rst')
 
-# -- Dynamically generates documentation for REST API help -------------------
-
-redoc = [{'name': 'Accelerator REST API', 'page': 'accelerator_rest_api/index',
-          'spec': '../rest_api/input_spec.json',
-          'opts': {'hide-hostname': True, 'hide-loading': True,
-                   'expand-responses': [200],}}]
-
-
 # -- Project information -----------------------------------------------------
 
 project = SPHINX_INFO['project'][1]
@@ -154,12 +146,11 @@ release = SPHINX_INFO['release'][1]
 # -- General configuration ---------------------------------------------------
 
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon',
-              'sphinx.ext.coverage', 'sphinx.ext.viewcode',
-              'sphinxcontrib.redoc']
+              'sphinx.ext.coverage', 'sphinx.ext.viewcode']
 source_suffix = '.rst'
 master_doc = 'index'
 language = 'en'
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'accelerator_rest_api']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 pygments_style = 'default'
 
 
