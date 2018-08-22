@@ -136,7 +136,7 @@ generates_cli_help('cli_help.rst')
 
 # -- Dynamically generates documentation for REST API help -------------------
 
-redoc = [{'name': 'Accelerator REST API', 'page': 'accelerator_rest_api',
+redoc = [{'name': 'Accelerator REST API', 'page': 'accelerator_rest_api/index',
           'spec': '../rest_api/input_spec.json',
           'opts': {'hide-hostname': True, 'hide-loading': True,
                    'expand-responses': [200],}}]
@@ -166,8 +166,6 @@ pygments_style = 'default'
 # -- Options for HTML output -------------------------------------------------
 
 html_theme = 'sphinx_rtd_theme'
-import sphinx_rtd_theme
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 
 # -- Options for HTMLHelp output ---------------------------------------------
