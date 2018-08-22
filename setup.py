@@ -264,7 +264,8 @@ if {'pytest', 'test', 'ptr'}.intersection(argv):
 
 # Add Sphinx requirements if needed
 elif 'build_sphinx' in argv:
-    PACKAGE_INFO['setup_requires'] += ['sphinx', 'sphinx_rtd_theme']
+    PACKAGE_INFO['setup_requires'] += [
+        'sphinx', 'sphinx_rtd_theme', 'sphinxcontrib-redoc']
 
 # Generates wildcard "all" extras_require
 PACKAGE_INFO['extras_require']['all'] = list(set(

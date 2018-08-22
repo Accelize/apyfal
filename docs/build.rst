@@ -1,7 +1,7 @@
-Building apyfal
+Building Apyfal
 =======================
 
-Installing apyfal build environment
+Installing Apyfal build environment
 -------------------------------------------
 
 Prepare Python environment
@@ -17,7 +17,7 @@ to date.
 Clone repository from Github
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-apyfal development version is hosted on github, to get it use
+Apyfal development version is hosted on github, to get it use
 git clone:
 
 .. code-block:: bash
@@ -27,10 +27,10 @@ git clone:
 Generating REST API client with OpenApi
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-apyfal REST API client code (``apyfal.client.rest._openapi``)
+Apyfal REST API client code (``apyfal.client.rest._openapi``)
 is not stored in repository but generated from OpenApi.
 
-This code need to be generated before run apyfal in
+This code need to be generated before run Apyfal in
 development environment.
 
    *Java* is required to perform this step.
@@ -41,10 +41,10 @@ To generate client code, run the following line in repository directory:
 
     ./setup.py swagger_codegen
 
-Installing all apyfal requirements
+Installing all Apyfal requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To install all package that are required to run apyfal, run the
+To install all package that are required to run Apyfal, run the
 following line in repository directory:
 
 .. code-block:: bash

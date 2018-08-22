@@ -1,7 +1,8 @@
 Apyfal CLI
 ==========
 
-Apyfal CLI is a command line interface to use Apyfal directly in shell without the need to use Python.
+Apyfal CLI is a command line interface to use Apyfal directly in shell without
+the need to use Python.
 
 Apyfal CLI commands
 -------------------
@@ -14,15 +15,20 @@ Apyfal CLI provides help using ``-h`` or ``--help`` arguments:
 
 Apyfal CLI needs to be run with a command, following command are available:
 
-* ``create``: Create accelerator and configure host. Equivalent to ``apyfal.Accelerator`` instantiation.
-* ``start``: Start and configure Accelerator. Equivalent to ``apyfal.Accelerator.start`` method.
-* ``process``: Process with Accelerator. Equivalent to ``apyfal.Accelerator.process`` method.
+* ``create``: Create accelerator and configure host. Equivalent to
+  ``apyfal.Accelerator`` instantiation.
+* ``start``: Start and configure Accelerator. Equivalent to
+  ``apyfal.Accelerator.start`` method.
+* ``process``: Process with Accelerator. Equivalent to
+  ``apyfal.Accelerator.process`` method.
 * ``stop``: Stop accelerator. Equivalent to ``apyfal.Accelerator.stop`` method.
-* ``copy``: Copy Apyfal Storage URL. Equivalent to ``apyfal.storage.copy`` function.
-* ``clear``: Clear cached accelerators. New command, specific to CLI mode (detailed below).
+* ``copy``: Copy Apyfal Storage URL. Equivalent to ``apyfal.storage.copy``
+  function.
+* ``clear``: Clear cached accelerators. New command, specific to CLI mode
+  (detailed below).
 
-Each command accept the sames parameters as its ``apyfal`` library equivalent. Keywords arguments names needs to be
-prefixed with ``--``.
+Each command accept the sames parameters as its ``apyfal`` library equivalent.
+Keywords arguments names needs to be prefixed with ``--``.
 
 .. code-block:: bash
 
@@ -52,7 +58,8 @@ Full commands documentation:
 Using accelerator with Apyfal CLI
 ---------------------------------
 
-The use of accelerator with CLI is the same as the library, see :doc:`getting_started` for more information
+The use of accelerator with CLI is the same as the library,
+see :doc:`getting_started` for more information
 
 This example show the basic use of an accelerator using Apyfal CLI :
 
@@ -81,8 +88,8 @@ Specific start and process arguments are passed like others:
 Using multiple accelerators
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It is possible to use multiple accelerators at the same time by naming them with different names
-using the ``--name`` argument:
+It is possible to use multiple accelerators at the same time by naming them with
+different names using the ``--name`` argument:
 
 .. code-block:: bash
 
@@ -99,8 +106,8 @@ using the ``--name`` argument:
     # Do not forget this step, this is not automatically handled with CLI
     apyfal stop --name myaccel
 
-It is possible to clear all previously existing accelerator with the ``clear`` command.
-Warning: This don't stop accelerators.
+It is possible to clear all previously existing accelerator with the ``clear``
+command. Warning: This don't stop accelerators.
 
 .. code-block:: bash
 

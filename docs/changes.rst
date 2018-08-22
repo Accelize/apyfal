@@ -6,9 +6,10 @@ Changelog
 
 New features
 
-- Add support for cloud storage and more using ``apyfal.storage``.
+- Add support for cloud storage and more in ``apyfal.storage`` package using
+  ``pycosio``.
 - Add Apyfal CLI, this allow to use Apyfal from outside Python.
-- Apyfal can now be used locally on host (like accelerator executable).
+- Apyfal can now be used locally on host (as library or CLI).
 - Add ``apyfal.iter_accelerator`` function to iterates over all existing
   accelerators for a configuration.
 - Add Alibaba Cloud support.
@@ -46,7 +47,7 @@ Fixes:
 - Apyfal don't wait until end of timeout if instance is in ``error`` status
   during instance provisioning.
 - Instance now terminates correctly if both ``instance_id`` and ``host_ip`` are
- provided.
+  provided.
 - ``stop`` ``stop_mode`` with OpenStack now pauses instance instead of
   terminates it.
 - Exception on AWS IAM policy first creation.
@@ -76,7 +77,7 @@ Features of the 1.0.0 version:
 - Complete unittest for the core or the package.
 - Full Sphinx documentation.
 
-Known Issues:
--------------
+Known Issues
+------------
 
 - Using ``start`` is mandatory when connecting to an already existing instance.
