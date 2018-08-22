@@ -37,4 +37,4 @@ for almost any language (Java, Javascript, ...)
 API Documentation
 =================
 
-:doc:`accelerator_rest_api`
+`API documentation <accelerator_rest_api/>`__
