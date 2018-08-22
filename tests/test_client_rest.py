@@ -674,11 +674,9 @@ def test_restclient_process(tmpdir):
         in_error = False
 
         # Check if working as excepted
-        expected_parameters_result = copy.deepcopy(parameters_result)
-        del expected_parameters_result['app']['specific']
         assert accelerator.process(
             str(file_in), str(file_out), info_dict=True) == (
-                   specific, expected_parameters_result)
+                   specific, parameters_result)
         assert file_out.read_binary() == out_content
 
         # Checks without info_dict
