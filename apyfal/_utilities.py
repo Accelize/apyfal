@@ -204,7 +204,7 @@ def handle_request_exceptions(exc_type):
 
 
 def check_url(url, timeout=0.0, max_retries=0, sleep=0.5,
-              request_timeout=1.0):
+              request_timeout=2.0):
     """
     Checking if an HTTP is up and running.
 
@@ -221,12 +221,12 @@ def check_url(url, timeout=0.0, max_retries=0, sleep=0.5,
     Returns:
         bool: True if success, False elsewhere
     """
-    session = http_session(max_retries=max_retries, https=False)
     with Timeout(timeout, sleep=sleep) as timeout:
         while True:
             try:
-                if session.get(url, timeout=request_timeout).status_code == 200:
-                    return True
+                http_session(max_retries=max_retries, https=False).get(
+                        url, timeout=request_timeout).raise_for_status()
+                return True
             except requests.RequestException:
                 pass
             if timeout.reached():
