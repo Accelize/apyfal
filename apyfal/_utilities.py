@@ -203,7 +203,7 @@ def handle_request_exceptions(exc_type):
         raise exc_type(exc=exception)
 
 
-def check_url(url, timeout=0.0, max_retries=0, sleep=0.5,
+def check_url(url, timeout=0.0, max_retries=3, sleep=0.5,
               request_timeout=2.0):
     """
     Checking if an HTTP is up and running.
