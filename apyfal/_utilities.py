@@ -13,6 +13,7 @@ import sys
 import time
 
 import requests
+import warnings
 
 
 _CACHE = dict()  # Store some cached values
@@ -221,16 +222,18 @@ def check_url(url, timeout=0.0, max_retries=3, sleep=0.5,
     Returns:
         bool: True if success, False elsewhere
     """
-    with Timeout(timeout, sleep=sleep) as timeout:
-        while True:
-            try:
-                http_session(max_retries=max_retries, https=False).get(
-                        url, timeout=request_timeout).raise_for_status()
-                return True
-            except requests.RequestException:
-                pass
-            if timeout.reached():
-                return False
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        with Timeout(timeout, sleep=sleep) as timeout:
+            while True:
+                try:
+                    http_session(max_retries=max_retries, https=False).get(
+                            url, timeout=request_timeout).raise_for_status()
+                    return True
+                except requests.RequestException:
+                    pass
+                if timeout.reached():
+                    return False
 
 
 def format_url(url_or_ip):
