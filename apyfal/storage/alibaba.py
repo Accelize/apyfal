@@ -21,6 +21,8 @@ class OSSStorage(_Storage):
         client_id (str): Alibaba Access Key ID.
         secret_id (str): Alibaba Secret Access Key.
         region (str): Alibaba region.
+        storage_parameters (dict): Extra "storage_parameters".
+            See "pycosio.mount".
     """
     #: Provider name
     NAME = 'Alibaba'

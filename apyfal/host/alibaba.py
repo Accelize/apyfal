@@ -95,6 +95,8 @@ class AlibabaCSP(_CSPHost):
         ssl_cert_key (path-like object or file-like object):
             Private ".key" key file of the SSL certificate used to provides
             HTTPS.
+        acs_client_kwargs (dict): Extra keyword arguments for
+            novaclient.client.Client.
     """
     #: Provider name
     NAME = "Alibaba"
@@ -129,17 +131,35 @@ class AlibabaCSP(_CSPHost):
     _INFO_NAMES = _CSPHost._INFO_NAMES.copy()
     _INFO_NAMES.update(['_role', '_policy'])
 
-    def __init__(self, role=None, **kwargs):
+    def __init__(self, role=None, acs_client_kwargs=None, **kwargs):
         _CSPHost.__init__(self, **kwargs)
 
-        # Default some attributes
+        # Initializes attributes
         self._security_group_id = None
         self._role = (role or self._config[self._config_section]['role'] or
                       self._default_parameter_value('Role'))
         self._policy = self._default_parameter_value('Policy')
+        self._acs_client_kwargs = acs_client_kwargs or dict()
 
         # ClientToken guarantee idempotence of requests
         self._client_token = str(_uuid())
+
+    @property
+    @_utl.memoizedmethod
+    def _acs_client(self):
+        """
+        Return ACS client
+
+        Returns:
+            aliyunsdkcore.client.AcsClient: ACS client
+        """
+        kwargs = dict(ak=self._client_id, secret=self._secret_id,
+                      region_id=self._region)
+        kwargs.update(self._acs_client_kwargs)
+        try:
+            return _AcsClient(**kwargs)
+        except _acs_exceptions.ClientException as exception:
+            raise _exc.HostAuthenticationException(exc=exception)
 
     def _request(self, action_name, domain='ecs',
                  error_code_filter=None, error_code_ignore=None,
@@ -161,9 +181,6 @@ class AlibabaCSP(_CSPHost):
         Returns:
             dict: Request response.
         """
-        # Checks credentials and init session
-        self._check_credential()
-
         # Creates request
         request = _acs_request.CommonRequest(
             domain='%s.%s' % (domain, MAIN_DOMAIN),
@@ -189,7 +206,7 @@ class AlibabaCSP(_CSPHost):
 
         # Performs request
         try:
-            response = self._session.do_action_with_exception(request)
+            response = self._acs_client.do_action_with_exception(request)
 
         # Handles exceptions
         except (_acs_exceptions.ClientException,
@@ -302,12 +319,7 @@ class AlibabaCSP(_CSPHost):
             apyfal.exceptions.HostAuthenticationException:
                 Authentication failed.
         """
-        if self._session is None:
-            try:
-                self._session = _AcsClient(
-                    self._client_id, self._secret_id, self._region)
-            except _acs_exceptions.ClientException as exception:
-                raise _exc.HostAuthenticationException(exc=exception)
+        return self._acs_client
 
     def _get_status(self):
         """

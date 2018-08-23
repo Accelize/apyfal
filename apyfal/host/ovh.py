@@ -47,6 +47,11 @@ class OVHHost(_OpenStackHost):
         ssl_cert_key (path-like object or file-like object):
             Private ".key" key file of the SSL certificate used to provides
             HTTPS.
+        nova_client_kwargs (dict): Extra keyword arguments for
+            novaclient.client.Client.
+        neutron_client_kwargs (dict): Extra keyword arguments for
+            neutronclient.client.Client. By default, neutron client
+            inherits from nova client session.
     """
     #: Provider name to use
     NAME = 'OVH'

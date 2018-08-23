@@ -66,6 +66,7 @@ class Host(_utl.ABC):
                  stop_mode=None, host_name_prefix=None, **_):
 
         # Default some attributes
+        self._cache = {}
         self._accelerator = None
         self._stop_mode = None
         self._config_env = {}

@@ -136,3 +136,26 @@ def test_handle_request_exceptions():
     with pytest.raises(exc.AcceleratorException):
         with handle_request_exceptions(exc.AcceleratorException):
             raise requests.RequestException
+
+
+def test_memoizedmethod():
+    """Tests memoizedmethod"""
+    from apyfal._utilities import memoizedmethod
+
+    # Tests _memoize
+    class Dummy:
+
+        def __init__(self):
+            self._cache = {}
+
+        @memoizedmethod
+        def to_memoize(self, arg):
+            """Fake method"""
+            return arg
+
+    dummy = Dummy()
+    assert not dummy._cache
+    value = 'value'
+    assert dummy.to_memoize(value) == value
+    assert dummy._cache == {'to_memoize': value}
+    assert dummy.to_memoize(value) == value

@@ -98,6 +98,11 @@ class OpenStackHost(_CSPHost):
         ssl_cert_key (path-like object or file-like object):
             Private ".key" key file of the SSL certificate used to provides
             HTTPS.
+        nova_client_kwargs (dict): Extra keyword arguments for
+            novaclient.client.Client.
+        neutron_client_kwargs (dict): Extra keyword arguments for
+            neutronclient.client.Client. By default, neutron client
+            inherits from nova client session.
     """
     #: Provider name to use
     NAME = 'OpenStack'
@@ -120,7 +125,8 @@ class OpenStackHost(_CSPHost):
     _INIT_METHODS = list(_CSPHost._INIT_METHODS)
     _INIT_METHODS.append('_init_image')
 
-    def __init__(self, project_id=None, auth_url=None, **kwargs):
+    def __init__(self, project_id=None, auth_url=None,
+                 nova_client_kwargs=None, neutron_client_kwargs=None, **kwargs):
         _CSPHost.__init__(self, **kwargs)
 
         # OpenStack specific arguments
@@ -131,14 +137,41 @@ class OpenStackHost(_CSPHost):
             auth_url or section['auth_url'] or
             self.OPENSTACK_AUTH_URL)
 
+        self._nova_client_kwargs = nova_client_kwargs or dict()
+        self._neutron_client_kwargs = neutron_client_kwargs or dict()
+
         # Checks mandatory configuration values
         self._check_arguments('project_id', 'auth_url')
 
-        # Load session
-        self._session = _NovaClient(
+    @property
+    @_utl.memoizedmethod
+    def _nova_client(self):
+        """
+        Return Nova client
+
+        Returns:
+            novaclient.client.Client: Nova client
+        """
+        kwargs = dict(
             version='2', username=self._client_id, password=self._secret_id,
             project_id=self._project_id, auth_url=self._auth_url,
             region_name=self._region)
+        kwargs.update(self._nova_client_kwargs)
+        return _NovaClient(**kwargs)
+
+    @property
+    @_utl.memoizedmethod
+    def _neutron_client(self):
+        """
+        Return Neutron client
+
+        Returns:
+            neutronclient.client.Client: Neutron client
+        """
+        kwargs = dict(session=self._nova_client.client.session,
+                      region_name=self._region)
+        kwargs.update(self._neutron_client_kwargs)
+        return _NeutronClient(**kwargs)
 
     def _check_credential(self):
         """
@@ -149,7 +182,7 @@ class OpenStackHost(_CSPHost):
                 Authentication failed.
         """
         with _exception_handler():
-            self._session.servers.list(detailed=False, limit=1)
+            self._nova_client.servers.list(detailed=False, limit=1)
 
     def _init_key_pair(self):
         """
@@ -161,14 +194,14 @@ class OpenStackHost(_CSPHost):
         # Get key pair from CSP is exists
         key_pair_name = self._key_pair.lower()
         with _exception_handler(gen_msg=('no_find', "key pair")):
-            for key_pair in self._session.keypairs.list():
+            for key_pair in self._nova_client.keypairs.list():
                 if key_pair.name.lower() == key_pair_name:
                     self._key_pair = key_pair.name
                     return
 
         # Create key pair if not exists
         with _exception_handler(gen_msg=('created_failed', "key pair")):
-            key_pair = self._session.keypairs.create_keypair(
+            key_pair = self._nova_client.keypairs.create_keypair(
                 name=self._key_pair)
 
         _utl.create_key_pair_file(self._key_pair, key_pair.private_key)
@@ -179,15 +212,11 @@ class OpenStackHost(_CSPHost):
         """
         Initialize security group.
         """
-        # Connect to Neutron using same authentication session
-        neutron = _NeutronClient(session=self._session.client.session,
-                                 region_name=self._region)
-
         # Checks if security group exists
         security_group_id = None
         security_group_name = self._security_group.lower()
         with _exception_handler(gen_msg=('no_find', "security groups")):
-            for security_group in neutron.list_security_groups(
+            for security_group in self._neutron_client.list_security_groups(
                     )['security_groups']:
                 if security_group['name'].lower() == security_group_name:
                     self._security_group = security_group['name']
@@ -197,7 +226,7 @@ class OpenStackHost(_CSPHost):
         if security_group_id is None:
             with _exception_handler(gen_msg=(
                     'created_failed', "security groups")):
-                security_group_id = neutron.create_security_group({
+                security_group_id = self._neutron_client.create_security_group({
                     'security_group': {
                         'name': self._security_group,
                         'description': _utl.gen_msg('accelize_generated'),
@@ -212,7 +241,7 @@ class OpenStackHost(_CSPHost):
         # Create rule on SSH and HTTP
         for port in self.ALLOW_PORTS:
             with _exception_handler(filter_error_codes=(409,)):
-                neutron.create_security_group_rule(
+                self._neutron_client.create_security_group_rule(
                    {'security_group_rule': {
                        'direction': 'ingress', 'port_range_min': str(port),
                        'port_range_max': str(port),
@@ -230,7 +259,7 @@ class OpenStackHost(_CSPHost):
         # Checks if image exists and get its name
         with _exception_handler(gen_msg=(
                 'unable_find_from', 'image', self._image_id, 'Accelize')):
-            image = self._session.glance.find_image(self._image_id)
+            image = self._nova_client.glance.find_image(self._image_id)
         try:
             self._image_name = image.name
         except AttributeError:
@@ -247,7 +276,7 @@ class OpenStackHost(_CSPHost):
                 to_raise=_exc.HostConfigurationException,
                 gen_msg=('unable_find_from', 'flavor',
                          self._instance_type, self._host_type)):
-            for flavor in self._session.flavors.list():
+            for flavor in self._nova_client.flavors.list():
                 if flavor.name.lower() == self._instance_type:
                     self._instance_type_name = flavor.name
                     self._instance_type = flavor.id
@@ -271,7 +300,7 @@ class OpenStackHost(_CSPHost):
         # Try to find instance
         with _exception_handler(gen_msg=(
                 'no_instance_id', self._instance_id)):
-            return self._session.servers.get(self._instance_id)
+            return self._nova_client.servers.get(self._instance_id)
 
     def _get_public_ip(self):
         """
@@ -333,9 +362,9 @@ class OpenStackHost(_CSPHost):
             str: Instance ID
         """
         with _exception_handler(gen_msg=('unable_to', "start")):
-            image = self._session.glance.find_image(self._image_id)
-            flavor = self._session.flavors.get(self._instance_type)
-            instance = self._session.servers.create(
+            image = self._nova_client.glance.find_image(self._image_id)
+            flavor = self._nova_client.flavors.get(self._instance_type)
+            instance = self._nova_client.servers.create(
                 name=self._get_host_name(), image=image, flavor=flavor,
                 key_name=self._key_pair, security_groups=[self._security_group],
                 userdata=self._user_data)
@@ -354,9 +383,9 @@ class OpenStackHost(_CSPHost):
 
         with _exception_handler(gen_msg=('unable_to', "start")):
             if status == self.STATUS_STOPPED:
-                self._session.servers.unpause(self._instance)
+                self._nova_client.servers.unpause(self._instance)
             else:
-                self._session.servers.start(self._instance)
+                self._nova_client.servers.start(self._instance)
 
     def _terminate_instance(self):
         """
@@ -364,14 +393,14 @@ class OpenStackHost(_CSPHost):
         """
         with _exception_handler(gen_msg=('unable_to', "delete"),
                                 filter_error_codes=(404,)):
-            self._session.servers.force_delete(self._instance)
+            self._nova_client.servers.force_delete(self._instance)
 
     def _pause_instance(self):
         """
         Pause instance.
         """
         with _exception_handler(gen_msg=('unable_to', "pause")):
-            self._session.servers.pause(self._instance)
+            self._nova_client.servers.pause(self._instance)
 
     def _iter_hosts(self):
         """
@@ -381,7 +410,7 @@ class OpenStackHost(_CSPHost):
             generator of dict: dicts contains attributes values of the host.
         """
         with _exception_handler():
-            for instance in self._session.servers.list():
+            for instance in self._nova_client.servers.list():
                 host_name = instance.name
 
                 # Yields only matching accelerator instances

@@ -25,6 +25,8 @@ class OVHStorage(_SwiftStorage):
         secret_id (str): OVH Secret Access Key.
         region (str): OVH region.
         project_id (str): OVH Project
+        storage_parameters (dict): Extra "storage_parameters".
+            See "pycosio.mount".
     """
     #: Provider name
     NAME = 'OVH'

@@ -127,6 +127,10 @@ class AWSHost(_CSPHost):
         ssl_cert_key (path-like object or file-like object):
             Private ".key" key file of the SSL certificate used to provides
             HTTPS.
+        boto3_session_kwargs (dict): Extra keyword arguments for
+            boto3.session.Session
+        boto3_client_kwargs (dict): Extra keyword arguments for
+            boto3.session.Session clients.
     """
     #: Provider name to use
     NAME = 'AWS'
@@ -160,19 +164,79 @@ class AWSHost(_CSPHost):
     _INFO_NAMES = _CSPHost._INFO_NAMES.copy()
     _INFO_NAMES.update(['_role', '_policy'])
 
-    def __init__(self, role=None, **kwargs):
+    def __init__(self, role=None, boto3_session_kwargs=None,
+                 boto3_client_kwargs=None, **kwargs):
         _CSPHost.__init__(self, **kwargs)
 
         # Get AWS specific arguments
         self._role = (role or self._config[self._config_section]['role'] or
                       self._default_parameter_value('Role'))
+        self._policy = self._default_parameter_value('Policy')
         self._policy_arn = None
         self._instance_profile_name = 'AccelizeLoadFPGA'
 
-        # Load session
-        self._session = _boto3.session.Session(
+        # Session, clients and resources are lazy instantiated
+        self._boto3_session_kwargs = boto3_session_kwargs or dict()
+        self._boto3_client_kwargs = boto3_client_kwargs or dict()
+
+    @property
+    @_utl.memoizedmethod
+    def _session(self):
+        """
+        Return boto3 session
+
+        Returns:
+            boto3.session.Session: session
+        """
+        kwargs = dict(
             aws_access_key_id=self._client_id,
             aws_secret_access_key=self._secret_id, region_name=self._region)
+        kwargs.update(self._boto3_session_kwargs)
+        return _boto3.session.Session(**kwargs)
+
+    @property
+    @_utl.memoizedmethod
+    def _ec2_client(self):
+        """
+        Return boto3 EC2 client
+
+        Returns:
+            boto3.session.Session.client: client
+        """
+        return self._session.client('ec2', **self._boto3_client_kwargs)
+
+    @property
+    @_utl.memoizedmethod
+    def _ec2_resource(self):
+        """
+        Return boto3 EC2 resource
+
+        Returns:
+            boto3.session.Session.resource: resource
+        """
+        return self._session.resource('ec2')
+
+    @property
+    @_utl.memoizedmethod
+    def _iam_client(self):
+        """
+        Return boto3 IAM client
+
+        Returns:
+            boto3.session.Session.client: client
+        """
+        return self._session.client('iam', **self._boto3_client_kwargs)
+
+    @property
+    @_utl.memoizedmethod
+    def _iam_resource(self):
+        """
+        Return boto3 IAM resource
+
+        Returns:
+            boto3.session.Session.resource: resource
+        """
+        return self._session.resource('iam')
 
     def _check_credential(self):
         """
@@ -182,21 +246,18 @@ class AWSHost(_CSPHost):
             apyfal.exceptions.HostAuthenticationException:
                 Authentication failed.
         """
-        ec2_client = self._session.client('ec2')
         with _exception_handler(to_raise=_exc.HostAuthenticationException):
-            ec2_client.describe_key_pairs()
+            self._ec2_client.describe_key_pairs()
 
     def _init_key_pair(self):
         """
         Initializes key pair.
         """
-        ec2_client = self._session.client('ec2')
-
         # Checks if Key pairs exists, needs to get the full pairs list
         # and compare in lower case because Boto perform its checks case
         # sensitive and AWS use case insensitive names.
         with _exception_handler():
-            key_pairs = ec2_client.describe_key_pairs()
+            key_pairs = self._ec2_client.describe_key_pairs()
 
         name_lower = self._key_pair.lower()
         for key_pair in key_pairs['KeyPairs']:
@@ -206,9 +267,9 @@ class AWSHost(_CSPHost):
                 return
 
         # Key does not exist on the CSP, create it
-        ec2_resource = self._session.resource('ec2')
         with _exception_handler():
-            key_pair = ec2_resource.create_key_pair(KeyName=self._key_pair)
+            key_pair = self._ec2_resource.create_key_pair(
+                KeyName=self._key_pair)
 
         _utl.create_key_pair_file(self._key_pair, key_pair.key_material)
         _get_logger().info(_utl.gen_msg(
@@ -226,27 +287,25 @@ class AWSHost(_CSPHost):
             str: 'policy'
         """
         # Create a policy
-        policy = self._default_parameter_value('Policy')
-
-        iam_client = self._session.client('iam')
         with _exception_handler(filter_error_codes='EntityAlreadyExists'):
-            iam_client.create_policy(
-                PolicyName=policy,
+            self._iam_client.create_policy(
+                PolicyName=self._policy,
                 PolicyDocument=_json_dumps(self.POLICY_DOCUMENT))
 
-            _get_logger().info(_utl.gen_msg('created_named', 'policy', policy))
+            _get_logger().info(_utl.gen_msg(
+                'created_named', 'policy', self._policy))
 
         with _exception_handler():
-            response = iam_client.list_policies(
+            response = self._iam_client.list_policies(
                 Scope='Local', OnlyAttached=False, MaxItems=100)
         for policy_item in response['Policies']:
-            if policy_item['PolicyName'] == policy:
+            if policy_item['PolicyName'] == self._policy:
                 self._policy_arn = policy_item['Arn']
                 # 'policy' returns str is used set future object ID
                 return 'policy'
 
         raise _exc.HostConfigurationException(
-            gen_msg=('created_failed_named', 'IAM policy', policy))
+            gen_msg=('created_failed_named', 'IAM policy', self._policy))
 
     def _init_role(self):
         """
@@ -255,7 +314,7 @@ class AWSHost(_CSPHost):
         This role allow to perform actions defined by policy.
         """
         with _exception_handler(filter_error_codes='EntityAlreadyExists'):
-            role = self._session.resource('iam').create_role(
+            role = self._iam_resource.create_role(
                 RoleName=self._role,
                 AssumeRolePolicyDocument=_json_dumps(
                     self.ASSUME_ROLE_POLICY_DOCUMENT),
@@ -267,10 +326,8 @@ class AWSHost(_CSPHost):
         """
         Attach IAM policy to IAM role.
         """
-        iam_client = self._session.client('iam')
-
         with _exception_handler(filter_error_codes='EntityAlreadyExists'):
-            iam_client.attach_role_policy(
+            self._iam_client.attach_role_policy(
                 PolicyArn=self._policy_arn, RoleName=self._role)
 
             _get_logger().info(_utl.gen_msg(
@@ -283,11 +340,9 @@ class AWSHost(_CSPHost):
 
         This instance_profile allow to perform actions defined by role.
         """
-        iam_client = self._session.client('iam')
-
         # Create instance profile
         with _exception_handler(filter_error_codes='EntityAlreadyExists'):
-            iam_client.create_instance_profile(
+            self._iam_client.create_instance_profile(
                 InstanceProfileName=self._instance_profile_name)
 
             _get_logger().info(_utl.gen_msg(
@@ -298,14 +353,12 @@ class AWSHost(_CSPHost):
         """
         Attach IAM role to IAM instance profile.
         """
-        iam_client = self._session.client('iam')
-
         # Attach role to instance profile
         with _exception_handler(filter_error_codes='LimitExceeded'):
             with _utl.Timeout(self.TIMEOUT) as timeout:
                 while True:
                     try:
-                        iam_client.add_role_to_instance_profile(
+                        self._iam_client.add_role_to_instance_profile(
                             InstanceProfileName=self._instance_profile_name,
                             RoleName=self._role)
                         break
@@ -332,9 +385,8 @@ class AWSHost(_CSPHost):
         # Get list of security groups
         # Checks if Key pairs exists, like for key pairs
         # needs  case insensitive names check
-        ec2_client = self._session.client('ec2')
         with _exception_handler():
-            security_groups = ec2_client.describe_security_groups()
+            security_groups = self._ec2_client.describe_security_groups()
 
         name_lower = self._security_group.lower()
         group_exists = False
@@ -356,11 +408,11 @@ class AWSHost(_CSPHost):
         if not group_exists:
             # Get VPC
             with _exception_handler():
-                vpc_id = ec2_client.describe_vpcs().get(
+                vpc_id = self._ec2_client.describe_vpcs().get(
                     'Vpcs', [{}])[0].get('VpcId', '')
 
             with _exception_handler():
-                response = ec2_client.create_security_group(
+                response = self._ec2_client.create_security_group(
                     GroupName=self._security_group,
                     Description=_utl.gen_msg('accelize_generated'),
                     VpcId=vpc_id)
@@ -382,7 +434,7 @@ class AWSHost(_CSPHost):
 
         with _exception_handler(
                 filter_error_codes='InvalidPermission.Duplicate'):
-            ec2_client.authorize_security_group_ingress(
+            self._ec2_client.authorize_security_group_ingress(
                 GroupId=security_group_id, IpPermissions=ip_permissions)
 
         _get_logger().info(
@@ -396,7 +448,7 @@ class AWSHost(_CSPHost):
             object: Instance
         """
         with _exception_handler(gen_msg=('no_instance_id', self._instance_id)):
-            return self._session.resource('ec2').Instance(self._instance_id)
+            return self._ec2_resource.Instance(self._instance_id)
 
     def _get_public_ip(self):
         """
@@ -489,7 +541,7 @@ class AWSHost(_CSPHost):
 
         # Create instance
         with _exception_handler():
-            instance = self._session.resource('ec2').create_instances(
+            instance = self._ec2_resource.create_instances(
                 **kwargs)[0]
 
         return instance, instance.id
@@ -546,10 +598,8 @@ class AWSHost(_CSPHost):
         Returns:
             generator of dict: dicts contains attributes values of the host.
         """
-        ec2_resource = self._session.resource('ec2')
-
         with _exception_handler():
-            for instance in ec2_resource.instances.filter(
+            for instance in self._ec2_resource.instances.filter(
                     Filters=[{'Name': 'instance-state-name',
                               'Values': ['running']}]):
                 host_name = [instance.tags[index]['Value']

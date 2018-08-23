@@ -7,9 +7,11 @@ from concurrent.futures import (ThreadPoolExecutor as _ThreadPoolExecutor,
                                 as_completed as as_completed)
 from contextlib import contextmanager
 from importlib import import_module
+import logging
 import os
 import re
 import sys
+from threading import Lock
 import time
 
 import requests
@@ -222,18 +224,29 @@ def check_url(url, timeout=0.0, max_retries=3, sleep=0.5,
     Returns:
         bool: True if success, False elsewhere
     """
+    # Disables requests vendored urllib3 verbosity
+    logger = logging.getLogger(requests.packages.urllib3.__package__)
+    logger_level = logger.level
+    logger.setLevel(logging.ERROR)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        with Timeout(timeout, sleep=sleep) as timeout:
-            while True:
-                try:
-                    http_session(max_retries=max_retries, https=False).get(
-                            url, timeout=request_timeout).raise_for_status()
-                    return True
-                except requests.RequestException:
-                    pass
-                if timeout.reached():
-                    return False
+
+    # Checks URL
+        try:
+            with Timeout(timeout, sleep=sleep) as timeout:
+                while True:
+                    try:
+                        http_session(max_retries=max_retries, https=False).get(
+                                url, timeout=request_timeout).raise_for_status()
+                        return True
+                    except requests.RequestException:
+                        pass
+                    if timeout.reached():
+                        return False
+
+    # Restore urllib3 verbosity
+        finally:
+            logger.setLevel(logger_level)
 
 
 def format_url(url_or_ip):
@@ -376,6 +389,38 @@ def create_key_pair_file(key_pair, key_content):
     os.chmod(key_filename, 0o400)
 
 
+def memoizedmethod(method):
+    """
+    Decorator that caches method result. This function is thread safe.
+
+    Args:
+        method (function): Method
+
+    Returns:
+        function: Memoized method.
+
+    Notes:
+        Target method class needs as "_cache" attribute (dict).
+    """
+    method_name = method.__name__
+    lock = Lock()
+
+    def patched(self, *args, **kwargs):
+        """Patched method"""
+        with lock:
+            # Gets value from cache
+            try:
+                return self._cache[method_name]
+
+            # Evaluates and cache value
+            except KeyError:
+                result = self._cache[method_name] = method(
+                    self, *args, **kwargs)
+                return result
+
+    return patched
+
+
 def gen_msg(message_id, *args):
     """
     Provides pre-generated text messages.
@@ -437,12 +482,10 @@ def get_logger(stdout=False):
 
     # Initialize logger on first call
     except KeyError:
-        import logging
         logger = logging.getLogger("apyfal")
         logger.addHandler(logging.NullHandler())
 
     if stdout:
-        import logging
         logger.addHandler(logging.StreamHandler())
         logger.setLevel(logging.INFO)
 

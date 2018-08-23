@@ -81,15 +81,15 @@ def copy(source, destination):
     _pycosio.copy(source, destination)
 
 
-def mount(storage_type, **parameters):
+def mount(storage_type, **kwargs):
     """Mount a new storage.
 
     Args:
         storage_type (str): storage type
-        parameters: storage parameters
+        kwargs: Storage keywords argument
             (see targeted storage class for more information)
     """
-    _Storage(storage_type=storage_type, **parameters).mount()
+    _Storage(storage_type=storage_type, **kwargs).mount()
 
 
 def parse_url(url, host=True):
@@ -145,6 +145,8 @@ class _Storage:
             This can improve performance, but makes connection insecure.
         client_id (str): Storage access key ID.
         secret_id (str): Storage secret access Key.
+        storage_parameters (dict): Extra "storage_parameters".
+            See "pycosio.mount".
     """
     #: Name (str), Linked to apyfal.host NAME
     NAME = None
@@ -176,8 +178,10 @@ class _Storage:
             _exc.StorageConfigurationException)
 
     def __init__(self, storage_type=None, config=None,
-                 client_id=None, secret_id=None, unsecure=None, **_):
+                 client_id=None, secret_id=None, unsecure=None,
+                 storage_parameters=None, **_):
         self._storage_type = storage_type or self.STORAGE_NAME
+        self._storage_parameters = storage_parameters or dict()
         self._config = _cfg.create_configuration(config)
 
         self._client_id = self._from_config('client_id', client_id)
@@ -223,6 +227,7 @@ class _Storage:
         """Mount storage."""
         storage_parameters = _deepcopy(self.STORAGE_PARAMETERS)
         self._update_parameter(storage_parameters)
+        _utl.recursive_update(storage_parameters, self._storage_parameters)
         return _pycosio.mount(
             storage=self.STORAGE_NAME, extra_url_prefix=self.EXTRA_URL_PREFIX,
             storage_parameters=storage_parameters, unsecure=self._unsecure)
@@ -260,6 +265,8 @@ def _auto_mount():
             except (ImportError, _exc.AcceleratorException):
                 continue
             futures.append(executor.submit(storage.mount))
+
+        # Waits completion and hide exceptions silently
         _wait(futures)
 
 

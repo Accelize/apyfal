@@ -25,6 +25,8 @@ class SwiftStorage(_Storage):
         region (str): OpenStack region.
         project_id (str): OpenStack Project
         auth_url (str): OpenStack auth-URL
+        storage_parameters (dict): Extra "storage_parameters".
+            See "pycosio.mount".
     """
     #: Provider name
     NAME = 'OpenStack'

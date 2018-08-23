@@ -20,6 +20,8 @@ class S3Storage(_Storage):
             This can improve performance, but makes connection insecure.
         client_id (str): AWS Access Key ID.
         secret_id (str): AWS Secret Access Key.
+        storage_parameters (dict): Extra "storage_parameters".
+            See "pycosio.mount".
     """
     #: Provider name
     NAME = 'AWS'

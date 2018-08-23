@@ -104,7 +104,6 @@ class CSPHost(_Host):
         _Host.__init__(self, **kwargs)
 
         # Default some attributes
-        self._session = None
         self._instance = None
         self._image_id = None
         self._image_name = None
