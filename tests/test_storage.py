@@ -3,7 +3,6 @@
 from io import BytesIO
 from sys import version_info
 from os import urandom
-from uuid import uuid4 as uuid
 
 import pytest
 
