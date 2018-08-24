@@ -95,7 +95,7 @@ class Accelerator(object):
             self._host = None
 
             # Use default local client if not specified IP
-            client_type = 'REST' if host_ip else None
+            client_type = 'REST' if (host_ip and host_type is None) else None
 
         # Create AcceleratorClient object
         self._client = _clt.AcceleratorClient(
