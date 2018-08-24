@@ -410,7 +410,8 @@ class OpenStackHost(_CSPHost):
             generator of dict: dicts contains attributes values of the host.
         """
         with _exception_handler():
-            for instance in self._nova_client.servers.list():
+            for instance in self._nova_client.servers.list(
+                    search_opts={'status': self.STATUS_RUNNING}):
                 host_name = instance.name
 
                 # Yields only matching accelerator instances
