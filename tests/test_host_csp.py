@@ -769,6 +769,7 @@ def run_full_real_test_sequence(host_type, environment,
             apyfal._utilities.check_url = utilities_check_url
 
         # Stops all instances
+        time.sleep(5)
         for accelerator in iter_accelerators(config=config):
             instance_id = None
             try:

@@ -161,7 +161,8 @@ def run_full_real_test_sequence(storage_type, tmpdir):
     tmp_dst_path = str(tmp_dst)
 
     # Mount bucket
-    storage = _Storage(storage_type=storage_type).mount()
+    storage = _Storage(storage_type=storage_type)
+    storage.mount()
     storage_dir = ('%stestaccelizestorage/apyfal_testing/' %
                    storage.EXTRA_URL_PREFIX)
 
