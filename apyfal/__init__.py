@@ -76,7 +76,7 @@ class Accelerator(object):
 
         # Create host object
         host_type = host_type or config['host']['host_type']
-        if host_type is not None:
+        if host_type not in (None, 'localhost'):
             # Use a remote host
             self._host = _hst.Host(
                 host_type=host_type, config=config, host_ip=host_ip,
