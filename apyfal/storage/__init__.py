@@ -129,7 +129,8 @@ def parse_url(url, host=True):
     return scheme, path
 
 
-class _Storage:
+class _Storage(object):
+    # Python 2: requires new style class (inherit fro object) to use __new__
     """Base storage class
     This is also a factory which instantiate host subclass related to
     specified cases.
