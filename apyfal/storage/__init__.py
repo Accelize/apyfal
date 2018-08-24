@@ -242,33 +242,38 @@ def _auto_mount():
 
     # Finds possibles storage
     to_mount = set()
-    to_mount.add(config['host']['host_type'])
+    name = config['host']['host_type']
+    if name:
+        to_mount.add(name)
     for section in config:
         if section.startswith('host.') or section.startswith('storage.'):
-            to_mount.add(section.split('.', 1)[1])
+            name = section.split('.', 1)[1]
+            if name:
+                to_mount.add(name)
 
-    # Tries to mount storage
-    if _py[0] == 2:
-        # On Python 2: Seem to have a deadlock on import if use of
-        # ThreadPoolExecutor
-        for storage_type in to_mount:
-            try:
-                mount(storage_type=storage_type, config=config)
-            except (ImportError, _exc.AcceleratorException):
-                continue
-        return
+    if to_mount:
+        # Tries to mount storage
+        if _py[0] == 2:
+            # On Python 2: Seem to have a deadlock on import if use of
+            # ThreadPoolExecutor
+            for storage_type in to_mount:
+                try:
+                    mount(storage_type=storage_type, config=config)
+                except (ImportError, _exc.AcceleratorException):
+                    continue
+            return
 
-    futures = []
-    with _ThreadPoolExecutor(max_workers=len(to_mount)) as executor:
-        for storage_type in to_mount:
-            try:
-                storage = _Storage(storage_type=storage_type, config=config)
-            except (ImportError, _exc.AcceleratorException):
-                continue
-            futures.append(executor.submit(storage.mount))
+        futures = []
+        with _ThreadPoolExecutor(max_workers=len(to_mount)) as executor:
+            for storage_type in to_mount:
+                try:
+                    storage = _Storage(storage_type=storage_type, config=config)
+                except (ImportError, _exc.AcceleratorException):
+                    continue
+                futures.append(executor.submit(storage.mount))
 
-        # Waits completion and hide exceptions silently
-        _wait(futures)
+            # Waits completion and hide exceptions silently
+            _wait(futures)
 
 
 _auto_mount()
