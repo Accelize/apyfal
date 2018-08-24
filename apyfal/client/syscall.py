@@ -267,7 +267,8 @@ class SysCallClient(_Client):
             config_env if key not in ('client_id', 'client_secret'))
 
         # All is already up to date: caches values
-        if not update_config or not update_credentials:
+        # TODO : remove the false later
+        if (not update_config or not update_credentials ) and False:
             self._metering_env = full_env
             return
 
