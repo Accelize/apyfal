@@ -3,9 +3,6 @@
 # Excludes useless generated REST API files
 prune apyfal/rest_api/test
 
-# Includes configuration file
-recursive-include apyfal *.conf
-
 # Excludes tests and documentation
 prune docs
 prune tests

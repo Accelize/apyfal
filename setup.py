@@ -63,14 +63,10 @@ PACKAGE_INFO = dict(
     setup_requires=['setuptools'],
     tests_require=['pytest'],
     packages=find_packages(exclude=['docs', 'tests', 'rest_api']),
-    include_package_data=True,
     zip_safe=True,
     command_options={},
     cmdclass={},
-    entry_points={
-        'console_scripts':
-            ['apyfal=apyfal.__main__:_run_command']}
-    )
+    entry_points={'console_scripts': ['apyfal=apyfal.__main__:_run_command']})
 
 # Add OpenStack sub extra:
 PACKAGE_INFO['extras_require']['OVH'] = PACKAGE_INFO[
@@ -102,10 +98,8 @@ class SwaggerCommand(Command):
     Generate Python REST API client using OpenApi
     """
     description = "Generate REST API client"
-    user_options = [
-        ('swagger-version=', None,
-         'Force use of a specific Swagger-Codegen version'),
-    ]
+    user_options = [('swagger-version=', None,
+                     'Force use of a specific Swagger-Codegen version')]
 
     def initialize_options(self):
         """Options default values"""
