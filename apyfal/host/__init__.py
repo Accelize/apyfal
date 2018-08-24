@@ -256,11 +256,13 @@ class Host(_utl.ABC):
         # Gets parameters
         parameters = dict()
         if accelerator is not None:
-            parameters.update(self._config.get_host_requirements(
-                self._host_type, accelerator))
+            _utl.recursive_update(
+                parameters, self._config.get_host_requirements(
+                    self._host_type, accelerator))
 
         if accel_parameters is not None:
-            parameters.update(accel_parameters)
+            _utl.recursive_update(
+                parameters, _deepcopy(accel_parameters))
 
         # Gets accelerator name
         self._accelerator = parameters.pop('accelerator')
