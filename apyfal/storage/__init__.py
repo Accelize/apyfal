@@ -31,7 +31,7 @@ Storage URL format:
 See target storage class documentation for more information.
 """
 from concurrent.futures import (
-    ThreadPoolExecutor as _ThreadPoolExecutor, wait as _wait)
+    ThreadPoolExecutor as _ThreadPoolExecutor, as_completed as _as_completed)
 from contextlib import contextmanager as _contextmanager
 from copy import deepcopy as _deepcopy
 from sys import version_info as _py
@@ -272,8 +272,9 @@ def _auto_mount():
                     continue
                 futures.append(executor.submit(storage.mount))
 
-            # Waits completion and hide exceptions silently
-            _wait(futures)
+            # Waits completion
+            for future in _as_completed(futures):
+                future.result()
 
 
 _auto_mount()
