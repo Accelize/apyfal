@@ -2,6 +2,7 @@
 """apyfal.storage tests"""
 from io import BytesIO
 from sys import version_info
+from os import urandom
 from uuid import uuid4 as uuid
 
 import pytest
@@ -143,17 +144,17 @@ def run_full_real_test_sequence(storage_type, tmpdir):
         storage_type (str): Bucket storage_type.
         tmpdir (object): tmpdir Pytest fixture
     """
-    from apyfal.storage import _Storage, copy
+    from apyfal.storage import _Storage, copy, open as srg_open
 
     # Skip if no correct configuration with this host_type
     if not _Storage(storage_type=storage_type)._client_id:
         pytest.skip('No configuration for %s.' % storage_type)
 
     # Initializes local file source
-    content = 'dummy_content'.encode()
+    content = urandom(4096)
     tmp_src = tmpdir.join('src.txt')
     tmp_src_path = str(tmp_src)
-    tmp_src.write(content)
+    tmp_src.write_binary(content)
     assert tmp_src.check(file=True)
 
     # Initializes local file destination
@@ -162,12 +163,13 @@ def run_full_real_test_sequence(storage_type, tmpdir):
 
     # Mount bucket
     storage = _Storage(storage_type=storage_type)
+    storage.EXTRA_URL_PREFIX = 'storage://'
     storage.mount()
     storage_dir = ('%stestaccelizestorage/apyfal_testing/' %
                    storage.EXTRA_URL_PREFIX)
 
     # Local file to bucket
-    file_name = storage_dir + str(uuid())
+    file_name = storage_dir + '001.dat'
     copy(tmp_src_path, file_name)
 
     # Bucket to local file
@@ -177,5 +179,9 @@ def run_full_real_test_sequence(storage_type, tmpdir):
     assert tmp_dst.read_binary() == content
 
     # Bucket to bucket
-    file_name2 = storage_dir + str(uuid())
+    file_name2 = storage_dir + '002.dat'
     copy(file_name, file_name2)
+
+    # Read with open
+    with srg_open(file_name2, 'rb') as file2:
+        assert file2.read() == content
