@@ -1,6 +1,7 @@
 # coding=utf-8
 """apyfal.host._csp tests"""
 from copy import deepcopy
+from datetime import datetime
 import gc
 import time
 
@@ -659,8 +660,7 @@ def import_from_generic_test(host_type, **kwargs):
 
 
 def run_full_real_test_sequence(host_type, environment,
-                                use_full_images=False,
-                                support_stop_restart=True):
+                                use_full_images=False):
     """Run common real tests for all CSP.
 
     Args:
@@ -669,11 +669,10 @@ def run_full_real_test_sequence(host_type, environment,
         use_full_images (bool): If True, uses full
             images with host application that provides
             HTTP access.
-        support_stop_restart (bool): If True support pause instance
-            and restart.
     """
     from apyfal.configuration import Configuration
     from apyfal.exceptions import AcceleratorException
+    from apyfal import iter_accelerators
 
     # Skip if no correct configuration with this host_type
     config = Configuration()
@@ -703,6 +702,7 @@ def run_full_real_test_sequence(host_type, environment,
 
     # Add accelerator to environment
     environment['accelerator'] = 'apyfal_testing'
+    config['host']['host_name_prefix'] = datetime.now().strftime('test%H%M%S')
 
     # Mock instance URL check
     # Since used basic image don't provide HTTP access
@@ -720,59 +720,65 @@ def run_full_real_test_sequence(host_type, environment,
 
     # Tests:
     from apyfal.host import Host
+    instance_id_term = None
+    instance_id_stop = None
+    instance_id_keep = None
 
     try:
         # Start and terminate
         print('Test: Start and terminate')
-        with Host(config=config, stop_mode='term') as csp:
-            csp.start(accel_parameters=environment)
+        with Host(config=config, stop_mode='term') as csp_term:
+            csp_term.start(accel_parameters=environment)
+            instance_id_term = csp_term.instance_id
 
         # Start and stop, then terminate
         # Also check getting instance handle with ID
-        if support_stop_restart:
-            print('Test: Start and stop')
-            with Host(config=config, stop_mode='stop') as csp_stop:
-                csp_stop.start(accel_parameters=environment)
-                instance_id = csp.instance_id
+        print('Test: Start and stop')
+        with Host(config=config, stop_mode='stop') as csp_stop:
+            csp_stop.start(accel_parameters=environment)
+            instance_id_stop = csp_stop.instance_id
 
-            print('Test: Start from stopped and terminate')
-            with Host(config=config, instance_id=instance_id,
-                      stop_mode='term') as csp:
-                csp.start()
-
-            try:
-                # Force close of instance
-                csp_stop.stop(stop_mode='term')
-            except AcceleratorException:
-                pass
+        print('Test: Start from stopped and terminate')
+        with Host(config=config, instance_id=instance_id_stop,
+                  stop_mode='term') as csp:
+            csp.start(accel_parameters=environment)
+            assert csp.instance_id == instance_id_stop
 
         # Start and keep, then
         # Also check getting instance handle with URL
         print('Test: Start and keep')
         with Host(config=config, stop_mode='keep') as csp_keep:
             csp_keep.start(accel_parameters=environment)
-            instance_id = csp.instance_id
-            host_ip = csp.url
+            instance_id_keep = csp_keep.instance_id
+            instance_url_keep = csp_keep.url
 
         print('Test: Reuse with instance IP/URL')
-        with Host(config=config, host_ip=host_ip) as csp:
-            csp.start()
+        with Host(config=config, host_ip=instance_url_keep) as csp:
+            csp.start(accel_parameters=environment)
+            assert csp.url == instance_url_keep
 
         print('Test: Reuse with instance ID and terminate')
-        with Host(config=config, instance_id=instance_id,
+        with Host(config=config, instance_id=instance_id_keep,
                   stop_mode='term') as csp:
-            csp.start()
-
-        try:
-            # Force close of instance
-            csp_keep.stop(stop_mode='term')
-        except AcceleratorException:
-            pass
+            csp.start(accel_parameters=environment)
+            assert csp.instance_id == instance_id_keep
 
     # Restore check_url
     finally:
         if not use_full_images:
             apyfal._utilities.check_url = utilities_check_url
+
+        # Stops all instances
+        for accelerator in iter_accelerators(config=config):
+            instance_id = None
+            try:
+                instance_id = accelerator.host.instance_id
+                accelerator.stop('term')
+            except AcceleratorException:
+                pass
+            assert instance_id not in (instance_id_term,
+                                       instance_id_stop,
+                                       instance_id_keep)
 
 
 def test_csphost_user_data(tmpdir):

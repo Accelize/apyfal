@@ -143,7 +143,7 @@ def run_full_real_test_sequence(storage_type, tmpdir):
         storage_type (str): Bucket storage_type.
         tmpdir (object): tmpdir Pytest fixture
     """
-    from apyfal.storage import _Storage, copy, mount
+    from apyfal.storage import _Storage, copy
 
     # Skip if no correct configuration with this host_type
     if not _Storage(storage_type=storage_type)._client_id:
@@ -161,7 +161,7 @@ def run_full_real_test_sequence(storage_type, tmpdir):
     tmp_dst_path = str(tmp_dst)
 
     # Mount bucket
-    storage = mount(storage_type)
+    storage = _Storage(storage_type=storage_type).mount()
     storage_dir = ('%stestaccelizestorage/apyfal_testing/' %
                    storage.EXTRA_URL_PREFIX)
 
