@@ -26,7 +26,7 @@ class AcceleratorException(Exception):
 
         # Augments exception with source error message
         if exc is not None:
-            msg = '%s: %r' % (msg.rstrip('.'), exc)
+            msg = '%s: %s' % (msg.rstrip('.'), exc)
         Exception.__init__(self, msg, *args, **kwargs)
 
 
