@@ -110,7 +110,7 @@ You can also install these optional extras:
 
 -  ``all``: Install all extras.
 -  ``Alibaba``: Requirements for Alibaba.
--  ``AWS``: Requirements for AWS.
+-  ``AWS``: Requirements for AWS (Installed by default).
 -  ``OpenStack``: Requirements for OpenStack.
 -  ``OVH``: Requirements for OVH.
 -  ``optional``: other optional requirements (ex ``pycurl``).

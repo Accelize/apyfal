@@ -7,7 +7,7 @@ run "./setup.py --help-commands" for help.
 from datetime import datetime
 from os import makedirs, chdir, environ
 from os.path import dirname, abspath, join, isfile, isdir
-from sys import argv, version_info
+from sys import argv
 
 from setuptools import setup, find_packages, Command
 
@@ -46,8 +46,14 @@ PACKAGE_INFO = dict(
     },
     license='Apache License, Version 2.0',
     python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',
-    install_requires=['setuptools', 'requests', 'ipgetter', 'pycosio',
-                      'futures; python_version == "2.7"'],
+    install_requires=[
+        'setuptools', 'requests', 'ipgetter', 'pycosio',
+        'futures; python_version == "2.7"',
+
+        # Makes AWS as default since it is the only one ready
+        # to production today. AWS extra is kept for compatibility.
+        'boto3'],
+
     extras_require={
         # Optional speedup
         'optional': ['pycurl'],
@@ -60,6 +66,7 @@ PACKAGE_INFO = dict(
         'AWS': ['boto3', 'pycosio[s3]'],
         'OpenStack': ['python-novaclient', 'python-neutronclient',
                       'pycosio[swift]']},
+
     setup_requires=['setuptools'],
     tests_require=['pytest'],
     packages=find_packages(exclude=['docs', 'tests', 'rest_api']),
@@ -278,7 +285,7 @@ PACKAGE_INFO['command_options']['build_sphinx'] = {
     'copyright': ('setup.py', '2017-%s, %s' % (
         datetime.now().year, PACKAGE_INFO['author']))}
 
-# Unable to install PyURL on ReadTheDocs
+# Unable to install PycURL on ReadTheDocs
 if environ.get('READTHEDOCS'):
     PACKAGE_INFO['extras_require']['all'].remove('pycurl')
 
