@@ -10,6 +10,7 @@ from uuid import uuid4 as _uuid
 import apyfal.exceptions as _exc
 from apyfal.client import AcceleratorClient as _Client
 import apyfal.configuration as _cfg
+from apyfal._utilities import get_logger as _get_logger
 
 
 def _call(command, check_file=None, **exc_args):
@@ -17,7 +18,7 @@ def _call(command, check_file=None, **exc_args):
     Call command in subprocess.
 
     Args:
-        command (str or list or tuple): Command to call.
+        command (list or tuple of str): Command to call.
         check_file (str): Returns file content in exception if exists.
         exc_args: Extra arguments for exception to raise
             if error.
@@ -26,6 +27,7 @@ def _call(command, check_file=None, **exc_args):
         apyfal.exceptions.ClientRuntimeException:
             Error while calling command.
     """
+    _get_logger().info("Running shell command: '%s'" % ' '.join(command))
     try:
         process = _Popen(
             command, stdout=_PIPE, stderr=_PIPE, universal_newlines=True,
@@ -268,7 +270,7 @@ class SysCallClient(_Client):
 
         # All is already up to date: caches values
         # TODO : remove the false later
-        if (not update_config or not update_credentials ) and False:
+        if (not update_config or not update_credentials) and False:
             self._metering_env = full_env
             return
 
@@ -292,10 +294,15 @@ class SysCallClient(_Client):
             # Configuration
             if update_config:
                 with open(_cfg.METERING_CLIENT_CONFIG, 'wt') as config_file:
-                    config_file.write('\n'.join(
+                    config_content = '\n'.join(
                         '%s=%s' % (key, full_env[key])
                         for key in full_env if key
-                        not in ('client_id', 'client_secret')))
+                        not in ('client_id', 'client_secret'))
+                    config_file.write(config_content)
+
+                _get_logger().info(
+                    "Setting configuration:\n%s" % config_content.replace(
+                        '\n', '    \n'))
 
         # Restart services
         finally:
