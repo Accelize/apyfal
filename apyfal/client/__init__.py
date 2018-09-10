@@ -55,7 +55,7 @@ class AcceleratorClient(_utl.ABC):
     REMOTE = False
 
     # Format required for parameter: 'file' (default) or 'stream'
-    PARAMETER_IO_FORMAT = {}
+    _PARAMETER_IO_FORMAT = {}
 
     #: Default directories that can be processed remotely on host
     DEFAULT_AUTHORIZED_HOST_DIRS = ['~/shared']
@@ -460,7 +460,7 @@ class AcceleratorClient(_utl.ABC):
         # Other case, yields file in expected format (file or stream)
         else:
             # As file
-            if self.PARAMETER_IO_FORMAT.get(
+            if self._PARAMETER_IO_FORMAT.get(
                     parameter_name, 'file') == 'file':
 
                 # Already a file

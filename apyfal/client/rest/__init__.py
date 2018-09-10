@@ -7,22 +7,8 @@ import os as _os
 import shutil as _shutil
 from ast import literal_eval as _literal_eval
 
-try:
-    import pycurl as _pycurl
-
-    _USE_PYCURL = True
-
-    try:
-        # Python 2
-        from StringIO import StringIO as _BytesIO
-    except ImportError:
-        # Python 3
-        from io import BytesIO as _BytesIO
-
-except ImportError:
-    _USE_PYCURL = False
-    _pycurl = None
-    _BytesIO = None
+from requests_toolbelt.multipart.encoder import (
+    MultipartEncoder as _MultipartEncoder)
 
 import apyfal._utilities as _utl
 import apyfal.exceptions as _exc
@@ -67,15 +53,17 @@ class RESTClient(_Client):
     REMOTE = True
 
     # Format required for parameter: 'file' (default) or 'stream'
-    PARAMETER_IO_FORMAT = {'file_out': 'stream'}
+    _PARAMETER_IO_FORMAT = {'file_in': 'stream', 'file_out': 'stream'}
 
     def __init__(self, accelerator=None, host_ip=None, *args, **kwargs):
         # Initialize client
         _Client.__init__(self, accelerator=accelerator, *args, **kwargs)
 
-        # Initializes OpenApi client
+        # Initializes HTTP client
         self._configuration_url = None
         self._api_client = _api.ApiClient()
+
+        self._session = _utl.http_session(https=False)
 
         # Mandatory parameters
         if not accelerator:
@@ -216,91 +204,12 @@ class RESTClient(_Client):
         config_result['url_instance'] = self.url
         return config_result
 
-    def _process_openapi(self, json_parameters, datafile):
-        """
-        Processes using OpenApi REST API.
-
-        Args:
-            json_parameters (str): AcceleratorClient parameter as JSON
-            datafile (str): Input file.
-
-        Returns:
-            dict: Response from API
-            bool: True if processed
-        """
-        api_response = self._rest_api_process().process_create(
-            self._configuration_url, parameters=json_parameters,
-            datafile=datafile)
-        return api_response.id, api_response.processed
-
-    def _process_curl(self, json_parameters, datafile):
-        """
-        Process using cURL (PycURL)
-
-        Args:
-            json_parameters (str): AcceleratorClient parameter as JSON
-            datafile (str): Input file.
-
-        Returns:
-            dict: Response from API
-            bool: True if processed
-        """
-        # Configure cURL
-        curl = _pycurl.Curl()
-
-        post = [("parameters", json_parameters),
-                ("configuration", self._configuration_url)]
-        if datafile is not None:
-            post.append(("datafile", (_pycurl.FORM_FILE, datafile)))
-
-        for curl_opt in (
-                (_pycurl.URL, str("%s/v1.0/process/" % self.url)),
-                (_pycurl.POST, 1), (_pycurl.TIMEOUT, 1200),
-                (_pycurl.HTTPPOST, post),
-                (_pycurl.HTTPHEADER, ['Content-Type: multipart/form-data'])):
-            curl.setopt(*curl_opt)
-
-        # Process with cURL
-        retries_max = 3
-        retries_done = 1
-        while True:
-            write_buffer = _BytesIO()
-            curl.setopt(_pycurl.WRITEDATA, write_buffer)
-
-            try:
-                curl.perform()
-                break
-
-            except _pycurl.error as exception:
-                if retries_done > retries_max:
-                    raise _exc.ClientRuntimeException(
-                        'Failed to post process request', exc=exception)
-                retries_done += 1
-
-        curl.close()
-
-        # Get result
-        content = write_buffer.getvalue().decode()
-
-        try:
-            api_response = _json.loads(content)
-        except ValueError:
-            raise _exc.ClientRuntimeException(
-                "Response not valid", exc=content)
-
-        if 'id' not in api_response:
-            raise _exc.ClientRuntimeException(
-                "Processing failed with no message "
-                "(host application did not run): %s" % content)
-
-        return api_response['id'], api_response['processed']
-
     def _process(self, file_in, file_out, parameters):
         """
         Client specific process implementation.
 
         Args:
-            file_in (str or file-like object): Input file.
+            file_in (file-like object): Input file.
             file_out (file-like object): Output file.
             parameters (dict): Parameters dict.
 
@@ -313,13 +222,29 @@ class RESTClient(_Client):
                 "AcceleratorClient has not been configured. "
                 "Use 'start' function.")
 
-        # Use cURL to improve performance and avoid issue with big file
-        # (https://bugs.python.org/issue8450)
-        # If not available, use REST API (with limitations)
-        process_function = (
-            self._process_curl if _USE_PYCURL else self._process_openapi)
-        api_resp_id, processed = process_function(_json.dumps(parameters),
-                                                  file_in)
+        # Post processing request
+        multipart = _MultipartEncoder(fields={
+            'parameters': _json.dumps(parameters),
+            'configuration': self._configuration_url,
+            'datafile': ('file_in', file_in, 'application/octet-stream')})
+
+        response = self._session.post(
+            "%s/v1.0/process/" % self.url, data=multipart,
+            headers={'Content-Type': multipart.content_type})
+
+        # Check response
+        try:
+            api_response = response.json()
+        except ValueError:
+            raise _exc.ClientRuntimeException(
+                "Response not valid", exc=response.text)
+
+        try:
+            api_resp_id = api_response['id']
+        except KeyError:
+            raise _exc.ClientRuntimeException(
+                "Processing failed with no message "
+                "(host application did not run): %s" % response.text)
 
         # Get result
         api_instance = self._rest_api_process()
@@ -338,7 +263,7 @@ class RESTClient(_Client):
 
             # Write result file
             if file_out:
-                response = _utl.http_session(https=False).get(
+                response = self._session.get(
                     api_response.datafileresult, stream=True)
                 _shutil.copyfileobj(response.raw, file_out)
 

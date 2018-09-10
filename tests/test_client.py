@@ -123,7 +123,7 @@ def test_data_file(tmpdir):
         """Dummy Client"""
 
         REMOTE = False
-        PARAMETER_IO_FORMAT = {parameter_name: 'file'}
+        _PARAMETER_IO_FORMAT = {parameter_name: 'file'}
 
         def __init__(self, *_, **__):
             """Do nothing"""
@@ -169,11 +169,11 @@ def test_data_file(tmpdir):
     file_out.remove()
 
     # Test: Input file as stream
-    client.PARAMETER_IO_FORMAT[parameter_name] = 'stream'
+    client._PARAMETER_IO_FORMAT[parameter_name] = 'stream'
     with client._data_file(
             file_in_path, parameters, parameter_name, 'rb') as file:
         assert file.read() == content
-    client.PARAMETER_IO_FORMAT[parameter_name] = 'file'
+    client._PARAMETER_IO_FORMAT[parameter_name] = 'file'
 
     # Test: Input stream
     with open(file_in_path, 'rb') as file:

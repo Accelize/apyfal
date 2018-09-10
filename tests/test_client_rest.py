@@ -2,11 +2,9 @@
 """apyfal.client.rest tests"""
 import collections
 from contextlib import contextmanager
-import copy
 import io
 import gc
 import json
-import sys
 
 import pytest
 import requests
@@ -253,7 +251,8 @@ def test_restclient_use_last_configuration():
     rest_api.ConfigurationApi = ConfigurationApi
 
     # Tests:
-    # method called through AcceleratorClient.url, through AcceleratorClient.__init__
+    # method called through AcceleratorClient.url,
+    # through AcceleratorClient.__init__
     try:
 
         # No previous configuration
@@ -366,187 +365,6 @@ def test_restclient_stop():
         rest_api.StopApi = rest_api_stop_api
 
 
-def test_restclient_process_curl():
-    """Tests RESTClient._process_curl with PycURL"""
-    # Skip if PycURL not available
-    try:
-        import pycurl
-    except ImportError:
-        pytest.skip('Pycurl module required')
-        return
-
-    # Check PycURL is enabled in accelerator API
-    import apyfal.client.rest
-    assert apyfal.client.rest._USE_PYCURL
-
-    # Start testing
-    from apyfal.client.rest import RESTClient
-    from apyfal.exceptions import ClientRuntimeException
-
-    # Mock some accelerators parts
-    class DummyAccelerator(RESTClient):
-        """Dummy AcceleratorClient"""
-
-        def __del__(self):
-            """Does nothing"""
-
-    # Mock PycURL
-    pycurl_curl = pycurl.Curl
-    perform_raises = False
-    api_response = ''
-
-    class Curl:
-        """Fake cURL that don"t communicate"""
-        mock_write = None
-
-        def __init__(self):
-            self.curl = pycurl_curl()
-
-        def perform(self):
-            """Don't communicated but write in buffer"""
-            # Simulate exception
-            if perform_raises:
-                raise pycurl.error
-
-            # Write api_response
-            self.mock_write.write(api_response.encode())
-
-        def setopt(self, *args):
-            """set cURL options and intercept WRITEDATA"""
-            if args[0] == pycurl.WRITEDATA:
-                self.mock_write = args[1]
-            self.curl.setopt(*args)
-
-        def close(self):
-            """Close curl"""
-            self.curl.close()
-
-    pycurl.Curl = Curl
-
-    # Tests
-    try:
-        # Mock some variables
-        dummy_parameters = 'dummy_accelerator_parameters'
-        dummy_datafile = 'dummy_datafile'
-
-        accelerator = DummyAccelerator('Dummy')
-        accelerator._configuration_url = 'dummy_configuration'
-
-        # Test if work as excepted
-        expected_response = {'id': 'dummy_id', 'processed': 'dummy_processed'}
-        api_response = json.dumps(expected_response)
-        response_id, processed = accelerator._process_curl(
-            dummy_parameters, dummy_datafile)
-        assert response_id == expected_response['id']
-        assert processed == expected_response['processed']
-
-        # Test: Invalid response
-        api_response = '{id: corrupted_data'
-        with pytest.raises(ClientRuntimeException):
-            accelerator._process_curl(
-                dummy_parameters, dummy_datafile)
-
-        # Test: No id in response
-        api_response = '{}'
-        with pytest.raises(ClientRuntimeException):
-            accelerator._process_curl(
-                dummy_parameters, dummy_datafile)
-
-        # Test: Curl.perform raise Exception
-        perform_raises = True
-        with pytest.raises(ClientRuntimeException):
-            accelerator._process_curl(
-                dummy_parameters, dummy_datafile)
-
-    # Restore PycURL
-    finally:
-        pycurl.Curl = pycurl_curl
-
-
-def test_restclient_process_openapi():
-    """Tests RESTClient._process_openapi with OpenApi"""
-    # Clean imported modules
-    # to force to reimport without PycURL if present
-    pycurl_module = sys.modules.get('pycurl')
-    if pycurl_module is not None:
-        sys.modules['pycurl'] = None
-        for module in list(sys.modules):
-            if module.startswith('apyfal.client.rest'):
-                del sys.modules[module]
-        gc.collect()
-
-    # Check PycURL is disabled in accelerator API
-    import apyfal.client.rest
-    assert not apyfal.client.rest._USE_PYCURL
-
-    # Starts testing with PycURL disabled
-    try:
-        from apyfal.client.rest import RESTClient
-        import apyfal.client.rest._openapi as rest_api
-
-        # Mock some variables
-        dummy_id = 'dummy_id'
-        dummy_processed = 'dummy_processed'
-        dummy_parameters = 'dummy_accelerator_parameters'
-        dummy_datafile = 'dummy_datafile'
-        dummy_configuration = 'dummy_configuration'
-
-        # Mocks OpenApi REST API ProcessApi
-        class ProcessApi:
-            """Fake rest_api.ProcessApi"""
-
-            def __init__(self, api_client):
-                """Store API client"""
-                self.api_client = api_client
-
-            @staticmethod
-            def process_create(configuration, parameters, datafile):
-                """Checks input arguments and returns fake response"""
-                assert parameters == dummy_parameters
-                assert datafile == dummy_datafile
-                assert configuration == dummy_configuration
-
-                # Return fake response
-                Response = collections.namedtuple('Response',
-                                                  ['processed', 'id'])
-                return Response(id=dummy_id, processed=dummy_processed)
-
-        # Mock some accelerators parts
-        class DummyAccelerator(RESTClient):
-            """Dummy AcceleratorClient"""
-
-            def __del__(self):
-                """Does nothing"""
-
-        # Monkey patch OpenApi client with mocked API
-        rest_api_process_api = rest_api.ProcessApi
-        rest_api.ProcessApi = ProcessApi
-
-        # Tests
-        try:
-            # Test if work as excepted
-            accelerator = DummyAccelerator('Dummy')
-            accelerator._configuration_url = dummy_configuration
-
-            response_id, processed = accelerator._process_openapi(
-                dummy_parameters, dummy_datafile)
-            assert response_id == dummy_id
-            assert processed == dummy_processed
-
-        # Restore OpenApi API
-        finally:
-            rest_api.ProcessApi = rest_api_process_api
-
-    # Restores PycURL
-    finally:
-        if pycurl_module is not None:
-            sys.modules['pycurl'] = pycurl_module
-            for module in list(sys.modules):
-                if module.startswith('apyfal.client.rest'):
-                    del sys.modules[module]
-            gc.collect()
-
-
 def test_restclient_process(tmpdir):
     """Tests RESTClient._process"""
     import apyfal.exceptions as exc
@@ -560,6 +378,7 @@ def test_restclient_process(tmpdir):
     file_out = dir_out.join('file_out.txt')
 
     # Mocks some variables
+    dummy_id = 'dummy_id'
     processed = False
     in_error = True
     specific = {'result': '1'}
@@ -570,6 +389,7 @@ def test_restclient_process(tmpdir):
     datafile_result = {'app': {
         'status': 0, 'msg': 'dummy_datafile_result'}}
     out_content = b'file out content'
+    post_response = json.dumps({'id': dummy_id}).encode()
 
     # Mocks OpenApi REST API ProcessApi
     class ProcessApi:
@@ -615,7 +435,7 @@ def test_restclient_process(tmpdir):
             assert datafile == file_in
 
             # Returns fake result
-            return 'dummy_id', processed
+            return dummy_id, processed
 
         _process_curl = _process_openapi
 
@@ -636,6 +456,21 @@ def test_restclient_process(tmpdir):
 
             # Returns fake response
             return Response(raw=io.BytesIO(out_content))
+
+        @staticmethod
+        def post(url, data=None, **_):
+            """Checks input arguments and returns fake response"""
+            # Checks input parameters
+            assert '/process' in url
+            assert hasattr(data.fields['datafile'][1], 'read')
+            assert json.loads(data.fields['parameters']) == (
+                RESTClient.DEFAULT_PROCESS_PARAMETERS)
+
+            # Returns fake response
+            response = requests.Response()
+            response._content = post_response
+            response.status_code = 200
+            return response
 
     # Monkey patch OpenApi client with mocked API
     openapi_client_process_api = rest_api.ProcessApi
@@ -681,6 +516,15 @@ def test_restclient_process(tmpdir):
 
         # Checks without info_dict
         assert accelerator.process(str(file_in), str(file_out)) == specific
+
+        # Checks returns bad result
+        post_response = b''
+        with pytest.raises(exc.ClientRuntimeException):
+            accelerator.process(str(file_in), str(file_out))
+        post_response = b'{}'
+        with pytest.raises(exc.ClientRuntimeException):
+            accelerator.process(str(file_in), str(file_out))
+        post_response = json.dumps({'id': dummy_id}).encode()
 
         # Checks without result
         del parameters_result['app']['specific']

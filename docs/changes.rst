@@ -1,6 +1,28 @@
 Changelog
 =========
 
+1.2.0 (2018/09)
+---------------
+
+General improvements
+
+- Uses ``requests_toolbelt`` instead of ``PycURL`` to upload big files.
+  This simplify the Apyfal installation by using a far more easier to install
+  library.
+- Add ``boto3`` as default dependency. Actually AWS is the only provider
+  ready for production and is the most commonly used. Other providers are
+  available using extra setup options.
+
+Fixes:
+
+- Fix bad text formatting in some exception messages.
+- Server side logging was improved.
+
+Deprecations:
+
+- The ``optional`` extra setup option is deprecated with the replacement of
+  ``PycURL``.
+
 1.1.0 (2018/08)
 ---------------
 

@@ -5,7 +5,7 @@
 run "./setup.py --help-commands" for help.
 """
 from datetime import datetime
-from os import makedirs, chdir, environ
+from os import makedirs, chdir
 from os.path import dirname, abspath, join, isfile, isdir
 from sys import argv
 
@@ -47,7 +47,7 @@ PACKAGE_INFO = dict(
     license='Apache License, Version 2.0',
     python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',
     install_requires=[
-        'setuptools', 'requests', 'ipgetter', 'pycosio',
+        'setuptools', 'requests', 'requests_toolbelt', 'ipgetter', 'pycosio',
         'futures; python_version == "2.7"',
 
         # Makes AWS as default since it is the only one ready
@@ -55,9 +55,6 @@ PACKAGE_INFO = dict(
         'boto3'],
 
     extras_require={
-        # Optional speedup
-        'optional': ['pycurl'],
-
         # CSP specific requirements
         'Alibaba': [
             'pycosio[oss]',
@@ -284,10 +281,6 @@ PACKAGE_INFO['command_options']['build_sphinx'] = {
     'release': ('setup.py', PACKAGE_INFO['version']),
     'copyright': ('setup.py', '2017-%s, %s' % (
         datetime.now().year, PACKAGE_INFO['author']))}
-
-# Unable to install PycURL on ReadTheDocs
-if environ.get('READTHEDOCS'):
-    PACKAGE_INFO['extras_require']['all'].remove('pycurl')
 
 # Runs setup
 if __name__ == '__main__':

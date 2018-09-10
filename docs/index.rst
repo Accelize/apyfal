@@ -53,7 +53,7 @@ Features
 
 **Limitations in remote mode**
 
-+ Max data file is limited to 30GB if using PycURL, or 2GB otherwise.
++ Max input file size is limited to 30GB when using client local file.
 + Timeout will occur if a request takes more than 900s.
 
 

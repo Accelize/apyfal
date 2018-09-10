@@ -1,6 +1,6 @@
 environment:
     matrix:
-        #- PYTHON: "C:\\Python37-x64"
+        - PYTHON: "C:\\Python37-x64"
         - PYTHON: "C:\\Python36-x64"
         - PYTHON: "C:\\Python35-x64"
         - PYTHON: "C:\\Python34-x64"
@@ -17,9 +17,6 @@ install:
 
     # Builds OpenApi client
     - "python ./setup.py swagger_codegen"
-
-    # Ensures PycURL is installed from wheel.
-    - 'python -m pip install pycurl --prefer-binary'
 
     # Installs all package dependencies
     - "python -m pip install -e .[all]"
