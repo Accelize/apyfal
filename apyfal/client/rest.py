@@ -3,9 +3,7 @@
 
 This client allow remote accelerator control."""
 import json as _json
-import os as _os
 import shutil as _shutil
-from ast import literal_eval as _literal_eval
 
 from requests_toolbelt.multipart.encoder import (
     MultipartEncoder as _MultipartEncoder)
@@ -13,16 +11,6 @@ from requests_toolbelt.multipart.encoder import (
 import apyfal._utilities as _utl
 import apyfal.exceptions as _exc
 from apyfal.client import AcceleratorClient as _Client
-
-try:
-    from apyfal.client.rest import _openapi as _api
-except ImportError:  # OpenAPI client need to be generated first
-    if not _os.path.isfile(_os.path.join(
-            _os.path.dirname(__file__), '_openapi/__init__.py')):
-        raise ImportError(
-            'OpenAPI client not found, please generate it '
-            'with "setup.py swagger_codegen"')
-    raise
 
 
 class RESTClient(_Client):
@@ -53,7 +41,14 @@ class RESTClient(_Client):
     REMOTE = True
 
     # Format required for parameter: 'file' (default) or 'stream'
-    _PARAMETER_IO_FORMAT = {'file_in': 'stream', 'file_out': 'stream'}
+    _PARAMETER_IO_FORMAT = {
+        'file_in': 'stream', 'file_out': 'stream', 'datafile': 'stream'}
+
+    # REST API URL list
+    _REST_API = {
+        'process': '/v1.0/process/',
+        'start': '/v1.0/configuration/',
+        'stop': '/v1.0/stop/'}
 
     def __init__(self, accelerator=None, host_ip=None, *args, **kwargs):
         # Initialize client
@@ -61,9 +56,7 @@ class RESTClient(_Client):
 
         # Initializes HTTP client
         self._configuration_url = None
-        self._api_client = _api.ApiClient()
-
-        self._session = _utl.http_session(https=False)
+        self._session = _utl.http_session()
 
         # Mandatory parameters
         if not accelerator:
@@ -92,9 +85,6 @@ class RESTClient(_Client):
 
         self._url = _utl.format_url(url)
 
-        # Configure REST API host
-        self._api_client.configuration.host = self._url
-
         # If possible use the last accelerator configuration (it can still be
         # overwritten later)
         self._use_last_configuration()
@@ -117,22 +107,16 @@ class RESTClient(_Client):
         Reload last accelerator configuration.
         """
         # Get last configuration, if any
+        response = self._session.get(self.url + self._REST_API['start'])
         try:
-            config_list = self._rest_api_configuration().configuration_list(
-            ).results
-        except ValueError:
-            # ValueError from generated code with Swagger Codegen >= 2.3.0
-            return
-        if not config_list:
-            return
-
-        last_config = config_list[0]
-        if last_config.used == 0:
+            last_config = response.json()['results'][0]
+        except (KeyError, IndexError, ValueError):
             return
 
         # The last configuration URL should be keep in order to not request
         # it to user.
-        self._configuration_url = last_config.url
+        if last_config['used'] != 0:
+            self._configuration_url = last_config['url']
 
     def start(self, datafile=None, info_dict=False, host_env=None,
               **parameters):
@@ -183,21 +167,33 @@ class RESTClient(_Client):
         Returns:
             dict: response.
         """
-        # Configures  accelerator
-        api_instance = self._rest_api_configuration()
-        api_response = api_instance.configuration_create(
-            parameters=_json.dumps(parameters), datafile=datafile or '')
+        start_url = self.url + self._REST_API['start']
 
-        # Checks operation success
-        config_result = _literal_eval(api_response.parametersresult)
+        # Post accelerator configuration
+        fields = {'parameters': _json.dumps(parameters)}
+        if datafile:
+            fields['datafile'] = (
+                'datafile', datafile, 'application/octet-stream')
+        multipart = _MultipartEncoder(fields=fields)
 
-        api_response_read = api_instance.configuration_read(api_response.id)
-        if api_response_read.inerror:
+        response = self._session.post(start_url, data=multipart, headers={
+            'Content-Type': multipart.content_type})
+
+        # Checks response, gets Configuration ID and result
+        response_dict = response.json()
+        config_result = response_dict['parametersresult']
+        start_url += str(response_dict['id'])
+
+        # Checks if configuration was successful
+        response = self._session.get(start_url)
+        response_dict = response.json()
+        if response_dict['inerror']:
             raise _exc.ClientRuntimeException(
-                "Cannot start the configuration %s" % api_response_read.url)
+                "Cannot start the configuration %s: " % response_dict['id'],
+                exc=response.text)
 
         # Memorizes configuration
-        self._configuration_url = api_response.url
+        self._configuration_url = response_dict['url']
 
         # Returns response
         config_result['url_config'] = self._configuration_url
@@ -216,6 +212,8 @@ class RESTClient(_Client):
         Returns:
             dict: response dict.
         """
+        process_url = self.url + self._REST_API['process']
+
         # Check if configuration was done
         if self._configuration_url is None:
             raise _exc.ClientConfigurationException(
@@ -223,56 +221,50 @@ class RESTClient(_Client):
                 "Use 'start' function.")
 
         # Post processing request
-        multipart = _MultipartEncoder(fields={
+        fields = {
             'parameters': _json.dumps(parameters),
-            'configuration': self._configuration_url,
-            'datafile': ('file_in', file_in, 'application/octet-stream')})
+            'configuration': self._configuration_url}
+        if file_in:
+            fields['datafile'] = 'file_in', file_in, 'application/octet-stream'
+        multipart = _MultipartEncoder(fields=fields)
 
-        response = self._session.post(
-            "%s/v1.0/process/" % self.url, data=multipart,
-            headers={'Content-Type': multipart.content_type})
+        response = self._session.post(process_url, data=multipart, headers={
+            'Content-Type': multipart.content_type})
 
-        # Check response
+        # Check response and append process ID to process URL
         try:
-            api_response = response.json()
-        except ValueError:
-            raise _exc.ClientRuntimeException(
-                "Response not valid", exc=response.text)
-
-        try:
-            api_resp_id = api_response['id']
-        except KeyError:
+            process_url += str(response.json()['id'])
+        except (KeyError, ValueError):
             raise _exc.ClientRuntimeException(
                 "Processing failed with no message "
                 "(host application did not run): %s" % response.text)
 
         # Get result
-        api_instance = self._rest_api_process()
         try:
+            # Wait processing
             while True:
-                api_response = api_instance.process_read(api_resp_id)
-                processed = api_response.processed
-                if processed is True:
+                response = self._session.get(process_url)
+                response_dict = response.json()
+                if response_dict['processed']:
                     break
 
-            # Checks for success
-            if api_response.inerror:
+            # Checks if process was successful
+            if response_dict['inerror']:
                 raise _exc.ClientRuntimeException(
-                    "Failed to process data: %s" %
-                    api_response.parametersresult)
+                    "Failed to process data: %s" % response.text)
 
-            # Write result file
+            # Gets result file
             if file_out:
                 response = self._session.get(
-                    api_response.datafileresult, stream=True)
+                    response_dict['datafileresult'], stream=True)
                 _shutil.copyfileobj(response.raw, file_out)
 
-            # Get response
-            return _literal_eval(api_response.parametersresult)
+            # Gets result dict
+            return response_dict['parametersresult']
 
         finally:
-            # Process_delete api_response
-            api_instance.process_delete(api_resp_id)
+            # Deletes process result on server
+            self._session.delete(process_url)
 
     def _stop(self, info_dict):
         """
@@ -295,51 +287,7 @@ class RESTClient(_Client):
             # No AcceleratorClient to stop
             return None
 
-        try:
-            return self._rest_api_stop().stop_list()
-        except _api.rest.ApiException:
-            pass
-
-    def _init_rest_api_class(self, api):
-        """
-        Instantiate and configure REST API class.
-
-        Args:
-            api: API class from apyfal.client.rest._openapi
-
-        Returns:
-            Configured instance of API class.
-        """
-        api_instance = api(api_client=self._api_client)
-        api_instance.api_client.rest_client.pool_manager.connection_pool_kw[
-            'retries'] = 3
-        return api_instance
-
-    def _rest_api_process(self):
-        """
-        Instantiate Process REST API
-
-        Returns:
-            apyfal.client.rest._openapi.ProcessApi: class instance
-        """
-        return self._init_rest_api_class(_api.ProcessApi)
-
-    def _rest_api_configuration(self):
-        """
-        Instantiate Configuration REST API
-
-        Returns:
-            apyfal.client.rest._openapi.ConfigurationApi: class instance
-        """
-        # /v1.0/configuration/
-        return self._init_rest_api_class(_api.ConfigurationApi)
-
-    def _rest_api_stop(self):
-        """
-        Instantiate Stop REST API
-
-        Returns:
-            apyfal.client.rest._openapi.StopApi: class instance
-        """
-        # /v1.0/stop
-        return self._init_rest_api_class(_api.StopApi)
+        # Sends stop to server
+        response = self._session.get(self.url + self._REST_API['stop'])
+        if info_dict:
+            return response.json()

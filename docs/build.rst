@@ -24,23 +24,6 @@ git clone:
 
     git clone https://github.com/Accelize/apyfal.git
 
-Generating REST API client with OpenApi
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Apyfal REST API client code (``apyfal.client.rest._openapi``)
-is not stored in repository but generated from OpenApi.
-
-This code need to be generated before run Apyfal in
-development environment.
-
-   *Java* is required to perform this step.
-
-To generate client code, run the following line in repository directory:
-
-.. code-block:: bash
-
-    ./setup.py swagger_codegen
-
 Installing all Apyfal requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

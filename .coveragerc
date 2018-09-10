@@ -3,7 +3,6 @@
 [run]
 # Ignore generated OpenApi code since we don't use it completely and don't change it
 omit=
-    */_openapi/*
     .tox/*
 
 [report]
@@ -14,4 +13,3 @@ exclude_lines =
     def get_logger
     if _enable_logger:
     _enable_logger =
-    except ImportError:  # OpenAPI client need to be generated first

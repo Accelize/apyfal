@@ -1,8 +1,5 @@
 # Manifest file for setup.py
 
-# Excludes useless generated REST API files
-prune apyfal/rest_api/test
-
 # Excludes tests and documentation
 prune docs
 prune tests

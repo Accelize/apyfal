@@ -4,7 +4,7 @@
 # -- Path setup --------------------------------------------------------------
 
 import os
-from os.path import abspath, dirname, join, isdir
+from os.path import abspath, dirname
 from subprocess import check_output
 import sys
 
@@ -15,7 +15,7 @@ sys.path.insert(0, SETUP_PATH)
 # -- Get information from setup.py -------------------------------------------
 
 # Get Package info
-from setup import PACKAGE_INFO, REST_API_DST
+from setup import PACKAGE_INFO
 SPHINX_INFO = PACKAGE_INFO['command_options']['build_sphinx']
 
 
@@ -30,15 +30,6 @@ if os.environ.get('READTHEDOCS'):
         Popen('python -m pip install -e .[all]', shell=True).communicate()
     finally:
         os.chdir(current_dir)
-
-    # Mock apyfal.client.rest._openapi since Java not available on ReadTheDocs
-    try:
-        os.makedirs(REST_API_DST)
-    except OSError:
-        if not isdir(REST_API_DST):
-            raise
-    with open(join(REST_API_DST, '__init__.py'), 'wt') as rest_init:
-        rest_init.write('')
 
 
 # -- Dynamically generates documentation for "accelerator.conf" file ----------
