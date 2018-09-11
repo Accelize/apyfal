@@ -6,12 +6,20 @@ Changelog
 
 General improvements
 
-- Uses ``requests_toolbelt`` instead of ``PycURL`` to upload big files.
-  This simplify the Apyfal installation by using a far more easier to install
-  library.
 - Add ``boto3`` as default dependency. Actually AWS is the only provider
   ready for production and is the most commonly used. Other providers are
   available using extra setup options.
+
+REST client improvements
+
+- Uses ``requests_toolbelt`` instead of ``PycURL`` to upload big files.
+  This simplify the Apyfal installation by using a far more easier to install
+  library.
+- Uses ``requests`` instead of Swagger codegen generated client. This
+  simplify the REST client, removes some dependencies remove extra build step.
+- Improves exceptions handling to add more detailed information from
+  server and handle HTTP errors correctly.
+- Allows HTTPS (Only for host configured with certificate).
 
 Fixes:
 
