@@ -32,13 +32,14 @@ But installation of Python 3.6 is possible.
 
 **Python 3:**
 
-The `IUS repository`_ is required to install Python 3.6 packages.
+The `Software Collections repository`_ is required to install Python 3.6
+packages.
 
 .. code-block:: bash
 
-    sudo yum install gcc python36u python36u-pip python36u-devel -y
+    sudo yum install gcc python36 python36-pip python36-devel -y
 
-Use ``python3.6`` instead of ``python`` and ``pip3.6`` instead of ``pip`` to
+Use ``python36`` instead of ``python`` and ``pip36`` instead of ``pip`` to
 call Python and Pip from this point on.
 
 **Python 2:**
@@ -108,6 +109,6 @@ Example for installing the ``OpenStack`` + ``Alibaba`` extras:
     pip install apyfal[OpenStack,Alibaba]
 
 .. _EPEL repository: https://fedoraproject.org/wiki/EPEL
-.. _IUS repository: https://ius.io/GettingStarted/#subscribing-to-the-ius-repository
+.. _Software Collections repository: https://access.redhat.com/documentation/en-us/red_hat_software_collections/3/
 .. _Python Website: https://www.python.org/downloads
 .. _Windows Compilers on Python documentation: https://wiki.python.org/moin/WindowsCompilers
