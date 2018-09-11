@@ -5,6 +5,7 @@ This client allow remote accelerator control."""
 import json as _json
 import shutil as _shutil
 
+import requests as _requests
 from requests_toolbelt.multipart.encoder import (
     MultipartEncoder as _MultipartEncoder)
 
@@ -44,7 +45,7 @@ class RESTClient(_Client):
     _PARAMETER_IO_FORMAT = {
         'file_in': 'stream', 'file_out': 'stream', 'datafile': 'stream'}
 
-    # REST API URL list
+    # REST API routes
     _REST_API = {
         'process': '/v1.0/process/',
         'start': '/v1.0/configuration/',
@@ -56,7 +57,8 @@ class RESTClient(_Client):
 
         # Initializes HTTP client
         self._configuration_url = None
-        self._session = _utl.http_session()
+        self._session = _utl.http_session(max_retries=3)
+        self._endpoints = {}
 
         # Mandatory parameters
         if not accelerator:
@@ -83,7 +85,10 @@ class RESTClient(_Client):
         if not url:
             raise _exc.ClientConfigurationException("Host URL is not valid.")
 
-        self._url = _utl.format_url(url)
+        self._url = url = _utl.format_url(url)
+
+        for route in self._REST_API:
+            self._endpoints[route] = url + self._REST_API[route]
 
         # If possible use the last accelerator configuration (it can still be
         # overwritten later)
@@ -167,8 +172,6 @@ class RESTClient(_Client):
         Returns:
             dict: response.
         """
-        start_url = self.url + self._REST_API['start']
-
         # Post accelerator configuration
         fields = {'parameters': _json.dumps(parameters)}
         if datafile:
@@ -176,21 +179,17 @@ class RESTClient(_Client):
                 'datafile', datafile, 'application/octet-stream')
         multipart = _MultipartEncoder(fields=fields)
 
-        response = self._session.post(start_url, data=multipart, headers={
-            'Content-Type': multipart.content_type})
+        response = self._session.post(
+            self._endpoints['start'], data=multipart, headers={
+                'Content-Type': multipart.content_type})
 
-        # Checks response, gets Configuration ID and result
-        response_dict = response.json()
+        # Checks response, gets Configuration result
+        response_dict = self._raise_for_error(response)
         config_result = response_dict['parametersresult']
-        start_url += str(response_dict['id'])
 
         # Checks if configuration was successful
-        response = self._session.get(start_url)
-        response_dict = response.json()
-        if response_dict['inerror']:
-            raise _exc.ClientRuntimeException(
-                "Cannot start the configuration %s: " % response_dict['id'],
-                exc=response.text)
+        response_dict = self._raise_for_error(self._session.get(
+            self._endpoints['start'] + str(response_dict['id'])))
 
         # Memorizes configuration
         self._configuration_url = response_dict['url']
@@ -212,8 +211,6 @@ class RESTClient(_Client):
         Returns:
             dict: response dict.
         """
-        process_url = self.url + self._REST_API['process']
-
         # Check if configuration was done
         if self._configuration_url is None:
             raise _exc.ClientConfigurationException(
@@ -228,30 +225,22 @@ class RESTClient(_Client):
             fields['datafile'] = 'file_in', file_in, 'application/octet-stream'
         multipart = _MultipartEncoder(fields=fields)
 
-        response = self._session.post(process_url, data=multipart, headers={
-            'Content-Type': multipart.content_type})
+        response = self._session.post(
+            self._endpoints['process'], data=multipart, headers={
+                'Content-Type': multipart.content_type})
 
         # Check response and append process ID to process URL
-        try:
-            process_url += str(response.json()['id'])
-        except (KeyError, ValueError):
-            raise _exc.ClientRuntimeException(
-                "Processing failed with no message "
-                "(host application did not run): %s" % response.text)
+        process_url = self._endpoints['process'] + str(
+            self._raise_for_error(response)['id'])
 
         # Get result
         try:
             # Wait processing
             while True:
-                response = self._session.get(process_url)
-                response_dict = response.json()
+                response_dict = self._raise_for_error(
+                    self._session.get(process_url))
                 if response_dict['processed']:
                     break
-
-            # Checks if process was successful
-            if response_dict['inerror']:
-                raise _exc.ClientRuntimeException(
-                    "Failed to process data: %s" % response.text)
 
             # Gets result file
             if file_out:
@@ -291,3 +280,37 @@ class RESTClient(_Client):
         response = self._session.get(self.url + self._REST_API['stop'])
         if info_dict:
             return response.json()
+
+    @staticmethod
+    def _raise_for_error(response):
+        """
+        Raises for error and returns response dict.
+
+        Args:
+            response (requests.Response): Response
+
+        Returns:
+            dict: Response JSON dict
+
+        Raises:
+            apyfal.exceptions.ClientRuntimeException: Error.
+        """
+        # Handles requests HTTP errors
+        try:
+            response.raise_for_status()
+        except _requests.exceptions.HTTPError as exception:
+            raise _exc.ClientRuntimeException(exc=exception)
+
+        # Gets result as dict
+        try:
+            response_dict = response.json()
+        except ValueError:
+            raise _exc.ClientRuntimeException(
+                "Unable to parse host response", exc=response.text)
+
+        # Checks error flag
+        if response_dict.get('inerror', True):
+            raise _exc.ClientRuntimeException(
+                "Host returned an error", exc=response.text)
+
+        return response_dict

@@ -1,9 +1,6 @@
 # coding=utf-8
 """apyfal.client.rest tests"""
-import collections
-from contextlib import contextmanager
 import io
-import gc
 import json
 
 import pytest
@@ -15,8 +12,8 @@ def test_restclient_is_alive():
     from apyfal.client.rest import RESTClient
     from apyfal.exceptions import ClientRuntimeException
 
-    # Mock some accelerators parts
-    class DummyAccelerator(RESTClient):
+    # Mock some client parts
+    class Client(RESTClient):
         """Dummy AcceleratorClient"""
 
         def __init__(self, host_ip=None):
@@ -27,17 +24,17 @@ def test_restclient_is_alive():
             """Do nothing"""
 
     # Test: No host
-    client = DummyAccelerator()
+    client = Client()
     with pytest.raises(ClientRuntimeException):
         client._is_alive()
 
     # Test: URL exists
-    client = DummyAccelerator(
+    client = Client(
         host_ip='https://www.accelize.com')
     client._is_alive()
 
     # Test: URL not exist
-    client = DummyAccelerator(
+    client = Client(
         host_ip='https://www.url_that_not_exists.accelize.com')
     with pytest.raises(ClientRuntimeException):
         client._is_alive()
@@ -48,8 +45,8 @@ def test_restclient_url():
     from apyfal.client.rest import RESTClient
     from apyfal.exceptions import ClientConfigurationException
 
-    # Mock some accelerators parts
-    class DummyAccelerator(RESTClient):
+    # Mock some client parts
+    class Client(RESTClient):
         """Dummy AcceleratorClient"""
         use_last_configuration_called = False
 
@@ -60,11 +57,11 @@ def test_restclient_url():
             """Checks if called"""
             self.use_last_configuration_called = True
 
-    accelerator = DummyAccelerator('Dummy')
+    accelerator = Client('Dummy')
 
     # Test: No accelerator provided
     with pytest.raises(ClientConfigurationException):
-        DummyAccelerator()
+        Client()
 
     # Test: No URL provided
     with pytest.raises(ClientConfigurationException):
@@ -84,8 +81,9 @@ def test_restclient_url():
     url = 'http://%s' % ip_address
     accelerator.url = url
     assert accelerator._url == url
-    assert accelerator._api_client.configuration.host == url
     assert accelerator.use_last_configuration_called
+    for key in accelerator._REST_API:
+        assert accelerator._endpoints[key] == url + accelerator._REST_API[key]
 
     # Test: URL set with IP
     accelerator.url = ip_address
@@ -95,442 +93,301 @@ def test_restclient_url():
 def test_restclient_start():
     """Tests RESTClient.start"""
     from apyfal.client.rest import RESTClient
-    from apyfal.exceptions import ClientRuntimeException
-    import apyfal.client.rest._openapi as rest_api
 
-    # Mock OpenApi REST API ConfigurationApi
-    excepted_parameters = None
-    excepted_datafile = None
-    configuration_read_in_error = 0
+    dummy_id = 123
+    dummy_url = 'https://www.accelize.com'
+    parameters_result = {'app': {'status': 0}}
+    response_json = json.dumps({
+        'id': dummy_id, 'parametersresult': parameters_result,
+        'url': dummy_url, 'inerror': False}).encode()
+    file_content = b'content'
+    file_in = io.BytesIO(file_content)
 
-    base_parameters_result = {
-        'app': {'status': 0, 'msg': 'dummy_msg'}}
+    # Mock some client parts
 
-    class ConfigurationApi:
-        """Fake rest_api.ConfigurationApi"""
-
-        def __init__(self, api_client):
-            """Store API client"""
-            self.api_client = api_client
-
-        @staticmethod
-        def configuration_create(parameters, datafile):
-            """Checks input arguments and returns fake response"""
-
-            # Check parameters
-            if excepted_parameters is not None:
-                assert json.loads(parameters) == excepted_parameters
-            if excepted_datafile is not None:
-                assert datafile == excepted_datafile
-
-            # Return response
-            Response = collections.namedtuple(
-                'Response', ['url', 'id', 'parametersresult'])
-
-            return Response(
-                url='dummy_url', id='dummy_id',
-                parametersresult=json.dumps(base_parameters_result))
-
-        @staticmethod
-        def configuration_read(id_value):
-            """Checks input arguments and returns fake response"""
-            Response = collections.namedtuple('Response',
-                                              ['inerror', 'id', 'url'])
-
-            # Check parameters
-            assert id_value == 'dummy_id'
-
-            # Return response
-            return Response(url='dummy_url', id=id_value,
-                            inerror=configuration_read_in_error)
-
-    # Mock some accelerators parts
-    class DummyAccelerator(RESTClient):
+    class Client(RESTClient):
         """Dummy AcceleratorClient"""
 
         def __del__(self):
             """Does nothing"""
 
+        def _use_last_configuration(self):
+            """Does nothing"""
+
+    client = Client('accelerator', host_ip=dummy_url)
+
+    # Mocks requests session
+    class Session(requests.Session):
+        """Fake requests.Session"""
+
         @staticmethod
-        @contextmanager
-        def _data_file(url, *_, **__):
-            """Skip file presence check"""
-            yield url
+        def get(url, **_):
+            """Checks input arguments and returns fake response"""
+            # Checks input parameters
+            assert '/configuration/%s' % dummy_id in url
 
-        @property
-        def url(self):
-            """Fake URL"""
-            return 'dummy_accelerator_url'
+            # Returns fake response
+            response = requests.Response()
+            response._content = response_json
+            response.status_code = 200
+            return response
 
-    client_id = 'dummy_client_id'
-    secret_id = 'dummy_secret_id'
+        @staticmethod
+        def post(url, data=None, **_):
+            """Checks input arguments and returns fake response"""
+            # Checks input parameters
+            assert '/configuration' in url
+            stream = data.fields['datafile'][1]
+            stream.seek(0)
+            assert stream.read() == file_content
+            assert json.loads(data.fields['parameters']) == (
+                client._configuration_parameters)
 
-    accelerator = DummyAccelerator(
-        'Dummy', accelize_client_id=client_id,
-        accelize_secret_id=secret_id)
+            # Returns fake response
+            response = requests.Response()
+            response._content = response_json
+            response.status_code = 200
+            return response
 
-    base_parameters = {
-        "env": {
-            "client_id": client_id,
-            "client_secret": secret_id}}
+    client._session = Session()
 
-    base_response = {'url_config': 'dummy_url',
-                     'url_instance': accelerator.url}
+    # Test: new configuration
+    assert client.start(datafile=file_in, info_dict=True)
 
-    # Monkey patch OpenAPI client with mocked API
-    rest_api_configuration_api = rest_api.ConfigurationApi
-    rest_api.ConfigurationApi = ConfigurationApi
-
-    # Tests
-    try:
-        # Check with arguments
-        accelerator_parameters = {'dummy_param': None}
-        excepted_parameters = base_parameters.copy()
-        excepted_parameters.update(accelerator._configuration_parameters)
-        excepted_parameters['app']['specific'] = accelerator_parameters
-        excepted_datafile = 'dummy_datafile'
-        excepted_response = base_response.copy()
-        excepted_response.update(base_parameters_result)
-
-        assert excepted_response == accelerator.start(
-            datafile=excepted_datafile, info_dict=True,
-            **accelerator_parameters)
-
-        # Check default values
-        excepted_datafile = ''
-        excepted_parameters = base_parameters.copy()
-        excepted_parameters.update(accelerator._configuration_parameters)
-        excepted_response = base_response.copy()
-        excepted_response.update(base_parameters_result)
-
-        # On already configured
-        assert accelerator.start(info_dict=True) is None
-
-        # On not configured
-        accelerator._configuration_url = None
-        assert accelerator.start(info_dict=True) == excepted_response
-
-        # Check error from host
-        configuration_read_in_error = 1
-        accelerator._configuration_url = None
-        with pytest.raises(ClientRuntimeException):
-            accelerator.start()
-
-    # Restore OpenApi client API
-    finally:
-        rest_api.ConfigurationApi = rest_api_configuration_api
+    # Test: Already configured
+    assert not client.start(info_dict=True)
 
 
 def test_restclient_use_last_configuration():
     """Tests RESTClient._use_last_configuration"""
     from apyfal.client.rest import RESTClient
-    import apyfal.client.rest._openapi as rest_api
 
-    # Mock OpenApi REST API ConfigurationApi
-    Config = collections.namedtuple('Config', ['url', 'used'])
-    config_list = []
-    configuration_list_raises = False
+    response_json = None
+    url = 'https://www.accelize.com'
 
-    class ConfigurationApi:
-        """Fake rest_api.ConfigurationApi"""
+    # Mocks client and requests session
 
-        def __init__(self, api_client):
-            """Store API client"""
-            self.api_client = api_client
+    class Client(RESTClient):
+        """Dummy AcceleratorClient"""
+
+        def __del__(self):
+            """Does nothing"""
+
+    class Session(requests.Session):
+        """Fake requests.Session"""
 
         @staticmethod
-        def configuration_list():
-            """Returns fake response"""
-            if configuration_list_raises:
-                raise ValueError
-            Response = collections.namedtuple('Response', ['results'])
-            return Response(results=config_list)
+        def get(url, **_):
+            """Checks input arguments and returns fake response"""
+            # Checks input parameters
+            assert '/configuration' in url
 
-    # Monkey patch OpenApi client with mocked API
-    rest_api_configuration_api = rest_api.ConfigurationApi
-    rest_api.ConfigurationApi = ConfigurationApi
+            # Returns fake response
+            response = requests.Response()
+            response._content = response_json
+            return response
 
-    # Tests:
-    # method called through AcceleratorClient.url,
-    # through AcceleratorClient.__init__
-    try:
+    client = Client('accelerator')
+    client._session = Session()
+    client._url = url
+    assert not client._configuration_url
 
-        # No previous configuration
-        accelerator = RESTClient(
-            'Dummy', host_ip='https://www.accelize.com')
-        assert accelerator._configuration_url is None
+    # Test: Invalid response
+    response_json = b''
+    client._use_last_configuration()
+    assert not client._configuration_url
 
-        configuration_list_raises = True
-        accelerator = RESTClient(
-            'Dummy', host_ip='https://www.accelize.com')
-        assert accelerator._configuration_url is None
-        configuration_list_raises = False
+    response_json = json.dumps({}).encode()
+    client._use_last_configuration()
+    assert not client._configuration_url
 
-        # Unused previous configuration
-        config_list.append(Config(url='dummy_config_url', used=0))
-        accelerator = RESTClient(
-            'Dummy', host_ip='https://www.accelize.com')
-        assert accelerator._configuration_url is None
+    # Test: No previous configuration
+    response_json = json.dumps({'results': []}).encode()
+    client._use_last_configuration()
+    assert not client._configuration_url
 
-        # Used previous configuration
-        config_list.insert(0, Config(url='dummy_config_url_2', used=1))
-        accelerator = RESTClient(
-            'Dummy', host_ip='https://www.accelize.com')
-        assert accelerator._configuration_url == 'dummy_config_url_2'
+    # Test: Unused configuration
+    response_json = json.dumps({'results': [{'used': 0, 'url': url}]}).encode()
+    client._use_last_configuration()
+    assert not client._configuration_url
 
-    # Restore OpenApi client API
-    finally:
-        rest_api.ConfigurationApi = rest_api_configuration_api
+    # Test: Valid configuration
+    response_json = json.dumps({'results': [{'used': 1, 'url': url}]}).encode()
+    client._use_last_configuration()
+    assert client._configuration_url == url
 
 
 def test_restclient_stop():
     """Tests RESTClient.stop"""
     from apyfal.client.rest import RESTClient
     from apyfal.exceptions import ClientRuntimeException
-    import apyfal.client.rest._openapi as rest_api
 
     # Mock OpenApi REST API StopApi
     is_alive = True
-    stop_list = {'app': {'status': 0, 'msg': ''}}
-    stop_list_raise = None
+    response_dict = {'app': {'status': 0, 'msg': ''}}
+    response_json = json.dumps(response_dict).encode()
 
-    class StopApi:
-        """Fake rest_api.StopApi"""
-        is_running = True
+    class Session(requests.Session):
+        """Fake requests.Session"""
 
-        def __init__(self, api_client):
-            """Store API client"""
-            self.api_client = api_client
+        @staticmethod
+        def get(url, **_):
+            """Checks input arguments and returns fake response"""
+            # Checks input parameters
+            assert '/stop' in url
 
-        @classmethod
-        def stop_list(cls):
-            """Simulates accelerator stop and returns fake response"""
-            # Stop AcceleratorClient
-            cls.is_running = False
-
-            # Fake error
-            if stop_list_raise:
-                raise rest_api.rest.ApiException
-
-            # Return result
-            return stop_list
+            # Returns fake response
+            response = requests.Response()
+            response._content = response_json
+            return response
 
     # Mock some accelerators parts
-    class DummyAccelerator(RESTClient):
+    class Client(RESTClient):
         """Dummy AcceleratorClient"""
+
+        def __init__(self, *args, **kwargs):
+            RESTClient.__init__(self, *args, **kwargs)
+            self._session = Session()
+            self._url = 'https://www.accelize.com'
 
         def _is_alive(self):
             """Raise on demand"""
             if not is_alive:
                 raise ClientRuntimeException()
 
-    # Monkey patch OpenApi client with mocked API
-    rest_api_stop_api = rest_api.StopApi
-    rest_api.StopApi = StopApi
+    # Test: AcceleratorClient to stop
+    client = Client('Dummy')
+    assert not client._stopped
+    assert client.stop(info_dict=True) == response_dict
+    assert client._stopped
 
-    # Tests
-    try:
-        # AcceleratorClient to stop
-        accelerator = DummyAccelerator('Dummy')
-        assert accelerator.stop(info_dict=True) == stop_list
-        assert not StopApi.is_running
+    # Test: Auto-stops with context manager
+    with Client('Dummy') as client:
+        assert not client._stopped
+    assert client._stopped
 
-        # Ignore OpenApi exceptions
-        stop_list_raise = True
-        assert DummyAccelerator('Dummy').stop(
-            info_dict=True) is None
-        assert not StopApi.is_running
-        stop_list_raise = False
-
-        # Auto-stops with context manager
-        StopApi.is_running = True
-        with DummyAccelerator('Dummy') as accelerator:
-            # Checks __enter__ returned object
-            assert isinstance(accelerator, RESTClient)
-        assert not StopApi.is_running
-
-        # Auto-stops on garbage collection
-        StopApi.is_running = True
-        DummyAccelerator('Dummy')
-        gc.collect()
-        assert not StopApi.is_running
-
-        # No accelerator to stop
-        is_alive = False
-        assert DummyAccelerator('Dummy').stop(
-            info_dict=True) is None
-
-    # Restore OpenApi client API
-    finally:
-        rest_api.StopApi = rest_api_stop_api
+    # Test: No accelerator to stop
+    is_alive = False
+    assert Client('Dummy').stop(info_dict=True) is None
 
 
-def test_restclient_process(tmpdir):
+def test_restclient_process():
     """Tests RESTClient._process"""
     import apyfal.exceptions as exc
-    import apyfal.client.rest._openapi as rest_api
     from apyfal.client.rest import RESTClient
 
-    # Creates temporary output dir and file in
-    tmp_dir = tmpdir.dirpath()
-    file_in = tmp_dir.join('file_in.txt')
-    dir_out = tmp_dir.join('subdir')
-    file_out = dir_out.join('file_out.txt')
+    dummy_id = 123
+    dummy_url = 'https://www.accelize.com'
+    datafileresult = 'url/to/file'
+    parameters_result = {'app': {'status': 0}}
+    response_json = json.dumps({
+        'id': dummy_id, 'parametersresult': parameters_result,
+        'datafileresult': datafileresult, 'processed': True,
+        'url': dummy_url, 'inerror': False}).encode()
+    file_content = b'content'
+    file_in = io.BytesIO(file_content)
+    file_out = io.BytesIO()
 
-    # Mocks some variables
-    dummy_id = 'dummy_id'
-    processed = False
-    in_error = True
-    specific = {'result': '1'}
-    parameters_result = {'app': {
-        'status': 0,
-        'msg': 'dummy_parameters_result',
-        'specific': specific}}
-    datafile_result = {'app': {
-        'status': 0, 'msg': 'dummy_datafile_result'}}
-    out_content = b'file out content'
-    post_response = json.dumps({'id': dummy_id}).encode()
+    # Mock some client parts
 
-    # Mocks OpenApi REST API ProcessApi
-    class ProcessApi:
-        """Fake rest_api.ProcessApi"""
-
-        def __init__(self, api_client):
-            """Store API client"""
-            self.api_client = api_client
-
-        @staticmethod
-        def process_read(id_value):
-            """Checks input arguments and returns fake response"""
-            Response = collections.namedtuple(
-                'Response', ['processed', 'inerror',
-                             'parametersresult', 'datafileresult'])
-
-            # Check parameters
-            assert id_value == 'dummy_id'
-
-            # Returns response
-            return Response(
-                processed=True, inerror=in_error,
-                parametersresult=json.dumps(parameters_result),
-                datafileresult=json.dumps(datafile_result))
-
-        @staticmethod
-        def process_delete(id_value):
-            """Checks input arguments"""
-            # Check parameters
-            assert id_value == 'dummy_id'
-
-    # Mock some accelerators parts
-    class DummyAccelerator(RESTClient):
+    class Client(RESTClient):
         """Dummy AcceleratorClient"""
-
-        def _process_openapi(self, accelerator_parameters, datafile):
-            """Mocks process function (tested separately)
-
-            Checks input arguments and returns fake response"""
-            # Checks input parameters
-            assert json.loads(
-                accelerator_parameters) == self._process_parameters
-            assert datafile == file_in
-
-            # Returns fake result
-            return dummy_id, processed
-
-        _process_curl = _process_openapi
 
         def __del__(self):
             """Does nothing"""
 
-    # Mocks requests in utilities
-    class DummySession(requests.Session):
+        def _use_last_configuration(self):
+            """Does nothing"""
+
+    client = Client('accelerator', host_ip=dummy_url)
+
+    # Mocks requests session
+    class Session(requests.Session):
         """Fake requests.Session"""
 
         @staticmethod
-        def get(datafile_result_arg, **_):
+        def get(url, **_):
             """Checks input arguments and returns fake response"""
-            Response = collections.namedtuple('Response', ['raw'])
+            response = requests.Response()
+            response.status_code = 200
 
-            # Checks input parameters
-            assert json.loads(datafile_result_arg) == datafile_result
+            if '/process/%s' % dummy_id in url:
+                response._content = response_json
+            elif url == datafileresult:
+                response.raw = io.BytesIO(file_content)
+                response.raw.seek(0)
+            else:
+                raise ValueError('Unexpected url: %s' % url)
 
-            # Returns fake response
-            return Response(raw=io.BytesIO(out_content))
+            return response
 
         @staticmethod
         def post(url, data=None, **_):
             """Checks input arguments and returns fake response"""
             # Checks input parameters
             assert '/process' in url
-            assert hasattr(data.fields['datafile'][1], 'read')
+            stream = data.fields['datafile'][1]
+            stream.seek(0)
+            assert data.fields['configuration'] == dummy_url
+            assert stream.read() == file_content
             assert json.loads(data.fields['parameters']) == (
-                RESTClient.DEFAULT_PROCESS_PARAMETERS)
+                client._process_parameters)
 
             # Returns fake response
             response = requests.Response()
-            response._content = post_response
+            response._content = response_json
             response.status_code = 200
             return response
 
-    # Monkey patch OpenApi client with mocked API
-    openapi_client_process_api = rest_api.ProcessApi
-    rest_api.ProcessApi = ProcessApi
+        @staticmethod
+        def delete(url, data=None, **_):
+            """Checks input arguments and returns fake response"""
+            # Checks input parameters
+            assert '/process/%s' % dummy_id in url in url
 
-    # Monkey patch requests in utilities
-    requests_session = requests.Session
-    requests.Session = DummySession
+    client._session = Session()
 
-    # Tests
-    try:
-        # Test accelerator not configured
-        accelerator = DummyAccelerator('Dummy')
-        with pytest.raises(exc.ClientConfigurationException):
-            accelerator.process()
+    # Test: No configuration
+    with pytest.raises(exc.ClientConfigurationException):
+        assert client.process(file_in=file_in)
+    client._configuration_url = dummy_url
 
-        accelerator._configuration_url = 'dummy_configuration'
+    # Test: run process
+    client.process(file_in=file_in, file_out=file_out)
+    file_out.seek(0)
+    assert file_out.read() == file_content
 
-        # Test input file not exists
-        with pytest.raises(exc.ClientConfigurationException):
-            accelerator.process(str(file_in), str(file_out))
 
-        # Creates input file
-        file_in.write('file in content')
-        assert file_in.check(file=True)
+def test_restclient_raise_for_error():
+    """Tests RESTClient._raise_for_error"""
+    from apyfal.client.rest import RESTClient
+    import apyfal.exceptions as exc
 
-        # Test result "inerror" and output-dir creation
-        assert not dir_out.check(dir=True)
+    response = requests.Response()
 
-        with pytest.raises(exc.ClientRuntimeException):
-            accelerator.process(str(file_in), str(file_out))
+    # Test: Everything OK
+    response_dict = {'inerror': False}
+    response._content = json.dumps(response_dict).encode()
+    response.status_code = 200
+    assert RESTClient._raise_for_error(response) == response_dict
 
-        assert dir_out.check(dir=True)
+    # Test: HTTP Error
+    response.status_code = 500
+    with pytest.raises(exc.ClientRuntimeException):
+        RESTClient._raise_for_error(response)
 
-        # Sets to not in error
-        in_error = False
+    # Test: Invalid response
+    response.status_code = 200
+    response._content = b''
+    with pytest.raises(exc.ClientRuntimeException):
+        RESTClient._raise_for_error(response)
 
-        # Check if working as excepted
-        assert accelerator.process(
-            str(file_in), str(file_out), info_dict=True) == (
-                   specific, parameters_result)
-        assert file_out.read_binary() == out_content
+    # Test: in error response
+    response._content = json.dumps({'inerror': True}).encode()
+    with pytest.raises(exc.ClientRuntimeException):
+        RESTClient._raise_for_error(response)
 
-        # Checks without info_dict
-        assert accelerator.process(str(file_in), str(file_out)) == specific
-
-        # Checks returns bad result
-        post_response = b''
-        with pytest.raises(exc.ClientRuntimeException):
-            accelerator.process(str(file_in), str(file_out))
-        post_response = b'{}'
-        with pytest.raises(exc.ClientRuntimeException):
-            accelerator.process(str(file_in), str(file_out))
-        post_response = json.dumps({'id': dummy_id}).encode()
-
-        # Checks without result
-        del parameters_result['app']['specific']
-        assert accelerator.process(str(file_in), str(file_out)) == dict()
-
-    # Restore requests and OpenApi API
-    finally:
-        requests.Session = requests_session
-        rest_api.ProcessApi = openapi_client_process_api
+    # Test: No in error in response
+    response._content = json.dumps({}).encode()
+    with pytest.raises(exc.ClientRuntimeException):
+        RESTClient._raise_for_error(response)
