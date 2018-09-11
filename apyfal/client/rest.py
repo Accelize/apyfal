@@ -5,7 +5,7 @@ This client allow remote accelerator control."""
 import json as _json
 import shutil as _shutil
 
-import requests as _requests
+from requests.exceptions import HTTPError as _HTTPError
 from requests_toolbelt.multipart.encoder import (
     MultipartEncoder as _MultipartEncoder)
 
@@ -298,7 +298,7 @@ class RESTClient(_Client):
         # Handles requests HTTP errors
         try:
             response.raise_for_status()
-        except _requests.exceptions.HTTPError as exception:
+        except _HTTPError as exception:
             raise _exc.ClientRuntimeException(exc=exception)
 
         # Gets result as dict
