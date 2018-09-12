@@ -182,7 +182,9 @@ def test_parse_and_run():
             'unknown': 'unknown_value',
             'equal': 'equal_value',
             'spaced': 'value1 value2',
-            'spaced_equal': 'value3 value4'}
+            'spaced_equal': 'value3 value4',
+            'numeric': 12,
+            'spaced_numeric': '12 12'}
 
     argv = sys.argv
     main._action_dummy = dummy_action
@@ -196,7 +198,10 @@ def test_parse_and_run():
             '--unknown', 'unknown_value',
             '--equal=equal_value',
             '--spaced', 'value1', 'value2',
-            '--spaced_equal=value3', 'value4']
+            '--spaced_equal=value3', 'value4',
+            '--numeric', '12',
+            '--spaced_numeric', '12', '12'
+        ]
         _parse_and_run(dummy_parser)
 
         # No command

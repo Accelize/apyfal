@@ -260,6 +260,10 @@ def _parse_and_run(parser):
     Args:
         parser (argparse.ArgumentParser): Argument parser
     """
+    from ast import literal_eval
+    import sys
+    from os.path import abspath, dirname
+
     # Parses known arguments
     namespace, extra_args = parser.parse_known_args()
     kwargs = vars(namespace)
@@ -285,12 +289,17 @@ def _parse_and_run(parser):
         # value
         else:
             value = arg.strip()
+            try:
+                # Convert literal values
+                value = literal_eval(value)
+            except ValueError:
+                pass
 
         # Saves value
         if parameter and value:
             # Space separated value
             if parameter in kwargs:
-                kwargs[parameter] += ' %s' % value
+                kwargs[parameter] = '%s %s' % (kwargs[parameter], value)
 
             # Simple value
             else:
@@ -300,8 +309,6 @@ def _parse_and_run(parser):
 
     # Adds parent directory to sys.path:
     # Allows import of Apyfal if this script is run locally
-    import sys
-    from os.path import abspath, dirname
     sys.path.insert(
         0, dirname(dirname(abspath(__file__))))
 
