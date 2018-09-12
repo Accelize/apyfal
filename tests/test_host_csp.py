@@ -152,11 +152,24 @@ def test_csphost_properties():
     # Test: properties values
     assert csp.host_type == host_type
     assert csp.public_ip == public_ip
+    assert csp.host_ip == public_ip
     assert csp.private_ip == private_ip
     assert csp.url == url
     assert csp.instance_id == instance_id
     assert csp.stop_mode == stop_mode
     assert csp.key_pair == key_pair
+
+    # Test: Use private IP
+    csp_private = DummyClass(
+        host_type=host_type,
+        instance_id=instance_id, stop_mode=stop_mode,
+        region=region, key_pair=key_pair, use_private_ip=True)
+    csp_private._instance = 'dummy_instance'
+    csp_private._url = 'http://127.0.0.1'
+
+    assert csp_private.public_ip == public_ip
+    assert csp_private.host_ip == private_ip
+    assert csp_private.private_ip == private_ip
 
     # Test: Information property
     # 'not_exists' tests case where a value is not defined on class
