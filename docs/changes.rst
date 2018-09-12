@@ -29,6 +29,8 @@ Fixes:
 - Server side logging was improved.
 - Apyfal CLI: Fixed parsing of numeric parameters.
 - Apyfal CLI: Fixed result dict handling.
+- Fix accelerator application stopped if client with exited or garbage
+  collected.
 
 Deprecations:
 

@@ -127,6 +127,7 @@ def test_data_file(tmpdir):
 
         def __init__(self, *_, **__):
             """Do nothing"""
+            self._stopped = False
             self._cache = {'tmp_dir': str(tmpdir)}
             self._authorized_host_dirs = [str(authorized_dir)]
 

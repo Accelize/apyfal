@@ -208,6 +208,7 @@ def test_syscall_client_run_executable():
 
         def __init__(self, *_, **__):
             self._cache = {'tmp_dir': dummy_tmp}
+            self._stopped = False
 
     syscall_call = syscall._call
     syscall._call = dummy_call

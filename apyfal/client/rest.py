@@ -261,11 +261,6 @@ class RESTClient(_Client):
         Returns:
             dict or None: response.
         """
-        if self._stopped:
-            # Avoid double call with __exit__ + __del__
-            return
-        self._stopped = True
-
         try:
             self._is_alive()
         except _exc.ClientRuntimeException:

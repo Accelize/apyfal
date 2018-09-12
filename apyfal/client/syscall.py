@@ -141,15 +141,8 @@ class SysCallClient(_Client):
         Returns:
             dict or None: response.
         """
-        if not _cfg.accelerator_executable_available():
-            # Don't try to stop accelerator if not present
-            return
-
-        response = self._run_executable(
+        return self._run_executable(
             mode='2', output_json=str(_uuid()) if info_dict else None)
-
-        # Gets optional information
-        return response
 
     def _run_executable(
             self, mode, input_file=None, output_file=None, input_json=None,
@@ -273,10 +266,10 @@ class SysCallClient(_Client):
             config_env if key not in ('client_id', 'client_secret'))
 
         # All is already up to date: caches values
-        # TODO : remove the false later
-        if (not update_config or not update_credentials) and False:
+        if not update_config or not update_credentials:
             self._metering_env = full_env
-            return
+            # TODO : Uncomment return once stabilized
+            # return
 
         # Stop services
         _systemctl(

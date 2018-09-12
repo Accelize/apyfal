@@ -1,15 +1,18 @@
 # Coverage.py configuration (Used pytest-cov)
 
 [run]
-# Ignore generated OpenApi code since we don't use it completely and don't change it
 omit=
     .tox/*
+    docs/conf.py
 
 [report]
-# Exclude logging functions and some non production error cases
+# Exclude:
+# - Logging functions
+# - CLI entry point
 exclude_lines =
     _get_logger()
     def _log_profiling_info
     def get_logger
     if _enable_logger:
     _enable_logger =
+    if __name__ == '__main__':

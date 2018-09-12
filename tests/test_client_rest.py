@@ -114,7 +114,8 @@ def test_restclient_start():
         def _use_last_configuration(self):
             """Does nothing"""
 
-    client = Client('accelerator', host_ip=dummy_url)
+    client = Client('accelerator', host_ip=dummy_url,
+                    accelize_client_id='client', accelize_secret_id='secret')
 
     # Mocks requests session
     class Session(requests.Session):
@@ -354,6 +355,13 @@ def test_restclient_process():
 
     # Test: run process
     client.process(file_in=file_in, file_out=file_out)
+    file_out.seek(0)
+    assert file_out.read() == file_content
+
+    # Test: run process with info_dict
+    file_out.seek(0)
+    assert client.process(file_in=file_in, file_out=file_out,
+                          info_dict=True) == (dict(), parameters_result)
     file_out.seek(0)
     assert file_out.read() == file_content
 

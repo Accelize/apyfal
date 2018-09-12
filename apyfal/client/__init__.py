@@ -115,10 +115,10 @@ class AcceleratorClient(_utl.ABC):
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.stop()
+        self.stop(full_stop=False)
 
     def __del__(self):
-        self.stop()
+        self.stop(full_stop=False)
 
     def __str__(self):
         return "<%s.%s accelerator='%s' type='%s'%s>" % (
@@ -267,13 +267,16 @@ class AcceleratorClient(_utl.ABC):
             dict: response.
         """
 
-    def stop(self, info_dict=False):
+    def stop(self, info_dict=False, full_stop=True):
         """
         Stop accelerator.
 
         Args:
             info_dict (bool): If True, returns a dict containing information on
                 stop operation.
+            full_stop (bool): If True, send stop request to accelerator
+                application. If False only clean up accelerator client
+                environment.
 
         Returns:
             dict: Optional, only if "info_dict" is True. AcceleratorClient
@@ -281,8 +284,16 @@ class AcceleratorClient(_utl.ABC):
                 stop operation. Take a look to accelerator documentation for
                 more information.
         """
+        if self._stopped:
+            # Avoid double call with __exit__ + __del__
+            return
+        self._stopped = True
+
         # Stops
-        response = self._stop(info_dict)
+        if full_stop:
+            response = self._stop(info_dict)
+        else:
+            response = dict()
 
         # Clears temporary directory
         try:
