@@ -11,6 +11,8 @@ General improvements
   available using extra setup options.
 - Apyfal CLI: ``create`` is now optional if can be called without any arguments,
   This is mainly indented to use local accelerator directly on host.
+- It is now possible to use private IP instead of public IP as accelerator
+  default URL. See ``use_private_ip`` parameter.
 
 REST client improvements
 
