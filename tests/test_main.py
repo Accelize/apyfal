@@ -148,6 +148,11 @@ def test_get_accelerator(tmpdir):
         with pytest.raises(_CommandLineException):
             _get_accelerator('Not_Exists', action='load')
 
+        # Re-raise exception on create
+        with pytest.raises(apyfal.exceptions.AcceleratorException):
+            _get_accelerator('Fail_to_create', action='create',
+                             parameters=parameters)
+
     # Restore cache dir
     finally:
         main._ACCELERATOR_CACHE = old_cache_dir
