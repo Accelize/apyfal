@@ -248,9 +248,16 @@ class Accelerator(object):
                 stop operation. Take a look to accelerator documentation for
                 more information.
         """
-        # Stops accelerator
+        # Updates stop mode
+        if self._host is not None:
+            self._host.stop_mode = stop_mode
+            stop_mode = self._host.stop_mode
+
+        # Stops accelerator, performs full stop only if not in "keep" mode
         try:
-            return self._client.stop(info_dict=info_dict)
+            return self._client.stop(
+                info_dict=info_dict,
+                full_stop=False if stop_mode == 'keep' else True)
 
         except (AttributeError, _exc.ClientException):
             return None

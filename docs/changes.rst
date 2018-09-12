@@ -31,6 +31,7 @@ Fixes:
 - Apyfal CLI: Fixed result dict handling.
 - Fix accelerator application stopped if client with exited or garbage
   collected.
+- Fix instance still running warning shown twice.
 
 Deprecations:
 

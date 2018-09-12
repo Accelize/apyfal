@@ -109,6 +109,7 @@ class CSPHost(_Host):
         self._image_name = None
         self._instance_type = None
         self._instance_type_name = None
+        self._warn_keep_once = False
 
         # Read configuration from file
         section = self._config[self._config_section]
@@ -443,8 +444,10 @@ class CSPHost(_Host):
 
         # Keep instance alive
         if stop_mode == 'keep':
-            _get_logger().warning(
-                "Instance '%s' is still running" % self.instance_id)
+            if not self._warn_keep_once:
+                self._warn_keep_once = True
+                _get_logger().warning(
+                    "Instance '%s' is still running" % self.instance_id)
             return
 
         # Checks if instance to stop

@@ -91,7 +91,7 @@ def test_accelerator():
             assert parameters == {'parameters': dummy_accelerator_parameters}
             return dummy_start_result
 
-        def stop(self, info_dict=True):
+        def stop(self, info_dict=True, **_):
             """Returns fake result"""
             DummyClient.running = False
 
