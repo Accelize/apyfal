@@ -82,12 +82,11 @@ class Host(_utl.ABC):
 
         self._url = _utl.format_url(host_ip or section['host_ip'])
 
-        self.stop_mode = (
-            stop_mode or section['stop_mode'] or
-            ('keep' if host_ip else 'term'))
+        self.stop_mode = (stop_mode or section['stop_mode'] or
+                          ('keep' if host_ip else 'term'))
 
         self._host_name_prefix = (host_name_prefix or
-                                      section['host_name_prefix'] or '')
+                                  section['host_name_prefix'] or '')
 
     def __enter__(self):
         return self

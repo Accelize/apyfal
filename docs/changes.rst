@@ -32,6 +32,7 @@ Fixes:
 - Fix accelerator application stopped if client with exited or garbage
   collected.
 - Fix instance still running warning shown twice.
+- Fix ``stop_mode`` overridden by default accelerator value.
 
 Deprecations:
 

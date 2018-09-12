@@ -69,7 +69,7 @@ class Accelerator(object):
     """
     def __init__(self, accelerator=None, config=None, accelize_client_id=None,
                  accelize_secret_id=None, host_type=None, host_ip=None,
-                 stop_mode='term', **host_kwargs):
+                 stop_mode=None, **host_kwargs):
 
         # Initialize configuration
         config = _cfg.create_configuration(config)
