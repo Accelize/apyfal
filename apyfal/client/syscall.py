@@ -78,6 +78,10 @@ class SysCallClient(_Client):
     #: Client type
     NAME = 'SysCall'
 
+    # Needs the use of temporary files
+    _PARAMETER_IO_FORMAT = {
+        'file_in': 'file', 'file_out': 'file', 'datafile': 'file'}
+
     def __init__(self, *args, **kwargs):
         _Client.__init__(self, *args, **kwargs)
 

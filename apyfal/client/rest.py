@@ -41,10 +41,6 @@ class RESTClient(_Client):
     # Client is remote or not
     REMOTE = True
 
-    # Format required for parameter: 'file' (default) or 'stream'
-    _PARAMETER_IO_FORMAT = {
-        'file_in': 'stream', 'file_out': 'stream', 'datafile': 'stream'}
-
     # REST API routes
     _REST_API = {
         'process': '/v1.0/process/',
