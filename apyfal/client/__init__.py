@@ -357,11 +357,8 @@ class AcceleratorClient(_utl.ABC):
             result = default_parameters
 
         # Gets parameters from included JSON file
-        try:
-            json_parameters = parameters.pop('parameters')
-        except KeyError:
-            pass
-        else:
+        json_parameters = parameters.pop('parameters', None)
+        if json_parameters:
             # Reads JSON parameter from file or literal
             if not isinstance(json_parameters, dict):
                 # JSON literal
