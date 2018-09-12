@@ -105,6 +105,8 @@ class AWSHost(_CSPHost):
         host_name_prefix (str): Prefix to add to instance name.
         host_ip (str): IP or URL address of an already existing AWS EC2 instance
             to use. If not specified, create a new instance.
+        use_private_ip (bool): If True, on new instances,
+            uses private IP instead of public IP as default host IP.
         role (str): AWS IAM role. Generated to allow instance to load AGFI
             (FPGA bitstream) and access to S3. Default to 'AccelizeRole'.
         stop_mode (str or int): Define the "stop" method behavior.

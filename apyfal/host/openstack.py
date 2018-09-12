@@ -76,6 +76,8 @@ class OpenStackHost(_CSPHost):
         host_name_prefix (str): Prefix to add to instance name.
         host_ip (str): IP or URL address of an already existing OpenStack nova
             instance to use. If not specified, create a new instance.
+        use_private_ip (bool): If True, on new instances,
+            uses private IP instead of public IP as default host IP.
         project_id (str): OpenStack Project
         auth_url (str): OpenStack auth-URL
         stop_mode (str or int): Define the "stop" method behavior.

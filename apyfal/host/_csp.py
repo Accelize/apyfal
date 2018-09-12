@@ -42,6 +42,8 @@ class CSPHost(_Host):
         host_name_prefix (str): Prefix to add to instance name.
         host_ip (str): IP or URL address of an already existing CSP instance to
             use. If not specified, create a new instance.
+        use_private_ip (bool): If True, on new instances,
+            uses private IP instead of public IP as default host IP.
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing
             instance. See "stop_mode" property for more information and possible
@@ -80,7 +82,7 @@ class CSPHost(_Host):
     _INFO_NAMES.update({
         'public_ip', 'private_ip', '_region', '_instance_type',
         '_key_pair', '_security_group', '_instance_id',
-        '_instance_type_name', '_region_parameters'})
+        '_instance_type_name', '_region_parameters', 'host_ip'})
 
     # Instance user home directory
     _HOME = '/home/centos'
@@ -100,7 +102,8 @@ class CSPHost(_Host):
     def __init__(self, client_id=None, secret_id=None, region=None,
                  instance_type=None, key_pair=None, security_group=None,
                  instance_id=None, init_config=None, init_script=None,
-                 ssl_cert_crt=None, ssl_cert_key=None, **kwargs):
+                 ssl_cert_crt=None, ssl_cert_key=None, use_private_ip=None,
+                 **kwargs):
         _Host.__init__(self, **kwargs)
 
         # Default some attributes
@@ -118,6 +121,8 @@ class CSPHost(_Host):
         self._region = region or section['region']
         self._instance_type = instance_type or section['instance_type']
         self._instance_id = instance_id or section['instance_id']
+        self._use_private_ip = (
+            use_private_ip or section['use_private_ip'] or False)
 
         self._key_pair = (
             key_pair or section['key_pair'] or
@@ -152,6 +157,23 @@ class CSPHost(_Host):
             raise _exc.HostConfigurationException(
                 "Need at least 'client_id', 'instance_id' or 'host_ip' "
                 "argument. See documentation for more information.")
+
+    @property
+    def host_ip(self):
+        """
+        Host IP of the current instance. This may return public or private IP
+        based on configuration.
+
+        Returns:
+            str: IP address
+
+        Raises:
+            apyfal.exceptions.HostRuntimeException:
+                No instance from which get IP.
+        """
+        if self._use_private_ip:
+            return self.private_ip
+        return self.public_ip
 
     @property
     def public_ip(self):
@@ -351,7 +373,7 @@ class CSPHost(_Host):
                 raise
 
             # Update instance URL
-            self._url = _utl.format_url(self.public_ip)
+            self._url = _utl.format_url(self.host_ip)
 
             # Waiting for the instance to boot
             _get_logger().info("Waiting instance boot...")

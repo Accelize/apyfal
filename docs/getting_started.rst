@@ -111,7 +111,7 @@ time. Don’t forget to terminate your cloud instance after use.*
 
        # We can get and store the host IP and instance ID for later use
        my_host_instance_id = myaccel.host.instance_id
-       my_host_ip = myaccel.host.public_ip
+       my_host_ip = myaccel.host.host_ip
 
    # This time the host is not deleted and will stay running when the
    # accelerator is closed.
@@ -198,7 +198,7 @@ You connect to your host using SSH:
   The related private key file in ``.pem`` format is generally stored in the
   ``.ssh`` sub folder of user home.
 - ``host_ip`` is the IP address of the instance and can be obtained with
-  ``myaccel.host.public_ip``.
+  ``myaccel.host.host_ip``.
 
 **Linux:**
 
