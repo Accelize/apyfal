@@ -85,7 +85,7 @@ def _handle_command(func):
             return
 
         # Returns result using parser
-        parser.exit(message=result if result else None)
+        parser.exit(message=str(result) if result else None)
 
     return patched
 

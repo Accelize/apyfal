@@ -27,7 +27,8 @@ Fixes:
 
 - Fix bad text formatting in some exception messages.
 - Server side logging was improved.
-- Apyfal CLI: Fixed parsing of numeric values.
+- Apyfal CLI: Fixed parsing of numeric parameters.
+- Apyfal CLI: Fixed result dict handling.
 
 Deprecations:
 
