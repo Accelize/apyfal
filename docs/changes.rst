@@ -9,6 +9,8 @@ General improvements
 - Add ``boto3`` as default dependency. Actually AWS is the only provider
   ready for production and is the most commonly used. Other providers are
   available using extra setup options.
+- With Apyfal CLI, create is optional if can be called without any arguments,
+  This is mainly indented to use local accelerator directly on host.
 
 REST client improvements
 

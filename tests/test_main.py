@@ -7,8 +7,7 @@ import pytest
 
 def test_cached_accelerator(tmpdir):
     """Tests _cached_accelerator"""
-    from apyfal.__main__ import (
-        _cached_accelerator, _CommandLineException)
+    from apyfal.__main__ import _cached_accelerator
     import apyfal.__main__ as main
 
     name = 'accelerator'
@@ -31,8 +30,7 @@ def test_cached_accelerator(tmpdir):
         assert _cached_accelerator(
             name=name, action='load') == parameters
 
-        with pytest.raises(_CommandLineException):
-            _cached_accelerator(name='not_exists', action='load')
+        assert _cached_accelerator(name='not_exists', action='load') == {}
 
         # Delete
         _cached_accelerator(name=name, action='delete')
@@ -48,8 +46,7 @@ def test_cached_accelerator(tmpdir):
 
 def test_handle_command():
     """Tests _handle_command"""
-    from apyfal.__main__ import (
-        _handle_command, _CommandLineException)
+    from apyfal.__main__ import _handle_command, _CommandLineException
 
     result = 'result'
     raises_exceptions = False
@@ -101,7 +98,7 @@ def test_handle_command():
 
 def test_get_accelerator(tmpdir):
     """Tests _get_accelerator"""
-    from apyfal.__main__ import _get_accelerator
+    from apyfal.__main__ import _get_accelerator, _CommandLineException
     import apyfal.__main__ as main
     import apyfal
 
@@ -109,6 +106,7 @@ def test_get_accelerator(tmpdir):
     parameters = {'instance_id': '123',
                   'accelerator': 'accelerator'}
     cache_dir = tmpdir.join('cache')
+    raise_exception = False
 
     # Mock cache dir and Accelerator
     old_cache_dir = main._ACCELERATOR_CACHE
@@ -119,6 +117,8 @@ def test_get_accelerator(tmpdir):
 
         def __init__(self, *_, **kwargs):
             """Checks arguments"""
+            if raise_exception:
+                raise apyfal.exceptions.AcceleratorException
             assert kwargs == parameters
 
     apyfal_accelerator = apyfal.Accelerator
@@ -137,6 +137,16 @@ def test_get_accelerator(tmpdir):
         # Load accelerator
         accelerator = _get_accelerator(name, action='update')
         assert isinstance(accelerator, Accelerator)
+
+        # Load not cached accelerator (But can be instantiated without create)
+        parameters = {}
+        accelerator = _get_accelerator('Not_exists_but_ok', action='load')
+        assert isinstance(accelerator, Accelerator)
+
+        # Load not cached accelerator (But fail to instantiate without create)
+        raise_exception = True
+        with pytest.raises(_CommandLineException):
+            _get_accelerator('Not_Exists', action='load')
 
     # Restore cache dir
     finally:

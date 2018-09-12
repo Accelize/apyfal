@@ -28,27 +28,25 @@ def _cached_accelerator(name, action, parameters=None):
     cache_dir = expanduser(_ACCELERATOR_CACHE)
     cached_file = join(cache_dir, name)
 
-    # Dump cache
+    # Dumps cache
     if action == 'dump':
-        # Ensure directory exists
+        # Ensures directory exists
         from apyfal._utilities import makedirs
         makedirs(cache_dir, exist_ok=True)
 
-        # Dump Accelerator object
+        # Dumps Accelerator object
         with open(cached_file, 'wt') as file:
             dump(parameters, file)
 
-    # Load cache
+    # Loads cache
     elif action == 'load':
         if isfile(cached_file):
             with open(cached_file, 'rt') as file:
                 return load(file)
-        raise _CommandLineException((
-            'No accelerator found for "--name %s"'
-            'Please run "apyfal create" command before'
-            ' use other commands.') % name)
+        # Returns empty configuration if not file found
+        return dict()
 
-    # Delete cache
+    # Deletes cache
     elif action == 'delete':
         from os import remove
         try:
@@ -76,17 +74,17 @@ def _handle_command(func):
         """
         from apyfal.exceptions import AcceleratorException
 
-        # Run function
+        # Runs function
         try:
             result = func(parser, *args, **kwargs)
 
-        # Print error and set status code using parser
+        # Prints error and set status code using parser
         except (_CommandLineException,
                 AcceleratorException) as exception:
             parser.error(str(exception))
             return
 
-        # Return result using parser
+        # Returns result using parser
         parser.exit(message=result if result else None)
 
     return patched
@@ -106,19 +104,31 @@ def _get_accelerator(name, action='load', parameters=None,
     Returns:
         apyfal.Accelerator: Accelerator instance.
     """
-    # Load cached accelerator
+    # Loads cached accelerator
     if action in ('load', 'update'):
         parameters = _cached_accelerator(name, 'load')
 
-    # Instantiate accelerator
+    # Instantiates accelerator
     if accelerator is None:
-        from apyfal import Accelerator, get_logger
-        accelerator = Accelerator(**parameters)
+        from apyfal import Accelerator, get_logger, exceptions
 
-        # Show logger
+        # Shows logger
         get_logger(True)
 
-    # Cache accelerator
+        # Tries to instantiates accelerator
+        try:
+            accelerator = Accelerator(**parameters)
+
+        # Raises special exception if accelerator not created previously
+        except exceptions.AcceleratorException:
+            if action != 'create':
+                raise _CommandLineException((
+                    'No accelerator found for "--name %s"'
+                    'Please run "apyfal create" command before'
+                    ' use other commands.') % name)
+            raise
+
+    # Caches accelerator
     if action in ('create', 'update'):
         for attribute, key in (
                 ('host_type', 'host_type'),
@@ -132,7 +142,7 @@ def _get_accelerator(name, action='load', parameters=None,
 
         _cached_accelerator(name, 'dump', parameters)
 
-    # Return accelerator
+    # Returns accelerator
     return accelerator
 
 
@@ -168,11 +178,11 @@ def _action_start(_, parameters):
     accelerator = _get_accelerator(name=name)
     result = accelerator.start(**parameters)
 
-    # Update cached accelerator
+    # Updates cached accelerator
     _get_accelerator(
         name=name, action='update', accelerator=accelerator)
 
-    # Show Accelerator information
+    # Shows Accelerator information
     try:
         ip_address = accelerator.host.url
         if ip_address is not None and '://' in ip_address:
@@ -212,7 +222,7 @@ def _action_stop(_, parameters):
     Returns:
         dict: apyfal.Accelerator.stop result.
     """
-    # Stop accelerator
+    # Stops accelerator
     name = parameters.pop('name')
     result = _get_accelerator(name=name).stop(**parameters)
 
@@ -250,16 +260,16 @@ def _parse_and_run(parser):
     Args:
         parser (argparse.ArgumentParser): Argument parser
     """
-    # Parse known arguments
+    # Parses known arguments
     namespace, extra_args = parser.parse_known_args()
     kwargs = vars(namespace)
 
-    # Get command name
+    # Gets command name
     command = kwargs.pop(_COMMAND_DEST)
     if not command:
         parser.error('An Apyfal command is required')
 
-    # Parser unknown arguments
+    # Parsers unknown arguments
     parameter = None
     value = None
     for arg in extra_args:
@@ -276,7 +286,7 @@ def _parse_and_run(parser):
         else:
             value = arg.strip()
 
-        # Save value
+        # Saves value
         if parameter and value:
             # Space separated value
             if parameter in kwargs:
@@ -288,15 +298,14 @@ def _parse_and_run(parser):
 
         value = None
 
-    # Add parent directory to sys.path:
-    # Allow import of Apyfal if this script
-    # is run locally
+    # Adds parent directory to sys.path:
+    # Allows import of Apyfal if this script is run locally
     import sys
     from os.path import abspath, dirname
     sys.path.insert(
         0, dirname(dirname(abspath(__file__))))
 
-    # Run command
+    # Runs command
     globals()['_action_%s' % command](parser, kwargs)
 
 
@@ -307,10 +316,10 @@ def _run_command():
     from argparse import ArgumentParser, SUPPRESS
     from warnings import filterwarnings
 
-    # Disable Python warnings
+    # Disables Python warnings
     filterwarnings("ignore")
 
-    # Initialize some values
+    # Initializes some values
     epilog_base = (
         'Extra parameters can be passed '
         'as "--parameter_name=parameter_value". ')
@@ -319,7 +328,7 @@ def _run_command():
              'was created with "create" commands',
         default='default')
 
-    # Create command line argument parser
+    # Creates command line argument parser
     parser = ArgumentParser(
         prog='apyfal', description='Apyfal command line utility.')
     sub_parsers = parser.add_subparsers(
@@ -387,13 +396,13 @@ def _run_command():
     action.add_argument('--stop_mode', default='term')
 
     # apyfal.storage.copy()
-    description = 'Copy Apyfal Storage URL.'
+    description = 'Copy a file using Apyfal.storage.'
     action = sub_parsers.add_parser(
         'copy', help=description, description=description)
     action.add_argument('source')
     action.add_argument('destination')
 
-    # Clear cache function
+    # Clears cache function
     description = 'Clear cached accelerators.'
     sub_parsers.add_parser(
         'clear', help=description, description=description)
