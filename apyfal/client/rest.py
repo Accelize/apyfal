@@ -80,9 +80,9 @@ class RESTClient(_Client):
         # Check URL
         if not url:
             raise _exc.ClientConfigurationException("Host URL is not valid.")
-
         self._url = url = _utl.format_url(url)
 
+        # Updates endpoints
         for route in self._REST_API:
             self._endpoints[route] = url + self._REST_API[route]
 
@@ -108,7 +108,7 @@ class RESTClient(_Client):
         Reload last accelerator configuration.
         """
         # Get last configuration, if any
-        response = self._session.get(self.url + self._REST_API['start'])
+        response = self._session.get(self._endpoints['start'])
         try:
             last_config = response.json()['results'][0]
         except (KeyError, IndexError, ValueError):

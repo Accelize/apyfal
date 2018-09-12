@@ -189,7 +189,7 @@ def test_restclient_use_last_configuration():
 
     client = Client('accelerator')
     client._session = Session()
-    client._url = url
+    client.url = url
     assert not client._configuration_url
 
     # Test: Invalid response
