@@ -249,7 +249,7 @@ def check_url(url, timeout=0.0, max_retries=3, sleep=0.5,
             logger.setLevel(logger_level)
 
 
-def format_url(url_or_ip):
+def format_url(url_or_ip, force_secure=False):
     """
     Check format and format an IP address or URL to URL.
     If not directly an URL, format it to URL.
@@ -257,6 +257,7 @@ def format_url(url_or_ip):
     Args:
         url_or_ip (str): URL or IP address.
             If None, skip check and return None.
+        force_secure (bool): If True, always return URL with secure scheme.
 
     Returns:
         str: URL
@@ -285,7 +286,14 @@ def format_url(url_or_ip):
         if re.match(url_validator, url) is None:
             raise ValueError("Invalid URL '%s'" % url_or_ip)
         return url
-    return url_or_ip
+    else:
+        # Already formated
+        url = url_or_ip
+
+    if force_secure:
+        # Force HTTPS/FTPS
+        url = re.sub('^(http|ftp)(://)', r"\1s\2", url, flags=re.IGNORECASE)
+    return url
 
 
 def get_host_public_ip(max_tries=10, validation_sample=3):

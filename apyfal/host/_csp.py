@@ -373,7 +373,8 @@ class CSPHost(_Host):
                 raise
 
             # Update instance URL
-            self._url = _utl.format_url(self.host_ip)
+            self._url = _utl.format_url(
+                self.host_ip, force_secure=True if self._ssl_cert else False)
 
             # Waiting for the instance to boot
             _get_logger().info("Waiting instance boot...")

@@ -159,3 +159,32 @@ def test_memoizedmethod():
     assert dummy.to_memoize(value) == value
     assert dummy._cache == {'to_memoize': value}
     assert dummy.to_memoize(value) == value
+
+
+def test_format_url():
+    """Tests format_url"""
+    from apyfal._utilities import format_url
+
+    # Test: Empty values
+    assert format_url('') is None
+    assert format_url(None) is None
+
+    # Test: Values without schemes
+    assert format_url('127.0.0.1') == 'http://127.0.0.1'
+    assert format_url('localhost') == 'http://localhost'
+    assert format_url('accelize.com') == 'http://accelize.com'
+
+    # Test: Values with schemes
+    assert format_url('http://127.0.0.1') == 'http://127.0.0.1'
+    assert format_url('http://localhost') == 'http://localhost'
+    assert format_url('http://accelize.com') == 'http://accelize.com'
+
+    # Test: Bad URL
+    with pytest.raises(ValueError):
+        format_url('http://accelize')
+
+    # Test: Force HTTPS
+    assert format_url('http://accelize.com',
+                      force_secure=True) == 'https://accelize.com'
+    assert format_url('https://accelize.com',
+                      force_secure=True) == 'https://accelize.com'
