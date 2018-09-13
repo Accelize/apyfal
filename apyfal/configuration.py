@@ -128,7 +128,7 @@ class _Section(dict):
         return dict(self).__str__()
 
     def __repr__(self):
-        return '%s(%s)' % (object.__repr__(self), self.__str__())
+        return self.__str__()
 
     def set(self, parameter, value=None):
         """Set value to parameter and return
@@ -236,6 +236,9 @@ class Configuration(_Mapping):
         if configuration_file:
             # Initialize configuration parser
             ini_file = ConfigParser(allow_no_value=True)
+
+            # Keep option name case
+            ini_file.optionxform = str
 
             # Read from file with apyfal.storage support
             from apyfal.storage import open as srg_open

@@ -35,6 +35,7 @@ Fixes:
   collected.
 - Fix instance still running warning shown twice.
 - Fix ``stop_mode`` overridden by default accelerator value.
+- Fix case handling in configuration file.
 
 Deprecations:
 
