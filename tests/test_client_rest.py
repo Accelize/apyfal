@@ -158,6 +158,15 @@ def test_restclient_start():
     # Test: Already configured
     assert not client.start(info_dict=True)
 
+    # Test: SSL Certificate
+    content = b'certificate'
+    ssl_cert_crt = io.BytesIO(content)
+    client = Client('accelerator', host_ip=dummy_url,
+                    accelize_client_id='client', accelize_secret_id='secret',
+                    ssl_cert_crt=ssl_cert_crt)
+    with open(client._session.verify, 'rb') as tmp_cert:
+        assert tmp_cert.read() == content
+
 
 def test_restclient_use_last_configuration():
     """Tests RESTClient._use_last_configuration"""

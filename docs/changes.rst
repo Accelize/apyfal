@@ -23,7 +23,9 @@ REST client improvements
   simplify the REST client, removes some dependencies remove extra build step.
 - Improves exceptions handling to add more detailed information from
   server and handle HTTP errors correctly.
-- Allows HTTPS (Only for host configured with certificate).
+- Allows HTTPS (Default for host configured with certificate).
+- Allows to force verifying requests with a specified SSL certificate.
+  This improves security with host using self signed certificates.
 
 Fixes:
 

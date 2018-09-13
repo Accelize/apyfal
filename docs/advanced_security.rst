@@ -60,8 +60,11 @@ SSL certificate
 
 The SSL/TLS certificate allows to access host over HTTPS instead of HTTP.
 
-A certificate needs to be passed to the instance using ``ssl_cert_crt`` and
+A certificate needs to be passed to the host creation using ``ssl_cert_crt`` and
 ``ssl_cert_key`` parameters.
+
+If a client have the ``ssl_cert_crt`` specified, HTTPS is used by default and
+requests are verified using this certificate.
 
 Host side configuration file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

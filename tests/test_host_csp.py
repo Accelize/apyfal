@@ -126,6 +126,7 @@ def test_csphost_properties():
     stop_mode = 'keep'
     region = 'dummy_region'
     key_pair = 'dummy_key_pair'
+    ssl_cert_crt = 'dummy_ssl_cert_crt'
 
     # Mock CSP class
     class DummyClass(get_dummy_csp_class()):
@@ -145,7 +146,7 @@ def test_csphost_properties():
     csp = DummyClass(
         host_type=host_type,
         instance_id=instance_id, stop_mode=stop_mode,
-        region=region, key_pair=key_pair)
+        region=region, key_pair=key_pair, ssl_cert_crt=ssl_cert_crt)
     csp._instance = 'dummy_instance'
     csp._url = 'http://127.0.0.1'
 
@@ -158,6 +159,7 @@ def test_csphost_properties():
     assert csp.instance_id == instance_id
     assert csp.stop_mode == stop_mode
     assert csp.key_pair == key_pair
+    assert csp.ssl_cert_crt == ssl_cert_crt
 
     # Test: Use private IP
     csp_private = DummyClass(
@@ -863,4 +865,4 @@ def test_csphost_user_data(tmpdir):
 
     with pytest.raises(HostConfigurationException):
         DummyCSP(client_id='client_id', secret_id='secret_id',
-                 region='region', ssl_cert_key=str(ssl_key_file))
+                 region='region', ssl_cert_key=str(ssl_key_file))._user_data

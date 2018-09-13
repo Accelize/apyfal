@@ -116,6 +116,9 @@ def test_syscall_client_init():
     import apyfal.configuration as cfg
     import apyfal.exceptions as exc
 
+    # Test: accelerator_executable_available, checks return type
+    assert type(cfg.accelerator_executable_available()) is bool
+
     # Mocks some functions
     accelerator_available = True
 
@@ -130,8 +133,7 @@ def test_syscall_client_init():
         """Return fake result"""
         return accelerator_available
 
-    cfg_accelerator_executable_available = (
-        cfg.accelerator_executable_available)
+    cfg_accelerator_executable_available = cfg.accelerator_executable_available
     cfg.accelerator_executable_available = (
         dummy_accelerator_executable_available)
 

@@ -139,15 +139,11 @@ class CSPHost(_Host):
         self._init_config = init_config or section['init_config']
         self._init_script = init_script or section['init_script']
 
-        ssl_cert_crt = ssl_cert_crt or section['ssl_cert_crt']
-        ssl_cert_key = ssl_cert_key or section['ssl_cert_key']
-        if ssl_cert_crt and ssl_cert_key:
-            self._ssl_cert = ssl_cert_crt, ssl_cert_key
-        elif ssl_cert_crt or ssl_cert_key:
-            raise _exc.HostConfigurationException(
-                "Both 'ssl_cert_crt' and 'ssl_cert_key' are required")
-        else:
-            self._ssl_cert = None
+        self._ssl_cert_crt = ssl_cert_crt or section['ssl_cert_crt']
+        self._ssl_cert_key = ssl_cert_key or section['ssl_cert_key']
+        if self._ssl_cert_crt:
+            # Uses HTTPS by default
+            self._url = _utl.format_url(self._url, force_secure=True)
 
         # Checks mandatory configuration values
         self._check_arguments('region')
@@ -225,6 +221,16 @@ class CSPHost(_Host):
         if self._instance is None:
             raise _exc.HostRuntimeException(gen_msg='no_instance')
         return self._get_private_ip()
+
+    @property
+    def ssl_cert_crt(self):
+        """
+        SSL certificate used.
+
+        Returns:
+            str: Path to SSL certificate.
+        """
+        return self._ssl_cert_crt
 
     @_abstractmethod
     def _get_private_ip(self):
@@ -374,7 +380,8 @@ class CSPHost(_Host):
 
             # Update instance URL
             self._url = _utl.format_url(
-                self.host_ip, force_secure=True if self._ssl_cert else False)
+                self.host_ip,
+                force_secure=bool(self._ssl_cert_crt))
 
             # Waiting for the instance to boot
             _get_logger().info("Waiting instance boot...")
@@ -574,7 +581,7 @@ class CSPHost(_Host):
             str: shell script.
         """
         if (self._init_config is None and self._init_script is None and
-                self._ssl_cert is None):
+                self._ssl_cert_crt is None and self._ssl_cert_key is None):
             return None
 
         # Initializes file with shebang
@@ -594,13 +601,17 @@ class CSPHost(_Host):
                          stream.read(), "EOF\n"]
 
         # Gets SSL certificate
-        if self._ssl_cert:
-            ssl_crt_path, ssl_key_path = self._ssl_cert
-            for src, dst in ((ssl_crt_path, self._SSL_CERT_CRT),
-                             (ssl_key_path, self._SSL_CERT_KEY)):
+        if self._ssl_cert_crt and self._ssl_cert_key:
+            for src, dst in ((self._ssl_cert_crt, self._SSL_CERT_CRT),
+                             (self._ssl_cert_key, self._SSL_CERT_KEY)):
                 with _srg.open(src, 'rt') as src_file:
                     commands += [
                         "cat << EOF > %s" % dst, src_file.read(), "EOF\n"]
+
+        elif self._ssl_cert_crt or self._ssl_cert_key:
+            # Needs both private and public keys
+            raise _exc.HostConfigurationException(
+                "Both 'ssl_cert_crt' and 'ssl_cert_key' are required")
 
         # Gets bash script
         if self._init_script:

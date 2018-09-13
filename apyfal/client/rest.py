@@ -3,7 +3,9 @@
 
 This client allow remote accelerator control."""
 import json as _json
+import os.path as _os_path
 import shutil as _shutil
+from uuid import uuid4 as _uuid
 
 from requests.exceptions import HTTPError as _HTTPError
 from requests_toolbelt.multipart.encoder import (
@@ -12,6 +14,7 @@ from requests_toolbelt.multipart.encoder import (
 import apyfal._utilities as _utl
 import apyfal.exceptions as _exc
 from apyfal.client import AcceleratorClient as _Client
+from apyfal.storage import copy as _srg_copy
 
 
 class RESTClient(_Client):
@@ -28,6 +31,10 @@ class RESTClient(_Client):
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with
             client_id.
         host_ip (str): IP or URL address of the accelerator host.
+        ssl_cert_crt (path-like object or file-like object):
+            Public ".crt" key file of the SSL certificate used by host to
+            provides HTTPS. If provided, the certificate is verified on each
+            request.
         config (apyfal.configuration.Configuration, path-like object or file-like object):
             If not set, will search it in current working directory,
             in current user "home" folder. If none found, will use default
@@ -47,13 +54,21 @@ class RESTClient(_Client):
         'start': '/v1.0/configuration/',
         'stop': '/v1.0/stop/'}
 
-    def __init__(self, accelerator=None, host_ip=None, *args, **kwargs):
+    def __init__(self, accelerator=None, host_ip=None, ssl_cert_crt=None,
+                 *args, **kwargs):
         # Initialize client
         _Client.__init__(self, accelerator=accelerator, *args, **kwargs)
 
         # Initializes HTTP client
         self._configuration_url = None
         self._session = _utl.http_session(max_retries=3)
+        if ssl_cert_crt:
+            # Verify HTTPS connection with a specified certificate
+            # Copy it locally because can be on an external cloud storage
+            local_cert = _os_path.join(self._tmp_dir, str(_uuid()))
+            _srg_copy(ssl_cert_crt, local_cert)
+            self._session.verify = local_cert
+
         self._endpoints = {}
 
         # Mandatory parameters
