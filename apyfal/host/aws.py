@@ -9,8 +9,8 @@ Security: IAM Role and policy:
     This behavior can be changed by overriding IAM Role and/or policy.
 
     This can be done using by:
-     - Selecting an already existing role on class instantiation
-       (using ``role`` argument).
+     - Selecting an already existing role or policy on class instantiation
+       (using ``role`` or ``policy`` argument).
      - Updating policy and role documents in class attributes before
        instantiating the class for the first time (``POLICY_DOCUMENT`` and
        ``ASSUME_ROLE_POLICY_DOCUMENT`` class attributes).
@@ -109,6 +109,8 @@ class AWSHost(_CSPHost):
             uses private IP instead of public IP as default host IP.
         role (str): AWS IAM role. Generated to allow instance to load AGFI
             (FPGA bitstream) and access to S3. Default to 'AccelizeRole'.
+        policy (str): AWS IAM policy. Generated to allow instance to load AGFI
+            (FPGA bitstream) and access to S3. Default to 'AccelizePolicy'.
         stop_mode (str or int): Define the "stop" method behavior.
             Default to 'term' if new instance, or 'keep' if already existing
             instance. See "stop_mode" property for more information and possible
@@ -166,14 +168,16 @@ class AWSHost(_CSPHost):
     _INFO_NAMES = _CSPHost._INFO_NAMES.copy()
     _INFO_NAMES.update(['_role', '_policy'])
 
-    def __init__(self, role=None, boto3_session_kwargs=None,
+    def __init__(self, role=None, policy=None, boto3_session_kwargs=None,
                  boto3_client_kwargs=None, **kwargs):
         _CSPHost.__init__(self, **kwargs)
 
         # Get AWS specific arguments
         self._role = (role or self._config[self._config_section]['role'] or
                       self._default_parameter_value('Role'))
-        self._policy = self._default_parameter_value('Policy')
+        self._policy = (
+                policy or self._config[self._config_section]['policy'] or
+                self._default_parameter_value('Policy'))
         self._policy_arn = None
         self._instance_profile_name = 'AccelizeLoadFPGA'
 
