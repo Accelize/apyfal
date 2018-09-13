@@ -37,6 +37,7 @@ def test_configuration(tmpdir):
     content = ("[accelize]\n"
                "client_id = client\n"
                "secret_id = secret\n"
+               "CamelCase = value\n"
                "[empty_section]\n"
                "[empty_option]\n"
                "option=\n")
@@ -54,6 +55,7 @@ def test_configuration(tmpdir):
     config = DummyConfiguration(str(config_file))
     assert has_accelize_credential(config)
     assert config['empty_option']['option'] is None
+    assert config['accelize']['CamelCase'] == 'value'
 
     # Test: export file
     config['dummy']['dummy'] = None
