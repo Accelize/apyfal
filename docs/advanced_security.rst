@@ -63,8 +63,28 @@ The SSL/TLS certificate allows to access host over HTTPS instead of HTTP.
 A certificate needs to be passed to the host creation using ``ssl_cert_crt`` and
 ``ssl_cert_key`` parameters.
 
+``ssl_cert_generate`` parameter can be used to generate a self signed
+certificate.
+
 If a client have the ``ssl_cert_crt`` specified, HTTPS is used by default and
 requests are verified using this certificate.
+
+Usage scenarios
+_______________
+
+Host has a DNS host name:
+  Use a Certificate Authority to generate a certificate for this DNS host name
+  and define ``ssl_cert_crt`` and ``ssl_cert_key`` to this certificate files.
+
+Host has no DNS host name and is shared between its creator and other users:
+  Creator generate a self signed certificate by defining ``ssl_cert_crt``,
+  ``ssl_cert_key`` and ``ssl_cert_generate`` and share the public certificate
+  file with other users. Others user set ``ssl_cert_crt`` to this certificate
+  file to enable request signature verification with it.
+
+Host has no DNS host name and is used only by its creator for a single session:
+  Creator generate a temporary self signed certificate by defining only
+  ``ssl_cert_generate``.
 
 Host side configuration file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

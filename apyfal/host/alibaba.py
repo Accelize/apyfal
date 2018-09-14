@@ -94,11 +94,17 @@ class AlibabaCSP(_CSPHost):
         init_script (path-like object or file-like object): A bash script
             to execute on instance startup.
         ssl_cert_crt (path-like object or file-like object):
-            Public ".crt" key file of the SSL certificate used to provides
+            Public ".crt" key file of the SSL ssl_cert_key used to provides
             HTTPS.
         ssl_cert_key (path-like object or file-like object):
-            Private ".key" key file of the SSL certificate used to provides
+            Private ".key" key file of the SSL ssl_cert_key used to provides
             HTTPS.
+        ssl_cert_generate (bool): Generate a self signed ssl_cert_key.
+            The ssl_cert_key and private key will be stored in files specified
+            by "ssl_cert_crt" and "ssl_cert_key" (Or temporary certificates if
+            not specified). Note that this ssl_cert_key is only safe if other
+            client verify it by providing "ssl_cert_crt". No Certificate
+            Authority are available to trust this ssl_cert_key.
         acs_client_kwargs (dict): Extra keyword arguments for
             novaclient.client.Client.
     """

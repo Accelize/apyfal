@@ -150,7 +150,7 @@ def test_restclient_start():
             response.status_code = 200
             return response
 
-    client._session = Session()
+    client._cache['_session'] = Session()
 
     # Test: new configuration
     assert client.start(datafile=file_in, info_dict=True)
@@ -159,11 +159,12 @@ def test_restclient_start():
     assert not client.start(info_dict=True)
 
     # Test: SSL Certificate
-    content = b'certificate'
+    content = b'ssl_cert_key'
     ssl_cert_crt = io.BytesIO(content)
     client = Client('accelerator', host_ip=dummy_url,
                     accelize_client_id='client', accelize_secret_id='secret',
                     ssl_cert_crt=ssl_cert_crt)
+    assert client.ssl_cert_crt == ssl_cert_crt
     with open(client._session.verify, 'rb') as tmp_cert:
         assert tmp_cert.read() == content
 
@@ -198,7 +199,7 @@ def test_restclient_use_last_configuration():
             return response
 
     client = Client('accelerator')
-    client._session = Session()
+    client._cache['_session'] = Session()
     client.url = url
     assert not client._configuration_url
 
@@ -257,7 +258,7 @@ def test_restclient_stop():
 
         def __init__(self, *args, **kwargs):
             RESTClient.__init__(self, *args, **kwargs)
-            self._session = Session()
+            self._cache['_session'] = Session()
             self._url = 'https://www.accelize.com'
 
         def _is_alive(self):
@@ -355,7 +356,7 @@ def test_restclient_process():
             # Checks input parameters
             assert '/process/%s' % dummy_id in url in url
 
-    client._session = Session()
+    client._cache['_session'] = Session()
 
     # Test: No configuration
     with pytest.raises(exc.ClientConfigurationException):

@@ -1,8 +1,7 @@
 #! /usr/bin/env python
 #  coding=utf-8
 """Provides Command line use of Apyfal"""
-
-_ACCELERATOR_CACHE = '~/.apyfal/command_line/accelerators'
+_ACCELERATOR_CACHE = 'command_line/accelerators'
 _COMMAND_DEST = 'Apyfal command'
 
 
@@ -23,9 +22,9 @@ def _cached_accelerator(name, action, parameters=None):
         dict: loaded Accelerator parameters.
     """
     from json import dump, load
-    from os.path import expanduser, isfile, join
-
-    cache_dir = expanduser(_ACCELERATOR_CACHE)
+    from os.path import isfile, join
+    from apyfal.configuration import APYFAL_HOME
+    cache_dir = join(APYFAL_HOME, _ACCELERATOR_CACHE)
     cached_file = join(cache_dir, name)
 
     # Dumps cache

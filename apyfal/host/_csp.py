@@ -4,7 +4,9 @@
 from abc import abstractmethod as _abstractmethod
 from concurrent.futures import (ThreadPoolExecutor as _ThreadPoolExecutor,
                                 as_completed as _as_completed)
-
+import os.path as _os_path
+from os import remove as _remove
+from uuid import uuid4 as _uuid
 try:
     # Python 2
     from StringIO import StringIO as _StringIO
@@ -59,11 +61,17 @@ class CSPHost(_Host):
         init_script (path-like object or file-like object): A bash script
             to execute on instance startup.
         ssl_cert_crt (path-like object or file-like object):
-            Public ".crt" key file of the SSL certificate used to provides
+            Public ".crt" key file of the SSL ssl_cert_key used to provides
             HTTPS.
         ssl_cert_key (path-like object or file-like object):
-            Private ".key" key file of the SSL certificate used to provides
+            Private ".key" key file of the SSL ssl_cert_key used to provides
             HTTPS.
+        ssl_cert_generate (bool): Generate a self signed ssl_cert_key.
+            The ssl_cert_key and private key will be stored in files specified
+            by "ssl_cert_crt" and "ssl_cert_key" (Or temporary certificates if
+            not specified). Note that this ssl_cert_key is only safe if other
+            client verify it by providing "ssl_cert_crt". No Certificate
+            Authority are available to trust this ssl_cert_key.
     """
     #: Instance status when running
     STATUS_RUNNING = 'running'
@@ -87,9 +95,12 @@ class CSPHost(_Host):
     # Instance user home directory
     _HOME = '/home/centos'
 
-    # Instance SSL certificate
+    # Instance SSL ssl_cert_key
     _SSL_CERT_CRT = '/etc/nginx/apyfal_cert.crt'
     _SSL_CERT_KEY = '/etc/nginx/apyfal_cert.key'
+
+    # User ssl_cert_key default storage
+    _SSL_CERT_HOME_DIR = _os_path.join(_cfg.APYFAL_HOME, 'certificates')
 
     # Initialization methods
     _INIT_METHODS = ['_init_security_group', '_init_key_pair']
@@ -102,7 +113,8 @@ class CSPHost(_Host):
     def __init__(self, client_id=None, secret_id=None, region=None,
                  instance_type=None, key_pair=None, security_group=None,
                  instance_id=None, init_config=None, init_script=None,
-                 ssl_cert_crt=None, ssl_cert_key=None, use_private_ip=None,
+                 ssl_cert_crt=None, ssl_cert_key=None, ssl_cert_generate=None,
+                 use_private_ip=None,
                  **kwargs):
         _Host.__init__(self, **kwargs)
 
@@ -122,7 +134,7 @@ class CSPHost(_Host):
         self._instance_type = instance_type or section['instance_type']
         self._instance_id = instance_id or section['instance_id']
         self._use_private_ip = (
-            use_private_ip or section['use_private_ip'] or False)
+            use_private_ip or section.get_literal('use_private_ip') or False)
 
         self._key_pair = (
             key_pair or section['key_pair'] or
@@ -139,10 +151,29 @@ class CSPHost(_Host):
         self._init_config = init_config or section['init_config']
         self._init_script = init_script or section['init_script']
 
+        # Get SSL certificate
         self._ssl_cert_crt = ssl_cert_crt or section['ssl_cert_crt']
         self._ssl_cert_key = ssl_cert_key or section['ssl_cert_key']
+        self._ssl_cert_generate = (
+                ssl_cert_generate or section.get_literal('ssl_cert_generate')
+                or False)
+
+        # Defines SSL certificate path if not specified
+        if self._ssl_cert_generate and not self._ssl_cert_crt:
+            self._ssl_cert_crt = _os_path.join(
+                self._SSL_CERT_HOME_DIR, str(_uuid()))
+            self._ssl_cert_crt_tmp = True
+        else:
+            self._ssl_cert_crt_tmp = False
+        if self._ssl_cert_generate and not self._ssl_cert_key:
+            self._ssl_cert_key = _os_path.join(
+                self._SSL_CERT_HOME_DIR, str(_uuid()))
+            self._ssl_cert_key_tmp = True
+        else:
+            self._ssl_cert_key_tmp = False
+
+        # Set HTTP/HTTPS as default depending on certificate
         if self._ssl_cert_crt:
-            # Uses HTTPS by default
             self._url = _utl.format_url(self._url, force_secure=True)
 
         # Checks mandatory configuration values
@@ -225,10 +256,10 @@ class CSPHost(_Host):
     @property
     def ssl_cert_crt(self):
         """
-        SSL certificate used.
+        SSL ssl_cert_key used.
 
         Returns:
-            str: Path to SSL certificate.
+            str: Path to SSL ssl_cert_key.
         """
         return self._ssl_cert_crt
 
@@ -506,6 +537,13 @@ class CSPHost(_Host):
         self._instance_id = None
         self._instance = None
 
+        # Clean up temporary self signed certificates
+        if self._ssl_cert_crt_tmp:
+            _remove(self._ssl_cert_crt)
+
+        if self._ssl_cert_key_tmp:
+            _remove(self._ssl_cert_key)
+
     @_abstractmethod
     def _terminate_instance(self):
         """
@@ -600,13 +638,39 @@ class CSPHost(_Host):
             commands += ["cat << EOF > %s/accelerator.conf" % self._HOME,
                          stream.read(), "EOF\n"]
 
-        # Gets SSL certificate
+        # Gets SSL ssl_cert_key
         if self._ssl_cert_crt and self._ssl_cert_key:
-            for src, dst in ((self._ssl_cert_crt, self._SSL_CERT_CRT),
-                             (self._ssl_cert_key, self._SSL_CERT_KEY)):
-                with _srg.open(src, 'rt') as src_file:
-                    commands += [
-                        "cat << EOF > %s" % dst, src_file.read(), "EOF\n"]
+
+            # Gets ssl_cert_key files
+            if self._ssl_cert_generate:
+                # Generates self signed wildcard ssl_cert_key because:
+                # - No DNS host name available.
+                # - Address IP is unknown at this step.
+                from apyfal._certificates import self_signed_certificate
+                ssl_cert_crt, ssl_cert_key = self_signed_certificate(
+                    "*", common_name=self.host_name)
+
+                # Creates temporary certificates dir
+                if self._ssl_cert_key_tmp or self._ssl_cert_crt_tmp:
+                    _utl.makedirs(self._SSL_CERT_HOME_DIR, exist_ok=True)
+
+                # Saves certificates in files
+                for path, content in ((self._ssl_cert_crt, ssl_cert_crt),
+                                      (self._ssl_cert_key, ssl_cert_key)):
+                    with _srg.open(path, 'wb') as src_file:
+                        src_file.write(content)
+
+            else:
+                # Reads ssl_cert_key from files
+                with _srg.open(self._ssl_cert_crt, 'rb') as src_file:
+                    ssl_cert_crt = src_file.read()
+                with _srg.open(self._ssl_cert_key, 'rb') as src_file:
+                    ssl_cert_key = src_file.read()
+
+            # Writes command
+            for src, dst in ((ssl_cert_crt, self._SSL_CERT_CRT),
+                             (ssl_cert_key, self._SSL_CERT_KEY)):
+                commands += ["cat << EOF > %s" % dst, src.decode(), "EOF\n"]
 
         elif self._ssl_cert_crt or self._ssl_cert_key:
             # Needs both private and public keys

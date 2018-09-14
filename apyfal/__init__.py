@@ -99,18 +99,10 @@ class Accelerator(object):
             client_type = 'REST' if (host_ip and host_type is None) else None
 
         # Create AcceleratorClient object
-
-        try:
-            # Get SSL certificate to verify
-            ssl_cert_crt = self._host.ssl_cert_crt
-        except AttributeError:
-            ssl_cert_crt = None
-
         self._client = _clt.AcceleratorClient(
             accelerator=accelerator, client_type=client_type,
             accelize_client_id=accelize_client_id, host_ip=host_ip,
-            accelize_secret_id=accelize_secret_id, config=config,
-            ssl_cert_crt=ssl_cert_crt)
+            accelize_secret_id=accelize_secret_id, config=config)
 
     def __enter__(self):
         return self
@@ -186,6 +178,12 @@ class Accelerator(object):
 
             # Set accelerator URL to host URL
             self._client.url = self._host.url
+
+            # Set certificate to verify
+            try:
+                self._client.ssl_cert_crt = self._host.ssl_cert_crt
+            except AttributeError:
+                pass
 
             # Get environment
             host_env = self._host.get_configuration_env(**(host_env or dict()))

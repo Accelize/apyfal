@@ -26,6 +26,8 @@ REST client improvements
 - Allows HTTPS (Default for host configured with certificate).
 - Allows to force verifying requests with a specified SSL certificate.
   This improves security with host using self signed certificates.
+- On host creation, a self signed certificate can be generated to secure the
+  accelerator session.
 
 Fixes:
 

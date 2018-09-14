@@ -3,6 +3,7 @@
 from copy import deepcopy
 from datetime import datetime
 import gc
+import os
 import time
 
 import pytest
@@ -805,6 +806,18 @@ def test_csphost_user_data(tmpdir):
     # Mock CSP class
     class DummyCSP(get_dummy_csp_class()):
         """Dummy CSP"""
+        _SSL_CERT_HOME_DIR = str(tmpdir.join('tmp_certificates'))
+
+        @property
+        def host_name(self):
+            """Return fake result"""
+            return 'host_name'
+
+        def _get_instance(self):
+            """Do nothing"""
+
+        def _status(self):
+            """Do nothing"""
 
     config_content = ("[dummy]\n"
                       "dummy1 = dummy1\n"
@@ -863,6 +876,40 @@ def test_csphost_user_data(tmpdir):
     assert DummyCSP._SSL_CERT_CRT in user_data
     assert DummyCSP._SSL_CERT_KEY in user_data
 
+    # Generated certificate
+    user_data = DummyCSP(
+        client_id='client_id', secret_id='secret_id',
+        region='region', ssl_cert_crt=str(ssl_crt_file),
+        ssl_cert_key=str(ssl_key_file),
+        ssl_cert_generate=True)._user_data.decode()
+
+    assert ssl_crt_file.read_text('utf-8') in user_data
+    assert ssl_key_file.read_text('utf-8') in user_data
+
+    # Generated temporary certificate
+    csp = DummyCSP(
+        client_id='client_id', secret_id='secret_id',
+        region='region', ssl_cert_generate=True)
+
+    user_data = csp._user_data.decode()
+    tmp_crt = csp._ssl_cert_crt
+    tmp_key = csp._ssl_cert_key
+    with open(tmp_crt, 'rt') as file:
+        assert file.read() in user_data
+    with open(tmp_key, 'rt') as file:
+        assert file.read() in user_data
+
+    csp._instance_id = True
+    csp.stop(stop_mode='term')
+    assert not os.path.isfile(tmp_crt)
+    assert not os.path.isfile(tmp_key)
+
+    # Missing key
     with pytest.raises(HostConfigurationException):
-        DummyCSP(client_id='client_id', secret_id='secret_id',
+        assert DummyCSP(client_id='client_id', secret_id='secret_id',
                  region='region', ssl_cert_key=str(ssl_key_file))._user_data
+
+    # Missing crt
+    with pytest.raises(HostConfigurationException):
+        assert DummyCSP(client_id='client_id', secret_id='secret_id',
+                 region='region', ssl_cert_crt=str(ssl_crt_file))._user_data

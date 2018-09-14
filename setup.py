@@ -48,7 +48,7 @@ PACKAGE_INFO = dict(
     python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',
     install_requires=[
         'requests', 'requests_toolbelt', 'ipgetter', 'pycosio',
-        'futures; python_version == "2.7"',
+        'futures; python_version == "2.7"', 'cryptography',
 
         # Makes AWS as default since it is the only one ready
         # to production today. AWS extra is kept for compatibility.

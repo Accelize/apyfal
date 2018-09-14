@@ -1,7 +1,7 @@
 # coding=utf-8
 """Accelerator REST client.
 
-This client allow remote accelerator control."""
+This client allows remote accelerator control."""
 import json as _json
 import os.path as _os_path
 import shutil as _shutil
@@ -32,8 +32,8 @@ class RESTClient(_Client):
             client_id.
         host_ip (str): IP or URL address of the accelerator host.
         ssl_cert_crt (path-like object or file-like object):
-            Public ".crt" key file of the SSL certificate used by host to
-            provides HTTPS. If provided, the certificate is verified on each
+            Public ".crt" key file of the SSL ssl_cert_key used by host to
+            provides HTTPS. If provided, the ssl_cert_key is verified on each
             request.
         config (apyfal.configuration.Configuration, path-like object or file-like object):
             If not set, will search it in current working directory,
@@ -61,14 +61,7 @@ class RESTClient(_Client):
 
         # Initializes HTTP client
         self._configuration_url = None
-        self._session = _utl.http_session(max_retries=3)
-        if ssl_cert_crt:
-            # Verify HTTPS connection with a specified certificate
-            # Copy it locally because can be on an external cloud storage
-            local_cert = _os_path.join(self._tmp_dir, str(_uuid()))
-            _srg_copy(ssl_cert_crt, local_cert)
-            self._session.verify = local_cert
-
+        self.ssl_cert_crt = ssl_cert_crt
         self._endpoints = {}
 
         # Mandatory parameters
@@ -79,6 +72,17 @@ class RESTClient(_Client):
         # Pass host URL if already defined.
         if host_ip:
             self.url = host_ip
+
+    @property
+    @_utl.memoizedmethod
+    def _session(self):
+        """
+        Requests session
+
+        Returns:
+            requests.sessions.Session: Session
+        """
+        return _utl.http_session(max_retries=3)
 
     @property
     def url(self):
@@ -92,6 +96,12 @@ class RESTClient(_Client):
 
     @url.setter
     def url(self, url):
+        """
+        URL of the accelerator host.
+
+        Args:
+            URL (str): URL.
+        """
         # Check URL
         if not url:
             raise _exc.ClientConfigurationException("Host URL is not valid.")
@@ -104,6 +114,36 @@ class RESTClient(_Client):
         # If possible use the last accelerator configuration (it can still be
         # overwritten later)
         self._use_last_configuration()
+
+    @property
+    def ssl_cert_crt(self):
+        """
+        SSL Certificate of the accelerator host.
+
+        Returns:
+            str: Path to ssl_cert_key.
+        """
+        return self._ssl_cert_crt
+
+    @ssl_cert_crt.setter
+    def ssl_cert_crt(self, ssl_cert_crt):
+        """
+        SSL Certificate of the accelerator host.
+
+        Args:
+            ssl_cert_key (path-like object or file-like object):
+        """
+        self._ssl_cert_crt = ssl_cert_crt
+
+        # Verify HTTPS connection with a specified ssl_cert_key
+        if ssl_cert_crt:
+            # Copy it locally if not reachable by local path
+            if (hasattr(ssl_cert_crt, 'read') or
+                    not _os_path.exists(ssl_cert_crt)):
+                ssl_cert_crt = _os_path.join(self._tmp_dir, str(_uuid()))
+                _srg_copy(self._ssl_cert_crt, ssl_cert_crt)
+
+            self._session.verify = ssl_cert_crt
 
     def _is_alive(self):
         """
