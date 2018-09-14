@@ -534,27 +534,18 @@ class AWSHost(_CSPHost):
             object: Instance
             str: Instance ID
         """
-        # Base arguments
-        kwargs = dict(
-            ImageId=self._image_id, InstanceType=self._instance_type,
-            KeyName=self._key_pair, SecurityGroups=[self._security_group],
-            IamInstanceProfile={'Name': 'AccelizeLoadFPGA'},
-            InstanceInitiatedShutdownBehavior='stop',
-            TagSpecifications=[{'ResourceType': 'instance', 'Tags': [
-                {'Key': 'Generated',
-                 'Value': _utl.gen_msg('accelize_generated')},
-                {'Key': 'Name', 'Value': self._get_host_name()}]}],
-            MinCount=1, MaxCount=1,)
-
-        # Optional arguments
-        user_data = self._user_data
-        if user_data:
-            kwargs['UserData'] = user_data
-
         # Create instance
         with _exception_handler():
             instance = self._ec2_resource.create_instances(
-                **kwargs)[0]
+                ImageId=self._image_id, InstanceType=self._instance_type,
+                KeyName=self._key_pair, SecurityGroups=[self._security_group],
+                IamInstanceProfile={'Name': 'AccelizeLoadFPGA'},
+                InstanceInitiatedShutdownBehavior='stop',
+                TagSpecifications=[{'ResourceType': 'instance', 'Tags': [
+                    {'Key': 'Generated',
+                     'Value': _utl.gen_msg('accelize_generated')},
+                    {'Key': 'Name', 'Value': self._get_host_name()}]}],
+                MinCount=1, MaxCount=1, UserData=self._user_data)[0]
 
         return instance, instance.id
 

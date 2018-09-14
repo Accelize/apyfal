@@ -510,23 +510,16 @@ class AlibabaCSP(_CSPHost):
                                  InstanceType=self._instance_type)
         max_bandwidth = response['Bandwidths']['Bandwidth'][0]['Max']
 
-        # Prepares args:
-        kwargs = dict(
+        # Creates instance
+        response = self._request(
+            'CreateInstance',
             ImageId=self._image_id, InstanceType=self._instance_type,
             SecurityGroupId=self._security_group_id,
             InstanceName=self._get_host_name(),
             Description=_utl.gen_msg('accelize_generated'),
             InternetMaxBandwidthOut=max_bandwidth,
-            KeyPairName=self._key_pair, RamRoleName=self._role)
-
-        # Handles user data
-        user_data = self._user_data
-        if user_data:
-            # Needs to be in base64
-            kwargs['UserData'] = _b64encode(user_data).decode()
-
-        # Creates instance
-        response = self._request('CreateInstance', **kwargs)
+            KeyPairName=self._key_pair, RamRoleName=self._role,
+            UserData=_b64encode(self._user_data).decode())
         instance_id = response['InstanceId']
 
         # Allocates public IP address
