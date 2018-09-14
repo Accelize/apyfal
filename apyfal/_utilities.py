@@ -285,7 +285,6 @@ def format_url(url_or_ip, force_secure=False):
         url = "http://%s" % url_or_ip
         if re.match(url_validator, url) is None:
             raise ValueError("Invalid URL '%s'" % url_or_ip)
-        return url
     else:
         # Already formated
         url = url_or_ip
