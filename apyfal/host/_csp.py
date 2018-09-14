@@ -83,7 +83,7 @@ class CSPHost(_Host):
     STATUS_ERROR = 'error'
 
     #: Allowed ports for instance access
-    ALLOW_PORTS = [22, 80, 443]
+    ALLOW_PORTS = {22, 80, 443}
 
     # Attributes returned as dict by "info" property
     _INFO_NAMES = _Host._INFO_NAMES.copy()
