@@ -9,6 +9,18 @@ class _CommandLineException(Exception):
     """Exceptions from command line mode"""
 
 
+def _get_cache_dir():
+    """
+    Cache directory
+
+    Returns:
+        str: cache directory
+    """
+    from apyfal.configuration import APYFAL_HOME
+    from os.path import join, normpath
+    return normpath(join(APYFAL_HOME, _ACCELERATOR_CACHE))
+
+
 def _cached_accelerator(name, action, parameters=None):
     """
     Cache accelerator instance.
@@ -23,15 +35,14 @@ def _cached_accelerator(name, action, parameters=None):
     """
     from json import dump, load
     from os.path import isfile, join
-    from apyfal.configuration import APYFAL_HOME
-    cache_dir = join(APYFAL_HOME, _ACCELERATOR_CACHE)
-    cached_file = join(cache_dir, name)
+
+    cached_file = join(_get_cache_dir(), name)
 
     # Dumps cache
     if action == 'dump':
         # Ensures directory exists
         from apyfal._utilities import makedirs
-        makedirs(cache_dir, exist_ok=True)
+        makedirs(_get_cache_dir(), exist_ok=True)
 
         # Dumps Accelerator object
         with open(cached_file, 'wt') as file:
@@ -247,9 +258,8 @@ def _action_copy(_, parameters):
 
 def _action_clear(*_):
     """Clear cache"""
-    from os.path import expanduser
     from shutil import rmtree
-    rmtree(expanduser(_ACCELERATOR_CACHE), ignore_errors=True)
+    rmtree(_get_cache_dir(), ignore_errors=True)
 
 
 def _parse_and_run(parser):

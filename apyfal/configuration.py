@@ -52,7 +52,7 @@ METERING_TMP = '/tmp/meteringServer'
 METERING_CLIENT_CONFIG = '/etc/sysconfig/meteringclient'
 
 #: Apyfal directory in user home
-APYFAL_HOME = _os_path.expanduser('~/.apyfal/')
+APYFAL_HOME = _os_path.join(_os_path.expanduser('~'), '.apyfal')
 
 __all__ = ['create_configuration', 'Configuration',
            'accelerator_executable_available',
