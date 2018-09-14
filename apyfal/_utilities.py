@@ -209,7 +209,7 @@ def handle_request_exceptions(exc_type):
 def check_url(url, timeout=0.0, max_retries=3, sleep=0.5,
               request_timeout=2.0):
     """
-    Checking if an HTTP is up and running.
+    Checking if an URL is up and running.
 
     Will attempt to connect during "timeout", every "sleep" time
     with "max_retries" retries per attempt.
@@ -236,7 +236,7 @@ def check_url(url, timeout=0.0, max_retries=3, sleep=0.5,
             with Timeout(timeout, sleep=sleep) as timeout:
                 while True:
                     try:
-                        http_session(max_retries=max_retries, https=False).get(
+                        http_session(max_retries=max_retries).get(
                                 url, timeout=request_timeout).raise_for_status()
                         return True
                     except requests.RequestException:
