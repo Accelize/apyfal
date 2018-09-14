@@ -95,6 +95,9 @@ class CSPHost(_Host):
     # Instance user home directory
     _HOME = '/home/centos'
 
+    # "User data" initialized flag file
+    _SH_FLAG = '/etc/nginx/.INITIALIZED'
+
     # Instance SSL ssl_cert_key
     _SSL_CERT_CRT = '/etc/nginx/apyfal_cert.crt'
     _SSL_CERT_KEY = '/etc/nginx/apyfal_cert.key'
@@ -618,10 +621,6 @@ class CSPHost(_Host):
         Returns:
             str: shell script.
         """
-        if (self._init_config is None and self._init_script is None and
-                self._ssl_cert_crt is None and self._ssl_cert_key is None):
-            return None
-
         # Initializes file with shebang
         commands = ["#!/usr/bin/env bash"]
 
@@ -676,6 +675,9 @@ class CSPHost(_Host):
             # Needs both private and public keys
             raise _exc.HostConfigurationException(
                 "Both 'ssl_cert_crt' and 'ssl_cert_key' are required")
+
+        # Add initialization flag file
+        commands.append('touch "%s"\n' % self._SH_FLAG)
 
         # Gets bash script
         if self._init_script:

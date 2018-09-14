@@ -841,9 +841,9 @@ def test_csphost_user_data(tmpdir):
     ssl_key_file.write(ssl_key_content)
 
     # No user data
-    assert DummyCSP(
+    assert DummyCSP._SH_FLAG in DummyCSP(
         client_id='client_id', secret_id='secret_id',
-        region='region')._user_data is None
+        region='region')._user_data.decode()
 
     # Get user data
     user_data = DummyCSP(
@@ -853,6 +853,7 @@ def test_csphost_user_data(tmpdir):
 
     # Check shebang
     assert user_data.count('#!') == 1
+    assert DummyCSP._SH_FLAG in user_data
 
     # Check configuration file presence
     for line in config_content.splitlines():
