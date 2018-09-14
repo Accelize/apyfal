@@ -489,10 +489,11 @@ def get_logger(stdout=False):
 
     # Initialize logger on first call
     except KeyError:
-        logger = logging.getLogger("apyfal")
+        _CACHE['logger'] = logger = logging.getLogger("apyfal")
         logger.addHandler(logging.NullHandler())
 
-    if stdout:
+    if stdout and 'logger_stdout' not in _CACHE:
+        _CACHE['logger_stdout'] = True
         logger.addHandler(logging.StreamHandler())
         logger.setLevel(logging.INFO)
 
