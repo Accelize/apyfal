@@ -65,7 +65,11 @@ def test_get_host_public_ip():
 
     # Test with ipgetter.myip directly
     # May fail if no connection
-    assert get_host_public_ip()[-3:] == '/32'
+    try:
+        assert get_host_public_ip()[-3:] == '/32'
+    except OSError:
+        # May fail on some CI
+        pytest.xfail('Unable to get public IP address')
 
 
 def test_create_key_pair_file(tmpdir):
