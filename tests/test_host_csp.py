@@ -162,6 +162,9 @@ def test_csphost_properties():
     assert csp.key_pair == key_pair
     assert csp.ssl_cert_crt == ssl_cert_crt
 
+    # Test Tag: Must not be empty
+    assert csp._get_tag()
+
     # Test: Use private IP
     csp_private = DummyClass(
         host_type=host_type,

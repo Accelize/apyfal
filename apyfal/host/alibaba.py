@@ -71,6 +71,7 @@ class AlibabaCSP(_CSPHost):
         instance_id (str): Instance ID of an already existing Alibaba ECS
             instance to use. If not specified, create a new instance.
         host_name_prefix (str): Prefix to add to instance name.
+            Also used as value of the "Apyfal" tag.
         host_ip (str): IP or URL address of an already existing Alibaba ECS
             instance to use. If not specified, create a new instance.
         use_private_ip (bool): If True, on new instances,
@@ -189,7 +190,8 @@ class AlibabaCSP(_CSPHost):
             error_code_ignore (str or tuple of str): Error codes to ignore and
                 continue.
             exception_message (str): Exception message if exception to raise.
-            parameters: request parameters
+            parameters: request parameters. A "parameter=" argument can also be
+                provided that must be a dict os str.
 
         Returns:
             dict: Request response.
@@ -205,6 +207,9 @@ class AlibabaCSP(_CSPHost):
 
         # Ensures idempotence of the request
         parameters.setdefault('ClientToken', self._client_token)
+
+        # Handles extra parameters that can't be used as arguments
+        parameters.update(parameters.pop('parameters', dict()))
 
         # Adds parameters to request
         for parameter in parameters:
@@ -519,7 +524,8 @@ class AlibabaCSP(_CSPHost):
             Description=_utl.gen_msg('accelize_generated'),
             InternetMaxBandwidthOut=max_bandwidth,
             KeyPairName=self._key_pair, RamRoleName=self._role,
-            UserData=_b64encode(self._user_data).decode())
+            UserData=_b64encode(self._user_data).decode(),
+            parameters={'Tag.1.Key': 'Apyfal', 'Tag.1.Value': self._get_tag()})
         instance_id = response['InstanceId']
 
         # Allocates public IP address

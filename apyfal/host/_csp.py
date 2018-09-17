@@ -42,6 +42,7 @@ class CSPHost(_Host):
         instance_id (str): Instance ID of an already existing CSP instance to
             use. If not specified, create a new instance.
         host_name_prefix (str): Prefix to add to instance name.
+            Also used as value of the "Apyfal" tag.
         host_ip (str): IP or URL address of an already existing CSP instance to
             use. If not specified, create a new instance.
         use_private_ip (bool): If True, on new instances,
@@ -690,3 +691,12 @@ class CSPHost(_Host):
             commands.extend(lines)
 
         return '\n'.join(commands).encode()
+
+    def _get_tag(self):
+        """
+        Returns "Apyfal" tag value.
+
+        Returns
+            str: tag value
+        """
+        return self._host_name_prefix or 'Apyfal'

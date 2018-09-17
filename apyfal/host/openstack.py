@@ -74,6 +74,7 @@ class OpenStackHost(_CSPHost):
         instance_id (str): Instance ID of an already existing OpenStack nova
             instance to use. If not specified, create a new instance.
         host_name_prefix (str): Prefix to add to instance name.
+            Also used as value of the "Apyfal" metadata.
         host_ip (str): IP or URL address of an already existing OpenStack nova
             instance to use. If not specified, create a new instance.
         use_private_ip (bool): If True, on new instances,
@@ -375,7 +376,7 @@ class OpenStackHost(_CSPHost):
             instance = self._nova_client.servers.create(
                 name=self._get_host_name(), image=image, flavor=flavor,
                 key_name=self._key_pair, security_groups=[self._security_group],
-                userdata=self._user_data)
+                userdata=self._user_data, meta={'Apyfal': self._get_tag()})
 
         return instance, instance.id
 

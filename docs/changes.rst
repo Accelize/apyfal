@@ -13,6 +13,8 @@ General improvements
   This is mainly indented to use local accelerator directly on host.
 - It is now possible to use private IP instead of public IP as accelerator
   default URL. See ``use_private_ip`` parameter.
+- Host instance have a new ``Apyfal`` tag/metadata with ``host_name_prefix``
+  value.
 
 REST client improvements
 

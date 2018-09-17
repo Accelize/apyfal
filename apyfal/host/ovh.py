@@ -24,6 +24,7 @@ class OVHHost(_OpenStackHost):
         instance_id (str): Instance ID of an already existing OVH nova instance
             to use. If not specified, create a new instance.
         host_name_prefix (str): Prefix to add to instance name.
+            Also used as value of the "Apyfal" metadata.
         host_ip (str): IP or URL address of an already existing AWS EC2 instance
             to use. If not specified, create a new instance.
         use_private_ip (bool): If True, on new instances,

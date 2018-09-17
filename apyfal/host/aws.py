@@ -103,6 +103,7 @@ class AWSHost(_CSPHost):
         instance_id (str): Instance ID of an already existing AWS EC2 instance
             to use. If not specified, create a new instance.
         host_name_prefix (str): Prefix to add to instance name.
+            Also used as value of the "Apyfal" tag.
         host_ip (str): IP or URL address of an already existing AWS EC2 instance
             to use. If not specified, create a new instance.
         use_private_ip (bool): If True, on new instances,
@@ -544,7 +545,8 @@ class AWSHost(_CSPHost):
                 TagSpecifications=[{'ResourceType': 'instance', 'Tags': [
                     {'Key': 'Generated',
                      'Value': _utl.gen_msg('accelize_generated')},
-                    {'Key': 'Name', 'Value': self._get_host_name()}]}],
+                    {'Key': 'Name', 'Value': self._get_host_name()},
+                    {'Key': 'Apyfal', 'Value': self._get_tag()}]}],
                 MinCount=1, MaxCount=1, UserData=self._user_data)[0]
 
         return instance, instance.id
