@@ -104,7 +104,8 @@ class SysCallClient(_Client):
             dict: response.
         """
         # Initialize metering
-        self._init_metering(parameters['env'])
+        self._init_metering(
+            parameters['env'], reload=parameters['app'].pop('reload', False))
 
         # Run and return response
         return self._run_executable(
@@ -179,6 +180,12 @@ class SysCallClient(_Client):
 
         # Input JSON file
         if input_json and parameters:
+
+            # Convert "reset" to int
+            parameters['app']['reset'] = int(
+                parameters['app'].get('reset', False))
+
+            # Write file
             input_json = _join(self._tmp_dir, input_json)
             with open(input_json, 'wt') as json_input_file:
                 _json.dump(parameters, json_input_file)
@@ -205,14 +212,15 @@ class SysCallClient(_Client):
             _remove(output_json)
             return response
 
-    def _init_metering(self, config_env):
+    def _init_metering(self, config_env, reload=False):
         """Initialize metering services.
 
         Args:
             config_env (dict): Host configuration environment.
+            reload (bool): Force reconfiguration.
         """
         # Cached value match with argument: Already configured
-        if config_env == self._metering_env:
+        if not reload and config_env == self._metering_env:
             return
 
         # Get current configuration from files
@@ -236,7 +244,7 @@ class SysCallClient(_Client):
                 full_env[key] = value
 
         # Cached value match with full environment: Already configured
-        if full_env == self._metering_env:
+        if not reload and full_env == self._metering_env:
             return
 
         # Checks if credentials needs to be updated
@@ -266,10 +274,9 @@ class SysCallClient(_Client):
             config_env if key not in ('client_id', 'client_secret'))
 
         # All is already up to date: caches values
-        if not update_config or not update_credentials:
+        if not reload and not update_config and not update_credentials:
             self._metering_env = full_env
-            # TODO : Uncomment return once stabilized
-            # return
+            return
 
         # Stop services
         _systemctl(

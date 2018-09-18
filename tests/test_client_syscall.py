@@ -174,9 +174,7 @@ def test_syscall_client_run_executable():
     dummy_file = 'file'
     dummy_tmp = 'tmp_dir'
     expected_path = os.path.join(dummy_tmp, dummy_file)
-    dummy_params = {
-        'test': 'dummy'
-    }
+    dummy_params = {'test': 'dummy', 'app': {'arg0': 0}}
 
     # Mocks some functions
     def dummy_call(command, *_, **__):
@@ -373,7 +371,7 @@ def test_syscall_client_start_process_stop():
     # Mock some client methods
     dummy_file_in = 'file_in'
     dummy_file_out = 'file_out'
-    dummy_parameters = {'params': 'params', 'env': {}}
+    dummy_parameters = {'params': 'params', 'env': {}, 'app': {}}
     dummy_response = {'response': 'response'}
     expected_args = {}
 
@@ -387,7 +385,7 @@ def test_syscall_client_start_process_stop():
             """Do nothing"""
 
         @staticmethod
-        def _init_metering(*_):
+        def _init_metering(*_, **__):
             """Do nothing"""
 
         @classmethod

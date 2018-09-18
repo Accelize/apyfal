@@ -174,44 +174,6 @@ class RESTClient(_Client):
         if last_config['used'] != 0:
             self._configuration_url = last_config['url']
 
-    def start(self, datafile=None, info_dict=False, host_env=None,
-              **parameters):
-        """
-        Configures accelerator.
-
-        Args:
-            datafile (path-like object or file-like object): Depending on the
-                accelerator, a configuration data file need to be loaded before
-                a process can be run.
-                Path-like object can be path, URL or cloud object URL.
-            info_dict (bool): If True, returns a dict containing information on
-                configuration operation.
-            parameters (str, path-like object or dict):
-                Accelerator configuration specific
-                parameters Can also be a full configuration parameters
-                dictionary (Or JSON equivalent as str literal or apyfal.storage
-                URL to file) Parameters dictionary override default
-                configuration values, individuals specific parameters overrides
-                parameters dictionary values. Take a look to accelerator
-                documentation for more information on possible parameters.
-                Path-like object can be path, URL or cloud object URL.
-
-        Returns:
-            dict: Optional, only if "info_dict" is True. AcceleratorClient
-                response. AcceleratorClient contain output information from
-                configuration operation. Take a look accelerator documentation
-                for more information.
-        """
-        # Skips configuration if already configured
-        if not (self._configuration_url is None or datafile or parameters or
-                host_env):
-            return
-
-        # Starts
-        return _Client.start(
-            self, datafile=datafile, info_dict=info_dict, host_env=host_env,
-            **parameters)
-
     def _start(self, datafile, parameters):
         """
         Client specific start implementation.

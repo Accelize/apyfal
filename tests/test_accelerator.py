@@ -85,7 +85,7 @@ def test_accelerator():
             """Do Nothing"""
 
         def start(self, datafile=None, host_env=None, info_dict=True,
-                  **parameters):
+                  reset=False, reload=False, **parameters):
             """Checks arguments and returns fake result"""
             assert datafile == dummy_datafile
             assert parameters == {'parameters': dummy_accelerator_parameters}

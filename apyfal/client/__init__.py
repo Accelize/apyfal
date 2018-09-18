@@ -42,13 +42,13 @@ class AcceleratorClient(_utl.ABC):
 
     #: Default parameters JSON for configuration/start stage
     DEFAULT_CONFIGURATION_PARAMETERS = {
-        "app": {"reset": 0, "enable-sw-comparison": 0,
+        "app": {"reset": False, "reload": False, "enable-sw-comparison": 0,
                 "logging": {"format": 1, "verbosity": 2}, "specific": {}},
         "env": {}}
 
     #: Default parameters JSON for process stage
     DEFAULT_PROCESS_PARAMETERS = {
-        "app": {"reset": 0, "enable-sw-comparison": 0,
+        "app": {"reset": False, "enable-sw-comparison": 0,
                 "logging": {"format": 1, "verbosity": 4}, "specific": {}}}
 
     # Client is remote or not
@@ -137,8 +137,8 @@ class AcceleratorClient(_utl.ABC):
         """
         return self._name
 
-    def start(self, datafile=None, info_dict=False, host_env=None,
-              **parameters):
+    def start(self, datafile=None, info_dict=False, host_env=None, reload=None,
+              reset=None, **parameters):
         """
         Configures accelerator.
 
@@ -158,6 +158,8 @@ class AcceleratorClient(_utl.ABC):
                 parameters dictionary values. Take a look to accelerator
                 documentation for more information on possible parameters.
                 Path-like object can be path, URL or cloud object URL.
+            reload (bool): Force reload of FPGA bitstream.
+            reset (bool): Force reset of FPGA logic.
 
         Returns:
             dict: Optional, only if "info_dict" is True. AcceleratorClient
@@ -169,6 +171,12 @@ class AcceleratorClient(_utl.ABC):
         parameters = self._get_parameters(
             parameters, self._configuration_parameters)
         parameters['env'].update(host_env or dict())
+
+        # Set FPGA reset and reload options
+        if reload is not None:
+            parameters['app']['reload'] = reload
+        if reset is not None:
+            parameters['app']['reset'] = reset
 
         # Handle files
         with self._data_file(

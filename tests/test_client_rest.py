@@ -1,5 +1,6 @@
 # coding=utf-8
 """apyfal.client.rest tests"""
+from copy import deepcopy
 import io
 import json
 
@@ -141,8 +142,10 @@ def test_restclient_start():
             stream = data.fields['datafile'][1]
             stream.seek(0)
             assert stream.read() == file_content
-            assert json.loads(data.fields['parameters']) == (
-                client._configuration_parameters)
+            excepted = deepcopy(client._configuration_parameters)
+            excepted['app']['reset'] = True
+            excepted['app']['reload'] = True
+            assert json.loads(data.fields['parameters']) == excepted
 
             # Returns fake response
             response = requests.Response()
@@ -153,10 +156,8 @@ def test_restclient_start():
     client._cache['_session'] = Session()
 
     # Test: new configuration
-    assert client.start(datafile=file_in, info_dict=True)
-
-    # Test: Already configured
-    assert not client.start(info_dict=True)
+    assert client.start(
+        datafile=file_in, info_dict=True, reset=True, reload=True)
 
     # Test: SSL Certificate
     content = b'ssl_cert_key'

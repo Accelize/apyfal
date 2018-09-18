@@ -142,7 +142,7 @@ class Accelerator(object):
         return self._host
 
     def start(self, stop_mode=None, datafile=None, info_dict=False,
-              host_env=None, **parameters):
+              host_env=None, reload=None, reset=None, **parameters):
         """
         Starts and/or configure an accelerator.
 
@@ -165,6 +165,8 @@ class Accelerator(object):
                 parameters dictionary values. Take a look to accelerator
                 documentation for more information on possible parameters.
                 Path-like object can be path, URL or cloud object URL.
+            reload (bool): Force reload of FPGA bitstream.
+            reset (bool): Force reset of FPGA logic.
 
         Returns:
             dict: Optional, only if "info_dict" is True. AcceleratorClient
@@ -191,7 +193,7 @@ class Accelerator(object):
         # Configure accelerator if needed
         return self._client.start(
             datafile=datafile, host_env=host_env or dict(), info_dict=info_dict,
-            **parameters)
+            reload=reload, reset=reset, **parameters)
 
     def process(self, file_in=None, file_out=None, info_dict=False,
                 **parameters):
@@ -331,14 +333,3 @@ class Accelerator(object):
             if total_bytes > 0.0 and fpga_time > 0.0:
                 logger.info("- FPGA processing bandwidths: %.1f MB/s",
                             total_bytes / fpga_time / 1024.0 / 1024.0)
-
-        # Handle Specific result
-        try:
-            specific = app['specific']
-        except KeyError:
-            pass
-        else:
-            if specific:
-                logger.info("Specific information from result:\n%s",
-                            json.dumps(specific, indent=4).replace('\\n', '\n')
-                            .replace('\\t', '\t'))
