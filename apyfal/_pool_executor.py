@@ -175,6 +175,16 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
 
     # TODO: repr
 
+    @property
+    def accelerators(self):
+        """
+        Accelerator workers.
+
+        Returns:
+            list of apyfal.Accelerator: Accelerators
+        """
+        return self._workers
+
     def start(self, stop_mode=None, datafile=None, info_dict=False,
               host_env=None, **parameters):
         """
@@ -242,6 +252,8 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
                 See "apyfal.Accelerator.process" method for
                 "Future.result()" content.
         """
+        # TODO: Share queue between accelerators instead ?
+
         # Find less busy worker
         workers_task_count = [
             worker.process_running_count for worker in self._workers]

@@ -329,6 +329,51 @@ The ``process`` method accept the following arguments:
            file_in='/path/myfile1.dat', file_out='/path/result1.dat',
            parameter1='my_parameter_1', parameter2='my_parameter_2')
 
+
+Asynchronous processing
+_______________________
+
+The ``process`` method wait result from accelerator before return.
+
+The ``process_submit`` is a non blocking asynchronous equivalent of ``process``.
+This method returns a ``concurrent.futures.Future`` object to handle the result
+and can be used to request multiple processing tasks in parallel to reduce the
+data transfer and network overhead.
+
+Note that the hardware accelerated processing itself is exclusive and take no
+benefit of the use of parallels tasks.
+
+.. code-block:: python
+
+   import apyfal
+
+   files = ['/path/myfile1', '/path/myfile2', '/path/myfile3']
+
+   with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
+       myaccel.start()
+
+       # Submit asynchronous processing tasks for a list of files
+       futures = [myaccel.process_submit(file_in=my_file)
+                  for my_file in files]
+
+       # All Processing tasks are performed in parallel.
+       # It is now possible to wait and get results from "Future" objects.
+       results = [future.result() for future in futures]
+
+A ``process_map`` function also exists to submit directly iterables to process.
+
+.. code-block:: python
+
+   import apyfal
+
+   files = ['/path/myfile1', '/path/myfile2', '/path/myfile3']
+
+   with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
+       myaccel.start()
+
+       # This performs the previous example in only one line
+       results = myaccel.process_map(files_in=files)
+
 Metering information
 --------------------
 
