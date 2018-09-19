@@ -42,7 +42,7 @@ class AcceleratorClient(_utl.ABC):
 
     #: Default parameters JSON for configuration/start stage
     DEFAULT_CONFIGURATION_PARAMETERS = {
-        "app": {"reset": False, "reload": False, "enable-sw-comparison": 0,
+        "app": {"reset": False, "reload": True, "enable-sw-comparison": 0,
                 "logging": {"format": 1, "verbosity": 2}, "specific": {}},
         "env": {}}
 
