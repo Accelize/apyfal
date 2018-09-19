@@ -8,7 +8,7 @@ import apyfal.exceptions as _exc
 from apyfal._utilities import ABC
 
 
-class AbstractAsyncAccelerator(ABC):
+class _AbstractAsyncAccelerator(ABC):
     """
     Asynchronous Accelerator process interface.
     """
@@ -111,7 +111,7 @@ class AbstractAsyncAccelerator(ABC):
         return result_iterator()
 
 
-class AcceleratorPoolExecutor(AbstractAsyncAccelerator):
+class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
     """
     An executor that uses a pool of workers_count identically configured
     accelerator to execute calls asynchronously.
