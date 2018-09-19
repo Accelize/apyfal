@@ -175,6 +175,16 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
 
     # TODO: repr
 
+    @property
+    def accelerators(self):
+        """
+        Accelerator workers.
+
+        Returns:
+            list of apyfal.Accelerator: Accelerators
+        """
+        return self._workers
+
     def start(self, stop_mode=None, datafile=None, info_dict=False,
               host_env=None, **parameters):
         """
