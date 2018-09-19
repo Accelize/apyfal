@@ -19,26 +19,32 @@ limitations under the License.
 __version__ = "1.2.0"
 __copyright__ = "Copyright 2018 Accelize"
 __licence__ = "Apache 2.0"
-__all__ = ['Accelerator', 'iter_accelerators', 'get_logger']
+__all__ = ['Accelerator', 'AcceleratorPoolExecutor', 'iter_accelerators',
+           'get_logger']
 
 from sys import version_info as _py
 if (_py[0] < 2) or (_py[0] == 2 and _py[1] < 7) or (_py[0] == 3 and _py[1] < 4):
     from sys import version
     raise ImportError('Python %s is not supported by Apyfal' % version)
 
+from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor
+
 import apyfal.host as _hst
 import apyfal.client as _clt
 import apyfal.exceptions as _exc
 import apyfal.configuration as _cfg
-from apyfal._utilities import get_logger as _get_logger
+from apyfal._utilities import (
+    get_logger as _get_logger, memoizedmethod as _memoizedmethod)
 from apyfal._iterators import iter_accelerators
+from apyfal._pool_executor import AcceleratorPoolExecutor, \
+    AbstractAsyncAccelerator as _AbstractAsyncAccelerator
 
 
 # Makes get_logger available here for easy access
 get_logger = _get_logger
 
 
-class Accelerator(object):
+class Accelerator(_AbstractAsyncAccelerator):
     """
     This class provides the full accelerator features by handling
     Accelerator and its host.
@@ -69,7 +75,10 @@ class Accelerator(object):
     """
     def __init__(self, accelerator=None, config=None, accelize_client_id=None,
                  accelize_secret_id=None, host_type=None, host_ip=None,
-                 stop_mode=None, **host_kwargs):
+                 stop_mode='term', **host_kwargs):
+        # Initialize some variables
+        self._cache = {}
+        self._tasks_count = 0
 
         # Initialize configuration
         config = _cfg.create_configuration(config)
@@ -148,6 +157,33 @@ class Accelerator(object):
             apyfal.host.Host subclass: Host
         """
         return self._host
+
+    @property
+    @_memoizedmethod
+    def _workers(self):
+        """
+        Worker threads pool.
+
+        Returns:
+            concurrent.future.ThreadPoolExecutor
+        """
+        return _ThreadPoolExecutor()
+
+    @property
+    def process_running_count(self):
+        """
+        Return number of asynchronous process tasks running.
+
+        Returns:
+            int: count.
+        """
+        return self._tasks_count
+
+    def _set_task_done(self):
+        """
+        Remove task from running count.
+        """
+        self._tasks_count -= 1
 
     def start(self, stop_mode=None, datafile=None, info_dict=False,
               host_env=None, reload=None, reset=None, **parameters):
@@ -240,6 +276,50 @@ class Accelerator(object):
             self._log_profiling_info(process_result)
             return process_result if info_dict else process_result[0]
         return process_result
+
+    def process_submit(self, file_in=None, file_out=None, info_dict=False,
+                       **parameters):
+        """
+        Schedules the process operation to be executed and returns a Future
+        object representing the execution.
+
+        See "apyfal.Accelerator.process"
+
+        Args:
+            file_in (path-like object or file-like object):
+                Input file to process.
+                Path-like object can be path, URL or cloud object URL.
+            file_out (path-like object or file-like object):
+                Output processed file.
+                Path-like object can be path, URL or cloud object URL.
+            parameters (path-like object, str or dict): Accelerator process
+                specific parameters
+                Can also be a full process parameters dictionary
+                (Or JSON equivalent as str literal) Parameters dictionary
+                override default configuration
+                values, individuals specific parameters overrides parameters
+                dictionary values. Take a look to accelerator documentation for
+                more information on possible parameters.
+                Path-like object can be path, URL or cloud object URL.
+            info_dict (bool): If True, returns a dict containing information on
+                process operation.
+
+        Returns:
+            concurrent.futures.Future: Future object representing execution.
+                See "apyfal.Accelerator.process" method for "Future.result()"
+                content.
+        """
+        # Submits process
+        future = self._workers.submit(
+            self.process, file_in=file_in, file_out=file_out,
+            info_dict=info_dict, **parameters)
+
+        # Keeps track of running tasks (Or planned in queue)
+        self._tasks_count += 1
+        future.add_done_callback(self._set_task_done)
+
+        # Returns future
+        return future
 
     def stop(self, stop_mode=None, info_dict=False):
         """
