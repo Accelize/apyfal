@@ -24,6 +24,7 @@ def has_accelize_credential(config):
 
 def test_configuration(tmpdir):
     """Tests Configuration"""
+    import apyfal.configuration as cfg
     from apyfal.configuration import Configuration
     try:
         # Python 3
@@ -74,9 +75,9 @@ def test_configuration(tmpdir):
     assert 'client_id' in repr(config['accelize'])
 
     # Test: Use file from home
-    config_file = os.path.join(
+    config_file_home = os.path.join(
         os.path.expanduser('~'), dummy_configuration)
-    with open(config_file, 'wt') as home_file:
+    with open(config_file_home, 'wt') as home_file:
         home_file.write(content)
 
     try:
@@ -85,7 +86,25 @@ def test_configuration(tmpdir):
 
     finally:
         # Remove file from home
-        os.remove(config_file)
+        os.remove(config_file_home)
+
+    # Test: Use APYFAL_CONFIG_FILE environment variable
+    # Mocks os.environ
+    cfg._environ = dict()
+    try:
+        # Not specified
+        config = DummyConfiguration()
+        assert not has_accelize_credential(config)
+
+        # Specified
+        cfg._environ['APYFAL_CONFIG_FILE'] = str(config_file)
+
+        config = DummyConfiguration()
+        assert has_accelize_credential(config)
+
+    finally:
+        # Un-mock environ
+        cfg._environ = os.environ
 
 
 def test_create_configuration():

@@ -29,6 +29,7 @@ except ImportError:
 
 import json as _json
 import os.path as _os_path
+from os import environ as _environ
 
 from apyfal import exceptions as _exc
 from apyfal import _utilities as _utl
@@ -219,6 +220,13 @@ class Configuration(_Mapping):
         # Initialize values Dictionaries
         self._sections = dict()
         self._cache = dict()
+
+        # Search for "APYFAL_CONFIG_FILE" environment variable
+        if not configuration_file:
+            try:
+                configuration_file = _environ['APYFAL_CONFIG_FILE']
+            except KeyError:
+                pass
 
         # Finds configuration file
         if configuration_file is None:

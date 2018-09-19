@@ -23,14 +23,16 @@ pipeline {
         }
         stage('Test') {
             steps {
-                sh '''
-                    # Enables environment
-                    source /opt/rh/rh-python36/enable
-                    source venv/bin/activate
+                withCredentials([file(credentialsId: 'apyfal_config_file', variable: 'APYFAL_CONFIG_FILE')]) {
+                    sh '''
+                        # Enables environment
+                        source /opt/rh/rh-python36/enable
+                        source venv/bin/activate
 
-                    # Runs tests
-                    py.test -v --cov=apyfal --cov-report=term-missing
-                '''
+                        # Runs tests
+                        py.test -v --cov=apyfal --cov-report=term-missing
+                    '''
+                }
             }
         }
         stage('CoverageReport') {
