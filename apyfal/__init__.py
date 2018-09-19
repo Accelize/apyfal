@@ -36,8 +36,8 @@ import apyfal.configuration as _cfg
 from apyfal._utilities import (
     get_logger as _get_logger, memoizedmethod as _memoizedmethod)
 from apyfal._iterators import iter_accelerators
-from apyfal._pool_executor import AcceleratorPoolExecutor, \
-    AbstractAsyncAccelerator as _AbstractAsyncAccelerator
+from apyfal._pool_executor import (
+    AcceleratorPoolExecutor, _AbstractAsyncAccelerator)
 
 
 # Makes get_logger available here for easy access
@@ -73,6 +73,9 @@ class Accelerator(_AbstractAsyncAccelerator):
         host_kwargs: Keyword arguments related to specific host. See targeted
             host class to see full list of arguments.
     """
+    # Number of parallel workers
+    _WORKERS_COUNT = 8
+
     def __init__(self, accelerator=None, config=None, accelize_client_id=None,
                  accelize_secret_id=None, host_type=None, host_ip=None,
                  stop_mode='term', **host_kwargs):
@@ -167,7 +170,7 @@ class Accelerator(_AbstractAsyncAccelerator):
         Returns:
             concurrent.future.ThreadPoolExecutor
         """
-        return _ThreadPoolExecutor()
+        return _ThreadPoolExecutor(max_workers=self._WORKERS_COUNT)
 
     @property
     def process_running_count(self):

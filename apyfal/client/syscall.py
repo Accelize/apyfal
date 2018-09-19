@@ -5,6 +5,7 @@ import json as _json
 from os import remove as _remove
 from os.path import join as _join, exists as _exists
 from subprocess import Popen as _Popen, PIPE as _PIPE
+from threading import Lock as _Lock
 from uuid import uuid4 as _uuid
 
 import apyfal.exceptions as _exc
@@ -87,6 +88,9 @@ class SysCallClient(_Client):
 
         self._metering_env = None
 
+        # Accelerator executable is exclusive
+        self._accelerator_lock = _Lock()
+
         # Need accelerator executable to run
         if not _cfg.accelerator_executable_available():
             raise _exc.HostConfigurationException(
@@ -104,8 +108,10 @@ class SysCallClient(_Client):
             dict: response.
         """
         # Initialize metering
-        self._init_metering(
-            parameters['env'], reload=parameters['app'].pop('reload', False))
+        with self._accelerator_lock:
+            self._init_metering(
+                parameters['env'], reload=parameters['app'].pop(
+                    'reload', False))
 
         # Run and return response
         return self._run_executable(
@@ -197,7 +203,8 @@ class SysCallClient(_Client):
             command += ['-p', output_json]
 
         # Runs command
-        _call(command, check_file=output_json)
+        with self._accelerator_lock:
+            _call(command, check_file=output_json)
 
         # Cleanup input JSON file
         if input_json:
