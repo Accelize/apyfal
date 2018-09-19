@@ -4,6 +4,7 @@
 from contextlib import contextmanager
 import json
 import os
+from threading import Lock
 
 try:
     # Python 2
@@ -209,6 +210,7 @@ def test_syscall_client_run_executable():
         def __init__(self, *_, **__):
             self._cache = {'tmp_dir': dummy_tmp}
             self._stopped = False
+            self._accelerator_lock = Lock()
 
     syscall_call = syscall._call
     syscall._call = dummy_call
@@ -380,6 +382,7 @@ def test_syscall_client_start_process_stop():
         def __init__(self, *_, **__):
             """Do nothing"""
             self._cache = {}
+            self._accelerator_lock = Lock()
 
         def __del__(self):
             """Do nothing"""
