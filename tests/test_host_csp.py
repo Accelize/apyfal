@@ -692,6 +692,7 @@ def run_full_real_test_sequence(host_type, environment,
     from apyfal.configuration import Configuration
     from apyfal.exceptions import AcceleratorException
     from apyfal import iter_accelerators
+    import apyfal._utilities as _utl
 
     # Skip if no correct configuration with this host_type
     config = Configuration()
@@ -719,14 +720,17 @@ def run_full_real_test_sequence(host_type, environment,
     from apyfal import get_logger
     get_logger(stdout=True)
 
+    # Defines testing prefix. Used to easily found CSP object linked to a
+    # particular test.
+    testing_prefix = datetime.now().strftime('ApyfalTesting%H%M%S')
+
     # Add accelerator to environment
     environment['accelerator'] = 'apyfal_testing'
-    config['host']['host_name_prefix'] = datetime.now().strftime('test%H%M%S')
+    config['host']['host_name_prefix'] = testing_prefix
 
     # Mock instance URL check
     # Since used basic image don't provide HTTP access
     if not use_full_images:
-        import apyfal._utilities
 
         def dummy_check_url(_, timeout=0.0, **__):
             """Don't check URL, only waits if timeout and returns True"""
@@ -734,11 +738,20 @@ def run_full_real_test_sequence(host_type, environment,
                 time.sleep(60)
             return True
 
-        utilities_check_url = apyfal._utilities.check_url
-        apyfal._utilities.check_url = dummy_check_url
+        utilities_check_url = _utl.check_url
+        _utl.check_url = dummy_check_url
+
+    else:
+        utilities_check_url = None
+
+    # Changes Host parameter prefix for default names
+    # TODO: replace 'apyfal_testing' by testing_prefix variable once full
+    #       clean up of CSP objects is implemented.
+    from apyfal.host import Host
+    host_parameter_prefix = Host._PARAMETER_PREFIX
+    Host._PARAMETER_PREFIX = 'ApyfalTesting' + '_'
 
     # Tests:
-    from apyfal.host import Host
     instance_id_term = None
     instance_id_stop = None
     instance_id_keep = None
@@ -782,10 +795,14 @@ def run_full_real_test_sequence(host_type, environment,
             csp.start(accel_parameters=environment)
             assert csp.instance_id == instance_id_keep
 
-    # Restore check_url
+    # Clean up testing environment
     finally:
+        # Restore prefix value
+        Host._PARAMETER_PREFIX = host_parameter_prefix
+
+        # Restore check_url
         if not use_full_images:
-            apyfal._utilities.check_url = utilities_check_url
+            _utl.check_url = utilities_check_url
 
         # Stops all instances
         time.sleep(5)

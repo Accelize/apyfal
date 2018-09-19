@@ -48,6 +48,9 @@ class Host(_utl.ABC):
     # Value to show in repr
     _REPR = [('type', '_host_type'), ('name', '_host_name')]
 
+    # Prefix for default parameter value (see "_default_parameter_value")
+    _PARAMETER_PREFIX = 'Accelize'
+
     def __new__(cls, *args, **kwargs):
         # If call from a subclass, instantiate this subclass directly
         if cls is not Host:
@@ -346,8 +349,8 @@ class Host(_utl.ABC):
         Returns:
             str: default parameter value.
         """
-        return 'Accelize%s%s' % (
-            cls.NAME if include_host else '', parameter_name)
+        return ''.join((cls._PARAMETER_PREFIX, cls.NAME if include_host else '',
+                        parameter_name))
 
     @classmethod
     def _add_help_to_exception_message(cls, exception):
