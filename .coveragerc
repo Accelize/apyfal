@@ -4,6 +4,7 @@
 omit=
     .tox/*
     docs/conf.py
+branch = True
 
 [report]
 # Exclude:
