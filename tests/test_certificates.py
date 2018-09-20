@@ -4,7 +4,8 @@
 
 def test_self_signed_certificate():
     """Tests _certificates.self_signed_certificate"""
-    from apyfal._certificates import self_signed_certificate
+    from apyfal._certificates import \
+        self_signed_certificate, get_host_names_from_certificate
 
     # Test result are bytes with BEGIN and END
     cert, key = self_signed_certificate(
@@ -14,3 +15,4 @@ def test_self_signed_certificate():
     assert b'END CERTIFICATE' in cert
     assert b'BEGIN RSA PRIVATE KEY' in key
     assert b'END RSA PRIVATE KEY' in key
+    assert get_host_names_from_certificate(cert) == ["127.0.0.1", "127.0.0.2"]

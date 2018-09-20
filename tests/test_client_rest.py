@@ -49,14 +49,9 @@ def test_restclient_url():
     # Mock some client parts
     class Client(RESTClient):
         """Dummy AcceleratorClient"""
-        use_last_configuration_called = False
 
         def __del__(self):
             """Does nothing"""
-
-        def _use_last_configuration(self):
-            """Checks if called"""
-            self.use_last_configuration_called = True
 
     accelerator = Client('Dummy')
 
@@ -82,7 +77,6 @@ def test_restclient_url():
     url = 'http://%s' % ip_address
     accelerator.url = url
     assert accelerator._url == url
-    assert accelerator.use_last_configuration_called
     for key in accelerator._REST_API:
         assert accelerator._endpoints[key] == url + accelerator._REST_API[key]
 
@@ -94,6 +88,7 @@ def test_restclient_url():
 def test_restclient_start():
     """Tests RESTClient.start"""
     from apyfal.client.rest import RESTClient
+    from apyfal._certificates import self_signed_certificate
 
     dummy_id = 123
     dummy_url = 'https://www.accelize.com'
@@ -110,9 +105,6 @@ def test_restclient_start():
         """Dummy AcceleratorClient"""
 
         def __del__(self):
-            """Does nothing"""
-
-        def _use_last_configuration(self):
             """Does nothing"""
 
     client = Client('accelerator', host_ip=dummy_url,
@@ -160,7 +152,8 @@ def test_restclient_start():
         datafile=file_in, info_dict=True, reset=True, reload=True)
 
     # Test: SSL Certificate
-    content = b'ssl_cert_key'
+    content = self_signed_certificate(
+        "*", common_name='host_name', country_name='FR')[0]
     ssl_cert_crt = io.BytesIO(content)
     client = Client('accelerator', host_ip=dummy_url,
                     accelize_client_id='client', accelize_secret_id='secret',
@@ -170,8 +163,8 @@ def test_restclient_start():
         assert tmp_cert.read() == content
 
 
-def test_restclient_use_last_configuration():
-    """Tests RESTClient._use_last_configuration"""
+def test_restclient_configuration_url():
+    """Tests RESTClient._configuration_url"""
     from apyfal.client.rest import RESTClient
 
     response_json = None
@@ -206,26 +199,25 @@ def test_restclient_use_last_configuration():
 
     # Test: Invalid response
     response_json = b''
-    client._use_last_configuration()
     assert not client._configuration_url
 
     response_json = json.dumps({}).encode()
-    client._use_last_configuration()
+    del client._cache['_configuration_url']
     assert not client._configuration_url
 
     # Test: No previous configuration
     response_json = json.dumps({'results': []}).encode()
-    client._use_last_configuration()
+    del client._cache['_configuration_url']
     assert not client._configuration_url
 
     # Test: Unused configuration
     response_json = json.dumps({'results': [{'used': 0, 'url': url}]}).encode()
-    client._use_last_configuration()
+    del client._cache['_configuration_url']
     assert not client._configuration_url
 
     # Test: Valid configuration
     response_json = json.dumps({'results': [{'used': 1, 'url': url}]}).encode()
-    client._use_last_configuration()
+    del client._cache['_configuration_url']
     assert client._configuration_url == url
 
 
@@ -308,9 +300,6 @@ def test_restclient_process():
         def __del__(self):
             """Does nothing"""
 
-        def _use_last_configuration(self):
-            """Does nothing"""
-
     client = Client('accelerator', host_ip=dummy_url)
 
     # Mocks requests session
@@ -323,7 +312,7 @@ def test_restclient_process():
             response = requests.Response()
             response.status_code = 200
 
-            if '/process/%s' % dummy_id in url:
+            if ('/process/%s' % dummy_id) in url:
                 response._content = response_json
             elif url == datafileresult:
                 response.raw = io.BytesIO(file_content)
@@ -358,11 +347,12 @@ def test_restclient_process():
             assert '/process/%s' % dummy_id in url in url
 
     client._cache['_session'] = Session()
+    client._cache["_configuration_url"] = None
 
     # Test: No configuration
     with pytest.raises(exc.ClientConfigurationException):
         assert client.process(file_in=file_in)
-    client._configuration_url = dummy_url
+    client._cache["_configuration_url"] = dummy_url
 
     # Test: run process
     client.process(file_in=file_in, file_out=file_out)

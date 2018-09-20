@@ -15,6 +15,7 @@ from threading import Lock
 import time
 
 import requests
+from requests.adapters import HTTPAdapter
 import warnings
 
 
@@ -171,7 +172,23 @@ class Timeout:
         return False
 
 
-def http_session(max_retries=2, https=True):
+class _HTTPSAdapter(HTTPAdapter):
+    """An HTTPS Adapter that don't checks hostname from certificates"""
+
+    def init_poolmanager(
+            self, connections, maxsize,
+            block=requests.adapters.DEFAULT_POOLBLOCK, **pool_kwargs):
+        """see requests.adapters.HTTPAdapter.init_poolmanager"""
+        # Disable hostname verification
+        pool_kwargs['assert_hostname'] = False
+
+        # Call
+        HTTPAdapter.init_poolmanager(
+            self, connections=connections, maxsize=maxsize, block=block,
+            **pool_kwargs)
+
+
+def http_session(max_retries=2, https=True, verify=True, assert_hostname=True):
     """
     Instantiate HTTP session
 
@@ -180,15 +197,29 @@ def http_session(max_retries=2, https=True):
             attempt
         https (bool): If True, enables HTTPS and HTTP support. Else only HTTP
             support.
+        verify (bool or str): True to verify HTTPS certificate, False to not.
+            Can also be a path to a certificate to verify against it.
+        assert_hostname (bool): False to disable hostname verification in HTTPS
+            certificate.
 
     Returns:
         requests.Session: Http session
     """
     session = requests.Session()
-    adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
+    adapter = HTTPAdapter(max_retries=max_retries)
     session.mount('http://', adapter)
+
     if https:
+        # Verify SSL certificate
+        session.verify = verify
+
+        # Disable hostname verification in SSL certificate
+        if verify and not assert_hostname:
+            adapter = _HTTPSAdapter(max_retries=max_retries)
+
+        # Allow HTTPS
         session.mount('https://', adapter)
+
     return session
 
 
@@ -236,8 +267,8 @@ def check_url(url, timeout=0.0, max_retries=3, sleep=0.5,
             with Timeout(timeout, sleep=sleep) as timeout:
                 while True:
                     try:
-                        http_session(max_retries=max_retries).get(
-                                url, timeout=request_timeout).raise_for_status()
+                        http_session(max_retries=max_retries, verify=False).get(
+                            url, timeout=request_timeout).raise_for_status()
                         return True
                     except requests.RequestException:
                         pass
@@ -293,7 +324,6 @@ def format_url(url_or_ip, force_secure=False):
         # Force HTTPS/FTPS
         url = re.sub('^(http|ftp)(://)', r"\1s\2", url, flags=re.IGNORECASE)
     return url
-
 
 def get_host_public_ip(max_tries=10, validation_sample=3):
     """

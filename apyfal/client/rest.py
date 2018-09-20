@@ -54,14 +54,16 @@ class RESTClient(_Client):
         'start': '/v1.0/configuration/',
         'stop': '/v1.0/stop/'}
 
+    # Number of retries for a request
+    _REQUEST_RETRIES = 3
+
     def __init__(self, accelerator=None, host_ip=None, ssl_cert_crt=None,
                  *args, **kwargs):
         # Initialize client
         _Client.__init__(self, accelerator=accelerator, *args, **kwargs)
 
         # Initializes HTTP client
-        self._configuration_url = None
-        self.ssl_cert_crt = ssl_cert_crt
+        self._ssl_cert_crt = ssl_cert_crt
         self._endpoints = {}
 
         # Mandatory parameters
@@ -82,7 +84,31 @@ class RESTClient(_Client):
         Returns:
             requests.sessions.Session: Session
         """
-        return _utl.http_session(max_retries=3)
+        session_kwargs = dict(max_retries=self._REQUEST_RETRIES)
+
+        # Handles SSL certificate
+        if self._ssl_cert_crt:
+            # Copies certificate locally if not reachable by local path
+            if (hasattr(self._ssl_cert_crt, 'read') or
+                    not _os_path.exists(self._ssl_cert_crt)):
+                ssl_cert_crt = _os_path.join(self._tmp_dir, str(_uuid()))
+                _srg_copy(self._ssl_cert_crt, ssl_cert_crt)
+                self._ssl_cert_crt = ssl_cert_crt
+
+            session_kwargs['verify'] = self._ssl_cert_crt
+
+            # Disables hostname verification if wildcard (*) certificate
+            from apyfal._certificates import \
+                get_host_names_from_certificate
+
+            with open(self._ssl_cert_crt, 'rb') as crt_file:
+                host_names = get_host_names_from_certificate(crt_file.read())
+
+            if host_names == ['*']:
+                session_kwargs['assert_hostname'] = False
+
+        # Initializes session
+        return _utl.http_session(**session_kwargs)
 
     @property
     def url(self):
@@ -111,9 +137,21 @@ class RESTClient(_Client):
         for route in self._REST_API:
             self._endpoints[route] = url + self._REST_API[route]
 
-        # If possible use the last accelerator configuration (it can still be
-        # overwritten later)
-        self._use_last_configuration()
+    @property
+    @_utl.memoizedmethod
+    def _configuration_url(self):
+        """Last configuration URL"""
+        # Get last configuration, if any
+        response = self._session.get(self._endpoints['start'])
+        try:
+            last_config = response.json()['results'][0]
+        except (KeyError, IndexError, ValueError):
+            return
+
+        # The last configuration URL should be keep in order to not request
+        # it to user.
+        if last_config['used'] != 0:
+            return last_config['url']
 
     @property
     def ssl_cert_crt(self):
@@ -124,26 +162,6 @@ class RESTClient(_Client):
             str: Path to ssl_cert_key.
         """
         return self._ssl_cert_crt
-
-    @ssl_cert_crt.setter
-    def ssl_cert_crt(self, ssl_cert_crt):
-        """
-        SSL Certificate of the accelerator host.
-
-        Args:
-            ssl_cert_key (path-like object or file-like object):
-        """
-        self._ssl_cert_crt = ssl_cert_crt
-
-        # Verify HTTPS connection with a specified ssl_cert_key
-        if ssl_cert_crt:
-            # Copy it locally if not reachable by local path
-            if (hasattr(ssl_cert_crt, 'read') or
-                    not _os_path.exists(ssl_cert_crt)):
-                ssl_cert_crt = _os_path.join(self._tmp_dir, str(_uuid()))
-                _srg_copy(self._ssl_cert_crt, ssl_cert_crt)
-
-            self._session.verify = ssl_cert_crt
 
     def _is_alive(self):
         """
@@ -157,22 +175,6 @@ class RESTClient(_Client):
         if not _utl.check_url(self.url, max_retries=2):
             raise _exc.ClientRuntimeException(
                 gen_msg=('unable_reach_url', self._url))
-
-    def _use_last_configuration(self):
-        """
-        Reload last accelerator configuration.
-        """
-        # Get last configuration, if any
-        response = self._session.get(self._endpoints['start'])
-        try:
-            last_config = response.json()['results'][0]
-        except (KeyError, IndexError, ValueError):
-            return
-
-        # The last configuration URL should be keep in order to not request
-        # it to user.
-        if last_config['used'] != 0:
-            self._configuration_url = last_config['url']
 
     def _start(self, datafile, parameters):
         """
@@ -205,7 +207,7 @@ class RESTClient(_Client):
             self._endpoints['start'] + str(response_dict['id'])))
 
         # Memorizes configuration
-        self._configuration_url = response_dict['url']
+        self._cache['_configuration_url'] = response_dict['url']
 
         # Returns response
         config_result['url_config'] = self._configuration_url

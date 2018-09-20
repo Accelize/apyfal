@@ -47,8 +47,11 @@ PACKAGE_INFO = dict(
     license='Apache License, Version 2.0',
     python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',
     install_requires=[
-        'requests', 'requests_toolbelt', 'ipgetter', 'pycosio',
-        'futures; python_version == "2.7"', 'cryptography',
+        'requests', 'requests_toolbelt', 'ipgetter', 'pycosio', 'cryptography',
+
+        # Python 2.7 compatibility
+        'futures; python_version == "2.7"',
+        'ipaddress; python_version == "2.7"',
 
         # Makes AWS as default since it is the only one ready
         # to production today. AWS extra is kept for compatibility.

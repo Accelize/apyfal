@@ -1,12 +1,13 @@
 # coding=utf-8
 """SSL Certificate management"""
 from datetime import datetime, timedelta
-from ipaddress import ip_address as ip_address
+from ipaddress import ip_address, AddressValueError, NetmaskValueError
 from sys import version_info
 
 from cryptography.x509 import (
     Name, NameAttribute, DNSName, IPAddress, SubjectAlternativeName,
-    BasicConstraints, CertificateBuilder, random_serial_number)
+    BasicConstraints, CertificateBuilder, random_serial_number,
+    load_pem_x509_certificate)
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives.asymmetric.rsa import generate_private_key
 from cryptography.hazmat.primitives.hashes import SHA256
@@ -27,7 +28,7 @@ def self_signed_certificate(*hostname, **oid):
         oid (str): Object Identifiers. See "cryptography.x509.oid.NameOID"
 
     Returns:
-        tuple of bytes: ssl_cert_key and private key in PEM format.
+        tuple of bytes: certificate and private key in PEM format.
     """
     # Python 2: Unicode are required
     if version_info[0] == 2:
@@ -92,3 +93,18 @@ def self_signed_certificate(*hostname, **oid):
         encryption_algorithm=NoEncryption())
 
     return certificate_bytes, private_key_bytes
+
+
+def get_host_names_from_certificate(certificate_bytes):
+    """
+    Get host names from certificate.
+    
+    Args:
+        certificate_bytes (bytes): Certificate in PEM format
+
+    Returns:
+        list of str: Host names
+    """
+    return (load_pem_x509_certificate(certificate_bytes, default_backend()).
+            extensions.get_extension_for_class(SubjectAlternativeName).
+            value.get_values_for_type(DNSName))
