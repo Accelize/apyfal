@@ -20,7 +20,7 @@ import warnings
 
 
 _CACHE = dict()  # Store some cached values
-
+SSH_DIR = os.path.expanduser('~/.ssh')  # SSH Directory
 
 # Python 2 compatibility
 if sys.version_info[0] >= 3:
@@ -380,6 +380,13 @@ def recursive_update(to_update, update):
     return to_update
 
 
+def ensure_ssh_dir():
+    """
+    Ensures ".ssh" dir exists in user home directory.
+    """
+    makedirs(SSH_DIR, 0o700, exist_ok=True)
+
+
 def create_key_pair_file(key_pair, key_content):
     """
     Create SSH key file.
@@ -388,14 +395,10 @@ def create_key_pair_file(key_pair, key_content):
         key_pair (str): key name
         key_content (str): key content
     """
-    # Path to SSH keys dir
-    ssh_dir = os.path.expanduser('~/.ssh')
-
-    # Create if not exists
-    makedirs(ssh_dir, 0o700, exist_ok=True)
+    ensure_ssh_dir()
 
     # Find SSH key file path
-    ssh_files = os.listdir(ssh_dir)
+    ssh_files = os.listdir(SSH_DIR)
 
     # Check if SSH file already exists
     # and increment name if another file
@@ -405,7 +408,7 @@ def create_key_pair_file(key_pair, key_content):
         # File name
         key_pair_file = "%s%s.pem" % (
             key_pair, ('_%d' % index) if index > 1 else '')
-        key_filename = os.path.join(ssh_dir, key_pair_file)
+        key_filename = os.path.join(SSH_DIR, key_pair_file)
 
         # File with same name exists
         if key_pair_file in ssh_files:

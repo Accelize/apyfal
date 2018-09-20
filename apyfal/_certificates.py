@@ -108,3 +108,22 @@ def get_host_names_from_certificate(certificate_bytes):
     return (load_pem_x509_certificate(certificate_bytes, default_backend()).
             extensions.get_extension_for_class(SubjectAlternativeName).
             value.get_values_for_type(DNSName))
+
+
+def create_wildcard_certificate(common_name):
+    """
+    Create a wildcard self signed SSL certificate if not already exists.
+
+    This certificate may be used if:
+        - No DNS host name available.
+        - Address IP is unknown or may change.
+
+    This certificate require that client disable host_name verification.
+
+    Args:
+        common_name (str): Common name used for issuer and subject.
+
+    Returns:
+        tuple of bytes: Paths to certificate and private key.
+    """
+    return self_signed_certificate("*", common_name=common_name)

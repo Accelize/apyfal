@@ -75,20 +75,16 @@ def test_get_host_public_ip():
 def test_create_key_pair_file(tmpdir):
     """Tests create_key_pair_file"""
     from apyfal._utilities import create_key_pair_file
+    import apyfal._utilities as _utl
 
     tmp_dir = tmpdir.dirpath()
     ssh_dir = tmp_dir.join('.ssh')
     key_pair = 'key_pair'
     key_content = 'key_content'
 
-    # Mock os.path.expanduser
-
-    def dummy_expanduser(*_, **__):
-        """Dummy os.path.expanduser"""
-        return str(ssh_dir)
-
-    os_path_expanduser = os.path.expanduser
-    os.path.expanduser = dummy_expanduser
+    # Mock SSH path
+    utl_ssh_dir = _utl.SSH_DIR
+    _utl.SSH_DIR = str(ssh_dir)
 
     # Tests
     try:
@@ -112,7 +108,7 @@ def test_create_key_pair_file(tmpdir):
 
     # Restore os.path.expanduser
     finally:
-        os.path.expanduser = os_path_expanduser
+        _utl.SSH_DIR = utl_ssh_dir
 
 
 def test_recursive_update():

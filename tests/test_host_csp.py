@@ -920,11 +920,6 @@ def test_csphost_user_data(tmpdir):
     with open(tmp_key, 'rt') as file:
         assert file.read() in user_data
 
-    csp._instance_id = True
-    csp.stop(stop_mode='term')
-    assert not os.path.isfile(tmp_crt)
-    assert not os.path.isfile(tmp_key)
-
     # Missing key
     with pytest.raises(HostConfigurationException):
         assert DummyCSP(client_id='client_id', secret_id='secret_id',

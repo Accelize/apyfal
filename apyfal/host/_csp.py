@@ -69,8 +69,11 @@ class CSPHost(_Host):
             HTTPS.
         ssl_cert_generate (bool): Generate a self signed ssl_cert_key.
             The ssl_cert_key and private key will be stored in files specified
-            by "ssl_cert_crt" and "ssl_cert_key" (Or temporary certificates if
-            not specified). Note that this ssl_cert_key is only safe if other
+            by "ssl_cert_crt" and "ssl_cert_key".
+            if ssl_cert_crt" and "ssl_cert_key" are not specified, a
+            certificate is create in user home if no existing certificate are
+            found.
+            Note that this ssl_cert_key is only safe if other
             client verify it by providing "ssl_cert_crt". No Certificate
             Authority are available to trust this ssl_cert_key.
     """
@@ -102,9 +105,6 @@ class CSPHost(_Host):
     # Instance SSL ssl_cert_key
     _SSL_CERT_CRT = '/etc/nginx/apyfal_cert.crt'
     _SSL_CERT_KEY = '/etc/nginx/apyfal_cert.key'
-
-    # User ssl_cert_key default storage
-    _SSL_CERT_HOME_DIR = _os_path.join(_cfg.APYFAL_HOME, 'certificates')
 
     # Initialization methods
     _INIT_METHODS = ['_init_security_group', '_init_key_pair']
@@ -163,18 +163,35 @@ class CSPHost(_Host):
                 or False)
 
         # Defines SSL certificate path if not specified
-        if self._ssl_cert_generate and not self._ssl_cert_crt:
-            self._ssl_cert_crt = _os_path.join(
-                self._SSL_CERT_HOME_DIR, str(_uuid()))
-            self._ssl_cert_crt_tmp = True
-        else:
-            self._ssl_cert_crt_tmp = False
-        if self._ssl_cert_generate and not self._ssl_cert_key:
-            self._ssl_cert_key = _os_path.join(
-                self._SSL_CERT_HOME_DIR, str(_uuid()))
-            self._ssl_cert_key_tmp = True
-        else:
-            self._ssl_cert_key_tmp = False
+        if self._ssl_cert_generate:
+
+            if not self._ssl_cert_crt:
+                self._ssl_cert_crt = _os_path.join(
+                    _utl.SSH_DIR, self._default_parameter_value(
+                        'Certificate.crt'))
+                use_ssh_dir = True
+                crt_exists = _os_path.isfile(self._ssl_cert_crt)
+            else:
+                use_ssh_dir = False
+                crt_exists = False
+
+            if not self._ssl_cert_key:
+                self._ssl_cert_key = _os_path.join(
+                    _utl.SSH_DIR, self._default_parameter_value(
+                        'Certificate.key'))
+                use_ssh_dir = True
+                key_exists = _os_path.isfile(self._ssl_cert_crt)
+            else:
+                key_exists = False
+
+            if use_ssh_dir:
+                # Files already exists, don't need to generate them
+                if crt_exists and key_exists:
+                    self._ssl_cert_generate = False
+
+                # Files needs to be generated, ensures directory exists
+                else:
+                    _utl.ensure_ssh_dir()
 
         # Set HTTP/HTTPS as default depending on certificate
         if self._ssl_cert_crt:
@@ -540,13 +557,6 @@ class CSPHost(_Host):
         self._instance_id = None
         self._instance = None
 
-        # Clean up temporary self signed certificates
-        if self._ssl_cert_crt_tmp:
-            _remove(self._ssl_cert_crt)
-
-        if self._ssl_cert_key_tmp:
-            _remove(self._ssl_cert_key)
-
     @_abstractmethod
     def _terminate_instance(self):
         """
@@ -642,16 +652,9 @@ class CSPHost(_Host):
 
             # Gets ssl_cert_key files
             if self._ssl_cert_generate:
-                # Generates self signed wildcard ssl_cert_key because:
-                # - No DNS host name available.
-                # - Address IP is unknown at this step.
-                from apyfal._certificates import self_signed_certificate
-                ssl_cert_crt, ssl_cert_key = self_signed_certificate(
-                    "*", common_name=self.host_name)
-
-                # Creates temporary certificates dir
-                if self._ssl_cert_key_tmp or self._ssl_cert_crt_tmp:
-                    _utl.makedirs(self._SSL_CERT_HOME_DIR, exist_ok=True)
+                from apyfal._certificates import create_wildcard_certificate
+                ssl_cert_crt, ssl_cert_key = create_wildcard_certificate(
+                    common_name=self.host_name)
 
                 # Saves certificates in files
                 for path, content in ((self._ssl_cert_crt, ssl_cert_crt),
