@@ -3,7 +3,6 @@
 from copy import deepcopy
 from datetime import datetime
 import gc
-import os
 import time
 
 import pytest
@@ -822,11 +821,11 @@ def test_csphost_user_data(tmpdir):
     """Tests Host._user_data"""
     from apyfal.configuration import Configuration
     from apyfal.exceptions import HostConfigurationException
+    import apyfal.configuration as _cfg
 
     # Mock CSP class
     class DummyCSP(get_dummy_csp_class()):
         """Dummy CSP"""
-        _SSL_CERT_HOME_DIR = str(tmpdir.join('tmp_certificates'))
 
         @property
         def host_name(self):
@@ -860,33 +859,33 @@ def test_csphost_user_data(tmpdir):
     ssl_key_file = tmpdir.join('dummy.key')
     ssl_key_file.write(ssl_key_content)
 
-    # No user data
+    # Test: No user data
     assert DummyCSP._SH_FLAG in DummyCSP(
         client_id='client_id', secret_id='secret_id',
         region='region')._user_data.decode()
 
-    # Get user data
+    # Test: Get user data
     user_data = DummyCSP(
         client_id='client_id', secret_id='secret_id',
         region='region', init_config=config,
         init_script=str(script_file))._user_data.decode()
 
-    # Check shebang
+    # Test: Check shebang
     assert user_data.count('#!') == 1
     assert DummyCSP._SH_FLAG in user_data
 
-    # Check configuration file presence
+    # Test: Check configuration file presence
     for line in config_content.splitlines():
         assert line in user_data
 
-    # Check script file presence
+    # Test: Check script file presence
     for line in script_content.splitlines()[1:]:
         assert line in user_data
 
-    # Check path
+    # Test: Check path
     assert DummyCSP._HOME in user_data
 
-    # Certificate
+    # Test: Certificate
     user_data = DummyCSP(
         client_id='client_id', secret_id='secret_id',
         region='region', ssl_cert_crt=str(ssl_crt_file),
@@ -897,7 +896,7 @@ def test_csphost_user_data(tmpdir):
     assert DummyCSP._SSL_CERT_CRT in user_data
     assert DummyCSP._SSL_CERT_KEY in user_data
 
-    # Generated certificate
+    # Test: Generated certificate
     user_data = DummyCSP(
         client_id='client_id', secret_id='secret_id',
         region='region', ssl_cert_crt=str(ssl_crt_file),
@@ -907,25 +906,48 @@ def test_csphost_user_data(tmpdir):
     assert ssl_crt_file.read_text('utf-8') in user_data
     assert ssl_key_file.read_text('utf-8') in user_data
 
-    # Generated temporary certificate
-    csp = DummyCSP(
-        client_id='client_id', secret_id='secret_id',
-        region='region', ssl_cert_generate=True)
+    # Test: Generated temporary certificate
+    cfg_apyfal_cert_crt = _cfg.APYFAL_CERT_CRT
+    cfg_apyfal_cert_key = _cfg.APYFAL_CERT_KEY
+    _cfg.APYFAL_CERT_KEY = str(tmpdir.join('dummy_generated.key'))
+    _cfg.APYFAL_CERT_CRT = str(tmpdir.join('dummy_generated.crt'))
+    try:
+        csp = DummyCSP(
+            client_id='client_id', secret_id='secret_id',
+            region='region', ssl_cert_generate=True)
+        user_data = csp._user_data.decode()
 
-    user_data = csp._user_data.decode()
-    tmp_crt = csp._ssl_cert_crt
-    tmp_key = csp._ssl_cert_key
-    with open(tmp_crt, 'rt') as file:
-        assert file.read() in user_data
-    with open(tmp_key, 'rt') as file:
-        assert file.read() in user_data
+        with open(csp._ssl_cert_crt, 'rt') as file:
+            tmp_crt_content = file.read()
+        with open(csp._ssl_cert_key, 'rt') as file:
+            tmp_key_content = file.read()
 
-    # Missing key
+        assert tmp_key_content in user_data
+        assert tmp_crt_content in user_data
+
+        # Test: Already generated, should not recreate certificates
+        csp = DummyCSP(
+            client_id='client_id', secret_id='secret_id',
+            region='region', ssl_cert_generate=True)
+        user_data = csp._user_data.decode()
+        assert tmp_key_content in user_data
+        assert tmp_crt_content in user_data
+
+    finally:
+        _cfg.APYFAL_CERT_KEY = cfg_apyfal_cert_key
+        _cfg.APYFAL_CERT_CRT = cfg_apyfal_cert_crt
+
+    # Test: Missing key
     with pytest.raises(HostConfigurationException):
         assert DummyCSP(client_id='client_id', secret_id='secret_id',
                  region='region', ssl_cert_key=str(ssl_key_file))._user_data
 
-    # Missing crt
+    # Test: Missing crt
     with pytest.raises(HostConfigurationException):
         assert DummyCSP(client_id='client_id', secret_id='secret_id',
                  region='region', ssl_cert_crt=str(ssl_crt_file))._user_data
+
+    # Test: Disabled certificate
+    csp = DummyCSP(client_id='client_id', secret_id='secret_id',
+                   region='region', ssl_cert_crt=False)
+    assert csp._ssl_cert_crt is False

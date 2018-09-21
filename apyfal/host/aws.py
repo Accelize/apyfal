@@ -126,12 +126,15 @@ class AWSHost(_CSPHost):
             (This is default behavior).
         init_script (path-like object or file-like object): A bash script
             to execute on instance startup.
-        ssl_cert_crt (path-like object or file-like object):
+        ssl_cert_crt (path-like object or file-like object or bool):
             Public ".crt" key file of the SSL ssl_cert_key used to provides
             HTTPS.
+            If not specified, uses already generated certificate if found.
+            If False, disable HTTPS.
         ssl_cert_key (path-like object or file-like object):
             Private ".key" key file of the SSL ssl_cert_key used to provides
             HTTPS.
+            If not specified, uses already generated key if found.
         ssl_cert_generate (bool): Generate a self signed ssl_cert_key.
             The ssl_cert_key and private key will be stored in files specified
             by "ssl_cert_crt" and "ssl_cert_key" (Or temporary certificates if

@@ -325,6 +325,7 @@ def format_url(url_or_ip, force_secure=False):
         url = re.sub('^(http|ftp)(://)', r"\1s\2", url, flags=re.IGNORECASE)
     return url
 
+
 def get_host_public_ip(max_tries=10, validation_sample=3):
     """
     Find current host IP address.
@@ -380,13 +381,6 @@ def recursive_update(to_update, update):
     return to_update
 
 
-def ensure_ssh_dir():
-    """
-    Ensures ".ssh" dir exists in user home directory.
-    """
-    makedirs(SSH_DIR, 0o700, exist_ok=True)
-
-
 def create_key_pair_file(key_pair, key_content):
     """
     Create SSH key file.
@@ -395,7 +389,8 @@ def create_key_pair_file(key_pair, key_content):
         key_pair (str): key name
         key_content (str): key content
     """
-    ensure_ssh_dir()
+    # Ensure .ssh dir
+    makedirs(SSH_DIR, 0o700, exist_ok=True)
 
     # Find SSH key file path
     ssh_files = os.listdir(SSH_DIR)

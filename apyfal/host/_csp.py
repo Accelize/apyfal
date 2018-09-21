@@ -5,8 +5,6 @@ from abc import abstractmethod as _abstractmethod
 from concurrent.futures import (ThreadPoolExecutor as _ThreadPoolExecutor,
                                 as_completed as _as_completed)
 import os.path as _os_path
-from os import remove as _remove
-from uuid import uuid4 as _uuid
 try:
     # Python 2
     from StringIO import StringIO as _StringIO
@@ -61,12 +59,15 @@ class CSPHost(_Host):
             (This is default behavior).
         init_script (path-like object or file-like object): A bash script
             to execute on instance startup.
-        ssl_cert_crt (path-like object or file-like object):
+        ssl_cert_crt (path-like object or file-like object or bool):
             Public ".crt" key file of the SSL ssl_cert_key used to provides
             HTTPS.
+            If not specified, uses already generated certificate if found.
+            If False, disable HTTPS.
         ssl_cert_key (path-like object or file-like object):
             Private ".key" key file of the SSL ssl_cert_key used to provides
             HTTPS.
+            If not specified, uses already generated key if found.
         ssl_cert_generate (bool): Generate a self signed ssl_cert_key.
             The ssl_cert_key and private key will be stored in files specified
             by "ssl_cert_crt" and "ssl_cert_key".
@@ -156,46 +157,19 @@ class CSPHost(_Host):
         self._init_script = init_script or section['init_script']
 
         # Get SSL certificate
-        self._ssl_cert_crt = ssl_cert_crt or section['ssl_cert_crt']
         self._ssl_cert_key = ssl_cert_key or section['ssl_cert_key']
+
+        if ssl_cert_crt is False:
+            self._ssl_cert_crt = False
+        else:
+            self._ssl_cert_crt = ssl_cert_crt or section.get_literal(
+                'ssl_cert_crt')
+
         self._ssl_cert_generate = (
                 ssl_cert_generate or section.get_literal('ssl_cert_generate')
                 or False)
 
-        # Defines SSL certificate path if not specified
-        if self._ssl_cert_generate:
-
-            if not self._ssl_cert_crt:
-                self._ssl_cert_crt = _os_path.join(
-                    _utl.SSH_DIR, self._default_parameter_value(
-                        'Certificate.crt'))
-                use_ssh_dir = True
-                crt_exists = _os_path.isfile(self._ssl_cert_crt)
-            else:
-                use_ssh_dir = False
-                crt_exists = False
-
-            if not self._ssl_cert_key:
-                self._ssl_cert_key = _os_path.join(
-                    _utl.SSH_DIR, self._default_parameter_value(
-                        'Certificate.key'))
-                use_ssh_dir = True
-                key_exists = _os_path.isfile(self._ssl_cert_crt)
-            else:
-                key_exists = False
-
-            if use_ssh_dir:
-                # Files already exists, don't need to generate them
-                if crt_exists and key_exists:
-                    self._ssl_cert_generate = False
-
-                # Files needs to be generated, ensures directory exists
-                else:
-                    _utl.ensure_ssh_dir()
-
-        # Set HTTP/HTTPS as default depending on certificate
-        if self._ssl_cert_crt:
-            self._url = _utl.format_url(self._url, force_secure=True)
+        self._init_certificates()
 
         # Checks mandatory configuration values
         self._check_arguments('region')
@@ -703,3 +677,36 @@ class CSPHost(_Host):
             str: tag value
         """
         return self._host_name_prefix or 'Apyfal'
+
+    def _init_certificates(self):
+        """
+        Initializes certificates paths
+        """
+        # Defines SSL certificate path if not specified
+        if self._ssl_cert_generate and self._ssl_cert_crt is not False:
+
+            if not self._ssl_cert_crt:
+                self._ssl_cert_crt = _cfg.APYFAL_CERT_CRT
+                generated = True
+                exists = _os_path.isfile(self._ssl_cert_crt)
+            else:
+                generated = False
+                exists = False
+
+            if not self._ssl_cert_key:
+                self._ssl_cert_key = _cfg.APYFAL_CERT_KEY
+                generated = True
+                exists &= _os_path.isfile(self._ssl_cert_key)
+
+            if exists:
+                # Files already exists, don't need to generate them
+                self._ssl_cert_generate = False
+
+            elif generated:
+                # Files needs to be generated, ensures directories exists
+                for path in (self._ssl_cert_crt, self._ssl_cert_key):
+                    _utl.makedirs(_os_path.dirname(path), exist_ok=True)
+
+        # Set HTTP/HTTPS as default depending on certificate
+        if self._ssl_cert_crt:
+            self._url = _utl.format_url(self._url, force_secure=True)

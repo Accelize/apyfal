@@ -60,31 +60,77 @@ SSL certificate
 
 The SSL/TLS certificate allows to access host over HTTPS instead of HTTP.
 
-A certificate needs to be passed to the host creation using ``ssl_cert_crt`` and
-``ssl_cert_key`` parameters.
+Certificate selection and generation
+____________________________________
 
-``ssl_cert_generate`` parameter can be used to generate a self signed
+Apyfal allows to define a certificate to use, or to generates automatically a
 certificate.
 
-If a client have the ``ssl_cert_crt`` specified, HTTPS is used by default and
-requests are verified using this certificate.
+Using an user defined certificate:
+    A certificate can to be passed to the host creation using
+    ``ssl_cert_crt`` and ``ssl_cert_key`` parameters.
+
+Generating a self signed wildcard certificate:
+    ``ssl_cert_generate`` parameter can be used to generate a self signed
+    certificate.
+
+    If ``ssl_cert_generate`` is used without ``ssl_cert_crt`` and
+    ``ssl_cert_key``, a generic certificate is generated in the ``.ssh``
+    directory of the user home. If the generic certificate exists, it is reused
+    and not regenerated.
+
+Certificate verification
+________________________
+
+The certificate needs to be verified to provides security.
+
+Classical DNS host name based certificate
+    This kind of certificate is verified as usual using a Certificate Authority.
+
+Self signed wildcard certificate
+    Certificate Authority cannot verify this kind of certificate., but Apyfal
+    can verify the connexion against a specified certificate.
+
+    Once a client have the ``ssl_cert_crt`` specified or a generic certificate
+    is found in the ``.ssh`` directory, connections are verified using this
+    certificate.
+
+    Host name is not verified when using a wildcard certificate.
+
+Disabling HTTPS and using HTTP
+______________________________
+
+If ``ssl_cert_crt`` is specified or if a generic certificate is found in the
+``.ssh`` directory, HTTPS is enabled.
+
+``ssl_cert_crt`` can be set to ``False`` to disable HTTPS.
 
 Usage scenarios
 _______________
 
 Host has a DNS host name:
-  Use a Certificate Authority to generate a certificate for this DNS host name
-  and define ``ssl_cert_crt`` and ``ssl_cert_key`` to this certificate files.
+    Use a Certificate Authority to generate a certificate for this DNS host name
+    and define ``ssl_cert_crt`` and ``ssl_cert_key`` to this certificate files.
+
+    This is the most secure and recommended way, but it require to bind hosts IP
+    address to an host name.
 
 Host has no DNS host name and is shared between its creator and other users:
-  Creator generate a self signed certificate by defining ``ssl_cert_crt``,
-  ``ssl_cert_key`` and ``ssl_cert_generate`` and share the public certificate
-  file with other users. Others user set ``ssl_cert_crt`` to this certificate
-  file to enable request signature verification with it.
+    Creator generate a self signed certificate by defining ``ssl_cert_crt``,
+    ``ssl_cert_key`` and ``ssl_cert_generate`` and share the public certificate
+    file with other users. Others user set ``ssl_cert_crt`` to this certificate
+    file to enable connection verification with it.
 
 Host has no DNS host name and is used only by its creator for a single session:
-  Creator generate a temporary self signed certificate by defining only
-  ``ssl_cert_generate``.
+    Creator generate a generic self signed certificate by defining only
+    ``ssl_cert_generate``.
+
+Using HTTP to improve data transfer speed between client and host.
+    Set ``ssl_cert_generate`` to ``False`` to be sure using HTTP instead of
+    HTTPS.
+
+    Note that with this option, transferred data and Accelize access keys
+    are publicly visible to anyone on the network.
 
 Host side configuration file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

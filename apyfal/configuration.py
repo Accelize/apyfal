@@ -55,12 +55,15 @@ METERING_CLIENT_CONFIG = '/etc/sysconfig/meteringclient'
 #: Apyfal directory in user home
 APYFAL_HOME = _os_path.join(_os_path.expanduser('~'), '.apyfal')
 
+#: Apyfal generated self signed wildcard certificate files
+APYFAL_CERT_CRT = _os_path.join(_utl.SSH_DIR, 'ApyfalCertificate.crt')
+APYFAL_CERT_KEY = _os_path.join(_utl.SSH_DIR, 'ApyfalCertificate.key')
+
 __all__ = ['create_configuration', 'Configuration',
            'accelerator_executable_available',
-           'ACCELERATOR_EXECUTABLE', 'ACCELERATOR_TMP_ROOT',
-           'METERING_SERVER', 'METERING_TMP',
-           'METERING_CLIENT_CONFIG',
-           'METERING_CREDENTIALS']
+           'ACCELERATOR_EXECUTABLE', 'ACCELERATOR_TMP_ROOT', 'APYFAL_HOME',
+           'METERING_SERVER', 'METERING_TMP', 'METERING_CLIENT_CONFIG',
+           'METERING_CREDENTIALS', 'APYFAL_CERT_CRT', 'APYFAL_CERT_KEY']
 
 
 def create_configuration(configuration_file):

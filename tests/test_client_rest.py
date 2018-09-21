@@ -85,17 +85,19 @@ def test_restclient_url():
     assert accelerator._url == url
 
 
-def test_restclient_start():
+def test_restclient_start(tmpdir):
     """Tests RESTClient.start"""
     from apyfal.client.rest import RESTClient
     from apyfal._certificates import self_signed_certificate
+    import apyfal.configuration as _cfg
 
     dummy_id = 123
-    dummy_url = 'https://www.accelize.com'
+    dummy_url_https = 'https://www.accelize.com'
+    dummy_url_http = 'http://www.accelize.com'
     parameters_result = {'app': {'status': 0}}
     response_json = json.dumps({
         'id': dummy_id, 'parametersresult': parameters_result,
-        'url': dummy_url, 'inerror': False}).encode()
+        'url': dummy_url_https, 'inerror': False}).encode()
     file_content = b'content'
     file_in = io.BytesIO(file_content)
 
@@ -107,7 +109,7 @@ def test_restclient_start():
         def __del__(self):
             """Does nothing"""
 
-    client = Client('accelerator', host_ip=dummy_url,
+    client = Client('accelerator', host_ip=dummy_url_https,
                     accelize_client_id='client', accelize_secret_id='secret')
 
     # Mocks requests session
@@ -151,16 +153,56 @@ def test_restclient_start():
     assert client.start(
         datafile=file_in, info_dict=True, reset=True, reload=True)
 
-    # Test: SSL Certificate
-    content = self_signed_certificate(
+    # Test: stream SSL Certificate
+    ssl_crt_bytes = self_signed_certificate(
         "*", common_name='host_name', country_name='FR')[0]
-    ssl_cert_crt = io.BytesIO(content)
-    client = Client('accelerator', host_ip=dummy_url,
+    ssl_cert_crt = io.BytesIO(ssl_crt_bytes)
+    client = Client('accelerator', host_ip=dummy_url_https,
                     accelize_client_id='client', accelize_secret_id='secret',
                     ssl_cert_crt=ssl_cert_crt)
     assert client.ssl_cert_crt == ssl_cert_crt
+    assert client.url == dummy_url_https
     with open(client._session.verify, 'rb') as tmp_cert:
-        assert tmp_cert.read() == content
+        assert tmp_cert.read() == ssl_crt_bytes
+
+    # Test: File SSL Certificate
+    ssl_cert_crt_file = tmpdir.join('certificate.crt')
+    ssl_cert_crt_file.write(ssl_crt_bytes)
+    ssl_cert_crt = str(ssl_cert_crt_file)
+    client = Client('accelerator', host_ip=dummy_url_http,
+                    accelize_client_id='client', accelize_secret_id='secret',
+                    ssl_cert_crt=str(ssl_cert_crt))
+    assert client.ssl_cert_crt == ssl_cert_crt
+    assert client._session.verify == ssl_cert_crt
+    assert client.url == dummy_url_https
+
+    # Test: Generated SSL Certificate
+    ssl_cert_crt_file = tmpdir.join('certificate_generated.crt')
+    ssl_cert_crt_file.write(ssl_crt_bytes)
+    ssl_cert_crt = str(ssl_cert_crt_file)
+    cfg_apyfal_cert_crt = _cfg.APYFAL_CERT_CRT
+    _cfg.APYFAL_CERT_CRT = ssl_cert_crt
+    try:
+        client = Client(
+            'accelerator', host_ip=dummy_url_http,
+            accelize_client_id='client', accelize_secret_id='secret')
+        assert client.ssl_cert_crt is None
+        assert client._session.verify == ssl_cert_crt
+        assert client.ssl_cert_crt == ssl_cert_crt
+        assert client.url == dummy_url_https
+
+        # Tests: Disabled generated certificate
+        client = Client(
+            'accelerator', host_ip=dummy_url_http,
+            accelize_client_id='client', accelize_secret_id='secret',
+            ssl_cert_crt=False)
+        assert client.ssl_cert_crt is False
+        assert client._session.verify is True
+        assert client.ssl_cert_crt is False
+        assert client.url == dummy_url_http
+
+    finally:
+        _cfg.APYFAL_CERT_CRT = cfg_apyfal_cert_crt
 
 
 def test_restclient_configuration_url():

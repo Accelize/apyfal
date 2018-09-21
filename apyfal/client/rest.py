@@ -13,6 +13,7 @@ from requests_toolbelt.multipart.encoder import (
 
 import apyfal._utilities as _utl
 import apyfal.exceptions as _exc
+import apyfal.configuration as _cfg
 from apyfal.client import AcceleratorClient as _Client
 from apyfal.storage import copy as _srg_copy
 
@@ -31,10 +32,11 @@ class RESTClient(_Client):
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with
             client_id.
         host_ip (str): IP or URL address of the accelerator host.
-        ssl_cert_crt (path-like object or file-like object):
+        ssl_cert_crt (path-like object or file-like object or bool):
             Public ".crt" key file of the SSL ssl_cert_key used by host to
             provides HTTPS. If provided, the ssl_cert_key is verified on each
-            request.
+            request. If not provided, search for a generated certificate.
+            If False, disable HTTPS.
         config (apyfal.configuration.Configuration, path-like object or file-like object):
             If not set, will search it in current working directory,
             in current user "home" folder. If none found, will use default
@@ -86,26 +88,32 @@ class RESTClient(_Client):
         """
         session_kwargs = dict(max_retries=self._REQUEST_RETRIES)
 
-        # Handles SSL certificate
-        if self._ssl_cert_crt:
-            # Copies certificate locally if not reachable by local path
-            if (hasattr(self._ssl_cert_crt, 'read') or
-                    not _os_path.exists(self._ssl_cert_crt)):
-                ssl_cert_crt = _os_path.join(self._tmp_dir, str(_uuid()))
-                _srg_copy(self._ssl_cert_crt, ssl_cert_crt)
-                self._ssl_cert_crt = ssl_cert_crt
+        # Gets SSL certificate
+        if self._ssl_cert_crt is None and _os_path.exists(_cfg.APYFAL_CERT_CRT):
+            # Uses default certificate if not provided and not not False
+            self._ssl_cert_crt = _cfg.APYFAL_CERT_CRT
 
+        elif (self._ssl_cert_crt and (hasattr(self._ssl_cert_crt, 'read') or
+              not _os_path.exists(self._ssl_cert_crt))):
+            # Copies certificate locally if not reachable by local path
+            ssl_cert_crt = _os_path.join(self._tmp_dir, str(_uuid()))
+            _srg_copy(self._ssl_cert_crt, ssl_cert_crt)
+            self._ssl_cert_crt = ssl_cert_crt
+
+        # Enables certificates verification
+        if self._ssl_cert_crt:
             session_kwargs['verify'] = self._ssl_cert_crt
 
-            # Disables hostname verification if wildcard (*) certificate
+            # Disables hostname verification if wildcard certificate
             from apyfal._certificates import \
                 get_host_names_from_certificate
-
             with open(self._ssl_cert_crt, 'rb') as crt_file:
-                host_names = get_host_names_from_certificate(crt_file.read())
+                if get_host_names_from_certificate(crt_file.read()) == ['*']:
+                    session_kwargs['assert_hostname'] = False
 
-            if host_names == ['*']:
-                session_kwargs['assert_hostname'] = False
+            # Force url to use HTTPS
+            self._url = _utl.format_url(
+                self._url, force_secure=bool(self._ssl_cert_crt))
 
         # Initializes session
         return _utl.http_session(**session_kwargs)
@@ -131,7 +139,8 @@ class RESTClient(_Client):
         # Check URL
         if not url:
             raise _exc.ClientConfigurationException("Host URL is not valid.")
-        self._url = url = _utl.format_url(url)
+        self._url = url = _utl.format_url(
+            url, force_secure=bool(self._ssl_cert_crt))
 
         # Updates endpoints
         for route in self._REST_API:
