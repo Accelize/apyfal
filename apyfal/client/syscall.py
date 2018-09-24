@@ -27,7 +27,7 @@ def _call(command, check_file=None, **exc_args):
         apyfal.exceptions.ClientRuntimeException:
             Error while calling command.
     """
-    _get_logger().info("Running shell command: '%s'" % ' '.join(command))
+    _get_logger().debug("Running shell command: '%s'" % ' '.join(command))
     try:
         process = _Popen(
             command, stdout=_PIPE, stderr=_PIPE, universal_newlines=True,

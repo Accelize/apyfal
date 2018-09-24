@@ -97,13 +97,13 @@ class CSPHost(_Host):
         '_key_pair', '_security_group', '_instance_id',
         '_instance_type_name', '_region_parameters', 'host_ip'})
 
-    # Instance user home directory
+    # Host user home directory
     _HOME = '/home/centos'
 
     # "User data" initialized flag file
     _SH_FLAG = '/etc/nginx/.INITIALIZED'
 
-    # Instance SSL ssl_cert_key
+    # Host SSL ssl_cert_key
     _SSL_CERT_CRT = '/etc/nginx/apyfal_cert.crt'
     _SSL_CERT_KEY = '/etc/nginx/apyfal_cert.key'
 
@@ -373,7 +373,7 @@ class CSPHost(_Host):
             # Creates and starts instance if not exists
             if self.instance_id is None:
                 _get_logger().info(
-                    "Configuring %s instance...", self._host_type)
+                    "Configuring host on %s instance...", self._host_type)
 
                 try:
                     self._create_instance()
@@ -397,7 +397,6 @@ class CSPHost(_Host):
                 self._start_existing_instance(status)
 
             # Waiting for instance provisioning
-            _get_logger().info("Waiting instance provisioning...")
             try:
                 self._wait_instance_ready()
             except _exc.HostException as exception:
@@ -409,10 +408,9 @@ class CSPHost(_Host):
                 self.host_ip, force_secure=bool(self._ssl_cert_crt))
 
             # Waiting for the instance to boot
-            _get_logger().info("Waiting instance boot...")
             self._wait_instance_boot()
 
-            _get_logger().info("Instance ready")
+            _get_logger().info("Host ready")
 
         # If URL exists, checks if reachable
         elif not _utl.check_url(self._url):
@@ -457,6 +455,7 @@ class CSPHost(_Host):
         """
         Waits until instance is ready.
         """
+        warned = False
         # Waiting for the instance provisioning
         with _utl.Timeout(self.TIMEOUT) as timeout:
             while True:
@@ -471,12 +470,20 @@ class CSPHost(_Host):
                     raise _exc.HostRuntimeException(
                         gen_msg=('timeout_status', "provisioning", status))
 
+                if not warned:
+                    warned = True
+                    _get_logger().info("Waiting instance provisioning...")
+
     def _wait_instance_boot(self):
         """Waits until instance has booted and webservice is OK
 
         Raises:
             apyfal.exceptions.HostRuntimeException:
                 Timeout while booting."""
+        if _utl.check_url(self._url):
+            return
+
+        _get_logger().info("Waiting instance boot...")
         if not _utl.check_url(self._url, timeout=self.TIMEOUT):
             raise _exc.HostRuntimeException(gen_msg=('timeout', "boot"))
 

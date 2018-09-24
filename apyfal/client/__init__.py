@@ -13,6 +13,7 @@ import apyfal._utilities as _utl
 import apyfal.exceptions as _exc
 import apyfal.configuration as _cfg
 import apyfal.storage as _srg
+from apyfal._utilities import get_logger as _get_logger
 
 
 class AcceleratorClient(_utl.ABC):
@@ -167,6 +168,8 @@ class AcceleratorClient(_utl.ABC):
                 configuration operation. Take a look accelerator documentation
                 for more information.
         """
+        _get_logger().info("Configuring accelerator...")
+
         # Configure start
         parameters = self._get_parameters(
             parameters, self._configuration_parameters)
@@ -186,6 +189,8 @@ class AcceleratorClient(_utl.ABC):
 
         # Check response status
         self._raise_for_status(response, "Failed to configure accelerator: ")
+
+        _get_logger().info("Accelerator ready")
 
         # Returns optional response
         if info_dict:
