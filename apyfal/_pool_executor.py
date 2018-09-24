@@ -50,7 +50,12 @@ class _AbstractAsyncAccelerator(ABC):
                 process operation.
 
         Returns:
-            concurrent.futures.Future: Future object representing execution.
+            generator of concurrent.futures.Future: Future object representing
+                execution.
+
+        Raises:
+            concurrent.futures.TimeoutError: "timeout" reached on at least one
+                task.
         """
         # Based on "concurrent.futures.Executor.map"
 
@@ -59,15 +64,17 @@ class _AbstractAsyncAccelerator(ABC):
             end_time = timeout + time()
 
         # Get file count
-        try:
+        if files_in is not None:
             size_in = len(files_in)
-        except TypeError:
+        else:
             size_in = 0
+            file_in = None
 
-        try:
+        if files_out is not None:
             size_out = len(files_out)
-        except TypeError:
+        else:
             size_out = 0
+            file_out = None
 
         if size_in and size_out and size_in != size_out:
             raise _exc.ClientConfigurationException(
@@ -77,14 +84,10 @@ class _AbstractAsyncAccelerator(ABC):
         # Submit process
         futures = []
         for index in range(size_in or size_out):
-            try:
+            if size_in:
                 file_in = files_in[index]
-            except IndexError:
-                file_in = None
-            try:
+            if size_out:
                 file_out = files_out[index]
-            except IndexError:
-                file_out = None
 
             futures.append(self.process_submit(
                 file_in=file_in, file_out=file_out, info_dict=info_dict,
@@ -134,8 +137,6 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with
             xlz_client_id.
         host_type (str): Type of host to use.
-        host_ip (str): IP or URL address of an already existing host to use.
-            If not specified, create a new host.
         stop_mode (str or int): Host stop mode.
             Default to 'term' if new host, or 'keep' if already existing host.
             See "apyfal.host.Host.stop_mode" property for more
@@ -146,7 +147,7 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
     """
 
     def __init__(self, accelerator=None, config=None, accelize_client_id=None,
-                 accelize_secret_id=None, host_type=None, host_ip=None,
+                 accelize_secret_id=None, host_type=None,
                  stop_mode='term', workers_count=4, **host_kwargs):
 
         # Needs to lazy import to avoid importing issues
@@ -159,10 +160,8 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
                 Accelerator, accelerator=accelerator, config=config,
                 accelize_client_id=accelize_client_id,
                 accelize_secret_id=accelize_secret_id, host_type=host_type,
-                host_ip=host_ip, stop_mode=stop_mode,
-                **host_kwargs) for _ in range(workers_count)]
-
-        # TODO: host_ip, instance_id => lists + properties
+                stop_mode=stop_mode, **host_kwargs).result()
+                for _ in range(workers_count)]
 
     def __enter__(self):
         return self
@@ -184,6 +183,26 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
             list of apyfal.Accelerator: Accelerators
         """
         return self._workers
+
+    @property
+    def clients(self):
+        """
+        Accelerator workers clients.
+
+        Returns:
+            list of apyfal.client.AcceleratorClient: Clients
+        """
+        return [worker.client for worker in self._workers]
+
+    @property
+    def hosts(self):
+        """
+        Accelerator workers hosts.
+
+        Returns:
+            list of apyfal.host.Host subclass: Hosts
+        """
+        return [worker.host for worker in self._workers]
 
     def start(self, stop_mode=None, datafile=None, info_dict=False,
               host_env=None, **parameters):
