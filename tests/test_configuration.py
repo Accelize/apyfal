@@ -80,13 +80,15 @@ def test_configuration(tmpdir):
     with open(config_file_home, 'wt') as home_file:
         home_file.write(content)
 
+    cfg._environ = dict()  # Empty to avoid default use.
     try:
         config = DummyConfiguration()
         assert has_accelize_credential(config)
 
     finally:
-        # Remove file from home
+        # Remove file from home and restore environ
         os.remove(config_file_home)
+        cfg._environ = os.environ
 
     # Test: Use APYFAL_CONFIG_FILE environment variable
     # Mocks os.environ
