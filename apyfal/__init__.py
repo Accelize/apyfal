@@ -322,7 +322,7 @@ class Accelerator(object):
             if global_time > 0.0:
                 logger.info('- Wall clock time: %.3fs' % global_time)
 
-            if global_time > 0.0:
+            if fpga_time > 0.0:
                 logger.info('- FPGA elapsed time: %.3fs' % fpga_time)
 
             if total_bytes > 0.0 and global_time > 0.0:

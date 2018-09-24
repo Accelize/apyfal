@@ -2,6 +2,7 @@
 """Cloud Service Providers"""
 
 from abc import abstractmethod as _abstractmethod
+from contextlib import contextmanager as _contextmanager
 from concurrent.futures import (ThreadPoolExecutor as _ThreadPoolExecutor,
                                 as_completed as _as_completed)
 import os.path as _os_path
@@ -361,8 +362,7 @@ class CSPHost(_Host):
         self.stop_mode = stop_mode
 
         # Get parameters from accelerator
-        self._set_accelerator_requirements(
-            accelerator, accel_parameters)
+        self._set_accelerator_requirements(accelerator, accel_parameters)
 
         # Starts instance only if not already started
         if self._url is None:
@@ -375,18 +375,12 @@ class CSPHost(_Host):
                 _get_logger().info(
                     "Configuring host on %s instance...", self._host_type)
 
-                try:
+                with self._stop_silently_on_exception():
                     self._create_instance()
-                except _exc.HostException as exception:
-                    self._stop_silently(exception)
-                    raise
 
-                try:
-                    self._instance, self._instance_id = (
-                        self._start_new_instance())
-                except _exc.HostException as exception:
-                    self._stop_silently(exception)
-                    raise
+                with self._stop_silently_on_exception():
+                    self._instance, self._instance_id = \
+                        self._start_new_instance()
 
                 _get_logger().info(_utl.gen_msg(
                     'created_named', 'instance', self._instance_id))
@@ -397,11 +391,8 @@ class CSPHost(_Host):
                 self._start_existing_instance(status)
 
             # Waiting for instance provisioning
-            try:
+            with self._stop_silently_on_exception():
                 self._wait_instance_ready()
-            except _exc.HostException as exception:
-                self._stop_silently(exception)
-                raise
 
             # Update instance URL
             self._url = _utl.format_url(
@@ -471,6 +462,7 @@ class CSPHost(_Host):
                         gen_msg=('timeout_status', "provisioning", status))
 
                 if not warned:
+                    # Avoid to show message if already booted
                     warned = True
                     _get_logger().info("Waiting instance provisioning...")
 
@@ -481,6 +473,7 @@ class CSPHost(_Host):
             apyfal.exceptions.HostRuntimeException:
                 Timeout while booting."""
         if _utl.check_url(self._url):
+            # Avoid to show message if already booted
             return
 
         _get_logger().info("Waiting instance boot...")
@@ -550,23 +543,26 @@ class CSPHost(_Host):
         Pauses instance.
         """
 
-    def _stop_silently(self, exception):
+    @_contextmanager
+    def _stop_silently_on_exception(self):
         """
         Terminates and deletes instance ignoring errors.
-
-        Args:
-            exception(Exception): If provided, augment message
-                of this exception with CSP help.
         """
-        # Augment exception message
-        if exception is not None:
+        try:
+            yield
+
+        except _exc.HostException as exception:
+            # Augment exception
             self._add_help_to_exception_message(exception)
 
-        # Force stop instance, ignore exception if any
-        try:
-            self._terminate_instance()
-        except _exc.HostException:
-            pass
+            # Force stop instance, ignore error if any
+            try:
+                self._terminate_instance()
+            except _exc.HostException:
+                pass
+
+            # Re-raise exception
+            raise
 
     def _set_accelerator_requirements(self, *args, **kwargs):
         """
@@ -717,3 +713,21 @@ class CSPHost(_Host):
         # Set HTTP/HTTPS as default depending on certificate
         if self._ssl_cert_crt:
             self._url = _utl.format_url(self._url, force_secure=True)
+
+    def _get_role_and_policy(self, role, policy):
+        """Get role and policy values from arguments and configuration file.
+
+        Only for CSP supporting theses values.
+
+        Args:
+            role (str): Role argument value.
+            policy (str): Policy argument value.
+
+        Returns:
+            tuple of str: role and policy
+        """
+        role = (role or self._config[self._config_section]['role'] or
+                self._default_parameter_value('Role'))
+        policy = (policy or self._config[self._config_section]['policy'] or
+                  self._default_parameter_value('Policy'))
+        return role, policy

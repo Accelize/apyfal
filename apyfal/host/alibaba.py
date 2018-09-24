@@ -151,11 +151,7 @@ class AlibabaCSP(_CSPHost):
 
         # Initializes attributes
         self._security_group_id = None
-        self._role = (role or self._config[self._config_section]['role'] or
-                      self._default_parameter_value('Role'))
-        self._policy = (
-                policy or self._config[self._config_section]['policy'] or
-                self._default_parameter_value('Policy'))
+        self._role, self._policy = self._get_role_and_policy(role, policy)
         self._acs_client_kwargs = acs_client_kwargs or dict()
 
         # ClientToken guarantee idempotence of requests

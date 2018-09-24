@@ -183,11 +183,7 @@ class AWSHost(_CSPHost):
         _CSPHost.__init__(self, **kwargs)
 
         # Get AWS specific arguments
-        self._role = (role or self._config[self._config_section]['role'] or
-                      self._default_parameter_value('Role'))
-        self._policy = (
-                policy or self._config[self._config_section]['policy'] or
-                self._default_parameter_value('Policy'))
+        self._role, self._policy = self._get_role_and_policy(role, policy)
         self._policy_arn = None
         self._instance_profile_name = 'AccelizeLoadFPGA'
 
