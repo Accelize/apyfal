@@ -296,9 +296,6 @@ class Accelerator(object):
         except KeyError:
             return None
 
-        # Lazy import since not always called
-        import json
-
         # Handle profiling info
         try:
             profiling = app['profiling']

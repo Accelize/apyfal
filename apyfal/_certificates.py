@@ -1,7 +1,7 @@
 # coding=utf-8
 """SSL Certificate management"""
 from datetime import datetime, timedelta
-from ipaddress import ip_address, AddressValueError, NetmaskValueError
+from ipaddress import ip_address
 from sys import version_info
 
 from cryptography.x509 import (
@@ -98,7 +98,7 @@ def self_signed_certificate(*hostname, **oid):
 def get_host_names_from_certificate(certificate_bytes):
     """
     Get host names from certificate.
-    
+
     Args:
         certificate_bytes (bytes): Certificate in PEM format
 
