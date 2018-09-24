@@ -3,6 +3,8 @@
 from collections import namedtuple
 import gc
 import sys
+from time import sleep
+
 
 import pytest
 
@@ -54,6 +56,7 @@ def test_accelerator():
     dummy_accelerator_parameters = {'dummy_accelerator_parameters': None}
     dummy_file_in = 'dummy_file_in'
     dummy_file_out = 'dummy_file_out'
+    process_duration = 0.0
 
     # Mocks client
     accelerator_client_class = apyfal.client.AcceleratorClient
@@ -107,6 +110,7 @@ def test_accelerator():
             assert parameters == {'parameters': dummy_accelerator_parameters}
             assert file_in == dummy_file_in
             assert file_out == dummy_file_out
+            sleep(process_duration)
             return dummy_process_result
 
     apyfal.client.AcceleratorClient = DummyClient
@@ -166,19 +170,35 @@ def test_accelerator():
         assert isinstance(accel.client, DummyClient)
         assert DummyClient.running
         assert DummyHost.running
+
+        # Start
         assert accel.start(
             datafile=dummy_datafile, stop_mode=dummy_stop_mode, info_dict=True,
             parameters=dummy_accelerator_parameters) == dummy_start_result
         assert accel.client.url == dummy_url
+
+        # Process
         assert accel.process(
             file_in=dummy_file_in, file_out=dummy_file_out, info_dict=True,
             parameters=dummy_accelerator_parameters) == dummy_process_result
+
+        # Async Process
+        process_duration = 0.05
+        future = accel.process_submit(
+            file_in=dummy_file_in, file_out=dummy_file_out, info_dict=True,
+            parameters=dummy_accelerator_parameters
+            )
+        assert accel.process_running_count == 1
+        assert future.result() == dummy_process_result
+        assert accel.process_running_count == 0
+
+        # Stop
         assert accel.stop(stop_mode=dummy_stop_mode,
                           info_dict=True) == dummy_stop_result
         assert not DummyClient.running
         assert not DummyHost.running
 
-        # repr
+        # Repr
         assert repr(accel) == str(accel)
 
         # Using existing IP

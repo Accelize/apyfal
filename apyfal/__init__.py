@@ -166,16 +166,21 @@ class Accelerator(_AbstractAsyncAccelerator):
     @property
     def process_running_count(self):
         """
-        Return number of asynchronous process tasks running.
+        Return number of asynchronous process tasks running or pending.
 
         Returns:
             int: count.
         """
         return self._tasks_count
 
-    def _set_task_done(self):
+    def _set_task_done(self, _):
         """
         Remove task from running count.
+
+        Only for use as callback.
+
+        Args:
+            _ (concurrent.futures.Future): Ignored future from callback.
         """
         self._tasks_count -= 1
 
