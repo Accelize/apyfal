@@ -1,6 +1,6 @@
 # coding=utf-8
 """Accelerator system call client."""
-
+from contextlib import contextmanager as _contextmanager
 from distutils.version import LooseVersion as _LooseVersion
 import json as _json
 from os import remove as _remove
@@ -116,15 +116,7 @@ class SysCallClient(_Client):
         env = parameters.pop('env', dict())
 
         # Checks Apyfal version
-        try:
-            if _LooseVersion(env['apyfal_version']) < _LooseVersion(
-                    self.APYFAL_MINIMUM_VERSION):
-                raise _exc.ClientConfigurationException(
-                    'Apyfal version needs to be at least %s. Please upgrade it.'
-                    % self.APYFAL_MINIMUM_VERSION)
-        except KeyError:
-            # Version not available
-            pass
+        self._checks_apyfal_version(env)
 
         # Initialize metering
         with self._accelerator_lock:
@@ -249,18 +241,7 @@ class SysCallClient(_Client):
             return
 
         # Get current configuration from files
-        cur_env = {}
-        if _exists(_cfg.METERING_CREDENTIALS):
-            # Get current credentials
-            with open(_cfg.METERING_CREDENTIALS, 'rt') as file:
-                cur_env.update(_json.load(file))
-
-        if _exists(_cfg.METERING_CLIENT_CONFIG):
-            # Get current AGFI configuration
-            with open(_cfg.METERING_CLIENT_CONFIG, 'rt') as file:
-                for line in file:
-                    key, value = line.strip().split('=')
-                    cur_env[key.strip()] = value.strip()
+        cur_env = self._read_configuration_files()
 
         # Set full environment
         full_env = cur_env.copy()
@@ -273,25 +254,8 @@ class SysCallClient(_Client):
             return
 
         # Checks if credentials needs to be updated
-        update_credentials = (
-                'client_id' in config_env and
-                (config_env['client_id'] != cur_env.get('client_id') or
-                 config_env['client_secret'] != cur_env.get('client_secret')))
-
-        if update_credentials:
-            # Update credential in config
-            for cred_key, config_key in (('client_id', 'client_id'),
-                                         ('client_secret', 'secret_id')):
-                self._config['accelize'][config_key] = full_env[cred_key]
-                self._configuration_parameters['env'][config_key] = full_env[
-                    cred_key]
-
-            # Checks if credentials are valid
-            config_env['access_token'] = self._config.access_token
-
-        elif cur_env.get('client_id') is None:
-            # No credentials
-            raise _exc.ClientAuthenticationException(gen_msg='no_credentials')
+        update_credentials = self._credentials_needs_update(
+            config_env, cur_env, full_env)
 
         # Checks if configuration needs to be updated
         update_config = any(
@@ -303,40 +267,156 @@ class SysCallClient(_Client):
             self._metering_env = full_env
             return
 
-        # Stop services
-        _systemctl(
-            'stop', 'accelerator', 'meteringsession', 'meteringclient')
-
         # Update
-        try:
-            # Clear cache
+        with self._restart_services():
+
+            # Clear metering cache
             if _exists(_cfg.METERING_TMP):
                 _call(['sudo', 'rm', _cfg.METERING_TMP])
 
-            # Credentials
-            if update_credentials:
-                with open(_cfg.METERING_CREDENTIALS, 'wt') as credential_file:
-                    _json.dump({
-                        key: full_env[key] for key in (
+            # Update configuration files
+            self._update_configuration_files(
+                full_env, update_config, update_credentials)
+
+        # Cache values
+        self._metering_env = full_env
+
+    def _credentials_needs_update(self, config_env, cur_env, full_env):
+        """
+        Checks if credentials needs update.
+
+        Args:
+            config_env (dict): Environment from start arguments.
+            cur_env (dict): Current environment.
+            full_env (dict): Current environment updated with environment from
+                start arguments.
+
+        Returns:
+            bool: True if credentials needs update.
+        """
+        # Needs update if credentials changed.
+        update_credentials = (
+                'client_id' in config_env and
+                (config_env['client_id'] != cur_env.get('client_id') or
+                 config_env['client_secret'] != cur_env.get('client_secret')))
+
+        # Update credential in config
+        if update_credentials:
+            for cred_key, config_key in (('client_id', 'client_id'),
+                                         ('client_secret', 'secret_id')):
+                self._config['accelize'][config_key] = full_env[cred_key]
+                self._configuration_parameters['env'][config_key] = full_env[
+                    cred_key]
+
+            # Checks if credentials are valid
+            config_env['access_token'] = self._config.access_token
+
+        # Checks if no credentials
+        elif cur_env.get('client_id') is None:
+            raise _exc.ClientAuthenticationException(gen_msg='no_credentials')
+
+        return update_credentials
+
+    @staticmethod
+    def _update_configuration_files(config_env, update_config,
+                                    update_credentials):
+        """
+        Updates configuration files values.
+
+        Args:
+            config_env (dict): environment.
+            update_config (bool): Update configuration file.
+            update_credentials (bool): Update credentials file.
+        """
+        # Credentials
+        if update_credentials:
+            with open(_cfg.METERING_CREDENTIALS, 'wt') as credential_file:
+                _json.dump({
+                    key: config_env[key] for key in (
                         'client_id', 'client_secret')}, credential_file)
 
-            # Configuration
-            if update_config:
-                with open(_cfg.METERING_CLIENT_CONFIG, 'wt') as config_file:
-                    config_content = '\n'.join(
-                        '%s=%s' % (key, full_env[key])
-                        for key in full_env if key
-                        not in ('client_id', 'client_secret'))
-                    config_file.write(config_content)
+        # Configuration
+        if update_config:
 
-                _get_logger().info(
-                    "Setting configuration:\n%s" % config_content.replace(
-                        '\n', '    \n'))
+            # Fix 1.0.0 Backward compatibility
+            if 'fpgaimage' not in config_env:
+                try:
+                    config_env['fpgaimage'] = config_env['AGFI']
+                except KeyError:
+                    pass
+
+            # update configuration
+            with open(_cfg.METERING_CLIENT_CONFIG, 'wt') as config_file:
+                config_content = '\n'.join(
+                    '%s=%s' % (key, config_env[key])
+                    for key in config_env if key
+                    not in ('client_id', 'client_secret'))
+                config_file.write(config_content)
+
+            _get_logger().debug(
+                "Setting configuration:\n%s" % config_content.replace(
+                    '\n', '    \n'))
+
+    @staticmethod
+    def _read_configuration_files():
+        """
+        Read configuration from files
+
+        Returns:
+            dict: Current configuration.
+        """
+        cur_env = {}
+
+        # Get current credentials
+        if _exists(_cfg.METERING_CREDENTIALS):
+            with open(_cfg.METERING_CREDENTIALS, 'rt') as file:
+                cur_env.update(_json.load(file))
+
+        # Get current configuration
+        if _exists(_cfg.METERING_CLIENT_CONFIG):
+            with open(_cfg.METERING_CLIENT_CONFIG, 'rt') as file:
+                for line in file:
+                    key, value = line.strip().split('=')
+                    cur_env[key.strip()] = value.strip()
+
+        return cur_env
+
+    @staticmethod
+    @_contextmanager
+    def _restart_services():
+        """
+        Restart services
+        """
+        # Stop services
+        _systemctl('stop', 'accelerator', 'meteringsession', 'meteringclient')
+
+        # Perform operation
+        try:
+            yield
 
         # Restart services
         finally:
             _systemctl(
                 'start', 'accelerator', 'meteringclient', 'meteringsession')
 
-        # Cache values
-        self._metering_env = full_env
+    def _checks_apyfal_version(self, config_env):
+        """
+        Checks if client Apyfal version is compatible.
+
+        Args:
+            config_env (dict): environment.
+
+        Raises:
+            apyfal.exceptions.ClientConfigurationException:
+                Apyfal version is not compatible.
+        """
+        try:
+            if _LooseVersion(config_env['apyfal_version']) < _LooseVersion(
+                    self.APYFAL_MINIMUM_VERSION):
+                raise _exc.ClientConfigurationException(
+                    'Apyfal version needs to be at least %s. Please upgrade it.'
+                    % self.APYFAL_MINIMUM_VERSION)
+
+        # Version not available: Return, can come from REST API directly.
+        except KeyError:
+            return

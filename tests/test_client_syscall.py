@@ -358,6 +358,23 @@ def test_syscall_init_metering(tmpdir):
             'client_id': new_client_id,
             'client_secret': client_secret}
 
+        # Apyfal 1.0.0 compatibility
+        metering_client_config.remove()
+        client._metering_env = None
+        client._init_metering({'AGFI': fpga_image}, reload=True)
+        assert client._metering_env == {
+            'fpgaimage': fpga_image, 'AGFI': fpga_image,
+            'client_id': new_client_id,
+            'client_secret': 'dummy_client_secret'}
+
+        metering_client_config.remove()
+        client._metering_env = None
+        client._init_metering({'arg': 'arg'}, reload=True)
+        assert client._metering_env == {
+            'client_id': new_client_id,
+            'client_secret': 'dummy_client_secret',
+            'arg': 'arg'}
+
     # Restore
     finally:
         syscall._call = syscall_call
