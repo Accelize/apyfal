@@ -500,13 +500,15 @@ def gen_msg(message_id, *args):
     return message
 
 
-def get_logger(stdout=False):
+def get_logger(stdout=False, debug=False):
     """
     Initialize logger
 
     Args:
         stdout (bool): If True, configure logger to print on
             stdout, else use NullHandler
+        debug (bool): If True, set logger level to Debug and show information
+            useful to debug.
 
     Returns:
        logging.Logger: logger instance
@@ -523,6 +525,6 @@ def get_logger(stdout=False):
     if stdout and 'logger_stdout' not in _CACHE:
         _CACHE['logger_stdout'] = True
         logger.addHandler(logging.StreamHandler())
-        logger.setLevel(logging.INFO)
+        logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
     return logger
