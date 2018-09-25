@@ -87,6 +87,7 @@ def test_restclient_url():
 
 def test_restclient_start(tmpdir):
     """Tests RESTClient.start"""
+    import apyfal
     from apyfal.client.rest import RESTClient
     from apyfal._certificates import self_signed_certificate
     import apyfal.configuration as _cfg
@@ -139,6 +140,7 @@ def test_restclient_start(tmpdir):
             excepted = deepcopy(client._configuration_parameters)
             excepted['app']['reset'] = True
             excepted['app']['reload'] = True
+            excepted['env']['apyfal_version'] = apyfal.__version__
             assert json.loads(data.fields['parameters']) == excepted
 
             # Returns fake response

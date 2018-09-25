@@ -11,6 +11,7 @@ from requests.exceptions import HTTPError as _HTTPError
 from requests_toolbelt.multipart.encoder import (
     MultipartEncoder as _MultipartEncoder)
 
+from apyfal import __version__ as _apyfal_version
 import apyfal._utilities as _utl
 import apyfal.exceptions as _exc
 import apyfal.configuration as _cfg
@@ -196,6 +197,9 @@ class RESTClient(_Client):
         Returns:
             dict: response.
         """
+        # Save Apyfal version in parameters
+        parameters['env']['apyfal_version'] = _apyfal_version
+
         # Post accelerator configuration
         fields = {'parameters': _json.dumps(parameters)}
         if datafile:

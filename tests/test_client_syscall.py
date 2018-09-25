@@ -2,6 +2,7 @@
 """apyfal.client.syscall tests"""
 
 from contextlib import contextmanager
+from copy import deepcopy
 import json
 import os
 from threading import Lock
@@ -369,6 +370,7 @@ def test_syscall_client_start_process_stop():
     """Tests SysCallClient._start, _process, _stop"""
     import apyfal.client.syscall as syscall
     import apyfal.configuration as cfg
+    from apyfal.exceptions import ClientConfigurationException
 
     # Mock some client methods
     dummy_file_in = 'file_in'
@@ -422,10 +424,21 @@ def test_syscall_client_start_process_stop():
         client = DummyClient()
 
         # Start
+        start_parameters = deepcopy(dummy_parameters)
+        excepted_parameters = start_parameters.copy()
+        del excepted_parameters['env']
         expected_args = dict(
             mode='0', input_file=dummy_file_in, input_json=str,
-            output_json=str, parameters=dummy_parameters, extra_args=['-v4'])
-        assert client._start(dummy_file_in, dummy_parameters) == dummy_response
+            output_json=str, parameters=excepted_parameters, extra_args=['-v4'])
+        assert client._start(dummy_file_in, start_parameters) == dummy_response
+
+        # Start with version checks
+        start_parameters['env']['apyfal_version'] = '1.0.0'
+        with pytest.raises(ClientConfigurationException):
+            client._start(dummy_file_in, start_parameters)
+
+        start_parameters['env']['apyfal_version'] = '10.0.0'
+        assert client._start(dummy_file_in, start_parameters) == dummy_response
 
         # Process
         expected_args = dict(

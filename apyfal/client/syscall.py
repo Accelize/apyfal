@@ -1,6 +1,7 @@
 # coding=utf-8
 """Accelerator system call client."""
 
+from distutils.version import LooseVersion as _LooseVersion
 import json as _json
 from os import remove as _remove
 from os.path import join as _join, exists as _exists
@@ -79,6 +80,9 @@ class SysCallClient(_Client):
     #: Client type
     NAME = 'SysCall'
 
+    #: Apyfal minimum compatible client version
+    APYFAL_MINIMUM_VERSION = '1.1.0'
+
     # Needs the use of temporary files
     _PARAMETER_IO_FORMAT = {
         'file_in': 'file', 'file_out': 'file', 'datafile': 'file'}
@@ -107,11 +111,25 @@ class SysCallClient(_Client):
         Returns:
             dict: response.
         """
+        # Get environment and remove it from parameters
+        parameters = parameters.copy()
+        env = parameters.pop('env', dict())
+
+        # Checks Apyfal version
+        try:
+            if _LooseVersion(env['apyfal_version']) < _LooseVersion(
+                    self.APYFAL_MINIMUM_VERSION):
+                raise _exc.ClientConfigurationException(
+                    'Apyfal version needs to be at least %s. Please upgrade it.'
+                    % self.APYFAL_MINIMUM_VERSION)
+        except KeyError:
+            # Version not available
+            pass
+
         # Initialize metering
         with self._accelerator_lock:
             self._init_metering(
-                parameters['env'], reload=parameters['app'].pop(
-                    'reload', False))
+                env, reload=parameters['app'].pop('reload', False))
 
         # Run and return response
         return self._run_executable(
