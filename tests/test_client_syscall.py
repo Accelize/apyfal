@@ -450,11 +450,11 @@ def test_syscall_client_start_process_stop():
         assert client._start(dummy_file_in, start_parameters) == dummy_response
 
         # Start with version checks
-        start_parameters['env']['apyfal_version'] = '1.0.0'
+        start_parameters['env']['apyfal_version'] = '0.0.0'
         with pytest.raises(ClientConfigurationException):
             client._start(dummy_file_in, start_parameters)
 
-        start_parameters['env']['apyfal_version'] = '10.0.0'
+        start_parameters['env']['apyfal_version'] = '9.9.9'
         assert client._start(dummy_file_in, start_parameters) == dummy_response
 
         # Process
