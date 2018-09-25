@@ -4,17 +4,32 @@ Changelog
 1.2.0 (2018/09)
 ---------------
 
+New features
+
+- Apyfal now fully support HTTPS between client and host.
+- Apyfal can generate self signed certificates for generated hosts, theses
+  certificates are verified by the client.
+- Add of ``process_map`` and ``process_submit`` methods to the Accelerator class
+  to performs ``process`` call asynchronously and improve performance on batch
+  of processing tasks.
+- Add the ``AcceleratorPoolExecutor`` that allow to perform processing tasks
+  asynchronously over a pool of multiple accelerators hosts.
+
 General improvements
 
-- Add ``boto3`` as default dependency. Actually AWS is the only provider
-  ready for production and is the most commonly used. Other providers are
-  available using extra setup options.
 - Apyfal CLI: ``create`` is now optional if can be called without any arguments,
   This is mainly indented to use local accelerator directly on host.
 - It is now possible to use private IP instead of public IP as accelerator
   default URL. See ``use_private_ip`` parameter.
 - Host instance have a new ``Apyfal`` tag/metadata with ``host_name_prefix``
   value.
+- Add ``boto3`` as default dependency. Actually AWS is the only provider
+  ready for production and is the most commonly used. Other providers are
+  available using extra setup options.
+- Change logging levels to show only minimal information with INFO,
+  implementation and step detail is still available using the DEBUG level.
+  This allow to show more relevant information when using Apyfal with CLI or
+  running Accelerators examples.
 
 REST client improvements
 
@@ -25,11 +40,6 @@ REST client improvements
   simplify the REST client, removes some dependencies remove extra build step.
 - Improves exceptions handling to add more detailed information from
   server and handle HTTP errors correctly.
-- Allows HTTPS (Default for host configured with certificate).
-- Allows to force verifying requests with a specified SSL certificate.
-  This improves security with host using self signed certificates.
-- On host creation, a self signed certificate can be generated to secure the
-  accelerator session.
 
 Fixes:
 
@@ -42,6 +52,10 @@ Fixes:
 - Fix instance still running warning shown twice.
 - Fix ``stop_mode`` overridden by default accelerator value.
 - Fix case handling in configuration file.
+- The host server now checks the Apyfal version used as client and raise a
+  proper exception if not compatible.
+- The host server was updated to be compatible with Apyfal starting from 1.0.0
+  instead of only 1.1.0.
 
 Deprecations:
 

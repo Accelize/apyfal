@@ -284,7 +284,7 @@ class AWSHost(_CSPHost):
                 KeyName=self._key_pair)
 
         _utl.create_key_pair_file(self._key_pair, key_pair.key_material)
-        _get_logger().info(_utl.gen_msg(
+        _get_logger().debug(_utl.gen_msg(
             "created_named", "key pair", self._key_pair))
 
     def _init_policy(self):
@@ -304,7 +304,7 @@ class AWSHost(_CSPHost):
                 PolicyName=self._policy,
                 PolicyDocument=_json_dumps(self.POLICY_DOCUMENT))
 
-            _get_logger().info(_utl.gen_msg(
+            _get_logger().debug(_utl.gen_msg(
                 'created_named', 'policy', self._policy))
 
         with _exception_handler():
@@ -332,7 +332,7 @@ class AWSHost(_CSPHost):
                     self.ASSUME_ROLE_POLICY_DOCUMENT),
                 Description=_utl.gen_msg('accelize_generated'))
 
-            _get_logger().info(_utl.gen_msg('created_named', 'IAM role', role))
+            _get_logger().debug(_utl.gen_msg('created_named', 'IAM role', role))
 
     def _attach_role_policy(self):
         """
@@ -342,7 +342,7 @@ class AWSHost(_CSPHost):
             self._iam_client.attach_role_policy(
                 PolicyArn=self._policy_arn, RoleName=self._role)
 
-            _get_logger().info(_utl.gen_msg(
+            _get_logger().debug(_utl.gen_msg(
                 'attached_to', 'IAM policy', self._policy_arn,
                 'IAM role', self._role))
 
@@ -357,7 +357,7 @@ class AWSHost(_CSPHost):
             self._iam_client.create_instance_profile(
                 InstanceProfileName=self._instance_profile_name)
 
-            _get_logger().info(_utl.gen_msg(
+            _get_logger().debug(_utl.gen_msg(
                 'created_named', 'IAM instance profile',
                 self._instance_profile_name))
 
@@ -386,7 +386,7 @@ class AWSHost(_CSPHost):
                             continue
                         raise
 
-            _get_logger().info(_utl.gen_msg(
+            _get_logger().debug(_utl.gen_msg(
                 'attached_to', 'IAM role', self._role, 'IAM instance profile',
                 self._instance_profile_name))
 
@@ -432,7 +432,7 @@ class AWSHost(_CSPHost):
             # Get group ID
             security_group_id = response['GroupId']
 
-            _get_logger().info(_utl.gen_msg(
+            _get_logger().debug(_utl.gen_msg(
                 'created_named', 'security group', security_group_id))
 
         # Add host IP to security group if not already done
@@ -449,7 +449,7 @@ class AWSHost(_CSPHost):
             self._ec2_client.authorize_security_group_ingress(
                 GroupId=security_group_id, IpPermissions=ip_permissions)
 
-        _get_logger().info(
+        _get_logger().debug(
             _utl.gen_msg('authorized_ip', public_ip, self._security_group))
 
     def _get_instance(self):

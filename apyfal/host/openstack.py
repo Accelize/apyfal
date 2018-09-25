@@ -217,7 +217,7 @@ class OpenStackHost(_CSPHost):
                 name=self._key_pair)
 
         _utl.create_key_pair_file(self._key_pair, key_pair.private_key)
-        _get_logger().info(_utl.gen_msg(
+        _get_logger().debug(_utl.gen_msg(
             "created_named", "key pair", self._key_pair))
 
     def _init_security_group(self):
@@ -244,7 +244,7 @@ class OpenStackHost(_CSPHost):
                         'description': _utl.gen_msg('accelize_generated'),
                     }})['security_group']['id']
 
-            _get_logger().info(_utl.gen_msg(
+            _get_logger().debug(_utl.gen_msg(
                 'created_named', 'security group', self._security_group))
 
         # Verify rules associated to security group for host IP address
@@ -261,7 +261,7 @@ class OpenStackHost(_CSPHost):
                        'protocol': 'tcp',
                        'security_group_id': security_group_id}})
 
-        _get_logger().info(
+        _get_logger().debug(
             _utl.gen_msg('authorized_ip', public_ip, self._security_group))
 
     def _init_image(self):

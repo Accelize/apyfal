@@ -382,7 +382,7 @@ class CSPHost(_Host):
                     self._instance, self._instance_id = \
                         self._start_new_instance()
 
-                _get_logger().info(_utl.gen_msg(
+                _get_logger().debug(_utl.gen_msg(
                     'created_named', 'instance', self._instance_id))
 
             # If exists, starts it directly
@@ -501,7 +501,7 @@ class CSPHost(_Host):
         if stop_mode == 'keep':
             if not self._warn_keep_once:
                 self._warn_keep_once = True
-                _get_logger().warning(
+                _get_logger().info(
                     "Instance '%s' is still running" % self.instance_id)
             return
 

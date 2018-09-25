@@ -81,7 +81,7 @@ class SysCallClient(_Client):
     NAME = 'SysCall'
 
     #: Apyfal minimum compatible client version
-    APYFAL_MINIMUM_VERSION = '1.1.0'
+    APYFAL_MINIMUM_VERSION = '1.0.0'
 
     # Needs the use of temporary files
     _PARAMETER_IO_FORMAT = {

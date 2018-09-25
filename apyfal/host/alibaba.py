@@ -415,7 +415,7 @@ class AlibabaCSP(_CSPHost):
                 Description=_utl.gen_msg('accelize_generated'))
             self._security_group_id = response['SecurityGroupId']
 
-            _get_logger().info(_utl.gen_msg(
+            _get_logger().debug(_utl.gen_msg(
                 'created_named', 'security group', self._security_group_id))
 
         # Adds host IP to security group if not already done
@@ -431,7 +431,7 @@ class AlibabaCSP(_CSPHost):
                 'AuthorizeSecurityGroup',
                 SecurityGroupId=self._security_group_id, **rule)
 
-        _get_logger().info(
+        _get_logger().debug(
             _utl.gen_msg('authorized_ip', public_ip, self._security_group))
 
     def _init_role(self):
@@ -447,7 +447,7 @@ class AlibabaCSP(_CSPHost):
                 Description=_utl.gen_msg('accelize_generated'),
                 error_code_ignore='EntityAlreadyExists'):
 
-            _get_logger().info(_utl.gen_msg(
+            _get_logger().debug(_utl.gen_msg(
                 'created_named', 'RAM role', self._role))
 
     def _init_policy(self):
@@ -464,7 +464,7 @@ class AlibabaCSP(_CSPHost):
                 Description=_utl.gen_msg('accelize_generated'),
                 error_code_ignore='EntityAlreadyExists'):
 
-            _get_logger().info(_utl.gen_msg(
+            _get_logger().debug(_utl.gen_msg(
                 'created_named', 'RAM policy', self._policy))
 
     def _attach_role_policy(self):
@@ -476,7 +476,7 @@ class AlibabaCSP(_CSPHost):
                 PolicyName=self._policy, RoleName=self._role,
                 error_code_ignore='EntityAlreadyExists'):
 
-            _get_logger().info(_utl.gen_msg(
+            _get_logger().debug(_utl.gen_msg(
                 'attached_to', 'RAM policy', self._policy,
                 'RAM role', self._role))
 
