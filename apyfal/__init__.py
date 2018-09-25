@@ -377,46 +377,40 @@ class Accelerator(_AbstractAsyncAccelerator):
         Args:
             process_result (dict): result from AcceleratorClient.process
         """
-        logger = _get_logger()
-
+        # Handle profiling info
         try:
-            app = process_result[1]['app']
+            profiling = process_result[1]['app']['profiling']
         except KeyError:
             return None
 
-        # Handle profiling info
-        try:
-            profiling = app['profiling']
-        except KeyError:
-            pass
-        else:
-            logger.info("Profiling information from result:")
+        logger = _get_logger()
+        logger.info("Profiling information from result:")
 
-            # Compute and show information only on DEBUG level
-            values = dict()
+        # Compute and show information only on DEBUG level
+        values = dict()
 
-            for key in ('wall-clock-time', 'fpga-elapsed-time',
-                        'total-bytes-written', 'total-bytes-read'):
-                try:
-                    values[key] = float(profiling[key])
-                except KeyError:
-                    pass
+        for key in ('wall-clock-time', 'fpga-elapsed-time',
+                    'total-bytes-written', 'total-bytes-read'):
+            try:
+                values[key] = float(profiling[key])
+            except KeyError:
+                pass
 
-            total_bytes = (values.get('total-bytes-written', 0.0) +
-                           values.get('total-bytes-read', 0.0))
-            global_time = values.get('wall-clock-time', 0.0)
-            fpga_time = values.get('fpga-elapsed-time', 0.0)
+        total_bytes = (values.get('total-bytes-written', 0.0) +
+                       values.get('total-bytes-read', 0.0))
+        global_time = values.get('wall-clock-time', 0.0)
+        fpga_time = values.get('fpga-elapsed-time', 0.0)
 
-            if global_time > 0.0:
-                logger.info('- Wall clock time: %.3fs' % global_time)
+        if global_time > 0.0:
+            logger.info('- Wall clock time: %.3fs' % global_time)
 
-            if fpga_time > 0.0:
-                logger.info('- FPGA elapsed time: %.3fs' % fpga_time)
+        if fpga_time > 0.0:
+            logger.info('- FPGA elapsed time: %.3fs' % fpga_time)
 
-            if total_bytes > 0.0 and global_time > 0.0:
-                logger.info("- Server processing bandwidths: %.1f MB/s",
-                            total_bytes / global_time / 1024.0 / 1024.0)
+        if total_bytes > 0.0 and global_time > 0.0:
+            logger.info("- Server processing bandwidths: %.1f MB/s",
+                        total_bytes / global_time / 1024.0 / 1024.0)
 
-            if total_bytes > 0.0 and fpga_time > 0.0:
-                logger.info("- FPGA processing bandwidths: %.1f MB/s",
-                            total_bytes / fpga_time / 1024.0 / 1024.0)
+        if total_bytes > 0.0 and fpga_time > 0.0:
+            logger.info("- FPGA processing bandwidths: %.1f MB/s",
+                        total_bytes / fpga_time / 1024.0 / 1024.0)

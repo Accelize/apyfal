@@ -131,17 +131,20 @@ class CSPHost(_Host):
         self._instance_type = None
         self._instance_type_name = None
         self._warn_keep_once = False
-
-        # Read configuration from file
         section = self._config[self._config_section]
+
+        # CSP
         self._client_id = client_id or section['client_id']
         self._secret_id = secret_id or section['secret_id']
         self._region = region or section['region']
+
+        # Instance data
         self._instance_type = instance_type or section['instance_type']
         self._instance_id = instance_id or section['instance_id']
         self._use_private_ip = (
             use_private_ip or section.get_literal('use_private_ip') or False)
 
+        # Security
         self._key_pair = (
             key_pair or section['key_pair'] or
             self._default_parameter_value('KeyPair', include_host=True))
@@ -150,36 +153,24 @@ class CSPHost(_Host):
             security_group or section['security_group'] or
             self._default_parameter_value('SecurityGroup'))
 
+        # Instance stop on "stop", "with" exit or garbage collection
         self.stop_mode = (
             kwargs.get('stop_mode') or section['stop_mode'] or
             ('keep' if instance_id or kwargs.get('host_ip') else 'term'))
 
+        # User data
         self._init_config = init_config or section['init_config']
         self._init_script = init_script or section['init_script']
 
-        # Get SSL certificate
-        self._ssl_cert_key = ssl_cert_key or section['ssl_cert_key']
-
-        if ssl_cert_crt is False:
-            self._ssl_cert_crt = False
-        else:
-            self._ssl_cert_crt = ssl_cert_crt or section.get_literal(
-                'ssl_cert_crt')
-
-        self._ssl_cert_generate = (
-                ssl_cert_generate or section.get_literal('ssl_cert_generate')
-                or False)
-
+        # Gets SSL certificate
+        self._ssl_cert_key, self._ssl_cert_crt, self._ssl_cert_generate = \
+            self._get_certificates_arguments(
+                ssl_cert_key, ssl_cert_crt, ssl_cert_generate)
         self._init_certificates()
 
         # Checks mandatory configuration values
         self._check_arguments('region')
-
-        if (self._client_id is None and
-                self._instance_id is None and self._url is None):
-            raise _exc.HostConfigurationException(
-                "Need at least 'client_id', 'instance_id' or 'host_ip' "
-                "argument. See documentation for more information.")
+        self._check_host_id_arguments()
 
     @property
     def host_ip(self):
@@ -387,8 +378,7 @@ class CSPHost(_Host):
 
             # If exists, starts it directly
             else:
-                status = self._status()
-                self._start_existing_instance(status)
+                self._start_existing_instance(self._status())
 
             # Waiting for instance provisioning
             with self._stop_silently_on_exception():
@@ -612,44 +602,11 @@ class CSPHost(_Host):
         commands = ["#!/usr/bin/env bash"]
 
         # Gets configuration file
-        if self._init_config:
-            config = (self._config if self._init_config is True else
-                      self._init_config)
-
-            # Write default configuration file
-            stream = _StringIO()
-            _cfg.create_configuration(config).write(stream)
-            stream.seek(0)
-
-            commands += ["cat << EOF > %s/accelerator.conf" % self._HOME,
-                         stream.read(), "EOF\n"]
+        self._cat_config_file(commands)
 
         # Gets SSL ssl_cert_key
         if self._ssl_cert_crt and self._ssl_cert_key:
-
-            # Gets ssl_cert_key files
-            if self._ssl_cert_generate:
-                from apyfal._certificates import create_wildcard_certificate
-                ssl_cert_crt, ssl_cert_key = create_wildcard_certificate(
-                    common_name=self.host_name)
-
-                # Saves certificates in files
-                for path, content in ((self._ssl_cert_crt, ssl_cert_crt),
-                                      (self._ssl_cert_key, ssl_cert_key)):
-                    with _srg.open(path, 'wb') as src_file:
-                        src_file.write(content)
-
-            else:
-                # Reads ssl_cert_key from files
-                with _srg.open(self._ssl_cert_crt, 'rb') as src_file:
-                    ssl_cert_crt = src_file.read()
-                with _srg.open(self._ssl_cert_key, 'rb') as src_file:
-                    ssl_cert_key = src_file.read()
-
-            # Writes command
-            for src, dst in ((ssl_cert_crt, self._SSL_CERT_CRT),
-                             (ssl_cert_key, self._SSL_CERT_KEY)):
-                commands += ["cat << EOF > %s" % dst, src.decode(), "EOF\n"]
+            self._cat_ssl_cert_files(commands)
 
         elif self._ssl_cert_crt or self._ssl_cert_key:
             # Needs both private and public keys
@@ -659,18 +616,81 @@ class CSPHost(_Host):
         # Add initialization flag file
         commands.append('touch "%s"\n' % self._SH_FLAG)
 
-        # Gets bash script
-        if self._init_script:
-            with _srg.open(self._init_script, 'rt') as script:
-                lines = script.read().strip().splitlines()
+        # Gets user bash script
+        self._extend_init_script(commands)
 
-            if lines[0].startswith("#!"):
-                # Remove shebang
-                lines = lines[1:]
-
-            commands.extend(lines)
-
+        # Return final script
         return '\n'.join(commands).encode()
+
+    def _extend_init_script(self, commands):
+        """
+        Update command with user init script.
+
+        Args:
+            commands (list of str): Commands
+        """
+        if not self._init_script:
+            return
+
+        with _srg.open(self._init_script, 'rt') as script:
+            lines = script.read().strip().splitlines()
+
+        if lines[0].startswith("#!"):
+            # Remove shebang
+            lines = lines[1:]
+
+        commands.extend(lines)
+
+    def _cat_config_file(self, commands):
+        """
+        Update command with cat of configuration file.
+
+        Args:
+            commands (list of str): Commands
+        """
+        if not self._init_config:
+            return
+
+        config = (self._config if self._init_config is True else
+                  self._init_config)
+
+        # Write default configuration file
+        stream = _StringIO()
+        _cfg.create_configuration(config).write(stream)
+        stream.seek(0)
+        commands += ["cat << EOF > %s/accelerator.conf" % self._HOME,
+                     stream.read(), "EOF\n"]
+
+    def _cat_ssl_cert_files(self, commands):
+        """
+        Update command with cat of certificate files.
+
+        Args:
+            commands (list of str): Commands
+        """
+        # Gets ssl_cert_key files
+        if self._ssl_cert_generate:
+            from apyfal._certificates import create_wildcard_certificate
+            ssl_cert_crt, ssl_cert_key = create_wildcard_certificate(
+                common_name=self.host_name)
+
+            # Saves certificates in files
+            for path, content in ((self._ssl_cert_crt, ssl_cert_crt),
+                                  (self._ssl_cert_key, ssl_cert_key)):
+                with _srg.open(path, 'wb') as src_file:
+                    src_file.write(content)
+
+        else:
+            # Reads ssl_cert_key from files
+            with _srg.open(self._ssl_cert_crt, 'rb') as src_file:
+                ssl_cert_crt = src_file.read()
+            with _srg.open(self._ssl_cert_key, 'rb') as src_file:
+                ssl_cert_key = src_file.read()
+
+        # Writes command
+        for src, dst in ((ssl_cert_crt, self._SSL_CERT_CRT),
+                         (ssl_cert_key, self._SSL_CERT_KEY)):
+            commands += ["cat << EOF > %s" % dst, src.decode(), "EOF\n"]
 
     def _get_tag(self):
         """
@@ -680,6 +700,35 @@ class CSPHost(_Host):
             str: tag value
         """
         return self._host_name_prefix or 'Apyfal'
+
+    def _get_certificates_arguments(
+            self, ssl_cert_key, ssl_cert_crt, ssl_cert_generate):
+        """
+        Get certificates related arguments.
+
+        Args:
+            ssl_cert_key (str):
+            ssl_cert_crt (str or bool):
+            ssl_cert_generate (bool):
+
+        Returns:
+            tuple: ssl_cert_key, ssl_cert_crt, ssl_cert_generate
+        """
+        section = self._config[self._config_section]
+
+        # Private key
+        ssl_cert_key = ssl_cert_key or section['ssl_cert_key']
+
+        # Public certificate
+        if ssl_cert_crt is not False:
+            ssl_cert_crt = ssl_cert_crt or section.get_literal('ssl_cert_crt')
+
+        # Generated certificate
+        ssl_cert_generate = (
+            ssl_cert_generate or section.get_literal('ssl_cert_generate')
+            or False)
+
+        return ssl_cert_key, ssl_cert_crt, ssl_cert_generate
 
     def _init_certificates(self):
         """
@@ -731,3 +780,16 @@ class CSPHost(_Host):
         policy = (policy or self._config[self._config_section]['policy'] or
                   self._default_parameter_value('Policy'))
         return role, policy
+
+    def _check_host_id_arguments(self):
+        """
+        Checks if enough arguments to start or get an instance.
+
+        Raises:
+            apyfal.exceptions.HostConfigurationException: Not enough arguments.
+        """
+        if (self._client_id is None and
+                self._instance_id is None and self._url is None):
+            raise _exc.HostConfigurationException(
+                "Need at least 'client_id', 'instance_id' or 'host_ip' "
+                "argument. See documentation for more information.")

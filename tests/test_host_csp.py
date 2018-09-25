@@ -748,7 +748,7 @@ def run_full_real_test_sequence(host_type, environment,
     #       clean up of CSP objects is implemented.
     from apyfal.host import Host
     host_parameter_prefix = Host._PARAMETER_PREFIX
-    Host._PARAMETER_PREFIX = 'ApyfalTesting' + '_'
+    Host._PARAMETER_PREFIX = 'ApyfalTesting'
 
     # Tests:
     instance_id_term = None

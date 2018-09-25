@@ -25,6 +25,7 @@ Security: RAM Role and policy:
 from base64 import b64encode as _b64encode
 from concurrent.futures import (ThreadPoolExecutor as _ThreadPoolExecutor,
                                 as_completed as _as_completed)
+from contextlib import contextmanager as _contextmanager
 import json as _json
 from uuid import uuid1 as _uuid
 
@@ -153,7 +154,6 @@ class AlibabaCSP(_CSPHost):
         self._security_group_id = None
         self._role, self._policy = self._get_role_and_policy(role, policy)
         self._acs_client_kwargs = acs_client_kwargs or dict()
-
         # ClientToken guarantee idempotence of requests
         self._client_token = str(_uuid())
 
@@ -183,10 +183,10 @@ class AlibabaCSP(_CSPHost):
         Args:
             action_name (str): Action name.
             domain (str): Alibaba cloud subdomain name.
-            error_code_filter (str or tuple of str): Filter error codes and
+            error_code_filter (str): Filter error codes and
                 raise original exception if found. Else raise
                 apyfal.exceptions.HostException subclass)
-            error_code_ignore (str or tuple of str): Error codes to ignore and
+            error_code_ignore (str): Error codes to ignore and
                 continue.
             exception_message (str): Exception message if exception to raise.
             parameters: request parameters. A "parameter=" argument can also be
@@ -222,51 +222,12 @@ class AlibabaCSP(_CSPHost):
             request.add_query_param(parameter, value)
 
         # Performs request
-        try:
+        with self._handle_request_exception(
+                error_code_ignore, error_code_filter, exception_message):
             response = self._acs_client.do_action_with_exception(request)
 
-        # Handles exceptions
-        except (_acs_exceptions.ClientException,
-                _acs_exceptions.ServerException) as acs_exception:
-
-            error_code = acs_exception.get_error_code()
-            error_msg = acs_exception.get_error_msg()
-
-            # Filters error codes to re-raise as it.
-            if error_code_ignore:
-                # Forces filter as tuple object
-                if isinstance(error_code_ignore, str):
-                    error_code_ignore = (error_code_ignore,)
-
-                for code in error_code_ignore:
-                    if error_code.startswith(code):
-                        return
-
-            if error_code_filter:
-                # Forces filter as tuple object
-                if isinstance(error_code_filter, str):
-                    error_code_filter = (error_code_filter,)
-
-                # Re-raises as it if found
-                for code in error_code_filter:
-                    if error_code.startswith(code):
-                        raise
-
-            # Selects exception type
-            if 'AccessKey' in error_code:
-                exception = _exc.HostAuthenticationException
-            elif 'Invalid' in error_code:
-                exception = _exc.HostConfigurationException
-            else:
-                exception = _exc.HostRuntimeException
-
-            # Raises Apyfal exception
-            raise exception(
-                exception_message,
-                exc='%s: %s' % (error_code, error_msg))
-
-        # Returns response
-        return _json.loads(response)
+            # Returns response
+            return _json.loads(response)
 
     def _instance_request(self, action_name, status_desc='', **parameters):
         """
@@ -303,6 +264,54 @@ class AlibabaCSP(_CSPHost):
                     if timeout.reached():
                         raise _exc.HostRuntimeException(gen_msg=(
                             'timeout', status_desc))
+
+    @staticmethod
+    @_contextmanager
+    def _handle_request_exception(
+            error_code_ignore, error_code_filter, exception_message):
+        """
+
+        Args:
+            error_code_filter (str): Filter error codes and
+                raise original exception if found. Else raise
+                apyfal.exceptions.HostException subclass)
+            error_code_ignore (str): Error codes to ignore and
+                continue.
+            exception_message (str): Exception message if exception to raise.
+
+        Raises:
+
+        """
+        # Run requests
+        try:
+            yield
+
+        # Handles exceptions
+        except (_acs_exceptions.ClientException,
+                _acs_exceptions.ServerException) as acs_exception:
+
+            error_code = acs_exception.get_error_code()
+            error_msg = acs_exception.get_error_msg()
+
+            # Filters error codes to re-raise as it.
+            if error_code_ignore and error_code.startswith(error_code_ignore):
+                return
+
+            if error_code_filter and error_code.startswith(error_code_filter):
+                raise
+
+            # Selects exception type
+            if 'AccessKey' in error_code:
+                exception = _exc.HostAuthenticationException
+            elif 'Invalid' in error_code:
+                exception = _exc.HostConfigurationException
+            else:
+                exception = _exc.HostRuntimeException
+
+            # Raises Apyfal exception
+            raise exception(
+                exception_message,
+                exc='%s: %s' % (error_code, error_msg))
 
     def _get_public_ip(self):
         """

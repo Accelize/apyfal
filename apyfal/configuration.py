@@ -224,48 +224,14 @@ class Configuration(_Mapping):
         self._sections = dict()
         self._cache = dict()
 
-        # Search for "APYFAL_CONFIG_FILE" environment variable
-        if not configuration_file:
-            try:
-                configuration_file = _environ['APYFAL_CONFIG_FILE']
-            except KeyError:
-                pass
-
-        # Finds configuration file
-        if configuration_file is None:
-            paths = (
-                # Search configuration file in current working directory
-                self.DEFAULT_CONFIG_FILE,
-                # Search configuration file in home directory
-                _os_path.join(_os_path.expanduser('~'),
-                              self.DEFAULT_CONFIG_FILE))
-            for path in paths:
-                if _os_path.isfile(path):
-                    configuration_file = path
-                    break
+        # Find configuration file to use
+        configuration_file = self._find_config_file(configuration_file)
 
         # Read configuration file if exists
         # If not, return empty Configuration file, this will force
         # host and accelerator classes to uses defaults values
         if configuration_file:
-            # Initialize configuration parser
-            ini_file = ConfigParser(allow_no_value=True)
-
-            # Keep option name case
-            ini_file.optionxform = str
-
-            # Read from file with apyfal.storage support
-            from apyfal.storage import open as srg_open
-            with srg_open(configuration_file, 'rt', encoding='utf-8') as file:
-                getattr(ini_file, CONFIG_PARSER_READ)(file)
-
-            # Retrieve parameters from configuration parser
-            self._sections = {
-                section: _Section(
-                    section, self,
-                    {key: value for key, value in ini_file.items(section)
-                     if value not in (None, '')})
-                for section in ini_file.sections()}
+            self._sections = self._read_config_file(configuration_file)
 
             # AcceleratorAPI backward compatibility
             self._legacy_backward_compatibility()
@@ -395,6 +361,67 @@ class Configuration(_Mapping):
 
         # Writes config parser to file object
         config_parser.write(fileobject)
+
+    def _find_config_file(self, configuration_file):
+        """
+        Find best configuration file to use.
+
+        Args:
+            configuration_file (apyfal.configuration.Configuration, path-like object or file-like object):
+                Path-like object can be path, URL or cloud object URL.
+
+        Returns:
+            apyfal.configuration.Configuration, path-like object or file-like object
+        """
+        # Search for "APYFAL_CONFIG_FILE" environment variable
+        if not configuration_file:
+            try:
+                configuration_file = _environ['APYFAL_CONFIG_FILE']
+            except KeyError:
+                pass
+
+        # Finds configuration file
+        if configuration_file is None:
+            paths = (
+                # Search configuration file in current working directory
+                self.DEFAULT_CONFIG_FILE,
+                # Search configuration file in home directory
+                _os_path.join(_os_path.expanduser('~'),
+                              self.DEFAULT_CONFIG_FILE))
+            for path in paths:
+                if _os_path.isfile(path):
+                    configuration_file = path
+                    break
+
+        return configuration_file
+
+    def _read_config_file(self, configuration_file):
+        """
+        Read configuration file and returns configuration section.
+
+        Args:
+            configuration_file (apyfal.configuration.Configuration, path-like object or file-like object):
+                Path-like object can be path, URL or cloud object URL.
+        Returns:
+            dict: Configuration sections.
+        """
+        # Initialize configuration parser
+        ini_file = ConfigParser(allow_no_value=True)
+
+        # Keep option name case
+        ini_file.optionxform = str
+
+        # Read from file with apyfal.storage support
+        from apyfal.storage import open as srg_open
+        with srg_open(configuration_file, 'rt', encoding='utf-8') as file:
+            getattr(ini_file, CONFIG_PARSER_READ)(file)
+
+        # Retrieve parameters from configuration parser
+        return {section: _Section(
+            section, self,
+            {key: value for key, value in ini_file.items(section)
+             if value not in (None, '')})
+            for section in ini_file.sections()}
 
     def _legacy_backward_compatibility(self):
         """

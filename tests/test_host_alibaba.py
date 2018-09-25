@@ -93,9 +93,8 @@ def test_alibibaclass_request():
         with pytest.raises(ServerException):
             csp._request(action, error_code_filter='DummyCode', **parameters)
 
-        with pytest.raises(ServerException):
-            csp._request(action, error_code_filter=(
-                'DummyCode', 'AnotherCode'), **parameters)
+        assert csp._request(
+            action, error_code_ignore='DummyCode', **parameters) is None
 
         # Test "_instance_request"
         raises_exception = []
