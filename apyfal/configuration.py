@@ -307,23 +307,14 @@ class Configuration(_Mapping):
         Returns:
             dict: AcceleratorClient requirements for host.
         """
-        headers = {"Authorization": "Bearer %s" % self.access_token,
-                   "Content-Type": "application/json",
-                   "Accept": "application/vnd.accelize.v1+json"}
-
-        response = _utl.http_session().get(
-            METERING_SERVER + '/auth/getlastcspconfiguration/',
-            headers=headers, timeout=self._REQUEST_TIMEOUT)
-        response.raise_for_status()
-        response_config = _json.loads(response.text)
-
         # Get host_type configuration
         try:
-            provider_config = response_config[host_type]
+            provider_config = self.get_host_configurations()[host_type]
         except KeyError:
             raise _exc.ClientConfigurationException(
                 "Host '%s' is not supported. Available hosts are: %s" % (
-                    host_type, ', '.join(response_config.keys())))
+                    host_type, ', '.join(
+                        self.get_host_configurations().keys())))
 
         # Get accelerator configuration
         try:
@@ -335,6 +326,25 @@ class Configuration(_Mapping):
 
         accelerator_config['accelerator'] = accelerator
         return accelerator_config
+
+    @_utl.memoizedmethod
+    def get_host_configurations(self):
+        """
+        Get available hosts configurations.
+
+        Returns:
+            dict: Dictionary of possibles configurations
+        """
+        response = _utl.http_session().get(
+            METERING_SERVER + '/auth/getlastcspconfiguration/',
+            headers={"Authorization": "Bearer %s" % self.access_token,
+                     "Content-Type": "application/json",
+                     "Accept": "application/vnd.accelize.v1+json"},
+            timeout=self._REQUEST_TIMEOUT)
+
+        response.raise_for_status()
+
+        return _json.loads(response.text)
 
     def write(self, fileobject):
         """

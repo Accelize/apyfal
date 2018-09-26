@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import time
 
 import apyfal.exceptions as _exc
+from apyfal.configuration import create_configuration
 from apyfal._utilities import ABC
 
 
@@ -150,18 +151,19 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
                  accelize_secret_id=None, host_type=None,
                  stop_mode='term', workers_count=4, **host_kwargs):
 
+        # Uses a common configuration file
+        config = create_configuration(config)
+
         # Needs to lazy import to avoid importing issues
         from apyfal import Accelerator
 
         # Initializes Accelerators workers
         self._workers_count = workers_count
-        with ThreadPoolExecutor(max_workers=self._workers_count) as executor:
-            self._workers = [executor.submit(
-                Accelerator, accelerator=accelerator, config=config,
-                accelize_client_id=accelize_client_id,
-                accelize_secret_id=accelize_secret_id, host_type=host_type,
-                stop_mode=stop_mode, **host_kwargs).result()
-                for _ in range(workers_count)]
+        self._workers = [Accelerator(
+            accelerator=accelerator, config=config,
+            accelize_client_id=accelize_client_id,
+            accelize_secret_id=accelize_secret_id, host_type=host_type,
+            stop_mode=stop_mode, **host_kwargs) for _ in range(workers_count)]
 
     def __enter__(self):
         return self
