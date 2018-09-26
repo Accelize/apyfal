@@ -47,25 +47,31 @@ PACKAGE_INFO = dict(
     license='Apache License, Version 2.0',
     python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',
     install_requires=[
-        'requests', 'requests_toolbelt', 'ipgetter', 'pycosio', 'cryptography',
+        'requests>=2.9.0',
+        'requests_toolbelt>=0.7.1',
+        'ipgetter>=0.6',
+        'pycosio>=1.0.0',
+        'cryptography>=2.1',
 
         # Python 2.7 compatibility
-        'futures; python_version == "2.7"',
-        'ipaddress; python_version == "2.7"',
+        'futures>=3.1.1; python_version == "2.7"',
+        'ipaddress>=1.0.18; python_version == "2.7"',
 
         # Makes AWS as default since it is the only one ready
         # to production today. AWS extra is kept for compatibility.
-        'boto3'],
+        'boto3>=1.5.0'],
 
     extras_require={
         # CSP specific requirements
         'Alibaba': [
             'pycosio[oss]',
-            'aliyun-python-sdk-core; python_version == "2.7"',
-            'aliyun-python-sdk-core-v3; python_version >= "3.4"'],
-        'AWS': ['boto3', 'pycosio[s3]'],
-        'OpenStack': ['python-novaclient', 'python-neutronclient',
-                      'pycosio[swift]']},
+            'aliyun-python-sdk-core>=2.5.0; python_version == "2.7"',
+            'aliyun-python-sdk-core-v3>=2.5.0; python_version >= "3.4"'],
+        'AWS': ['boto3>=1.5.0', 'pycosio[s3]'],
+        'OpenStack': [
+            'python-novaclient>=8.0.0',
+            'python-neutronclient>=6.0.0',
+            'pycosio[swift]']},
 
     setup_requires=['setuptools'],
     tests_require=['pytest'],
