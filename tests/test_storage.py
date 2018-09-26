@@ -37,10 +37,10 @@ def test_mount():
             'params': {'password': 'self._secret_id',
                        'arg1': 'arg1'}}
 
-    def mount(storage=None, extra_mount=None, storage_parameters=None, **_):
+    def mount(storage=None, extra_root=None, storage_parameters=None, **_):
         """Dummy pycosio.mount"""
         assert storage == storage_name
-        assert extra_mount == DummyStorage.EXTRA_ROOT
+        assert extra_root == DummyStorage.EXTRA_ROOT
         assert storage_parameters == excepted_storage_parameters
         mounted.append(storage)
 
