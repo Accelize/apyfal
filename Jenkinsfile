@@ -13,11 +13,11 @@ pipeline {
                     python -m pip install --upgrade pip
                     python -m pip install --upgrade setuptools wheel pytest coverage pytest-cov codecov --upgrade-strategy eager
 
-                    # Installs all package dependencies
-                    python -m pip install -e .[all] --upgrade-strategy eager
-
                     # Installs pre-releases of pycosio
                     python -m pip install pycosio[all] --pre --upgrade-strategy eager
+
+                    # Installs all package dependencies
+                    python -m pip install -e .[all] --upgrade-strategy eager
                 '''
             }
         }

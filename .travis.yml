@@ -16,11 +16,11 @@ install:
     # Python environment
     - "python -m pip install --upgrade setuptools pip wheel pytest coverage pytest-cov codecov"
 
-    # Installs all package dependencies
-    - "python -m pip install -e .[all]"
-
     # Installs pre-releases of pycosio
     - 'python -m pip install pycosio[all] --pre'
+
+    # Installs all package dependencies
+    - "python -m pip install -e .[all]"
 
 script:
     # Runs tests
