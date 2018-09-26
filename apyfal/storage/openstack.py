@@ -37,8 +37,8 @@ class SwiftStorage(_Storage):
     # Default OpenStack auth-URL to use (str)
     OPENSTACK_AUTH_URL = None
 
-    #: Extra URL prefix (For shorter URL)
-    EXTRA_URL_PREFIX = 'swift://'
+    #: Extra root (For shorter URL)
+    EXTRA_ROOT = 'swift://'
 
     #: Storage parameters template
     STORAGE_PARAMETERS = {

@@ -158,8 +158,8 @@ class _Storage(object):
     #: Link to Storage documentation or website (str)
     DOC_URL = ''
 
-    #: Extra URL prefix (str), For shorter URL
-    EXTRA_URL_PREFIX = None
+    #: Extra root (str), For shorter URL
+    EXTRA_ROOT = None
 
     #: Storage parameters template (dict)
     STORAGE_PARAMETERS = {}
@@ -230,7 +230,7 @@ class _Storage(object):
         self._update_parameter(storage_parameters)
         _utl.recursive_update(storage_parameters, self._storage_parameters)
         return _pycosio.mount(
-            storage=self.STORAGE_NAME, extra_url_prefix=self.EXTRA_URL_PREFIX,
+            storage=self.STORAGE_NAME, extra_root=self.EXTRA_ROOT,
             storage_parameters=storage_parameters, unsecure=self._unsecure)
 
 

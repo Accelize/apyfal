@@ -162,10 +162,10 @@ def run_full_real_test_sequence(storage_type, tmpdir):
 
     # Mount bucket
     storage = _Storage(storage_type=storage_type)
-    storage.EXTRA_URL_PREFIX = 'storage://'
+    storage.EXTRA_ROOT = 'storage://'
     storage.mount()
     storage_dir = ('%stestaccelizestorage/apyfal_testing/' %
-                   storage.EXTRA_URL_PREFIX)
+                   storage.EXTRA_ROOT)
 
     # Local file to bucket
     file_name = storage_dir + '001.dat'

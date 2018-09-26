@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.2.0 (2018/09)
+1.2.0 (2018/10)
 ---------------
 
 New features
@@ -30,6 +30,8 @@ General improvements
   implementation and step detail is still available using the DEBUG level.
   This allow to show more relevant information when using Apyfal with CLI or
   running Accelerators examples.
+- Minimum packages versions are set in setup based on packages changelog or
+  date.
 
 REST client improvements
 

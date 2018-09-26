@@ -50,7 +50,7 @@ PACKAGE_INFO = dict(
         'requests>=2.9.0',
         'requests_toolbelt>=0.7.1',
         'ipgetter>=0.6',
-        'pycosio>=1.0.0',
+        'pycosio>1.0.0',
         'cryptography>=2.1',
 
         # Python 2.7 compatibility

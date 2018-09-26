@@ -40,5 +40,5 @@ class OVHStorage(_SwiftStorage):
     #: OVH OpenStack auth-URL
     OPENSTACK_AUTH_URL = 'https://auth.cloud.ovh.net/'
 
-    #: Extra URL prefix (For shorter URL)
-    EXTRA_URL_PREFIX = 'ovh://'
+    #: Extra root (For shorter URL)
+    EXTRA_ROOT = 'ovh://'
