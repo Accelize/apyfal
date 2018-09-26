@@ -30,18 +30,17 @@ def test_mount():
         """Dummy storage"""
         NAME = storage_type
         STORAGE_NAME = storage_name
-        EXTRA_URL_PREFIX = 'dummy_prefix://'
+        EXTRA_ROOT = 'dummy_mount://'
         STORAGE_PARAMETERS = {
             'user': 'self._client_id',
             'arg0': 'arg0',
             'params': {'password': 'self._secret_id',
                        'arg1': 'arg1'}}
 
-    def mount(storage=None, extra_url_prefix=None, storage_parameters=None,
-                 **_):
+    def mount(storage=None, extra_mount=None, storage_parameters=None, **_):
         """Dummy pycosio.mount"""
         assert storage == storage_name
-        assert extra_url_prefix == DummyStorage.EXTRA_URL_PREFIX
+        assert extra_mount == DummyStorage.EXTRA_ROOT
         assert storage_parameters == excepted_storage_parameters
         mounted.append(storage)
 
