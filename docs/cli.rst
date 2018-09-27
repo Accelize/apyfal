@@ -17,7 +17,7 @@ Apyfal CLI needs to be run with a command, following command are available:
 
 * ``create``: Create accelerator and configure host. Equivalent to
   ``apyfal.Accelerator`` instantiation. Calling ``create`` is optional if called
-  without arguments (By example when run locally on host).
+  without arguments (By example when run locally on an already configured host).
 * ``start``: Start and configure Accelerator. Equivalent to
   ``apyfal.Accelerator.start`` method.
 * ``process``: Process with Accelerator. Equivalent to

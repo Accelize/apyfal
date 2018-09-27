@@ -8,3 +8,4 @@ Advanced use
    advanced_configuration_json
    advanced_security
    advanced_multi_accelerator
+   advanced_manual_host_configuration
