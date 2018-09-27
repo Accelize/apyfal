@@ -5,7 +5,7 @@
 run "./setup.py --help-commands" for help.
 """
 from datetime import datetime
-from os import chdir
+from os import chdir, environ
 from os.path import dirname, abspath, join
 from sys import argv
 
@@ -103,6 +103,14 @@ if {'pytest', 'test', 'ptr'}.intersection(argv):
 # Add Sphinx requirements if needed
 elif 'build_sphinx' in argv:
     PACKAGE_INFO['setup_requires'] += ['sphinx', 'sphinx_rtd_theme']
+
+# Allows developments build on Read the docs
+if environ.get('READTHEDOCS_VERSION') == 'latest':
+    for value in tuple(PACKAGE_INFO['install_requires']):
+        if 'pycosio' in value:
+            PACKAGE_INFO['install_requires'].remove(value)
+            break
+    PACKAGE_INFO['install_requires'] += ['pycosio']
 
 # Generates wildcard "all" extras_require
 PACKAGE_INFO['extras_require']['all'] = list(set(
