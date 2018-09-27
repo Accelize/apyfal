@@ -91,7 +91,7 @@ def rst_from_conf(conf_path, rst_path):
     _generates_rst(rst_path, content)
 
 
-rst_from_conf('../apyfal/accelerator.conf', 'configuration_file.rst')
+rst_from_conf('accelerator.conf', 'configuration_file.rst')
 
 
 # -- Dynamically generates documentation from Apyfal CLI help ----------
