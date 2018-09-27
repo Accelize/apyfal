@@ -158,6 +158,7 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
         from apyfal import Accelerator
 
         # Initializes Accelerators workers
+        self._accelerator = accelerator
         self._workers_count = workers_count
         self._workers = [Accelerator(
             accelerator=accelerator, config=config,
@@ -174,7 +175,11 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
     def __del__(self):
         self.stop()
 
-    # TODO: repr
+    def __str__(self):
+        return "<apyfal.%s accelerator='%s' workers=%s>" % (
+            self.__class__.__name__, self._accelerator, self._workers_count)
+
+    __repr__ = __str__
 
     @property
     def accelerators(self):

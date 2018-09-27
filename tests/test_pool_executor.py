@@ -89,6 +89,7 @@ def test_accelerator_pool_executor():
     """Tests AcceleratorPoolExecutor"""
     import apyfal
 
+    accelerator = 'accelerator'
     workers_count = 4
     start_kwargs = dict(datafile='datafile', info_dict=False,
                         host_env='env', stop_mode='term')
@@ -141,7 +142,8 @@ def test_accelerator_pool_executor():
     try:
 
         # Instantiation
-        pool = apyfal.AcceleratorPoolExecutor(workers_count=workers_count)
+        pool = apyfal.AcceleratorPoolExecutor(
+            accelerator=accelerator, workers_count=workers_count)
         assert len(pool.accelerators) == workers_count
         for acc in pool.accelerators:
             assert isinstance(acc, Accelerator)
@@ -149,6 +151,9 @@ def test_accelerator_pool_executor():
             assert host == Accelerator.host
         for client in pool.clients:
             assert client == Accelerator.client
+
+        assert accelerator in str(pool)
+        assert str(workers_count) in str(pool)
 
         # Start
         for acc in pool.accelerators:
