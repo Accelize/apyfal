@@ -6,6 +6,8 @@ Requirements
 
 Supported Python versions: 2.7, 3.4, 3.5, 3.6, 3.7
 
+Python 3.5 or more is recommended.
+
 Linux
 ~~~~~
 
@@ -81,13 +83,16 @@ availability, a C/C++ compiler may also be required to install dependencies.
 Setup
 -----
 
-Installation is performed using PIP:
+All installation is performed using PIP.
+
+The base package with all features and AWS support can be installed with:
 
 .. code-block:: bash
 
     pip install apyfal
 
-All mandatory dependencies are automatically installed.
+Some extra host type are supported as optional components.
+
 You can also install these optional extras:
 
 -  ``all``: Install all extras.
