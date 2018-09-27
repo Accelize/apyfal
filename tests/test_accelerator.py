@@ -246,3 +246,88 @@ def test_accelerator():
     finally:
         apyfal.client.AcceleratorClient = accelerator_client_class
         apyfal.host.Host = host_class
+
+
+def test_accelerator_get_host():
+    """Tests Accelerator._get_host"""
+    from apyfal import Accelerator
+    import apyfal.configuration as cfg
+
+    # Get an empty configuration
+    config = cfg.Configuration()
+    try:
+        del config._sections['host']
+    except KeyError:
+        pass
+
+    # Get static method to test
+    get_host = Accelerator._get_host
+
+    # Mock accelerator_executable_available
+    is_localhost = False
+
+    def accelerator_executable_available():
+        """Returns fake result"""
+        return is_localhost
+
+    cfg_accelerator_available = cfg.accelerator_executable_available
+    cfg.accelerator_executable_available = accelerator_executable_available
+
+    # Tests
+    try:
+        # Not local, but should be see as local
+        is_localhost = False
+
+        host_type = None
+        assert get_host(
+            config, host_type, prefer_self_hosted=False) == (host_type, True)
+
+        host_type = 'localhost'
+        assert get_host(
+            config, host_type, prefer_self_hosted=False) == (host_type, True)
+
+        # Is local
+        is_localhost = True
+
+        host_type = None
+        assert get_host(
+            config, host_type, prefer_self_hosted=False) == (host_type, True)
+        assert get_host(
+            config, host_type, prefer_self_hosted=True) == (host_type, True)
+
+        host_type = 'localhost'
+        assert get_host(
+            config, host_type, prefer_self_hosted=False) == (host_type, True)
+        assert get_host(
+            config, host_type, prefer_self_hosted=True) == (host_type, True)
+
+        host_type = 'host_type'
+        assert get_host(
+            config, host_type, prefer_self_hosted=True) == (host_type, True)
+
+        # Should select remote
+        assert get_host(
+            config, host_type, prefer_self_hosted=False) == (host_type, False)
+
+        is_localhost = False
+        assert get_host(
+            config, host_type, prefer_self_hosted=True) == (host_type, False)
+        assert get_host(
+            config, host_type, prefer_self_hosted=False) == (host_type, False)
+
+        # Get from configuration or default value
+        is_localhost = True
+        config['host']['host_type'] = host_type
+
+        assert get_host(
+            config, host_type=None, prefer_self_hosted=None) == (
+            host_type, True)
+
+        config['host']['prefer_self_hosted'] = False
+        assert get_host(
+            config, host_type=None, prefer_self_hosted=None) == (
+            host_type, False)
+
+    # Restore mocked function
+    finally:
+        cfg.accelerator_executable_available = cfg_accelerator_available

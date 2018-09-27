@@ -70,6 +70,11 @@ class Accelerator(_AbstractAsyncAccelerator):
             Default to 'term' if new host, or 'keep' if already existing host.
             See "apyfal.host.Host.stop_mode" property for more
             information and possible values.
+        prefer_self_hosted (bool): Default to True.
+            If True, and current machine is an accelerator host, operates this
+            accelerator instead of instantiating a new accelerator host.
+            If current machine is not an accelerator host, instantiates a new
+            host normally.
         host_kwargs: Keyword arguments related to specific host. See targeted
             host class to see full list of arguments.
     """
@@ -78,7 +83,8 @@ class Accelerator(_AbstractAsyncAccelerator):
 
     def __init__(self, accelerator=None, config=None, accelize_client_id=None,
                  accelize_secret_id=None, host_type=None, host_ip=None,
-                 stop_mode='term', **host_kwargs):
+                 stop_mode=None, prefer_self_hosted=None, **host_kwargs):
+
         # Initialize some variables
         self._cache = {}
         self._tasks_count = 0
@@ -87,8 +93,10 @@ class Accelerator(_AbstractAsyncAccelerator):
         config = _cfg.create_configuration(config)
 
         # Create host object
-        host_type = host_type or config['host']['host_type']
-        if host_type not in (None, 'localhost'):
+        host_type, is_local = self._get_host(
+            config, host_type, prefer_self_hosted)
+
+        if not is_local:
             # Use a remote host
             self._host = _hst.Host(
                 host_type=host_type, config=config, host_ip=host_ip,
@@ -369,6 +377,31 @@ class Accelerator(_AbstractAsyncAccelerator):
                     self._host.stop(stop_mode)
                 except (AttributeError, _exc.HostException):
                     pass
+
+    @staticmethod
+    def _get_host(config, host_type, prefer_self_hosted):
+        """
+        Determinate if use local host or host specified by host type.
+
+        Args:
+            config (apyfal.configuration.Configuration): Configuration.
+            host_type (str or None): Host type.
+            prefer_self_hosted (bool or None): Prefer localhost is available.
+
+        Returns:
+            tuple: host type, is local
+        """
+        host_type = host_type or config['host']['host_type']
+
+        if prefer_self_hosted is None:
+            prefer_self_hosted = config['host']['prefer_self_hosted']
+        if prefer_self_hosted is None:
+            prefer_self_hosted = True
+
+        is_local = (host_type in (None, 'localhost') or (
+                prefer_self_hosted and _cfg.accelerator_executable_available()))
+
+        return host_type, is_local
 
     @staticmethod
     def _log_profiling_info(process_result):
