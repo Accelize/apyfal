@@ -65,6 +65,7 @@ Features
    configuration
    getting_started
    advanced
+   faq
 
 .. toctree::
    :maxdepth: 2
