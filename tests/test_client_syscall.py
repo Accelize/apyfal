@@ -263,19 +263,42 @@ def test_syscall_init_metering(tmpdir):
     import apyfal.configuration as cfg
     from apyfal.exceptions import ClientAuthenticationException
 
+    # Mocks some values
+    host_type = 'host'
+    accelerator = 'accelerator'
+    region = 'region'
+    client_id = 'dummy_client_id'
+    client_secret = 'dummy_client_secret'
+    fpga_image = 'dummy_FPGA'
+    checks_client_id = False
+    default_config = dict()
+
     # Mocks some functions
     def dummy_call(*_, **__):
         """Do nothing"""
 
     class DummyConfiguration(cfg.Configuration):
+        """Dummy configuration"""
 
         @property
         def access_token(self):
+            """Return fake result"""
+            if checks_client_id:
+                assert self['accelize']['client_id']
+                assert self['accelize']['secret_id']
             return 'dummy_token'
 
+        def get_host_configurations(self):
+            """Return fake result"""
+            return default_config
+
     class DummyClient(SysCallClient):
+        """Dummy client"""
 
         def __init__(self, *_, **__):
+            self._host_type = host_type
+            self._name = accelerator
+            self._region = region
             self._metering_env = None
             self._config = DummyConfiguration()
             self._configuration_parameters = {'env': {}}
@@ -302,10 +325,6 @@ def test_syscall_init_metering(tmpdir):
     syscall._call = dummy_call
 
     try:
-        client_id = 'dummy_client_id'
-        client_secret = 'dummy_client_secret'
-        fpga_image = 'dummy_FPGA'
-
         # Already configured and cached
         client._metering_env = {
             'client_id': client_id,
@@ -374,6 +393,20 @@ def test_syscall_init_metering(tmpdir):
             'client_id': new_client_id,
             'client_secret': 'dummy_client_secret',
             'arg': 'arg'}
+
+        # Host configuration on non Apyfal started host
+        metering_client_config.remove()
+        client = DummyClient()
+        default_config = {
+            host_type: {accelerator: {region: {'fpga_image': fpga_image}}}}
+        try:
+            del client._config._sections['accelize']
+        except KeyError:
+            pass
+        checks_client_id = True
+        client._init_metering(dict())
+        assert metering_client_config.check()
+        assert fpga_image in metering_client_config.read()
 
     # Restore
     finally:

@@ -13,6 +13,7 @@ import apyfal.exceptions as _exc
 from apyfal.client import AcceleratorClient as _Client
 import apyfal.configuration as _cfg
 from apyfal._utilities import get_logger as _get_logger
+import apyfal._utilities as _utl
 
 
 def _call(command, check_file=None, **exc_args):
@@ -70,6 +71,8 @@ class SysCallClient(_Client):
             "https:/accelstore.accelize.com/user/applications".
         accelize_secret_id (str): Accelize Secret ID. Secret ID come with
             client_id.
+        host_type (str): Type of the current host.
+        region (str): Region of the current host.
         config (apyfal.configuration.Configuration, path-like object or file-like object):
             If not set, will search it in current working directory,
             in current user "home" folder. If none found, will use default
@@ -87,10 +90,12 @@ class SysCallClient(_Client):
     _PARAMETER_IO_FORMAT = {
         'file_in': 'file', 'file_out': 'file', 'datafile': 'file'}
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, host_type=None, region=None, *args, **kwargs):
         _Client.__init__(self, *args, **kwargs)
 
         self._metering_env = None
+        self._host_type = host_type or self._config['host']['host_type']
+        self._region = region or self._config['host']['region']
 
         # Accelerator executable is exclusive
         self._accelerator_lock = _Lock()
@@ -237,14 +242,22 @@ class SysCallClient(_Client):
             reload (bool): Force reconfiguration.
         """
         # Cached value match with argument: Already configured
-        if not reload and config_env == self._metering_env:
+        if (not reload and self._metering_env is not None and
+                config_env == self._metering_env):
             return
 
         # Get current configuration from files
-        cur_env = self._read_configuration_files()
+        cur_env, has_config = self._read_configuration_files()
 
-        # Set full environment
+        # Define full, up to date environment
         full_env = cur_env.copy()
+
+        # If no current configuration, updates with default configuration from
+        # metering server.
+        if not has_config:
+            self._update_with_default_configuration(full_env)
+
+        # Updates with user configuration
         for key, value in config_env.items():
             if value is not None:
                 full_env[key] = value
@@ -259,26 +272,26 @@ class SysCallClient(_Client):
 
         # Checks if configuration needs to be updated
         update_config = any(
-            config_env.get(key) != cur_env.get(key) for key in
-            config_env if key not in ('client_id', 'client_secret'))
+            full_env.get(key) != cur_env.get(key) for key in
+            full_env if key not in ('client_id', 'client_secret'))
 
         # All is already up to date: caches values
         if not reload and not update_config and not update_credentials:
             self._metering_env = full_env
             return
 
-        # Update
+        # Updates
         with self._restart_services():
 
-            # Clear metering cache
+            # Clears metering cache
             if _exists(_cfg.METERING_TMP):
                 _call(['sudo', 'rm', _cfg.METERING_TMP])
 
-            # Update configuration files
+            # Updates configuration files
             self._update_configuration_files(
                 full_env, update_config, update_credentials)
 
-        # Cache values
+        # Caches values
         self._metering_env = full_env
 
     def _credentials_needs_update(self, config_env, cur_env, full_env):
@@ -363,14 +376,9 @@ class SysCallClient(_Client):
         Read configuration from files
 
         Returns:
-            dict: Current configuration.
+            tuple: Current configuration, is config file empty.
         """
         cur_env = {}
-
-        # Get current credentials
-        if _exists(_cfg.METERING_CREDENTIALS):
-            with open(_cfg.METERING_CREDENTIALS, 'rt') as file:
-                cur_env.update(_json.load(file))
 
         # Get current configuration
         if _exists(_cfg.METERING_CLIENT_CONFIG):
@@ -378,8 +386,41 @@ class SysCallClient(_Client):
                 for line in file:
                     key, value = line.strip().split('=')
                     cur_env[key.strip()] = value.strip()
+        has_config = bool(cur_env)
 
-        return cur_env
+        # Get current credentials
+        if _exists(_cfg.METERING_CREDENTIALS):
+            with open(_cfg.METERING_CREDENTIALS, 'rt') as file:
+                cur_env.update(_json.load(file))
+
+        return cur_env, has_config
+
+    def _update_with_default_configuration(self, config_env):
+        """
+        Get default configuration environment from metering server.
+
+        Args:
+            config_env (dict): Environment to update
+
+        Returns:
+            dict: Default configuration environment
+        """
+        # Updates credentials in configuration with local file
+        section = self._config['accelize']
+        section['client_id'] = (
+                section['client_id'] or config_env['client_id'])
+        section['secret_id'] = (
+                section['secret_id'] or config_env['client_secret'])
+
+        # Gets default configuration
+        try:
+            _utl.recursive_update(
+                config_env, self._config.get_host_configurations()
+                [self._host_type][self._name][self._region])
+
+        # Empty default configuration is possible
+        except KeyError:
+            return
 
     @staticmethod
     @_contextmanager

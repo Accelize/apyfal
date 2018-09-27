@@ -122,7 +122,8 @@ class Accelerator(_AbstractAsyncAccelerator):
             accelerator=accelerator, client_type=client_type,
             accelize_client_id=accelize_client_id, host_ip=host_ip,
             accelize_secret_id=accelize_secret_id, config=config,
-            ssl_cert_crt=ssl_cert_crt)
+            ssl_cert_crt=ssl_cert_crt, host_type=host_type,
+            region=host_kwargs.get('region'))
 
     def __enter__(self):
         return self
