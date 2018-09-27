@@ -118,6 +118,8 @@ Fixes:
 - ``stop`` ``stop_mode`` with OpenStack now pauses instance instead of
   terminates it.
 - Exception on AWS IAM policy first creation.
+- Using ``start`` is not still mandatory when connecting to an already existing
+  instance.
 
 Deprecations:
 
@@ -143,8 +145,3 @@ Features of the 1.0.0 version:
 - Support for AWS and OVH public host.
 - Complete unittest for the core or the package.
 - Full Sphinx documentation.
-
-Known Issues
-------------
-
-- Using ``start`` is mandatory when connecting to an already existing instance.
