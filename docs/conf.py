@@ -27,7 +27,7 @@ if os.environ.get('READTHEDOCS'):
     current_dir = os.getcwd()
     os.chdir(SETUP_PATH)
     try:
-        Popen('python -m pip install -e .[all]', shell=True).communicate()
+        Popen('python -m pip install -e .[all] --pre', shell=True).communicate()
     finally:
         os.chdir(current_dir)
 
