@@ -1,21 +1,24 @@
 FAQ and Troubleshooting
 =======================
 
-Frequently asked questions.
+This page list some frequently asked questions and troubleshooting.
+
+If you encounter technical issues not listed here, don't hesitate to
+`open an issue on GitHub`_. For any other question, please `contact Accelize`_.
 
 
 Apyfal installation
 -------------------
 
 I get errors when trying to install Apyfal with Pip, Host to fix this ?
-    Theses kind of errors may appear on some outdated environment. Update its
-    environment is the recommended way to fix theses issues.
+    Theses kind of errors may appear on some outdated Python environment.
+    Update Python environment is the recommended way to fix theses issues.
 
     Multiple answer are available:
 
     **Using a dedicated virtual environment:**
 
-    This allows to separate the Apyfal environment from the system environment.
+    This allows to have a separate environment for each use.
 
     To install and use a virtual environments, refer to following
     documentations:
@@ -23,9 +26,9 @@ I get errors when trying to install Apyfal with Pip, Host to fix this ?
     * On any Python versions with `Pipenv`_ (Equivalent to ``pip`` + ``venv`` in
       one command).
     * On Python 3 with `venv`_ standard library module.
-    * On Python 2 with `Virtualenv`_.
+    * On Python 2 with `Virtualenv`_ module.
 
-    **Updating all dependencies packages:**
+    **Updating all dependencies packages on current environment:**
 
     Firstly upgrade Pip to the last version
 
@@ -54,6 +57,8 @@ AWS: How to run more Accelerator instances on AWS ?
 OVH: How to create access keys ?
     See "`Configure user access to Horizon`_" on OVH documentation.
 
+.. _contact Accelize: https://www.accelize.com/contact
+.. _open an issue on Github: https://github.com/Accelize/apyfal/issues
 .. _venv: https://docs.python.org/3/library/venv.html
 .. _Virtualenv: https://virtualenv.pypa.io
 .. _Pipenv: https://pipenv.readthedocs.io
