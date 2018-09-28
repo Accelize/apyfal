@@ -35,6 +35,7 @@ def test_call(tmpdir):
     raises_oserror = False
 
     class DummyPopen:
+        """Mocked subprocess.Popen"""
 
         returncode = 0
 
@@ -207,6 +208,7 @@ def test_syscall_client_run_executable():
             assert json.load(stream) == dummy_params
 
     class DummyClient(SysCallClient):
+        """Mocked SysCallClient"""
 
         def __init__(self, *_, **__):
             self._cache = {'tmp_dir': dummy_tmp}
@@ -430,6 +432,7 @@ def test_syscall_client_start_process_stop():
     expected_args = {}
 
     class DummyClient(syscall.SysCallClient):
+        """Mocked SysCallClient"""
 
         def __init__(self, *_, **__):
             """Do nothing"""

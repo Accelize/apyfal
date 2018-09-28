@@ -192,7 +192,7 @@ def test_configuration_access_token():
 
         # Test: Everything OK
         config = Configuration()
-        config['accelize']  # Creates section if not exists
+        assert config['accelize'] is not None  # Creates section if not exists
         config._sections['accelize']['client_id'] = client_id
         config._sections['accelize']['secret_id'] = secret_id
         assert config.access_token == access_token
@@ -467,12 +467,11 @@ def test_subsections(tmpdir):
     assert config['section.subsection']['key2'] == '2'
     assert config['section.subsection']['key3'] == '1.3'
 
-    assert config['section.subsection.subsubsection'
-           ]['key1'] == '1.1.1'
+    assert config['section.subsection.subsubsection']['key1'] == '1.1.1'
 
     assert config['section'].get_literal('key1') == 1
-    assert config['section.subsection.subsubsection'
-           ].get_literal('key1') == '1.1.1'
+    assert config['section.subsection.subsubsection'].get_literal(
+        'key1') == '1.1.1'
 
     # Test: writing
     config['section']['key1'] = None

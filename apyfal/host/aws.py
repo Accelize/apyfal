@@ -46,7 +46,7 @@ def _exception_handler(
     Apyfal exceptions.
 
     Args:
-        to_catch (Exception or tuple of Exception): Exception to catch.
+        to_catch (Exception sub class or tuple of Exception): Exception to catch.
             ClientError if not specified.
         to_raise (apyfal.exception.AcceleratorException subclass):
             Exception to raise. apyfal.exceptions.HostRuntimeException if not

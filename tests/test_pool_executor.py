@@ -18,6 +18,7 @@ def test_abstract_async_accelerator_process_map():
     process_duration = 0.0
 
     class AsyncAccelerator(_AbstractAsyncAccelerator):
+        """Mocked sub class"""
 
         def __init__(self):
             self._executor = ThreadPoolExecutor(max_workers=4)
@@ -92,7 +93,8 @@ def test_accelerator_pool_executor():
     accelerator = 'accelerator'
     workers_count = 4
     start_kwargs = dict(datafile='datafile', info_dict=False,
-                        host_env='env', stop_mode='term')
+                        host_env='env', stop_mode='term', reset=None,
+                        reload=None)
     stop_kwargs = dict(info_dict=False, stop_mode=None)
     process_kwargs = dict(arg='arg', info_dict=False, parameters='parameters',
                           file_in='file_in', file_out='file_out')

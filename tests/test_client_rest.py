@@ -226,10 +226,10 @@ def test_restclient_configuration_url():
         """Fake requests.Session"""
 
         @staticmethod
-        def get(url, **_):
+        def get(request_url, **_):
             """Checks input arguments and returns fake response"""
             # Checks input parameters
-            assert '/configuration' in url
+            assert '/configuration' in request_url
 
             # Returns fake response
             response = requests.Response()

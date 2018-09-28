@@ -1,3 +1,4 @@
+# coding=utf-8
 """Accelerator Client"""
 from abc import abstractmethod as _abstractmethod
 from contextlib import contextmanager as _contextmanager

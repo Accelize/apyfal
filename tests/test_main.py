@@ -53,6 +53,7 @@ def test_handle_command():
 
     # Mocks parser and command function
     class ArgumentParser:
+        """Mocked ArgumentParser"""
 
         @staticmethod
         def exit(message=None):
@@ -253,6 +254,7 @@ def test_actions(tmpdir):
     Host = namedtuple('Host', ('url', 'key_pair'))
 
     class Accelerator:
+        """Mocked Accelerator"""
 
         host = Host(url='http://url', key_pair='key_pair')
 
@@ -285,6 +287,7 @@ def test_actions(tmpdir):
         return Accelerator()
 
     class ArgumentParser:
+        """Mocked ArgumentParser"""
 
         @staticmethod
         def exit(*_, **__):

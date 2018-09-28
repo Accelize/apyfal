@@ -286,7 +286,7 @@ def format_url(url_or_ip, force_secure=False):
     If not directly an URL, format it to URL.
 
     Args:
-        url_or_ip (str): URL or IP address.
+        url_or_ip (str or None): URL or IP address.
             If None, skip check and return None.
         force_secure (bool): If True, always return URL with secure scheme.
 

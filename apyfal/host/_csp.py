@@ -682,9 +682,9 @@ class CSPHost(_Host):
 
         else:
             # Reads ssl_cert_key from files
-            with _srg.open(self._ssl_cert_crt, 'rb') as src_file:
+            with _srg.open(self._ssl_cert_crt) as src_file:
                 ssl_cert_crt = src_file.read()
-            with _srg.open(self._ssl_cert_key, 'rb') as src_file:
+            with _srg.open(self._ssl_cert_key) as src_file:
                 ssl_cert_key = src_file.read()
 
         # Writes command

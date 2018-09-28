@@ -1,6 +1,5 @@
 # coding=utf-8
 """apyfal._utilities tests"""
-import os
 import time
 
 import requests
@@ -144,6 +143,7 @@ def test_memoizedmethod():
 
     # Tests _memoize
     class Dummy:
+        """Fake class"""
 
         def __init__(self):
             self._cache = {}

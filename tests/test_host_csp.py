@@ -183,20 +183,18 @@ def test_csphost_properties():
     # a dict without not existing values
     csp._INFO_NAMES.add('not_exists')
     info = csp.info
-    for name in {
-        'host_type', 'public_ip',
-        'private_ip', 'url',
-        'instance_id', 'region', 'stop_mode'}:
+    for name in {'host_type', 'public_ip', 'private_ip', 'url', 'instance_id',
+                 'region', 'stop_mode'}:
         assert info[name] == locals()[name]
     assert 'not_exists' not in info
 
     # Test: properties if no instance
     csp._instance = None
     with pytest.raises(HostRuntimeException):
-        csp.public_ip
+        assert csp.public_ip
 
     with pytest.raises(HostRuntimeException):
-        csp.private_ip
+        assert csp.private_ip
 
     # Test: Stop mode setter, no change if no value set
     csp.stop_mode = None
@@ -939,13 +937,15 @@ def test_csphost_user_data(tmpdir):
 
     # Test: Missing key
     with pytest.raises(HostConfigurationException):
-        assert DummyCSP(client_id='client_id', secret_id='secret_id',
-                 region='region', ssl_cert_key=str(ssl_key_file))._user_data
+        assert DummyCSP(
+            client_id='client_id', secret_id='secret_id',
+            region='region', ssl_cert_key=str(ssl_key_file))._user_data
 
     # Test: Missing crt
     with pytest.raises(HostConfigurationException):
-        assert DummyCSP(client_id='client_id', secret_id='secret_id',
-                 region='region', ssl_cert_crt=str(ssl_crt_file))._user_data
+        assert DummyCSP(
+            client_id='client_id', secret_id='secret_id',
+            region='region', ssl_cert_crt=str(ssl_crt_file))._user_data
 
     # Test: Disabled certificate
     csp = DummyCSP(client_id='client_id', secret_id='secret_id',

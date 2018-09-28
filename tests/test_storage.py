@@ -140,7 +140,7 @@ def run_full_real_test_sequence(storage_type, tmpdir):
 
     Args:
         storage_type (str): Bucket storage_type.
-        tmpdir (object): tmpdir Pytest fixture
+        tmpdir: tmpdir Pytest fixture
     """
     from apyfal.storage import _Storage, copy, open as srg_open
 

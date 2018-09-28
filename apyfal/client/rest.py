@@ -135,7 +135,7 @@ class RESTClient(_Client):
         URL of the accelerator host.
 
         Args:
-            URL (str): URL.
+            url (str): URL.
         """
         # Check URL
         if not url:

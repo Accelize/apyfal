@@ -35,6 +35,7 @@ def test_alibibaclass_request():
 
     # Mocks client
     class DummyAcsClient:
+        """Mocked AcsClient"""
 
         def __init__(self, ak, secret, region_id):
             """Checks parameters"""
@@ -119,6 +120,7 @@ def test_alibibaclass_request():
     finally:
         client.AcsClient = client_acs_client
         alibaba._AcsClient = client_acs_client
+
 
 @pytest.mark.need_csp
 @pytest.mark.need_csp_alibaba

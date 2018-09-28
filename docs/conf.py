@@ -112,12 +112,12 @@ def generates_cli_help(rst_path):
         'for each command.\n']
 
     for command in commands:
-        help = check_output(
+        cli_help = check_output(
             cli + ([command, '-h'] if command else ['-h']),
             universal_newlines=True)
         title = 'apyfal%s' % ((' %s' % command) if command else '')
-        content += [
-            title, '-' * len(title), '\n| ' + help.replace('\n', '\n| '), '']
+        content += [title, '-' * len(title), '\n| ' +
+                    cli_help.replace('\n', '\n| '), '']
 
     # Save ".rst"
     _generates_rst(rst_path, content)

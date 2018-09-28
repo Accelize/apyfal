@@ -33,8 +33,7 @@ def _call(command, check_file=None, **exc_args):
     _get_logger().debug("Running shell command: '%s'" % ' '.join(command))
     try:
         process = _Popen(
-            command, stdout=_PIPE, stderr=_PIPE, universal_newlines=True,
-            shell=False)
+            command, stdout=_PIPE, stderr=_PIPE, universal_newlines=True)
         outputs = list(process.communicate())
         in_error = process.returncode
     except OSError as exception:

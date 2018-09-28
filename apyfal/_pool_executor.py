@@ -65,17 +65,16 @@ class _AbstractAsyncAccelerator(ABC):
             end_time = timeout + time()
 
         # Get file count
+        file_in = file_out = None
         if files_in is not None:
             size_in = len(files_in)
         else:
             size_in = 0
-            file_in = None
 
         if files_out is not None:
             size_out = len(files_out)
         else:
             size_out = 0
-            file_out = None
 
         if size_in and size_out and size_in != size_out:
             raise _exc.ClientConfigurationException(
@@ -212,7 +211,7 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
         return [worker.host for worker in self._workers]
 
     def start(self, stop_mode=None, datafile=None, info_dict=False,
-              host_env=None, **parameters):
+              host_env=None, reload=None, reset=None, **parameters):
         """
         Starts and/or configure all accelerators in the pool.
 
@@ -235,6 +234,9 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
                 parameters dictionary values. Take a look to accelerator
                 documentation for more information on possible parameters.
                 Path-like object can be path, URL or cloud object URL.
+            reload (bool): Force reload of FPGA bitstream.
+            reset (bool): Force reset of FPGA logic.
+            host_env (dict): Overrides Accelerator "env".
 
         Returns:
             list: List of "Accelerator.start" results.
@@ -242,8 +244,8 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
         with ThreadPoolExecutor(max_workers=self._workers_count) as executor:
             futures = [executor.submit(
                 worker.start, stop_mode=stop_mode, datafile=datafile,
-                info_dict=info_dict, host_env=host_env,
-                **parameters) for worker in self._workers]
+                info_dict=info_dict, host_env=host_env, reload=reload,
+                reset=reset, **parameters) for worker in self._workers]
         return [future.result() for future in as_completed(futures)]
 
     def process_submit(self, file_in=None, file_out=None, info_dict=False,

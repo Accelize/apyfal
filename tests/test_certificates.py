@@ -4,7 +4,7 @@
 
 def test_self_signed_certificate():
     """Tests _certificates.self_signed_certificate"""
-    from apyfal._certificates import(
+    from apyfal._certificates import (
         self_signed_certificate, get_host_names_from_certificate,
         create_wildcard_certificate)
 
