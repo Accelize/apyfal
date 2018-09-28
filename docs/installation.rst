@@ -25,7 +25,7 @@ Use the package manager of the Linux distribution to install packages.
 RHEL or CentOS 7:
 ^^^^^^^^^^^^^^^^^
 
-The `EPEL repository`_ is required to install some packages.
+The `EPEL repository`_ is required to install packages.
 
 ``-dev`` package suffix is renamed ``-devel`` on RHEL/CentOS.
 
@@ -33,9 +33,6 @@ Python 2.7 is the only Python version installed by default on RHEL/CentOS 7.
 But installation of Python 3.6 is possible.
 
 **Python 3:**
-
-The `Software Collections repository`_ is required to install Python 3.6
-packages.
 
 .. code-block:: bash
 
@@ -114,6 +111,5 @@ Example for installing the ``OpenStack`` + ``Alibaba`` extras:
     pip install apyfal[OpenStack,Alibaba]
 
 .. _EPEL repository: https://fedoraproject.org/wiki/EPEL
-.. _Software Collections repository: https://access.redhat.com/documentation/en-us/red_hat_software_collections/3/
 .. _Python Website: https://www.python.org/downloads
 .. _Windows Compilers on Python documentation: https://wiki.python.org/moin/WindowsCompilers
