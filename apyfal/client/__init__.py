@@ -161,6 +161,7 @@ class AcceleratorClient(_utl.ABC):
                 Path-like object can be path, URL or cloud object URL.
             reload (bool): Force reload of FPGA bitstream.
             reset (bool): Force reset of FPGA logic.
+            host_env (dict): Overrides Accelerator "env".
 
         Returns:
             dict: Optional, only if "info_dict" is True. AcceleratorClient

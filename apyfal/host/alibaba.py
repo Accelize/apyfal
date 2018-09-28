@@ -111,7 +111,9 @@ class AlibabaCSP(_CSPHost):
             client verify it by providing "ssl_cert_crt". No Certificate
             Authority are available to trust this ssl_cert_key.
         acs_client_kwargs (dict): Extra keyword arguments for
-            novaclient.client.Client.
+            aliyunsdkcore.client.AcsClient.
+        acs_create_instance_kwargs (dict): Extra keyword arguments for
+            "CreateInstance" ECS function.
     """
     #: Provider name
     NAME = "Alibaba"
@@ -147,13 +149,21 @@ class AlibabaCSP(_CSPHost):
     _INFO_NAMES.update(['_role', '_policy'])
 
     def __init__(self, role=None, policy=None, acs_client_kwargs=None,
-                 **kwargs):
+                 acs_create_instance_kwargs=None, **kwargs):
         _CSPHost.__init__(self, **kwargs)
 
         # Initializes attributes
         self._security_group_id = None
         self._role, self._policy = self._get_role_and_policy(role, policy)
-        self._acs_client_kwargs = acs_client_kwargs or dict()
+
+        section = self._config[self._config_section]
+        self._acs_client_kwargs = (
+            acs_client_kwargs or
+            section.get_literal('acs_client_kwargs') or dict())
+        self._acs_create_instance_kwargs = (
+            acs_create_instance_kwargs or
+            section.get_literal('acs_create_instance_kwargs') or dict())
+
         # ClientToken guarantee idempotence of requests
         self._client_token = str(_uuid())
 
@@ -524,8 +534,7 @@ class AlibabaCSP(_CSPHost):
         max_bandwidth = response['Bandwidths']['Bandwidth'][0]['Max']
 
         # Creates instance
-        response = self._request(
-            'CreateInstance',
+        kwargs = dict(
             ImageId=self._image_id, InstanceType=self._instance_type,
             SecurityGroupId=self._security_group_id,
             InstanceName=self._get_host_name(),
@@ -534,6 +543,9 @@ class AlibabaCSP(_CSPHost):
             KeyPairName=self._key_pair, RamRoleName=self._role,
             UserData=_b64encode(self._user_data).decode(),
             parameters={'Tag.1.Key': 'Apyfal', 'Tag.1.Value': self._get_tag()})
+        _utl.recursive_update(kwargs, self._acs_create_instance_kwargs)
+
+        response = self._request('CreateInstance', **kwargs)
         instance_id = response['InstanceId']
 
         # Allocates public IP address

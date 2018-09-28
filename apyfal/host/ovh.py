@@ -61,6 +61,8 @@ class OVHHost(_OpenStackHost):
             Authority are available to trust this ssl_cert_key.
         nova_client_kwargs (dict): Extra keyword arguments for
             novaclient.client.Client.
+        nova_client_create_server_kwargs (dict): Extra Keyword arguments for
+            novaclient.servers.ServerManager.create.
         neutron_client_kwargs (dict): Extra keyword arguments for
             neutronclient.client.Client. By default, neutron client
             inherits from nova client session.

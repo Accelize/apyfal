@@ -32,6 +32,8 @@ General improvements
   running Accelerators examples.
 - Minimum packages versions are set in setup based on packages changelog or
   date.
+- Hosts instantiation now support passing custom arguments to their libraries.
+  See each specific host documentation for more information.
 
 REST client improvements
 

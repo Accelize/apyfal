@@ -112,6 +112,8 @@ class OpenStackHost(_CSPHost):
             Authority are available to trust this ssl_cert_key.
         nova_client_kwargs (dict): Extra keyword arguments for
             novaclient.client.Client.
+        nova_client_create_server_kwargs (dict): Extra Keyword arguments for
+            novaclient.servers.ServerManager.create.
         neutron_client_kwargs (dict): Extra keyword arguments for
             neutronclient.client.Client. By default, neutron client
             inherits from nova client session.
@@ -138,7 +140,8 @@ class OpenStackHost(_CSPHost):
     _INIT_METHODS.append('_init_image')
 
     def __init__(self, project_id=None, auth_url=None,
-                 nova_client_kwargs=None, neutron_client_kwargs=None, **kwargs):
+                 nova_client_kwargs=None, nova_client_create_server_kwargs=None,
+                 neutron_client_kwargs=None, **kwargs):
         _CSPHost.__init__(self, **kwargs)
 
         # OpenStack specific arguments
@@ -149,8 +152,15 @@ class OpenStackHost(_CSPHost):
             auth_url or section['auth_url'] or
             self.OPENSTACK_AUTH_URL)
 
-        self._nova_client_kwargs = nova_client_kwargs or dict()
-        self._neutron_client_kwargs = neutron_client_kwargs or dict()
+        self._nova_client_kwargs = (
+            nova_client_kwargs or
+            section.get_literal('nova_client_kwargs') or dict())
+        self._nova_client_create_server_kwargs = (
+            nova_client_create_server_kwargs or
+            section.get_literal('nova_client_create_server_kwargs') or dict())
+        self._neutron_client_kwargs = (
+            neutron_client_kwargs or
+            section.get_literal('neutron_client_kwargs') or dict())
 
         # Checks mandatory configuration values
         self._check_arguments('project_id', 'auth_url')
@@ -373,13 +383,21 @@ class OpenStackHost(_CSPHost):
             object: Instance
             str: Instance ID
         """
+        kwargs = dict(
+            name=self._get_host_name(), key_name=self._key_pair,
+            security_groups=[self._security_group],
+            userdata=self._user_data, meta={'Apyfal': self._get_tag()})
+
         with _exception_handler(gen_msg=('unable_to', "start")):
-            image = self._nova_client.glance.find_image(self._image_id)
-            flavor = self._nova_client.flavors.get(self._instance_type)
-            instance = self._nova_client.servers.create(
-                name=self._get_host_name(), image=image, flavor=flavor,
-                key_name=self._key_pair, security_groups=[self._security_group],
-                userdata=self._user_data, meta={'Apyfal': self._get_tag()})
+            kwargs["image"] = self._nova_client.glance.find_image(
+                self._image_id)
+            kwargs["flavor"] = self._nova_client.flavors.get(
+                self._instance_type)
+
+            _utl.recursive_update(
+                kwargs, self._nova_client_create_server_kwargs)
+
+            instance = self._nova_client.servers.create(**kwargs)
 
         return instance, instance.id
 

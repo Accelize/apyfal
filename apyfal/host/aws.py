@@ -144,7 +144,9 @@ class AWSHost(_CSPHost):
         boto3_session_kwargs (dict): Extra keyword arguments for
             boto3.session.Session
         boto3_client_kwargs (dict): Extra keyword arguments for
-            boto3.session.Session clients.
+            boto3.session.Session.client.
+        boto3_create_instances_kwargs (dict): Extra Keyword arguments for
+            boto3.session.Session.resource('ec2').create_instances.
     """
     #: Provider name to use
     NAME = 'AWS'
@@ -179,7 +181,8 @@ class AWSHost(_CSPHost):
     _INFO_NAMES.update(['_role', '_policy'])
 
     def __init__(self, role=None, policy=None, boto3_session_kwargs=None,
-                 boto3_client_kwargs=None, **kwargs):
+                 boto3_client_kwargs=None, boto3_create_instances_kwargs=None,
+                 **kwargs):
         _CSPHost.__init__(self, **kwargs)
 
         # Get AWS specific arguments
@@ -188,8 +191,16 @@ class AWSHost(_CSPHost):
         self._instance_profile_name = 'AccelizeLoadFPGA'
 
         # Session, clients and resources are lazy instantiated
-        self._boto3_session_kwargs = boto3_session_kwargs or dict()
-        self._boto3_client_kwargs = boto3_client_kwargs or dict()
+        section = self._config[self._config_section]
+        self._boto3_session_kwargs = (
+            boto3_session_kwargs or
+            section.get_literal('boto3_session_kwargs') or dict())
+        self._boto3_client_kwargs = (
+            boto3_client_kwargs or
+            section.get_literal('boto3_client_kwargs') or dict())
+        self._boto3_create_instances_kwargs = (
+            boto3_create_instances_kwargs or
+            section.get_literal('boto3_create_instances_kwargs') or dict())
 
     @property
     @_utl.memoizedmethod
@@ -534,9 +545,7 @@ class AWSHost(_CSPHost):
             object: Instance
             str: Instance ID
         """
-        # Create instance
-        with _exception_handler():
-            instance = self._ec2_resource.create_instances(
+        kwargs = dict(
                 ImageId=self._image_id, InstanceType=self._instance_type,
                 KeyName=self._key_pair, SecurityGroups=[self._security_group],
                 IamInstanceProfile={'Name': 'AccelizeLoadFPGA'},
@@ -546,7 +555,12 @@ class AWSHost(_CSPHost):
                      'Value': _utl.gen_msg('accelize_generated')},
                     {'Key': 'Name', 'Value': self._get_host_name()},
                     {'Key': 'Apyfal', 'Value': self._get_tag()}]}],
-                MinCount=1, MaxCount=1, UserData=self._user_data)[0]
+                MinCount=1, MaxCount=1, UserData=self._user_data)
+        _utl.recursive_update(kwargs, self._boto3_create_instances_kwargs)
+
+        # Create instance
+        with _exception_handler():
+            instance = self._ec2_resource.create_instances(**kwargs)[0]
 
         return instance, instance.id
 
