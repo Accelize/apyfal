@@ -20,11 +20,11 @@ Example with AWS EC2.
     client used to run AWS instances:
 
     * ``boto3_session_kwargs``:
-        Overrides arguments of the `boto3.session.Session`_ class.
+      Overrides arguments of the `boto3.session.Session`_ class.
     * ``boto3_client_kwargs``:
-        Overrides arguments of the `boto3.session.Session.client`_ method.
+      Overrides arguments of the `boto3.session.Session.client`_ method.
     * ``boto3_create_instances_kwargs``: Overrides arguments of the
-        `boto3.session.Session.resource('ec2').create_instances`_ method.
+      `boto3.session.Session.resource('ec2').create_instances`_ method.
 
     With this it is by example possible to change billing options when creating
     the instance. Example with the use of AWS spot instance:
