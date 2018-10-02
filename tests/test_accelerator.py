@@ -190,6 +190,7 @@ def test_accelerator():
             )
         assert accel.process_running_count == 1
         assert future.result() == dummy_process_result
+        sleep(0.05)  # Avoid some Python 2 timing issues
         assert accel.process_running_count == 0
 
         # Stop
