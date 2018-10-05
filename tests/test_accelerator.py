@@ -52,10 +52,10 @@ def test_accelerator():
     dummy_stop_mode = 'dummy_stop_mode'
     dummy_accelerator = 'dummy_accelerator'
     dummy_host_type = 'dummy_host_type'
-    dummy_datafile = 'dummy_datafile'
+    dummy_src = 'dummy_src'
     dummy_accelerator_parameters = {'dummy_accelerator_parameters': None}
-    dummy_file_in = 'dummy_file_in'
-    dummy_file_out = 'dummy_file_out'
+    dummy_src = 'dummy_src'
+    dummy_dst = 'dummy_dst'
     process_duration = 0.0
 
     # Mocks client
@@ -87,10 +87,10 @@ def test_accelerator():
         def _process(self, *_):
             """Do Nothing"""
 
-        def start(self, datafile=None, host_env=None, info_dict=True,
+        def start(self, src=None, host_env=None, info_dict=True,
                   reset=False, reload=False, **parameters):
             """Checks arguments and returns fake result"""
-            assert datafile == dummy_datafile
+            assert src == dummy_src
             assert parameters == {'parameters': dummy_accelerator_parameters}
             return dummy_start_result
 
@@ -104,12 +104,12 @@ def test_accelerator():
 
             return dummy_stop_result
 
-        def process(self, file_in=None, file_out=None, info_dict=True,
+        def process(self, src=None, dst=None, info_dict=True,
                     **parameters):
             """Checks arguments and returns fake result"""
             assert parameters == {'parameters': dummy_accelerator_parameters}
-            assert file_in == dummy_file_in
-            assert file_out == dummy_file_out
+            assert src == dummy_src
+            assert dst == dummy_dst
             sleep(process_duration)
             return dummy_process_result
 
@@ -173,19 +173,19 @@ def test_accelerator():
 
         # Start
         assert accel.start(
-            datafile=dummy_datafile, stop_mode=dummy_stop_mode, info_dict=True,
+            src=dummy_src, stop_mode=dummy_stop_mode, info_dict=True,
             parameters=dummy_accelerator_parameters) == dummy_start_result
         assert accel.client.url == dummy_url
 
         # Process
         assert accel.process(
-            file_in=dummy_file_in, file_out=dummy_file_out, info_dict=True,
+            src=dummy_src, dst=dummy_dst, info_dict=True,
             parameters=dummy_accelerator_parameters) == dummy_process_result
 
         # Async Process
         process_duration = 0.05
         future = accel.process_submit(
-            file_in=dummy_file_in, file_out=dummy_file_out, info_dict=True,
+            src=dummy_src, dst=dummy_dst, info_dict=True,
             parameters=dummy_accelerator_parameters
             )
         assert accel.process_running_count == 1

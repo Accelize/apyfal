@@ -68,14 +68,10 @@ See your CSP documentation for information about how to obtain these values.
         myaccel.start()
 
         # Process data:
-        # Define which file to process and where they should be stored.
-        myaccel.process(
-            file_in='/path/myfile1.dat',
-            file_out='/path/result1.dat')
-        myaccel.process(
-            file_in='/path/myfile2.dat',
-            file_out='/path/result2.dat')
-        # ... It is possible to process any number of file
+        # Define which data to process and where they should be stored.
+        myaccel.process(src='/path/myfile1.dat', dst='/path/result1.dat')
+        myaccel.process(src='/path/myfile2.dat', dst='/path/result2.dat')
+        # ... It is possible to process any number of data
 
     # The accelerator is automatically closed  on "with" exit.
     # In this case, the default stop_mode ('term') is used:
@@ -107,7 +103,7 @@ time. Don’t forget to terminate your cloud instance after use.*
        # host running
        myaccel.start(stop_mode='keep')
 
-       myaccel.process(file_in='/path/myfile.dat', file_out='/path/result.dat')
+       myaccel.process(src='/path/myfile.dat', dst='/path/result.dat')
 
        # We can get and store the host IP and instance ID for later use
        my_host_instance_id = myaccel.host.instance_id
@@ -144,7 +140,7 @@ stop it at any time.
 
        myaccel.start()
 
-       myaccel.process(file_in='/path/myfile.dat', file_out='/path/result.dat')
+       myaccel.process(src='/path/myfile.dat', dst='/path/result.dat')
 
 
 With Host IP with Accelerator-Only Access
@@ -171,7 +167,7 @@ stop it.
 
        myaccel.start()
 
-       myaccel.process(file_in='/path/myfile.dat', file_out='/path/result.dat')
+       myaccel.process(src='/path/myfile.dat', dst='/path/result.dat')
 
 
 Running an Accelerator Locally
@@ -239,7 +235,7 @@ preconfigured:
 
        myaccel.start()
 
-       myaccel.process(file_in='/path/myfile.dat', file_out='/path/result.dat')
+       myaccel.process(src='/path/myfile.dat', dst='/path/result.dat')
 
 
 Configuring accelerators
@@ -257,9 +253,8 @@ You can call ``start`` again to change parameters.
 
 The ``start`` parameters is divided in two parts:
 
-- The ``datafile`` argument: Some accelerators may require a data file to run;
-  this argument is simply the path to this file. Read the accelerator
-  documentation to see the file format to use.
+- The ``src`` argument: Some accelerators may require a data to run.
+  Read the accelerator documentation to see the data to use.
 - The ``**parameters`` argument(s): Parameters are *specific configuration
   parameters* that are passed as keyword arguments. See the accelerator
   documentation for more information about possible *specific configuration
@@ -274,26 +269,23 @@ The ``start`` parameters is divided in two parts:
 
        # The parameters are passed to "start" to configure the accelerator;
        # theses parameters are:
-       # - datafile: The path to "datafile1.dat" file.
+       # - src: The path to "src1.dat" data.
        # - parameter1, parameter2: Keywords parameters are passed to
        #   "**parameters" arguments.
-       myaccel.start(datafile='/path/datafile1.dat',
+       myaccel.start(src='/path/src1.dat',
                      parameter1='my_parameter_1', parameter2='my_parameter_2')
 
        # Every "process" call after start uses the previously specified
        # parameters to perform processing
-       myaccel.process(
-           file_in='/path/myfile1.dat', file_out='/path/result1.dat')
-       myaccel.process(
-           file_in='/path/myfile2.dat', file_out='/path/result2.dat')
+       myaccel.process(src='/path/myfile1.dat', dst='/path/result1.dat')
+       myaccel.process(src='/path/myfile2.dat', dst='/path/result2.dat')
        # ...
 
        # It is possible to re-call "start" method with other parameters
-       myaccel.start(datafile='/path/datafile2.dat')
+       myaccel.start(src='/path/src2.dat')
 
        # The following "process" will use new parameters.
-       myaccel.process(
-           file_in='/path/myfile3.dat', file_out='/path/result3.dat')
+       myaccel.process(src='/path/myfile3.dat', dst='/path/result3.dat')
        # ...
 
 
@@ -304,10 +296,10 @@ Parameters passed to ``process`` applies only to this ``process`` call.
 
 The ``process`` method accept the following arguments:
 
-- ``file_in``: Path to the input file. Check the accelerator documentation to
-  see if an input file is required.
-- ``file_out``: Path to the output file. Check the accelerator documentation to
-  see if an output file is required.
+- ``src``: Input data. Check the accelerator documentation to
+  see if an input data is required.
+- ``dst``: Output data. Check the accelerator documentation to
+  see if an output data is required.
 - The ``**parameters`` argument(s): Parameters are *specific configuration
   parameters* that are passed as keyword arguments. See the accelerator
   documentation for more information about possible *specific configuration
@@ -325,9 +317,8 @@ The ``process`` method accept the following arguments:
        # theses parameters are:
        # - parameter1, parameter2: Keywords parameters are passed to
        #   "**parameters" arguments.
-       myaccel.process(
-           file_in='/path/myfile1.dat', file_out='/path/result1.dat',
-           parameter1='my_parameter_1', parameter2='my_parameter_2')
+       myaccel.process(src='/path/myfile1.dat', dst='/path/result1.dat',
+                       parameter1='my_parameter_1', parameter2='my_parameter_2')
 
 
 Asynchronous processing
@@ -347,14 +338,14 @@ benefit of the use of parallels tasks.
 
    import apyfal
 
-   files = ['/path/myfile1', '/path/myfile2', '/path/myfile3']
+   data_list = ['/path/myfile1', '/path/myfile2', '/path/myfile3']
 
    with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
        myaccel.start()
 
-       # Submit asynchronous processing tasks for a list of files
-       futures = [myaccel.process_submit(file_in=my_file)
-                  for my_file in files]
+       # Submit asynchronous processing tasks for a list of data
+       futures = [myaccel.process_submit(src=my_data)
+                  for my_data in data_list]
 
        # All Processing tasks are performed in parallel.
        # It is now possible to wait and get results from "Future" objects.
@@ -366,13 +357,13 @@ A ``process_map`` function also exists to submit directly iterables to process.
 
    import apyfal
 
-   files = ['/path/myfile1', '/path/myfile2', '/path/myfile3']
+   data_list = ['/path/myfile1', '/path/myfile2', '/path/myfile3']
 
    with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
        myaccel.start()
 
        # This performs the previous example in only one line
-       results = myaccel.process_map(files_in=files)
+       results = myaccel.process_map(srcs=data_list)
 
 Metering information
 --------------------

@@ -186,12 +186,12 @@ class RESTClient(_Client):
             raise _exc.ClientRuntimeException(
                 gen_msg=('unable_reach_url', self._url))
 
-    def _start(self, datafile, parameters):
+    def _start(self, src, parameters):
         """
         Client specific start implementation.
 
         Args:
-            datafile (str or file-like object): Input file.
+            src (str or file-like object): Input file.
             parameters (dict): Parameters dict.
 
         Returns:
@@ -202,9 +202,9 @@ class RESTClient(_Client):
 
         # Post accelerator configuration
         fields = {'parameters': _json.dumps(parameters)}
-        if datafile:
+        if src:
             fields['datafile'] = (
-                'datafile', datafile, 'application/octet-stream')
+                'src', src, 'application/octet-stream')
         multipart = _MultipartEncoder(fields=fields)
 
         response = self._session.post(
@@ -227,13 +227,13 @@ class RESTClient(_Client):
         config_result['url_instance'] = self.url
         return config_result
 
-    def _process(self, file_in, file_out, parameters):
+    def _process(self, src, dst, parameters):
         """
         Client specific process implementation.
 
         Args:
-            file_in (file-like object): Input file.
-            file_out (file-like object): Output file.
+            src (file-like object): Input data.
+            dst (file-like object): Output data.
             parameters (dict): Parameters dict.
 
         Returns:
@@ -249,8 +249,8 @@ class RESTClient(_Client):
         fields = {
             'parameters': _json.dumps(parameters),
             'configuration': self._configuration_url}
-        if file_in:
-            fields['datafile'] = 'file_in', file_in, 'application/octet-stream'
+        if src:
+            fields['datafile'] = 'src', src, 'application/octet-stream'
         multipart = _MultipartEncoder(fields=fields)
 
         response = self._session.post(
@@ -271,10 +271,10 @@ class RESTClient(_Client):
                     break
 
             # Gets result file
-            if file_out:
+            if dst:
                 response = self._session.get(
                     response_dict['datafileresult'], stream=True)
-                _shutil.copyfileobj(response.raw, file_out)
+                _shutil.copyfileobj(response.raw, dst)
 
             # Gets result dict
             return response_dict['parametersresult']

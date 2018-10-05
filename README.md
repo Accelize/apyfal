@@ -36,9 +36,9 @@ with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
     # Start and configure accelerator
     myaccel.start()
 
-    # Process files using FPGA accelerated function
-    myaccel.process(file_in='/path/myfile1.dat',  file_out='/path/result1.dat')
-    myaccel.process(file_in='/path/myfile2.dat',  file_out='/path/result2.dat')
+    # Process data using FPGA accelerated function
+    myaccel.process(src='/path/myfile1.dat',  dst='/path/result1.dat')
+    myaccel.process(src='/path/myfile2.dat',  dst='/path/result2.dat')
 ```
 
 # Documentation

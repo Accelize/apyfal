@@ -13,7 +13,7 @@ Some reasons to use Apyfal :
   function in a hybrid multi-cloud environment.
 + The configuration and the provisioning is generated for the FPGA cloud
   context.
-+ Apyfal can perform acceleration directly on cloud storage files.
++ Apyfal can perform acceleration directly on cloud storage objects.
 + Don't like Python ? Use the REST API and generate a client in any language.
 
 **All the accelerated functions**
@@ -26,7 +26,7 @@ discover them.
 **Basic Python code example**
 
 Accelerator API is easy to use and only needs a few lines of codes to
-instantiate an accelerator and its host and process files:
+instantiate an accelerator and its host and process data:
 
 .. code-block:: python
 
@@ -38,11 +38,9 @@ instantiate an accelerator and its host and process files:
        # Start and configure accelerator
        myaccel.start()
 
-       # Process files using FPGA accelerated function
-       myaccel.process(
-           file_in='/path/myfile1.dat',  file_out='/path/result1.dat')
-       myaccel.process(
-           file_in='/path/myfile2.dat',  file_out='/path/result2.dat')
+       # Process data using FPGA accelerated function
+       myaccel.process(src='/path/myfile1.dat',  dst='/path/result1.dat')
+       myaccel.process(src='/path/myfile2.dat',  dst='/path/result2.dat')
 
 Features
 --------
@@ -53,7 +51,7 @@ Features
 
 **Limitations in remote mode**
 
-+ Max input file size is limited to 30GB when using client local file.
++ Max input data size is limited to 30GB when using client local file.
 + Timeout will occur if a request takes more than 900s.
 
 

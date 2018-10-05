@@ -70,6 +70,15 @@ Deprecations:
 - The ``optional`` extra setup option is deprecated with the replacement of
   ``PycURL``.
 
+Pending deprecations:
+
+- ``file_in`` and ``file_out`` argument in ``process`` method are replaced by
+  ``src`` and ``dst``. ``datafile`` argument in ``start`` method is replaced by
+  ``src``. This name change allow us to provides a better input and output data
+  support in next version (No only files).
+  The backward compatibility is kept for old arguments names but will be removed
+  a future version.
+
 1.1.0 (2018/08)
 ---------------
 

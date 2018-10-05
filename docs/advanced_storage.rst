@@ -79,10 +79,9 @@ parameters:
 
    with apyfal.Accelerator(accelerator='my_accelerator') as myaccel:
 
-       myaccel.start(datafile='my_storage://datafile')
+       myaccel.start(src='my_storage://src')
 
-       myaccel.process(file_in='my_storage://file_in',
-                       file_out='my_storage://file_out')
+       myaccel.process(src='my_storage://src', dst='my_storage://dst')
 
 Basic storage operations
 ------------------------

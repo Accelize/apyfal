@@ -73,7 +73,7 @@ This example show the basic use of an accelerator using Apyfal CLI :
     apyfal start
 
     # Accelerator process
-    apyfal process --file_in /path/myfile.dat --file_out /path/result.dat
+    apyfal process --src /path/myfile.dat --dst /path/result.dat
 
     # Accelerator stop
     # Do not forget this step, this is not automatically handled with CLI
@@ -83,7 +83,7 @@ Specific start and process arguments are passed like others:
 
 .. code-block:: bash
 
-    apyfal process --file_in /path/myfile.dat --specific1 1 --specific2 2
+    apyfal process --src /path/myfile.dat --specific1 1 --specific2 2
 
 
 Using multiple accelerators
@@ -101,7 +101,7 @@ different names using the ``--name`` argument:
     apyfal start --name myaccel
 
     # Run "process" on "myaccel"
-    apyfal process --name myaccel --file_in /path/myfile.dat --file_out /path/result.dat
+    apyfal process --name myaccel --src /path/myfile.dat --dst /path/result.dat
 
     # Run "stop" on "myaccel"
     # Do not forget this step, this is not automatically handled with CLI

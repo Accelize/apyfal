@@ -4,6 +4,11 @@ JSON configuration files
 This section provides more information about parameter use than that described
 in the :doc:`getting_started`.
 
+JSON is not the recommanded way to send parameters to Apyfal
+
+Apyfal provides JSON support to allow compatibility with JSON used with
+Accelerator CLI.
+
 The low-level accelerator API that runs on the FPGA host works with parameters
 files.
 
@@ -50,8 +55,7 @@ existing in the dict passed to ``parameters=``.
        myaccel.start()
 
        # Example of passing the parameter JSON file and keyword arguments
-       myaccel.process(file_in='/path/myfile1.dat',
-                       file_out='/path/result1.dat',
+       myaccel.process(src='/path/myfile1.dat', dst='/path/result1.dat',
                        # Passing Path to JSON file to "parameters="
                        parameters='/path/parameters.json',
                        # Passing keywords arguments

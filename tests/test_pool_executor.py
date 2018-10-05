@@ -29,11 +29,11 @@ def test_abstract_async_accelerator_process_map():
             sleep(process_duration)
             return True
 
-        def process_submit(self, file_in=None, file_out=None, **kwargs):
+        def process_submit(self, src=None, dst=None, **kwargs):
             """Checks arguments and returns fake result"""
             assert kwargs == process_kwargs
-            assert file_in in files_in or (file_in is None and not files_in)
-            assert file_out in files_out or (file_out is None and not files_out)
+            assert src in files_in or (src is None and not files_in)
+            assert dst in files_out or (dst is None and not files_out)
             return self._executor.submit(self.run_task)
 
     acc = AsyncAccelerator()
@@ -43,46 +43,46 @@ def test_abstract_async_accelerator_process_map():
 
     # Test: One file in
     files_in = ['0']
-    assert list(acc.process_map(files_in=files_in, **process_kwargs)) == [True]
+    assert list(acc.process_map(srcs=files_in, **process_kwargs)) == [True]
     files_in = []
 
     # Test: One file out
     files_out = ['0']
     assert list(acc.process_map(
-        files_out=files_out, **process_kwargs)) == [True]
+        dsts=files_out, **process_kwargs)) == [True]
     files_out = []
 
     # Test: Multiples files in
     files_in = ['0', '1', '2', '3']
     assert list(acc.process_map(
-        files_in=files_in, **process_kwargs)) == [True] * len(files_in)
+        srcs=files_in, **process_kwargs)) == [True] * len(files_in)
     files_in = []
 
     # Test: Multiples files out
     files_out = ['0', '1', '2', '3']
     assert list(acc.process_map(
-        files_out=files_out, **process_kwargs)) == [True] * len(files_out)
+        dsts=files_out, **process_kwargs)) == [True] * len(files_out)
     files_out = []
 
     # Test: Multiples files in and out
     files_in = ['i0', 'i1', 'i2', 'i3']
     files_out = ['o0', 'o1', 'o2', 'o3']
     assert list(acc.process_map(
-        files_in=files_in, files_out=files_out,
+        srcs=files_in, dsts=files_out,
         **process_kwargs)) == [True] * len(files_out)
 
     # Test: count mismatch
     files_in = files_in[:-1]
     with pytest.raises(ClientConfigurationException):
         acc.process_map(
-            files_in=files_in, files_out=files_out, **process_kwargs)
+            srcs=files_in, dsts=files_out, **process_kwargs)
     files_in = ['i0', 'i1', 'i2', 'i3']
 
     # Test: timeout
     process_duration = 0.05
     with pytest.raises(TimeoutError):
         list(acc.process_map(
-            files_in=files_in, files_out=files_out, timeout=0.001,
+            srcs=files_in, dsts=files_out, timeout=0.001,
             **process_kwargs))
 
 
@@ -92,12 +92,12 @@ def test_accelerator_pool_executor():
 
     accelerator = 'accelerator'
     workers_count = 4
-    start_kwargs = dict(datafile='datafile', info_dict=False,
+    start_kwargs = dict(src='src', info_dict=False,
                         host_env='env', stop_mode='term', reset=None,
                         reload=None)
     stop_kwargs = dict(info_dict=False, stop_mode=None)
     process_kwargs = dict(arg='arg', info_dict=False, parameters='parameters',
-                          file_in='file_in', file_out='file_out')
+                          src='src', dst='dst')
 
     # Mocks Accelerator
 

@@ -57,7 +57,7 @@ hardware accelerated processing in parallel.
 
    import apyfal
 
-   files = ['/path/myfile1', '/path/myfile2', '/path/myfile3']
+   data_list = ['/path/myfile1', '/path/myfile2', '/path/myfile3']
 
    # Instantiates all accelerators in parallel
    with apyfal.AcceleratorPoolExecutor(accelerator='my_accelerator') as executor:
@@ -66,4 +66,4 @@ hardware accelerated processing in parallel.
        executor.start()
 
        # Submits tasks between to the accelerator pools
-       results = executor.process_map(files_in=files)
+       results = executor.process_map(srcs=data_list)

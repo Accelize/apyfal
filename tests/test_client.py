@@ -111,11 +111,11 @@ def test_data_file(tmpdir):
     parameters = {'app': {'specific': {}}}
     content = 'dummy_content'.encode()
     parameter_name = 'dummy_name'
-    file_in = tmpdir.join('in')
-    file_in.write(content)
-    file_in_path = str(file_in)
-    file_out = tmpdir.join('sub_dir').join('out')
-    file_out_path = str(file_out)
+    src = tmpdir.join('in')
+    src.write(content)
+    src_path = str(src)
+    dst = tmpdir.join('sub_dir').join('out')
+    dst_path = str(dst)
     authorized_dir = tmpdir.join('authorized')
 
     # Mocks Client
@@ -149,8 +149,8 @@ def test_data_file(tmpdir):
 
     # Test: Input file
     with client._data_file(
-            file_in_path, parameters, parameter_name, 'rb') as path:
-        assert path == file_in_path
+            src_path, parameters, parameter_name, 'rb') as path:
+        assert path == src_path
         with open(path, 'rb') as file:
             assert file.read() == content
 
@@ -162,77 +162,77 @@ def test_data_file(tmpdir):
 
     # Test: Output file
     with client._data_file(
-            file_out_path, parameters, parameter_name, 'wb') as path:
-        assert path == file_out_path
+            dst_path, parameters, parameter_name, 'wb') as path:
+        assert path == dst_path
         with open(path, 'wb') as file:
             file.write(content)
-        assert file_out.read_binary() == content
-    file_out.remove()
+        assert dst.read_binary() == content
+    dst.remove()
 
     # Test: Input file as stream
     client._PARAMETER_IO_FORMAT[parameter_name] = 'stream'
     with client._data_file(
-            file_in_path, parameters, parameter_name, 'rb') as file:
+            src_path, parameters, parameter_name, 'rb') as file:
         assert file.read() == content
     client._PARAMETER_IO_FORMAT[parameter_name] = 'file'
 
     # Test: Input stream
-    with open(file_in_path, 'rb') as file:
+    with open(src_path, 'rb') as file:
         with client._data_file(file, parameters, parameter_name, 'rb') as path:
             with open(path, 'rb') as tmp_file:
                 assert tmp_file.read() == content
 
     # Test: Output stream
-    with open(file_out_path, 'wb') as file:
+    with open(dst_path, 'wb') as file:
         with client._data_file(
                 file, parameters, parameter_name, 'wb') as path:
             with open(path, 'wb') as tmp_file:
                 tmp_file.write(content)
-    assert file_out.read_binary() == content
+    assert dst.read_binary() == content
 
     # host://: Unauthorized dir
     with pytest.raises(ClientSecurityException):
         with client._data_file(
-                'host://%s' % file_in_path, parameters,
+                'host://%s' % src_path, parameters,
                 parameter_name, 'rb'):
             pass
 
     # host://: Authorized dir
-    authorized_file_in = authorized_dir.join('in')
-    authorized_file_in.ensure()
-    authorized_file_in_path = str(authorized_file_in)
+    authorized_src = authorized_dir.join('in')
+    authorized_src.ensure()
+    authorized_src_path = str(authorized_src)
     with client._data_file(
-            'host://%s' % authorized_file_in_path,
+            'host://%s' % authorized_src_path,
             parameters, parameter_name, 'rb') as path:
-        assert path == authorized_file_in_path
+        assert path == authorized_src_path
 
     # Remote mode: No change for file
     client.REMOTE = True
     with client._data_file(
-            file_in_path, parameters, parameter_name, 'rb') as path:
-        assert path == file_in_path
+            src_path, parameters, parameter_name, 'rb') as path:
+        assert path == src_path
     assert not parameters['app']['specific']
 
     # Remote mode: No change for stream
-    with open(file_in_path, 'rb') as file:
+    with open(src_path, 'rb') as file:
         with client._data_file(
                 file, parameters, parameter_name, 'rb') as path:
             assert path is not None
     assert not parameters['app']['specific']
 
     # Remote mode: Others in parameters
-    url = 'host://%s' % authorized_file_in_path
+    url = 'host://%s' % authorized_src_path
     with client._data_file(
             url, parameters, parameter_name, 'rb') as path:
         assert path is None
     assert parameters['app']['specific'][parameter_name] == url
 
     # Reload from parameters
-    parameters['app']['specific'][parameter_name] = file_in_path
-    assert parameters['app']['specific'][parameter_name] == file_in_path
+    parameters['app']['specific'][parameter_name] = src_path
+    assert parameters['app']['specific'][parameter_name] == src_path
     with client._data_file(
             None, parameters, parameter_name, 'rb') as path:
-        assert path == file_in_path
+        assert path == src_path
     assert not parameters['app']['specific']
 
     # Try reload from parameters, but not found

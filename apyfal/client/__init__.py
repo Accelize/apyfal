@@ -139,14 +139,14 @@ class AcceleratorClient(_utl.ABC):
         """
         return self._name
 
-    def start(self, datafile=None, info_dict=False, host_env=None, reload=None,
+    def start(self, src=None, info_dict=False, host_env=None, reload=None,
               reset=None, **parameters):
         """
         Configures accelerator.
 
         Args:
-            datafile (path-like object or file-like object): Depending on the
-                accelerator, a configuration data file need to be loaded before
+            src (path-like object or file-like object): Depending on the
+                accelerator, a configuration data need to be loaded before
                 a process can be run.
                 Path-like object can be path, URL or cloud object URL.
             info_dict (bool): If True, returns a dict containing information on
@@ -185,9 +185,9 @@ class AcceleratorClient(_utl.ABC):
 
         # Handle files
         with self._data_file(
-                datafile, parameters, 'datafile', mode='rb') as datafile:
+                src, parameters, 'src', mode='rb') as src:
             # Starts
-            response = self._start(datafile, parameters)
+            response = self._start(src, parameters)
 
         # Check response status
         self._raise_for_status(response, "Failed to configure accelerator: ")
@@ -199,29 +199,29 @@ class AcceleratorClient(_utl.ABC):
             return response
 
     @_abstractmethod
-    def _start(self, datafile, parameters):
+    def _start(self, src, parameters):
         """
         Client specific start implementation.
 
         Args:
-            datafile (str or file-like object): Input file.
+            src (str or file-like object): Input data.
             parameters (dict): Parameters dict.
 
         Returns:
             dict: response.
         """
 
-    def process(self, file_in=None, file_out=None, info_dict=False,
+    def process(self, src=None, dst=None, info_dict=False,
                 **parameters):
         """
         Processes with accelerator.
 
         Args:
-            file_in (path-like object or file-like object):
-                Input file to process.
+            src (path-like object or file-like object):
+                Source data to process.
                 Path-like object can be path, URL or cloud object URL.
-            file_out (path-like object or file-like object):
-                Output processed file.
+            dst (path-like object or file-like object):
+                Processed data destination.
                 Path-like object can be path, URL or cloud object URL.
             parameters (path-like object, str or dict): Accelerator process
                 specific parameters
@@ -247,11 +247,11 @@ class AcceleratorClient(_utl.ABC):
 
         # Handle files
         with self._data_file(
-                file_in, parameters, 'file_in', mode='rb') as file_in:
+                src, parameters, 'src', mode='rb') as src:
             with self._data_file(
-                    file_out, parameters, 'file_out', mode='wb') as file_out:
+                    dst, parameters, 'dst', mode='wb') as dst:
                 # Processes
-                response = self._process(file_in, file_out, parameters)
+                response = self._process(src, dst, parameters)
 
         # Check response status
         self._raise_for_status(response, "Processing failed: ")
@@ -269,13 +269,13 @@ class AcceleratorClient(_utl.ABC):
         return result
 
     @_abstractmethod
-    def _process(self, file_in, file_out, parameters):
+    def _process(self, src, dst, parameters):
         """
         Client specific process implementation.
 
         Args:
-            file_in (str or file-like object): Input file.
-            file_out (str or file-like object): Output file.
+            src (str or file-like object): Input data.
+            dst (str or file-like object): Output data.
             parameters (dict): Parameters dict.
 
         Returns:

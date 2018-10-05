@@ -15,7 +15,7 @@ class _AbstractAsyncAccelerator(ABC):
     """
 
     @abstractmethod
-    def process_submit(self, file_in=None, file_out=None, info_dict=False,
+    def process_submit(self, src=None, dst=None, info_dict=False,
                        **parameters):
         """
 
@@ -24,17 +24,19 @@ class _AbstractAsyncAccelerator(ABC):
         See "apyfal.Accelerator.process" for more information.
         """
 
-    def process_map(self, files_in=None, files_out=None, info_dict=False,
+    def process_map(self, srcs=None, dsts=None, info_dict=False,
                     timeout=None, **parameters):
         """
         Map process execution on multiples files.
 
         Args:
-            files_in (iterable of path-like object or file-like object):
-                Iterable of input files to process.
+            srcs (iterable of path-like object or file-like object):
+                Iterable of input data to process.
+                Must be an iterable of "src" parameters of the "process" method.
                 Path-like object can be path, URL or cloud object URL.
-            files_out (iterable of path-like object or file-like object):
-                Iterable of output files.
+            dsts (iterable of path-like object or file-like object):
+                Iterable of output data.
+                Must be an iterable of "dst" parameters of the "process" method.
                 Path-like object can be path, URL or cloud object URL.
             timeout (float): The maximum number of seconds to wait. If None,
                 then there is no limit on the wait time.
@@ -65,33 +67,32 @@ class _AbstractAsyncAccelerator(ABC):
             end_time = timeout + time()
 
         # Get file count
-        file_in = file_out = None
-        if files_in is not None:
-            size_in = len(files_in)
+        src = dst = None
+        if srcs is not None:
+            size_src = len(srcs)
         else:
-            size_in = 0
+            size_src = 0
 
-        if files_out is not None:
-            size_out = len(files_out)
+        if dsts is not None:
+            size_dst = len(dsts)
         else:
-            size_out = 0
+            size_dst = 0
 
-        if size_in and size_out and size_in != size_out:
+        if size_src and size_dst and size_src != size_dst:
             raise _exc.ClientConfigurationException(
                 '"files_in" and "files_out" must contain the same count of'
                 ' files.')
 
         # Submit process
         futures = []
-        for index in range(size_in or size_out):
-            if size_in:
-                file_in = files_in[index]
-            if size_out:
-                file_out = files_out[index]
+        for index in range(size_src or size_dst):
+            if size_src:
+                src = srcs[index]
+            if size_dst:
+                dst = dsts[index]
 
             futures.append(self.process_submit(
-                file_in=file_in, file_out=file_out, info_dict=info_dict,
-                **parameters))
+                src=src, dst=dst, info_dict=info_dict, **parameters))
 
         def result_iterator():
             """
@@ -210,8 +211,8 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
         """
         return [worker.host for worker in self._workers]
 
-    def start(self, stop_mode=None, datafile=None, info_dict=False,
-              host_env=None, reload=None, reset=None, **parameters):
+    def start(self, stop_mode=None, src=None, info_dict=False, host_env=None,
+              reload=None, reset=None, **parameters):
         """
         Starts and/or configure all accelerators in the pool.
 
@@ -219,8 +220,8 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
             stop_mode (str or int): Host stop mode. If not None, override
                 current "stop_mode" value. See "apyfal.host.Host.stop_mode"
                 property for more information and possible values.
-            datafile (path-like object or file-like object): Depending on the
-                accelerator, a configuration data file need to be loaded before
+            src (path-like object or file-like object): Depending on the
+                accelerator, a configuration data need to be loaded before
                 a process can be run.
                 Path-like object can be path, URL or cloud object URL.
             info_dict (bool): If True, returns a dict containing information on
@@ -243,12 +244,12 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
         """
         with ThreadPoolExecutor(max_workers=self._workers_count) as executor:
             futures = [executor.submit(
-                worker.start, stop_mode=stop_mode, datafile=datafile,
+                worker.start, stop_mode=stop_mode, src=src,
                 info_dict=info_dict, host_env=host_env, reload=reload,
                 reset=reset, **parameters) for worker in self._workers]
         return [future.result() for future in as_completed(futures)]
 
-    def process_submit(self, file_in=None, file_out=None, info_dict=False,
+    def process_submit(self, src=None, dst=None, info_dict=False,
                        **parameters):
         """
         Schedules the process operation to be executed and returns a Future
@@ -257,11 +258,11 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
         See "apyfal.Accelerator.process".
 
         Args:
-            file_in (path-like object or file-like object):
-                Input file to process.
+            src (path-like object or file-like object):
+                Source data to process.
                 Path-like object can be path, URL or cloud object URL.
-            file_out (path-like object or file-like object):
-                Output processed file.
+            dst (path-like object or file-like object):
+                Processed data destination.
                 Path-like object can be path, URL or cloud object URL.
             parameters (path-like object, str or dict): Accelerator process
                 specific parameters
@@ -287,8 +288,7 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
 
         # Submit work to it.
         return self._workers[index].process_submit(
-            file_in=file_in, file_out=file_out, info_dict=info_dict,
-            **parameters)
+            src=src, dst=dst, info_dict=info_dict, **parameters)
 
     def stop(self, stop_mode=None, info_dict=False, wait=True):
         """

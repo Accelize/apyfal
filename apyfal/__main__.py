@@ -386,7 +386,7 @@ def _run_command():
             'See accelerator documentation for '
             'information on specific configuration parameters'))
     action.add_argument('--name', '-n', **name_arg)
-    action.add_argument('--datafile', '-i')
+    action.add_argument('--src', '-i')
     action.add_argument('--info_dict', action='store_true')
     action.add_argument('--parameters', '-j')
 
@@ -398,8 +398,8 @@ def _run_command():
             'See accelerator documentation for '
             'information on specific process parameters'))
     action.add_argument('--name', '-n', **name_arg)
-    action.add_argument('--file_in', '-i')
-    action.add_argument('--file_out', '-o')
+    action.add_argument('--src', '-i')
+    action.add_argument('--dst', '-o')
     action.add_argument('--info_dict', action='store_true')
     action.add_argument('--parameters', '-j')
 

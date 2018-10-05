@@ -86,8 +86,7 @@ class SysCallClient(_Client):
     APYFAL_MINIMUM_VERSION = '1.0.0'
 
     # Needs the use of temporary files
-    _PARAMETER_IO_FORMAT = {
-        'file_in': 'file', 'file_out': 'file', 'datafile': 'file'}
+    _PARAMETER_IO_FORMAT = {'src': 'file', 'dst': 'file'}
 
     def __init__(self, host_type=None, region=None, *args, **kwargs):
         _Client.__init__(self, *args, **kwargs)
@@ -104,12 +103,12 @@ class SysCallClient(_Client):
             raise _exc.HostConfigurationException(
                 gen_msg='no_host_found')
 
-    def _start(self, datafile, parameters):
+    def _start(self, src, parameters):
         """
         Client specific start implementation.
 
         Args:
-            datafile (str): Input file.
+            src (str): Input data.
             parameters (dict): Parameters dict.
 
         Returns:
@@ -129,23 +128,23 @@ class SysCallClient(_Client):
 
         # Run and return response
         return self._run_executable(
-            mode='0', input_file=datafile, input_json=str(_uuid()),
+            mode='0', input_file=src, input_json=str(_uuid()),
             output_json=str(_uuid()), parameters=parameters)
 
-    def _process(self, file_in, file_out, parameters):
+    def _process(self, src, dst, parameters):
         """
         Client specific process implementation.
 
         Args:
-            file_in (str): Input file.
-            file_out (str): Output file.
+            src (str): Input data.
+            dst (str): Output data.
             parameters (dict): Parameters dict.
 
         Returns:
             dict: response dict.
         """
         return self._run_executable(
-            mode='1', input_file=file_in, output_file=file_out,
+            mode='1', input_file=src, output_file=dst,
             input_json=str(_uuid()), output_json=str(_uuid()),
             parameters=parameters,
 

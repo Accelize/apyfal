@@ -1,13 +1,13 @@
-Accelerator REST API
-====================
+Apyfal REST API
+===============
 
 It is possible to use accelerators using the REST API instead of Python
-Apyfal. But, note that in this case, host configuration is not supported.
+But, note that in this case, host configuration is not supported.
 
-The Accelerator REST API follow rhe OpenApi specification.
+The Apyfal REST API follow rhe OpenApi specification.
 
-- `Accelerator REST API Documentation <./_static/accelerator_rest_api.html>`_
-- :download:`Accelerator OpenAPI specification <../rest_api/input_spec.json>`
+- `Apyfal REST API Documentation <./_static/rest_api.html>`_
+- :download:`Apyfal OpenAPI specification <../rest_api/input_spec.json>`
 
 Generating REST API client in any language using OpenApi
 --------------------------------------------------------

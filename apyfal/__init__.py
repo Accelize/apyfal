@@ -202,7 +202,7 @@ class Accelerator(_AbstractAsyncAccelerator):
         """
         self._tasks_count -= 1
 
-    def start(self, stop_mode=None, datafile=None, info_dict=False,
+    def start(self, stop_mode=None, src=None, info_dict=False,
               host_env=None, reload=None, reset=None, **parameters):
         """
         Starts and/or configure an accelerator.
@@ -211,8 +211,8 @@ class Accelerator(_AbstractAsyncAccelerator):
             stop_mode (str or int): Host stop mode. If not None, override
                 current "stop_mode" value. See "apyfal.host.Host.stop_mode"
                 property for more information and possible values.
-            datafile (path-like object or file-like object): Depending on the
-                accelerator, a configuration data file need to be loaded before
+            src (path-like object or file-like object): Depending on the
+                accelerator, a configuration data need to be loaded before
                 a process can be run.
                 Path-like object can be path, URL or cloud object URL.
             info_dict (bool): If True, returns a dict containing information on
@@ -246,22 +246,30 @@ class Accelerator(_AbstractAsyncAccelerator):
             # Get environment
             host_env = self._host.get_configuration_env(**(host_env or dict()))
 
+        # "datafile" backward compatibility
+        if not src:
+            import warnings
+            warnings.warn(
+                '"datafile" argument is replaced by "src" and '
+                'will be deprecated in future.', PendingDeprecationWarning)
+            src = parameters.pop('datafile', None)
+
         # Configure accelerator if needed
         return self._client.start(
-            datafile=datafile, host_env=host_env or dict(), info_dict=info_dict,
+            src=src, host_env=host_env or dict(), info_dict=info_dict,
             reload=reload, reset=reset, **parameters)
 
-    def process(self, file_in=None, file_out=None, info_dict=False,
+    def process(self, src=None, dst=None, info_dict=False,
                 **parameters):
         """
         Processes with accelerator.
 
         Args:
-            file_in (path-like object or file-like object):
-                Input file to process.
+            src (path-like object or file-like object):
+                Source data to process.
                 Path-like object can be path, URL or cloud object URL.
-            file_out (path-like object or file-like object):
-                Output processed file.
+            dst (path-like object or file-like object):
+                Processed data destination.
                 Path-like object can be path, URL or cloud object URL.
             parameters (path-like object, str or dict): Accelerator process
                 specific parameters
@@ -284,9 +292,19 @@ class Accelerator(_AbstractAsyncAccelerator):
         """
         _enable_logger = _get_logger().isEnabledFor(20)
 
+        # "file_in", "file_out" backward compatibility
+        if not src and not dst:
+            import warnings
+            warnings.warn(
+                '"file_in" and "file_out" arguments are replaced by "src" and '
+                '"dst" and will be deprecated in future.',
+                PendingDeprecationWarning)
+            src = parameters.pop('file_in', None)
+            dst = parameters.pop('file_out', None)
+
         # Process file with accelerator
         process_result = self._client.process(
-            file_in=file_in, file_out=file_out,
+            src=src, dst=dst,
             info_dict=info_dict or _enable_logger, **parameters)
 
         if _enable_logger:
@@ -295,7 +313,7 @@ class Accelerator(_AbstractAsyncAccelerator):
             return process_result if info_dict else process_result[0]
         return process_result
 
-    def process_submit(self, file_in=None, file_out=None, info_dict=False,
+    def process_submit(self, src=None, dst=None, info_dict=False,
                        **parameters):
         """
         Schedules the process operation to be executed and returns a Future
@@ -304,11 +322,11 @@ class Accelerator(_AbstractAsyncAccelerator):
         See "apyfal.Accelerator.process"
 
         Args:
-            file_in (path-like object or file-like object):
-                Input file to process.
+            src (path-like object or file-like object):
+                Source data to process.
                 Path-like object can be path, URL or cloud object URL.
-            file_out (path-like object or file-like object):
-                Output processed file.
+            dst (path-like object or file-like object):
+                Processed data destination.
                 Path-like object can be path, URL or cloud object URL.
             parameters (path-like object, str or dict): Accelerator process
                 specific parameters
@@ -328,9 +346,8 @@ class Accelerator(_AbstractAsyncAccelerator):
                 content.
         """
         # Submits process
-        future = self._workers.submit(
-            self.process, file_in=file_in, file_out=file_out,
-            info_dict=info_dict, **parameters)
+        future = self._workers.submit(self.process, src=src, dst=dst,
+                                      info_dict=info_dict, **parameters)
 
         # Keeps track of running tasks (Or planned in queue)
         self._tasks_count += 1

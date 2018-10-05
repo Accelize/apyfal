@@ -100,7 +100,7 @@ def test_restclient_start(tmpdir):
         'id': dummy_id, 'parametersresult': parameters_result,
         'url': dummy_url_https, 'inerror': False}).encode()
     file_content = b'content'
-    file_in = io.BytesIO(file_content)
+    src = io.BytesIO(file_content)
 
     # Mock some client parts
 
@@ -153,7 +153,7 @@ def test_restclient_start(tmpdir):
 
     # Test: new configuration
     assert client.start(
-        datafile=file_in, info_dict=True, reset=True, reload=True)
+        src=src, info_dict=True, reset=True, reload=True)
 
     # Test: stream SSL Certificate
     ssl_crt_bytes = self_signed_certificate(
@@ -333,8 +333,8 @@ def test_restclient_process():
         'datafileresult': datafileresult, 'processed': True,
         'url': dummy_url, 'inerror': False}).encode()
     file_content = b'content'
-    file_in = io.BytesIO(file_content)
-    file_out = io.BytesIO()
+    src = io.BytesIO(file_content)
+    dst = io.BytesIO()
 
     # Mock some client parts
 
@@ -395,20 +395,20 @@ def test_restclient_process():
 
     # Test: No configuration
     with pytest.raises(exc.ClientConfigurationException):
-        assert client.process(file_in=file_in)
+        assert client.process(src=src)
     client._cache["_configuration_url"] = dummy_url
 
     # Test: run process
-    client.process(file_in=file_in, file_out=file_out)
-    file_out.seek(0)
-    assert file_out.read() == file_content
+    client.process(src=src, dst=dst)
+    dst.seek(0)
+    assert dst.read() == file_content
 
     # Test: run process with info_dict
-    file_out.seek(0)
-    assert client.process(file_in=file_in, file_out=file_out,
+    dst.seek(0)
+    assert client.process(src=src, dst=dst,
                           info_dict=True) == (dict(), parameters_result)
-    file_out.seek(0)
-    assert file_out.read() == file_content
+    dst.seek(0)
+    assert dst.read() == file_content
 
 
 def test_restclient_raise_for_error():

@@ -425,8 +425,8 @@ def test_syscall_client_start_process_stop():
     from apyfal.exceptions import ClientConfigurationException
 
     # Mock some client methods
-    dummy_file_in = 'file_in'
-    dummy_file_out = 'file_out'
+    dummy_src = 'src'
+    dummy_dst = 'dst'
     dummy_parameters = {'params': 'params', 'env': {}, 'app': {}}
     dummy_response = {'response': 'response'}
     expected_args = {}
@@ -481,24 +481,24 @@ def test_syscall_client_start_process_stop():
         excepted_parameters = start_parameters.copy()
         del excepted_parameters['env']
         expected_args = dict(
-            mode='0', input_file=dummy_file_in, input_json=str,
+            mode='0', input_file=dummy_src, input_json=str,
             output_json=str, parameters=excepted_parameters, extra_args=['-v4'])
-        assert client._start(dummy_file_in, start_parameters) == dummy_response
+        assert client._start(dummy_src, start_parameters) == dummy_response
 
         # Start with version checks
         start_parameters['env']['apyfal_version'] = '0.0.0'
         with pytest.raises(ClientConfigurationException):
-            client._start(dummy_file_in, start_parameters)
+            client._start(dummy_src, start_parameters)
 
         start_parameters['env']['apyfal_version'] = '9.9.9'
-        assert client._start(dummy_file_in, start_parameters) == dummy_response
+        assert client._start(dummy_src, start_parameters) == dummy_response
 
         # Process
         expected_args = dict(
-            mode='1', input_file=dummy_file_in, output_file=dummy_file_out,
+            mode='1', input_file=dummy_src, output_file=dummy_dst,
             input_json=str, output_json=str,
             parameters=dummy_parameters, extra_args=['-v4'])
-        assert client._process(dummy_file_in, dummy_file_out,
+        assert client._process(dummy_src, dummy_dst,
                                dummy_parameters) == dummy_response
 
         # Stop

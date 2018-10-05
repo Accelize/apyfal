@@ -25,9 +25,9 @@ It support following arguments:
   mode.
   This is equivalent to ``apyfal.Accelerator`` ``start``, ``process`` and
   ``stop`` methods.
-- ``-i``: Input local file path, used to pass ``datafile`` in configuration mode
-  and ``file_in`` in process mode.
-- ``-o``: Output local file path, used to pass ``file_out`` in process mode.
+- ``-i``: Input local file path, used to pass ``src`` in configuration mode
+  and ``src`` in process mode.
+- ``-o``: Output local file path, used to pass ``dst`` in process mode.
 - ``-j``: JSON parameter local file path, used to pass a JSON parameters files
   like described in :doc:`advanced`.
 - ``-p``: JSON output local file path, used to get some results in JSON format.
@@ -36,11 +36,11 @@ It support following arguments:
 
 .. code-block:: bash
 
-    # Configures accelerator with datafile and JSON parameters
-    sudo /opt/accelize/accelerator/accelerator -m 0 -i ${datafile} -j ${parameters}
+    # Configures accelerator with src and JSON parameters
+    sudo /opt/accelize/accelerator/accelerator -m 0 -i ${src} -j ${parameters}
 
-    # Processes file_in and save result to file_out
-    sudo /opt/accelize/accelerator/accelerator -m 1 -i ${file_in} -o ${file_out}
+    # Processes src and save result to dst
+    sudo /opt/accelize/accelerator/accelerator -m 1 -i ${src} -o ${dst}
 
 Metering services
 -----------------
