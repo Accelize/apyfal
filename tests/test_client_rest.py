@@ -155,6 +155,10 @@ def test_restclient_start(tmpdir):
     assert client.start(
         src=src, info_dict=True, reset=True, reload=True)
 
+    # Test "datafile" backward compatibility
+    assert client.start(
+        datafile=src, info_dict=True, reset=True, reload=True)
+
     # Test: stream SSL Certificate
     ssl_crt_bytes = self_signed_certificate(
         "*", common_name='host_name', country_name='FR')[0]
@@ -400,6 +404,12 @@ def test_restclient_process():
 
     # Test: run process
     client.process(src=src, dst=dst)
+    dst.seek(0)
+    assert dst.read() == file_content
+
+    # Test: file_in/file_out backward compatibility
+    dst.seek(0)
+    client.process(file_in=src, file_out=dst)
     dst.seek(0)
     assert dst.read() == file_content
 

@@ -246,14 +246,6 @@ class Accelerator(_AbstractAsyncAccelerator):
             # Get environment
             host_env = self._host.get_configuration_env(**(host_env or dict()))
 
-        # "datafile" backward compatibility
-        if not src:
-            import warnings
-            warnings.warn(
-                '"datafile" argument is replaced by "src" and '
-                'will be deprecated in future.', PendingDeprecationWarning)
-            src = parameters.pop('datafile', None)
-
         # Configure accelerator if needed
         return self._client.start(
             src=src, host_env=host_env or dict(), info_dict=info_dict,
@@ -291,16 +283,6 @@ class Accelerator(_AbstractAsyncAccelerator):
                 more information.
         """
         _enable_logger = _get_logger().isEnabledFor(20)
-
-        # "file_in", "file_out" backward compatibility
-        if not src and not dst:
-            import warnings
-            warnings.warn(
-                '"file_in" and "file_out" arguments are replaced by "src" and '
-                '"dst" and will be deprecated in future.',
-                PendingDeprecationWarning)
-            src = parameters.pop('file_in', None)
-            dst = parameters.pop('file_out', None)
 
         # Process file with accelerator
         process_result = self._client.process(
