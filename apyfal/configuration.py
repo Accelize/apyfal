@@ -289,7 +289,9 @@ class Configuration(_Mapping):
                 auth=(client_id, secret_id), timeout=self._REQUEST_TIMEOUT)
 
             if response.status_code != 200:
-                raise _exc.ClientAuthenticationException(exc=response.text)
+                raise _exc.ClientAuthenticationException(
+                    'Unable to authenticate client ID starting by "%s"'
+                    % client_id, exc=response.text)
 
             self._cache['metering_access_token'] = _json.loads(
                 response.text)['access_token']

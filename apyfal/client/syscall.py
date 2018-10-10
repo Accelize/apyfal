@@ -253,7 +253,7 @@ class SysCallClient(_Client):
         # If no current configuration, updates with default configuration from
         # metering server.
         if not has_config:
-            self._update_with_default_configuration(full_env)
+            self._update_with_default_configuration(full_env, config_env)
 
         # Updates with user configuration
         for key, value in config_env.items():
@@ -393,12 +393,13 @@ class SysCallClient(_Client):
 
         return cur_env, has_config
 
-    def _update_with_default_configuration(self, config_env):
+    def _update_with_default_configuration(self, to_update, config_env):
         """
         Get default configuration environment from metering server.
 
         Args:
-            config_env (dict): Environment to update
+            to_update (dict): Environment to update
+            config_env (dict): User environment
 
         Returns:
             dict: Default configuration environment
@@ -406,14 +407,18 @@ class SysCallClient(_Client):
         # Updates credentials in configuration with local file
         section = self._config['accelize']
         section['client_id'] = (
-                section['client_id'] or config_env['client_id'])
+            section.get('client_id') or
+            config_env.get('client_id') or
+            to_update.get('client_id'))
         section['secret_id'] = (
-                section['secret_id'] or config_env['client_secret'])
+            section.get('secret_id') or
+            config_env.get('client_secret') or
+            to_update.get('client_secret'))
 
         # Gets default configuration
         try:
             _utl.recursive_update(
-                config_env, self._config.get_host_configurations()
+                to_update, self._config.get_host_configurations()
                 [self._host_type][self._name][self._region])
 
         # Empty default configuration is possible
