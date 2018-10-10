@@ -64,6 +64,8 @@ Fixes:
   Apyfal client (Ex: Host instance generated manually using accelerator image)
 - Apyfal now runs the local accelerator if available even if a ``host_type`` is
   provided in configuration file.
+- Fix Apyfal setup fail due to missing ``ipgetter`` package on PyPI
+  (This package was removed by this author without notice).
 
 Deprecations:
 
