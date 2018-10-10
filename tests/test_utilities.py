@@ -27,48 +27,29 @@ def test_timeout():
 
 def test_get_host_public_ip():
     """Tests get_host_public_ip"""
-    from apyfal._utilities import get_host_public_ip
-    import ipgetter
-    from random import randint
+    import apyfal._utilities as _utl
 
-    random = False
+    fake_api = 'http://nothing.nothing'
+    _utl.PUBLIC_IP_API.insert(0, fake_api)
 
-    # Mock ipgetter.myip
-    def dummy_myip():
-        """Return fake IP"""
-        if random:
-            return '%d.%d.%d.%d' % (
-                randint(0, 255),
-                randint(0, 255),
-                randint(0, 255),
-                randint(0, 255)
-            )
-        return '127.0.0.1'
-
-    ipgetter_myip = ipgetter.myip
-    ipgetter.myip = dummy_myip
-
-    # Test
+    # Test it directly: May fail if no connection
     try:
-        # Check format
-        assert get_host_public_ip() == '127.0.0.1/32'
-
-        # Raise errors if no returns
-        random = True
-        with pytest.raises(OSError):
-            get_host_public_ip()
-
-    # Restore ipgetter.myip
-    finally:
-        ipgetter.myip = ipgetter_myip
-
-    # Test with ipgetter.myip directly
-    # May fail if no connection
-    try:
-        assert get_host_public_ip()[-3:] == '/32'
+        assert _utl.get_host_public_ip()[-3:] == '/32'
     except OSError:
         # May fail on some CI
         pytest.xfail('Unable to get public IP address')
+    finally:
+        _utl.PUBLIC_IP_API.remove(fake_api)
+
+    # Test exception
+    public_ip_api = _utl.PUBLIC_IP_API
+    _utl.PUBLIC_IP_API = tuple()
+    try:
+        with pytest.raises(OSError):
+            _utl.get_host_public_ip()
+
+    finally:
+        _utl.PUBLIC_IP_API = public_ip_api
 
 
 def test_create_key_pair_file(tmpdir):

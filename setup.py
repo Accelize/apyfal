@@ -49,7 +49,6 @@ PACKAGE_INFO = dict(
     install_requires=[
         'requests>=2.9.0',
         'requests_toolbelt>=0.7.1',
-        'ipgetter>=0.6',
         'pycosio>1.0.0',
         'cryptography>=2.1',
 

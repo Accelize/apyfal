@@ -3,8 +3,6 @@
 
 import abc
 import collections
-from concurrent.futures import (ThreadPoolExecutor as _ThreadPoolExecutor,
-                                as_completed as as_completed)
 from contextlib import contextmanager
 from importlib import import_module
 import logging
@@ -21,6 +19,9 @@ import warnings
 
 _CACHE = dict()  # Store some cached values
 SSH_DIR = os.path.expanduser('~/.ssh')  # SSH Directory
+
+PUBLIC_IP_API = [
+    'https://api.ipify.org', 'https://ip.seeip.org', 'https://ident.me/']
 
 # Python 2 compatibility
 if sys.version_info[0] >= 3:
@@ -326,37 +327,20 @@ def format_url(url_or_ip, force_secure=False):
     return url
 
 
-def get_host_public_ip(max_tries=10, validation_sample=3):
+def get_host_public_ip():
     """
     Find current host IP address.
-
-    Args:
-        max_tries (int): Number of tries.
-        validation_sample (int): Number of service to
-            request that must return same result to
-            validate IP address.
 
     Returns:
         str: IP address in "XXX.XXX.XXX.XXX/32" format.
     """
-    # Lazy import since not always used
-    from ipgetter import myip
-
-    # Gets IP address from multiple sources and
-    # checks result consistency before returning one
-    with _ThreadPoolExecutor(max_workers=validation_sample) as executor:
-        for _ in range(max_tries):
-            # Gets address from multiple source in parallel
-            ip_addresses = [executor.submit(myip)
-                            for _ in range(validation_sample)]
-
-            # Checks if addresses match
-            ip_addresses = set(ip_address.result()
-                               for ip_address in as_completed(ip_addresses))
-            if len(ip_addresses) == 1:
-                ip_address = ip_addresses.pop()
-                if ip_address:
-                    return "%s/32" % ip_address
+    for api_address in PUBLIC_IP_API:
+        try:
+            ip_address = requests.get(api_address).text
+        except requests.exceptions.RequestException:
+            continue
+        if ip_address:
+            return "%s/32" % ip_address
     raise OSError('Unable to get public IP address')
 
 
