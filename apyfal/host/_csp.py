@@ -584,12 +584,6 @@ class CSPHost(_Host):
         self._image_id = self._config_env.pop('image')
         self._instance_type = self._config_env.pop('instancetype')
 
-        # Sets AGFI backward compatibility
-        try:
-            self._config_env['AGFI'] = self._config_env['fpgaimage']
-        except KeyError:
-            pass
-
     @property
     def _user_data(self):
         """

@@ -642,8 +642,7 @@ def test_csphost_set_accelerator_requirements():
 
         # Test pass environment parameters
         new_config_env = config_env.copy()
-        new_config_env['AGFI'] = new_config_env['fpgaimage'] = 'fpgaimage'
-        assert csp.get_configuration_env(AGFI='fpgaimage') == new_config_env
+        assert csp.get_configuration_env() == new_config_env
         new_config_env = config_env.copy()
         new_config_env['param'] = 'param'
         assert csp.get_configuration_env(param='param') == new_config_env

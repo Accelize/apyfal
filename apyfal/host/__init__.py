@@ -290,13 +290,6 @@ class Host(_utl.ABC):
 
         current_env = _deepcopy(self._config_env)
         current_env.update(config_env)
-
-        # Old name backward compatibility
-        try:
-            current_env['fpgaimage'] = config_env['AGFI']
-        except KeyError:
-            pass
-
         return current_env
 
     @classmethod
