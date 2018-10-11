@@ -261,6 +261,7 @@ class Configuration(_Mapping):
         return '%s(%s)' % (object.__repr__(self), self.__str__())
 
     @property
+    @_utl.memoizedmethod
     def access_token(self):
         """
         Check user Accelize credential and returns its access token.
@@ -272,31 +273,25 @@ class Configuration(_Mapping):
             apyfal.exceptions.ClientAuthenticationException:
                 User credential are not valid.
         """
-        try:
-            return self._cache['metering_access_token']
-        except KeyError:
-            # Checks Client ID and secret ID presence
-            client_id = self['accelize']['client_id']
-            secret_id = self['accelize']['secret_id']
-            if client_id is None or secret_id is None:
-                raise _exc.ClientAuthenticationException(
-                    gen_msg='no_credentials')
+        # Checks Client ID and secret ID presence
+        client_id = self['accelize']['client_id']
+        secret_id = self['accelize']['secret_id']
+        if client_id is None or secret_id is None:
+            raise _exc.ClientAuthenticationException(
+                gen_msg='no_credentials')
 
-            # Check access and get token from server
-            response = _utl.http_session().post(
-                METERING_SERVER + '/o/token/',
-                data={"grant_type": "client_credentials"},
-                auth=(client_id, secret_id), timeout=self._REQUEST_TIMEOUT)
+        # Check access and get token from server
+        response = _utl.http_session().post(
+            METERING_SERVER + '/o/token/',
+            data={"grant_type": "client_credentials"},
+            auth=(client_id, secret_id), timeout=self._REQUEST_TIMEOUT)
 
-            if response.status_code != 200:
-                raise _exc.ClientAuthenticationException(
-                    'Unable to authenticate client ID starting by "%s"'
-                    % client_id, exc=response.text)
+        if response.status_code != 200:
+            raise _exc.ClientAuthenticationException(
+                'Unable to authenticate client ID starting by "%s"'
+                % client_id[:10], exc=response.text)
 
-            self._cache['metering_access_token'] = _json.loads(
-                response.text)['access_token']
-
-        return self._cache['metering_access_token']
+        return _json.loads(response.text)['access_token']
 
     def get_host_requirements(self, host_type, accelerator):
         """
