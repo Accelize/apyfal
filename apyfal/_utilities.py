@@ -457,7 +457,8 @@ def gen_msg(message_id, *args):
         not_found_named="'%s' not found: %s",
         no_find="Unable to find %s",
         no_find_named="Unable to find %s '%s'",
-        no_host_found='No host found. Please check your configuration.',
+        no_host_found='No host found and no local accelerator available. '
+                      'Please check your configuration.',
         no_instance_ip="Unable to find instance IP",
         no_instance_id="Unable to find instance '%s'",
         no_instance="Unable to find instance",
