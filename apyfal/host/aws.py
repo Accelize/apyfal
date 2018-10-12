@@ -378,7 +378,8 @@ class AWSHost(_CSPHost):
         """
         # Attach role to instance profile
         with _exception_handler(filter_error_codes='LimitExceeded'):
-            with _utl.Timeout(self.TIMEOUT) as timeout:
+            with _utl.Timeout(self.TIMEOUT,
+                              sleep=self._TIMEOUT_SLEEP) as timeout:
                 while True:
                     try:
                         self._iam_client.add_role_to_instance_profile(
@@ -573,7 +574,8 @@ class AWSHost(_CSPHost):
         """
         # Waiting for the instance stop if currently stopping
         if status == self.STATUS_STOPPING:
-            with _utl.Timeout(self.TIMEOUT) as timeout:
+            with _utl.Timeout(self.TIMEOUT,
+                              sleep=self._TIMEOUT_SLEEP) as timeout:
                 while True:
                     # Get instance status
                     status = self._status()

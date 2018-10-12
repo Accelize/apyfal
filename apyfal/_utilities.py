@@ -5,6 +5,7 @@ import abc
 import collections
 from contextlib import contextmanager
 from importlib import import_module
+from ipaddress import ip_network
 import logging
 import os
 import re
@@ -332,15 +333,13 @@ def get_host_public_ip():
     Find current host IP address.
 
     Returns:
-        str: IP address in "XXX.XXX.XXX.XXX/32" format.
+        str: IP address with mask prefix.
     """
-    for api_address in PUBLIC_IP_API:
+    for url in PUBLIC_IP_API:
         try:
-            ip_address = requests.get(api_address).text
-        except requests.exceptions.RequestException:
+            return ip_network(requests.get(url).text).with_prefixlen
+        except (requests.exceptions.RequestException, ValueError):
             continue
-        if ip_address:
-            return "%s/32" % ip_address
     raise OSError('Unable to get public IP address')
 
 

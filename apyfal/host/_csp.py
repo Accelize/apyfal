@@ -438,7 +438,7 @@ class CSPHost(_Host):
         """
         warned = False
         # Waiting for the instance provisioning
-        with _utl.Timeout(self.TIMEOUT) as timeout:
+        with _utl.Timeout(self.TIMEOUT, sleep=self._TIMEOUT_SLEEP) as timeout:
             while True:
                 # Get instance status
                 status = self._status()
@@ -451,7 +451,7 @@ class CSPHost(_Host):
                     raise _exc.HostRuntimeException(
                         gen_msg=('timeout_status', "provisioning", status))
 
-                if not warned:
+                elif not warned:
                     # Avoid to show message if already booted
                     warned = True
                     _get_logger().info("Waiting instance provisioning...")
@@ -467,7 +467,8 @@ class CSPHost(_Host):
             return
 
         _get_logger().info("Waiting instance boot...")
-        if not _utl.check_url(self._url, timeout=self.TIMEOUT):
+        if not _utl.check_url(self._url, timeout=self.TIMEOUT,
+                              sleep=self._TIMEOUT_SLEEP):
             raise _exc.HostRuntimeException(gen_msg=('timeout', "boot"))
 
     def stop(self, stop_mode=None):
@@ -627,13 +628,10 @@ class CSPHost(_Host):
             return
 
         with _srg.open(self._init_script, 'rt') as script:
-            lines = script.read().strip().splitlines()
-
-        if lines[0].startswith("#!"):
-            # Remove shebang
-            lines = lines[1:]
-
-        commands.extend(lines)
+            # Get lines and remove shebang
+            commands.extend([
+                line for line in script.read().strip().splitlines()
+                if not line.startswith("#!")])
 
     def _cat_config_file(self, commands):
         """

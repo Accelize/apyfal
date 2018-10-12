@@ -59,6 +59,21 @@ def test_host_init():
         '_repr': ("<apyfal.host.Host name='prefix_accelize_"
                   "pytest%d_000000000000'>") % index} for index in range(2)]
 
+    # Test: iter_hosts without public ip
+    def _iter_hosts():
+        """dummy iter_host"""
+        for index in range(2):
+            yield dict(
+                host_name='prefix_accelize_pytest%d_000000000000' % index)
+
+    host._iter_hosts = _iter_hosts
+    assert list(host.iter_hosts()) == [{
+        'host_name': 'prefix_accelize_pytest%d_000000000000' % index,
+        'accelerator': 'pytest%d' % index,
+        'host_type': host.host_type,
+        '_repr': ("<apyfal.host.Host name='prefix_accelize_"
+                  "pytest%d_000000000000'>") % index} for index in range(2)]
+
     # Test: iter_hosts host_name_prefix
     prefix = 'prefix'
     host = Host(config=config, host_name_prefix=prefix)

@@ -331,7 +331,7 @@ class OpenStackHost(_CSPHost):
         Returns:
             str: IP address
         """
-        with _utl.Timeout(self.TIMEOUT) as timeout:
+        with _utl.Timeout(self.TIMEOUT, sleep=self._TIMEOUT_SLEEP) as timeout:
             while True:
                 for address in list(
                         self._get_instance().addresses.values())[0]:

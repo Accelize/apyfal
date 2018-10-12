@@ -260,7 +260,7 @@ class AlibabaCSP(_CSPHost):
             dict: Request response.
         """
         instance_id = parameters.pop('InstanceId', self._instance_id)
-        with _utl.Timeout(self.TIMEOUT) as timeout:
+        with _utl.Timeout(self.TIMEOUT, sleep=self._TIMEOUT_SLEEP) as timeout:
             while True:
                 # Tries to execute requests
                 try:

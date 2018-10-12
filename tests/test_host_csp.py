@@ -76,6 +76,7 @@ def get_dummy_csp_class():
     class BaseDummyClass(CSPHost):
         """Base dummy class"""
         NAME = 'Dummy'
+        _TIMEOUT_SLEEP = 0.0
 
         def _get_public_ip(self):
             """Dummy method"""
@@ -335,8 +336,7 @@ def test_csphost_start():
             self.mark_instance_started = True
             return instance, instance_id
 
-        @staticmethod
-        def _get_status():
+        def _get_status(self):
             """Returns fake result"""
             return status
 
@@ -356,10 +356,21 @@ def test_csphost_start():
             return dummy_url
 
     # Mock check_url function
+    check_url_retry = [0]
+
     def dummy_check_url(url, **_):
         """Checks argument and returns fake result"""
         assert url == dummy_url
-        return not raises_on_boot
+
+        # Simulate unable to connect to host
+        if raises_on_boot:
+            return False
+
+        # Simulate not ready on first call
+        if check_url_retry[0] < 1:
+            check_url_retry[0] += 1
+            return False
+        return True
 
     utl_check_url = utl.check_url
     utl.check_url = dummy_check_url
@@ -368,6 +379,31 @@ def test_csphost_start():
     try:
         # Test: start from nothing with success
         csp = DummyClass(**dummy_kwargs)
+        csp.start()
+        assert csp._instance == instance
+        assert csp.instance_id == instance_id
+        assert csp.url == dummy_url
+        assert csp.mark_credential_checked
+        assert csp.mark_key_pair_created
+        assert csp.mark_instance_created
+        assert csp.mark_instance_started
+        assert not csp.mark_instance_terminated
+
+        # Test: Simulate provisioning time
+        status_retry = [0]
+        csp = DummyClass(**dummy_kwargs)
+
+        def _status():
+            """Returns fake result"""
+            if status == csp.STATUS_RUNNING and status_retry[0] < 2:
+                # Simulate time to provision
+                status_retry[0] += 1
+                return 'PROVISIONING'
+            return status
+
+        csp.TIMEOUT = 1
+        csp._status = _status
+
         csp.start()
         assert csp._instance == instance
         assert csp.instance_id == instance_id
@@ -416,6 +452,14 @@ def test_csphost_start():
         assert not csp.mark_instance_started
         assert csp.mark_instance_terminated
 
+        # Test: No special CSP message available
+        del DummyClass.DOC_URL
+        csp = DummyClass(**dummy_kwargs)
+        with pytest.raises(HostException) as exc_info:
+            csp.start()
+            assert csp.DOC_URL not in exc_info
+
+        DummyClass.DOC_URL = 'dummy_csp_help'
         raises_on_start_instance = False
 
         # Test: Fail on instance provisioning

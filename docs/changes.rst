@@ -1,6 +1,14 @@
 Changelog
 =========
 
+1.2.1 (2018/?)
+---------------
+
+General improvements
+
+- Allow user machine public IP to be IPv6.
+- Improve unit tests.
+
 1.2.0 (2018/10)
 ---------------
 
@@ -18,7 +26,7 @@ New features
 General improvements
 
 - Apyfal CLI: ``create`` is now optional if can be called without any arguments,
-  This is mainly indented to use local accelerator directly on host.
+  This is mainly intended to use local accelerator directly on host.
 - It is now possible to use private IP instead of public IP as accelerator
   default URL. See ``use_private_ip`` parameter.
 - Host instance have a new ``Apyfal`` tag/metadata with ``host_name_prefix``

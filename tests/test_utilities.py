@@ -2,9 +2,8 @@
 """apyfal._utilities tests"""
 import time
 
-import requests
-
 import pytest
+import requests
 
 
 def test_timeout():
@@ -34,7 +33,7 @@ def test_get_host_public_ip():
 
     # Test it directly: May fail if no connection
     try:
-        assert _utl.get_host_public_ip()[-3:] == '/32'
+        assert _utl.get_host_public_ip().split('/')[1] in ('32', '128')
     except OSError:
         # May fail on some CI
         pytest.xfail('Unable to get public IP address')

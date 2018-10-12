@@ -243,6 +243,13 @@ def test_accelerator():
         accel.stop()
         raises_on_host_stop = False
 
+        accel = Accelerator(dummy_accelerator, host_type='localhost')
+        assert accel.host is None
+        assert accel.start(
+            src=dummy_src, stop_mode=dummy_stop_mode, info_dict=True,
+            parameters=dummy_accelerator_parameters) == dummy_start_result
+        assert accel.client.url is None
+
     # Restore classes
     finally:
         apyfal.client.AcceleratorClient = accelerator_client_class

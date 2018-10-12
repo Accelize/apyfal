@@ -101,6 +101,7 @@ def test_restclient_start(tmpdir):
         'url': dummy_url_https, 'inerror': False}).encode()
     file_content = b'content'
     src = io.BytesIO(file_content)
+    has_src = True
 
     # Mock some client parts
 
@@ -134,9 +135,12 @@ def test_restclient_start(tmpdir):
             """Checks input arguments and returns fake response"""
             # Checks input parameters
             assert '/configuration' in url
-            stream = data.fields['datafile'][1]
-            stream.seek(0)
-            assert stream.read() == file_content
+            if has_src:
+                stream = data.fields['datafile'][1]
+                stream.seek(0)
+                assert stream.read() == file_content
+            else:
+                assert 'datafile' not in data.fields
             excepted = deepcopy(client._configuration_parameters)
             excepted['app']['reset'] = True
             excepted['app']['reload'] = True
@@ -159,17 +163,23 @@ def test_restclient_start(tmpdir):
     assert client.start(
         datafile=src, info_dict=True, reset=True, reload=True)
 
-    # Test: stream SSL Certificate
-    ssl_crt_bytes = self_signed_certificate(
-        "*", common_name='host_name', country_name='FR')[0]
-    ssl_cert_crt = io.BytesIO(ssl_crt_bytes)
-    client = Client('accelerator', host_ip=dummy_url_https,
-                    accelize_client_id='client', accelize_secret_id='secret',
-                    ssl_cert_crt=ssl_cert_crt)
-    assert client.ssl_cert_crt == ssl_cert_crt
-    assert client.url == dummy_url_https
-    with open(client._session.verify, 'rb') as tmp_cert:
-        assert tmp_cert.read() == ssl_crt_bytes
+    # Test no input file
+    has_src = False
+    assert client.start(info_dict=True, reset=True, reload=True)
+    has_src = True
+
+    # Test: stream SSL Certificate, with DNS and wildcard name
+    for address in ("accelize.com", "*"):
+        ssl_crt_bytes = self_signed_certificate(
+            address, common_name='host_name', country_name='FR')[0]
+        ssl_cert_crt = io.BytesIO(ssl_crt_bytes)
+        client = Client('accelerator', host_ip=dummy_url_https,
+                        accelize_client_id='client', accelize_secret_id='secret',
+                        ssl_cert_crt=ssl_cert_crt)
+        assert client.ssl_cert_crt == ssl_cert_crt
+        assert client.url == dummy_url_https
+        with open(client._session.verify, 'rb') as tmp_cert:
+            assert tmp_cert.read() == ssl_crt_bytes
 
     # Test: File SSL Certificate
     ssl_cert_crt_file = tmpdir.join('certificate.crt')
@@ -313,6 +323,12 @@ def test_restclient_stop():
     assert client.stop(info_dict=True) == response_dict
     assert client._stopped
 
+    # Test: no info dict
+    client = Client('Dummy')
+    assert not client._stopped
+    assert client.stop() is None
+    assert client._stopped
+
     # Test: Auto-stops with context manager
     with Client('Dummy') as client:
         assert not client._stopped
@@ -332,13 +348,18 @@ def test_restclient_process():
     dummy_url = 'https://www.accelize.com'
     datafileresult = 'url/to/file'
     parameters_result = {'app': {'status': 0}}
-    response_json = json.dumps({
+    response_dict = {
         'id': dummy_id, 'parametersresult': parameters_result,
         'datafileresult': datafileresult, 'processed': True,
-        'url': dummy_url, 'inerror': False}).encode()
+        'url': dummy_url, 'inerror': False}
+    response_json = json.dumps(response_dict).encode()
+    response_dict['processed'] = False
+    response_json_not_ready = json.dumps(response_dict).encode()
     file_content = b'content'
     src = io.BytesIO(file_content)
     dst = io.BytesIO()
+    has_src = True
+    processed_retry = [0]
 
     # Mock some client parts
 
@@ -361,7 +382,12 @@ def test_restclient_process():
             response.status_code = 200
 
             if ('/process/%s' % dummy_id) in url:
-                response._content = response_json
+                # Simulate processing not completed
+                if processed_retry[0] < 2:
+                    response._content = response_json_not_ready
+                    processed_retry[0] += 1
+                else:
+                    response._content = response_json
             elif url == datafileresult:
                 response.raw = io.BytesIO(file_content)
                 response.raw.seek(0)
@@ -375,10 +401,13 @@ def test_restclient_process():
             """Checks input arguments and returns fake response"""
             # Checks input parameters
             assert '/process' in url
-            stream = data.fields['datafile'][1]
-            stream.seek(0)
+            if has_src:
+                stream = data.fields['datafile'][1]
+                stream.seek(0)
+                assert stream.read() == file_content
+            else:
+                assert 'datafile' not in data.fields
             assert data.fields['configuration'] == dummy_url
-            assert stream.read() == file_content
             assert json.loads(data.fields['parameters']) == (
                 client._process_parameters)
 
@@ -412,6 +441,19 @@ def test_restclient_process():
     client.process(file_in=src, file_out=dst)
     dst.seek(0)
     assert dst.read() == file_content
+
+    # Test: No Input
+    has_src = False
+    dst.seek(0)
+    client.process(file_out=dst)
+    dst.seek(0)
+    assert dst.read() == file_content
+    has_src = True
+
+    # Test: No Output
+    dst.seek(0)
+    client.process(file_in=src)
+    assert dst.tell() == 0
 
     # Test: run process with info_dict
     dst.seek(0)

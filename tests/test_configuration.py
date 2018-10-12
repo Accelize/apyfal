@@ -424,12 +424,13 @@ def test_legacy_backward_compatibility(tmpdir):
     # Check not overwrite existing with legacy
     key_pair = 'key_pair'
     legacy_conf = {
-        'csp': {'ssh_key': legacy_ssh_key},
-        'host': {'key_pair': key_pair}
+        'csp': {'ssh_key': legacy_ssh_key, 'arg': '0'},
+        'host': {'key_pair': key_pair, 'arg': '1'}
     }
     dumps_config(legacy_conf, config_file)
     config = create_configuration(config_path)
     assert config['host']['key_pair'] == key_pair
+    assert config['host']['arg'] == '1'
 
 
 def test_subsections(tmpdir):

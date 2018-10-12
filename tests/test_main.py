@@ -39,6 +39,10 @@ def test_cached_accelerator(tmpdir):
         assert not cache_dir.join('not_exists').check()
         _cached_accelerator(name='not_exists', action='delete')
 
+        # Invalide Action
+        with pytest.raises(ValueError):
+            _cached_accelerator(name=name, action='not exists')
+
     # Restore cache dir
     finally:
         main._ACCELERATOR_CACHE = old_cache_dir
@@ -153,6 +157,10 @@ def test_get_accelerator(tmpdir):
         with pytest.raises(apyfal.exceptions.AcceleratorException):
             _get_accelerator('Fail_to_create', action='create',
                              parameters=parameters)
+
+        # Pass accelerator
+        assert _get_accelerator(
+            name, action='update', accelerator=accelerator) is accelerator
 
     # Restore cache dir
     finally:
@@ -313,8 +321,13 @@ def test_actions(tmpdir):
         main._action_process(parser, full_parameters.copy())
         main._action_stop(parser, full_parameters.copy())
 
-        # Host without URL
+        # Host without host class
         Accelerator.host = None
+        main._action_create(parser, full_parameters.copy())
+        main._action_start(parser, full_parameters.copy())
+
+        # Host without IP instead of URL
+        Accelerator.host = Host(url='127.0.0.1', key_pair='key_pair')
         main._action_create(parser, full_parameters.copy())
         main._action_start(parser, full_parameters.copy())
 

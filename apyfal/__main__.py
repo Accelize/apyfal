@@ -63,6 +63,8 @@ def _cached_accelerator(name, action, parameters=None):
             remove(cached_file)
         except OSError:
             pass
+    else:
+        raise ValueError('Unknown action "%s"' % action)
 
 
 def _handle_command(func):
