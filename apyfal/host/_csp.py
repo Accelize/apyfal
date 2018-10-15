@@ -630,7 +630,7 @@ class CSPHost(_Host):
         with _srg.open(self._init_script, 'rt') as script:
             # Get lines and remove shebang
             commands.extend([
-                line for line in script.read().strip().splitlines()
+                line.rstrip() for line in script.read().strip().splitlines()
                 if not line.startswith("#!")])
 
     def _cat_config_file(self, commands):
