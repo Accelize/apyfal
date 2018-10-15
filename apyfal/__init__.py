@@ -27,7 +27,8 @@ if (_py[0] < 2) or (_py[0] == 2 and _py[1] < 7) or (_py[0] == 3 and _py[1] < 4):
     from sys import version
     raise ImportError('Python %s is not supported by Apyfal' % version)
 
-from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor, \
+    wait as _wait
 
 import apyfal.host as _hst
 import apyfal.client as _clt
@@ -88,6 +89,7 @@ class Accelerator(_AbstractAsyncAccelerator):
         # Initialize some variables
         self._cache = {}
         self._tasks_count = 0
+        self._tasks = set()
 
         # Initialize configuration
         config = _cfg.create_configuration(config)
@@ -191,16 +193,23 @@ class Accelerator(_AbstractAsyncAccelerator):
         """
         return self._tasks_count
 
-    def _set_task_done(self, _):
+    def _set_task_done(self, future):
         """
         Remove task from running count.
 
         Only for use as callback.
 
         Args:
-            _ (concurrent.futures.Future): Ignored future from callback.
+            future (concurrent.futures.Future): Calling future.
         """
         self._tasks_count -= 1
+        self._tasks.discard(future)
+
+    def _wait_completed(self):
+        """
+        Wait async tasks are completed or cancelled.
+        """
+        _wait(self._tasks.copy())
 
     def start(self, stop_mode=None, src=None, info_dict=False,
               host_env=None, reload=None, reset=None, **parameters):
@@ -333,6 +342,7 @@ class Accelerator(_AbstractAsyncAccelerator):
 
         # Keeps track of running tasks (Or planned in queue)
         self._tasks_count += 1
+        self._tasks.add(future)
         future.add_done_callback(self._set_task_done)
 
         # Returns future
@@ -356,6 +366,9 @@ class Accelerator(_AbstractAsyncAccelerator):
                 stop operation. Take a look to accelerator documentation for
                 more information.
         """
+        # Waits all tasks are completed before allowing to stop accelerator
+        self._wait_completed()
+
         # Updates stop mode
         if self._host is not None:
             self._host.stop_mode = stop_mode

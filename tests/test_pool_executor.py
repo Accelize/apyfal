@@ -119,6 +119,9 @@ def test_accelerator_pool_executor():
             self.process_running_count = 0
             self.running = False
 
+        def _wait_completed(self):
+            """Do Nothing"""
+
         def start(self, **kwargs):
             """Checks arguments and return fake result"""
             self.running = True

@@ -6,8 +6,17 @@ Changelog
 
 General improvements
 
-- Allow user machine public IP to be IPv6.
 - Improve unit tests.
+- Improve user public IP handling.
+
+Fixes:
+
+- ``Accelerator`` and ``AcceleratorPoolExecutor`` now waits completion of all
+  asynchronous tasks (From ``process_submit`` or ``process_map``) before exiting
+  using ``stop``.
+  This avoid the accelerator or the host to be stopped before the end of tasks
+  if ``with`` statement exited or Accelerator garbage collected when tasks
+  are still running.
 
 1.2.0 (2018/10)
 ---------------

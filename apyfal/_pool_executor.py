@@ -53,8 +53,7 @@ class _AbstractAsyncAccelerator(ABC):
                 process operation.
 
         Returns:
-            generator of concurrent.futures.Future: Future object representing
-                execution.
+            generator: Results.
 
         Raises:
             concurrent.futures.TimeoutError: "timeout" reached on at least one
@@ -312,6 +311,10 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
             list: List of "Accelerator.stop" results if "info_dict", else
                 list of Futures objects.
         """
+        # Waits all tasks are completed before allowing to stop accelerator
+        for worker in self._workers:
+            worker._wait_completed()
+
         with ThreadPoolExecutor(max_workers=self._workers_count) as executor:
             futures = [executor.submit(
                 worker.stop, stop_mode=stop_mode, info_dict=info_dict)
