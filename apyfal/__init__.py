@@ -26,6 +26,7 @@ from sys import version_info as _py
 if (_py[0] < 2) or (_py[0] == 2 and _py[1] < 7) or (_py[0] == 3 and _py[1] < 4):
     from sys import version
     raise ImportError('Python %s is not supported by Apyfal' % version)
+del _py
 
 from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor, \
     wait as _wait
