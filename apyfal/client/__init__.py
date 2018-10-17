@@ -193,7 +193,7 @@ class AcceleratorClient(_utl.ABC):
 
         # Handle files
         with self._data_file(
-                src, parameters, 'src', mode='rb') as src:
+                src, parameters, ('src', 'datafile'), mode='rb') as src:
             # Starts
             response = self._start(src, parameters)
 
@@ -265,9 +265,9 @@ class AcceleratorClient(_utl.ABC):
 
         # Handle files
         with self._data_file(
-                src, parameters, 'src', mode='rb') as src:
+                src, parameters, ('src', 'file_in'), mode='rb') as src:
             with self._data_file(
-                    dst, parameters, 'dst', mode='wb') as dst:
+                    dst, parameters, ('dst', 'file_out'), mode='wb') as dst:
                 # Processes
                 response = self._process(src, dst, parameters)
 
@@ -450,13 +450,19 @@ class AcceleratorClient(_utl.ABC):
         Args:
             url (str or file-like object): Input URL.
             parameters (dict): Parameters dict.
-            parameter_name (str): Parameter name for input URL.
+            parameter_name (str or tuple of str): Parameter name for input URL.
             mode (str): Access mode. 'r' or 'w'.
 
         Returns:
             str or file-like object or None:
                 Local version of input path.
         """
+        # Apyfal 1.1.0 Compatibility
+        if isinstance(parameter_name, tuple):
+            parameter_name, ap110_name = parameter_name
+        else:
+            ap110_name = parameter_name
+
         # No URL
         if url is None:
             # Get URL from parameters if not provided directly
@@ -465,8 +471,13 @@ class AcceleratorClient(_utl.ABC):
 
             # Still no URL, yields directly
             except KeyError:
-                yield None
-                return
+
+                # Apyfal 1.1.0 Compatibility
+                url = parameters['app']['specific'].pop(ap110_name, None)
+                if url is None:
+
+                    yield None
+                    return
 
         # Gets scheme and path from URL
         scheme, path = _srg.parse_url(url, not self.REMOTE)
@@ -496,6 +507,11 @@ class AcceleratorClient(_utl.ABC):
         # yields None to client
         if self.REMOTE and scheme not in ('stream', 'file'):
             parameters['app']['specific'][parameter_name] = url
+
+            # Apyfal 1.1.0 Compatibility
+            if ap110_name != parameter_name:
+                parameters['app']['specific'][ap110_name] = url
+
             yield None
 
         # Other case, yields file in expected format (file or stream)

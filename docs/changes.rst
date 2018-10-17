@@ -1,22 +1,20 @@
 Changelog
 =========
 
-1.2.1 (2018/?)
+1.2.1 (2018/10)
 ---------------
-
-General improvements
-
-- Improve unit tests.
-- Improve user public IP handling.
 
 Fixes:
 
+- Fix broken input and output data on some accelerators when using cloud
+  storage.
 - ``Accelerator`` and ``AcceleratorPoolExecutor`` now waits completion of all
   asynchronous tasks (From ``process_submit`` or ``process_map``) before exiting
   using ``stop``.
   This avoid the accelerator or the host to be stopped before the end of tasks
   if ``with`` statement exited or Accelerator garbage collected when tasks
   are still running.
+- Improve user public IP handling.
 
 1.2.0 (2018/10)
 ---------------
