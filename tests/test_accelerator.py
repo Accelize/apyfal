@@ -87,14 +87,14 @@ def test_accelerator():
         def _process(self, *_):
             """Do Nothing"""
 
-        def start(self, src=None, host_env=None, info_dict=True,
+        def start(self, src=None, host_env=None, info_dict=None,
                   reset=False, reload=False, **parameters):
             """Checks arguments and returns fake result"""
             assert src == dummy_src
             assert parameters == {'parameters': dummy_accelerator_parameters}
             return dummy_start_result
 
-        def stop(self, info_dict=True, **_):
+        def stop(self, **_):
             """Returns fake result"""
             DummyClient.running = False
 
@@ -104,7 +104,7 @@ def test_accelerator():
 
             return dummy_stop_result
 
-        def process(self, src=None, dst=None, info_dict=True,
+        def process(self, src=None, dst=None, info_dict=None,
                     **parameters):
             """Checks arguments and returns fake result"""
             assert parameters == {'parameters': dummy_accelerator_parameters}
@@ -173,19 +173,19 @@ def test_accelerator():
 
         # Start
         assert accel.start(
-            src=dummy_src, stop_mode=dummy_stop_mode, info_dict=True,
+            src=dummy_src, stop_mode=dummy_stop_mode, info_dict=None,
             parameters=dummy_accelerator_parameters) == dummy_start_result
         assert accel.client.url == dummy_url
 
         # Process
         assert accel.process(
-            src=dummy_src, dst=dummy_dst, info_dict=True,
+            src=dummy_src, dst=dummy_dst, info_dict=None,
             parameters=dummy_accelerator_parameters) == dummy_process_result
 
         # Async Process
         process_duration = 0.05
         future = accel.process_submit(
-            src=dummy_src, dst=dummy_dst, info_dict=True,
+            src=dummy_src, dst=dummy_dst, info_dict=None,
             parameters=dummy_accelerator_parameters
             )
         assert accel.process_running_count == 1
@@ -195,7 +195,7 @@ def test_accelerator():
 
         # Stop
         assert accel.stop(stop_mode=dummy_stop_mode,
-                          info_dict=True) == dummy_stop_result
+                          info_dict=None) == dummy_stop_result
         assert not DummyClient.running
         assert not DummyHost.running
 
@@ -246,7 +246,7 @@ def test_accelerator():
         accel = Accelerator(dummy_accelerator, host_type='localhost')
         assert accel.host is None
         assert accel.start(
-            src=dummy_src, stop_mode=dummy_stop_mode, info_dict=True,
+            src=dummy_src, stop_mode=dummy_stop_mode, info_dict=None,
             parameters=dummy_accelerator_parameters) == dummy_start_result
         assert accel.client.url is None
 

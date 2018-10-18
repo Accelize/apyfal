@@ -14,7 +14,7 @@ def test_abstract_async_accelerator_process_map():
     # Mocks sub class
     files_in = []
     files_out = []
-    process_kwargs = dict(arg='arg', info_dict=True, parameters='parameters')
+    process_kwargs = dict(arg='arg', info_dict=None, parameters='parameters')
     process_duration = 0.0
 
     class AsyncAccelerator(_AbstractAsyncAccelerator):

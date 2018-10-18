@@ -298,8 +298,7 @@ class Accelerator(_AbstractAsyncAccelerator):
 
         # Process file with accelerator
         process_result = self._client.process(
-            src=src, dst=dst,
-            info_dict=info_dict or _enable_logger, **parameters)
+            src=src, dst=dst, info_dict=info_dict, **parameters)
 
         if _enable_logger:
             self._log_profiling_info(info_dict)

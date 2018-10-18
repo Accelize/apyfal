@@ -274,7 +274,6 @@ class AcceleratorClient(_utl.ABC):
 
         # Update info dict
         if info_dict is not None and response:
-            print(1)
             _utl.recursive_update(info_dict, response)
 
         # Returns result

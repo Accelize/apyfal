@@ -15,7 +15,7 @@ class _AbstractAsyncAccelerator(ABC):
     """
 
     @abstractmethod
-    def process_submit(self, src=None, dst=None, info_dict=False,
+    def process_submit(self, src=None, dst=None, info_dict=None,
                        **parameters):
         """
 
@@ -242,7 +242,7 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
                 for worker in self._workers]
         return [future.result() for future in as_completed(futures)]
 
-    def process_submit(self, src=None, dst=None, info_dict=False,
+    def process_submit(self, src=None, dst=None, info_dict=None,
                        **parameters):
         """
         Schedules the process operation to be executed and returns a Future
