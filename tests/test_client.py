@@ -50,6 +50,9 @@ def test_acceleratorclient_get_parameters(tmpdir):
     class DummyClient(AcceleratorClient):
         """Dummy Client"""
 
+        def __del__(self):
+            """Do nothing"""
+
         def _start(self, *_):
             """Do nothing"""
 
@@ -130,6 +133,9 @@ def test_data_file(tmpdir):
             self._stopped = False
             self._cache = {'tmp_dir': str(tmpdir)}
             self._authorized_host_dirs = [str(authorized_dir)]
+
+        def __del__(self):
+            """Do nothing"""
 
         def _start(self, *_):
             """Do nothing"""
@@ -248,6 +254,9 @@ def test_tmp_dir():
     # Mocks Client
     class DummyClient(AcceleratorClient):
         """Dummy Client"""
+
+        def __del__(self):
+            """Do nothing"""
 
         def _start(self, *_):
             """Do nothing"""

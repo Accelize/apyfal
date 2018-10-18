@@ -312,27 +312,50 @@ def test_restclient_stop():
             self._cache['_session'] = Session()
             self._url = 'https://www.accelize.com'
 
+            self.call__stop = False
+            self.call_stop = False
+
         def _is_alive(self):
             """Raise on demand"""
             if not is_alive:
                 raise ClientRuntimeException()
 
+        def _stop(self, *arg, **kwargs):
+            """Mark as called"""
+            self.call__stop = True
+            return RESTClient._stop(self, *arg, **kwargs)
+
+        def stop(self, *arg, **kwargs):
+            """Mark as called"""
+            self.call_stop = True
+            return RESTClient.stop(self, *arg, **kwargs)
+
     # Test: AcceleratorClient to stop
     client = Client('Dummy')
-    assert not client._stopped
-    assert client.stop(info_dict=True) == response_dict
-    assert client._stopped
+    assert not client.call__stop
+    response = client.stop(info_dict=True)
+    assert client.call__stop
+    assert response == response_dict
 
     # Test: no info dict
     client = Client('Dummy')
-    assert not client._stopped
+    assert not client.call__stop
     assert client.stop() is None
-    assert client._stopped
+    assert client.call__stop
 
     # Test: Auto-stops with context manager
     with Client('Dummy') as client:
-        assert not client._stopped
-    assert client._stopped
+        assert not client.call__stop
+        assert not client.call_stop
+    assert client.call_stop
+    assert not client.call__stop
+
+    with Client('Dummy') as client:
+        client._stopped = True
+        assert not client.call__stop
+        assert not client.call_stop
+    assert not client.call_stop
+    assert not client.call__stop
 
     # Test: No accelerator to stop
     is_alive = False

@@ -91,6 +91,8 @@ class Accelerator(_AbstractAsyncAccelerator):
         self._cache = {}
         self._tasks_count = 0
         self._tasks = set()
+        self._cleaning_up = False
+        self._stopped = False
 
         # Initialize configuration
         config = _cfg.create_configuration(config)
@@ -140,10 +142,18 @@ class Accelerator(_AbstractAsyncAccelerator):
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.stop()
+        self.__del__()
 
     def __del__(self):
-        self.stop()
+        if self._stopped:
+            return
+
+        self._stopped = True
+        self._cleaning_up = True
+        try:
+            self.stop()
+        finally:
+            self._cleaning_up = False
 
     def __str__(self):
         return "<%s.%s client=(%s) host=(%s)>" % (
@@ -379,7 +389,8 @@ class Accelerator(_AbstractAsyncAccelerator):
         try:
             return self._client.stop(
                 info_dict=info_dict,
-                full_stop=False if stop_mode == 'keep' else True)
+                full_stop=False if (stop_mode == 'keep' and self._cleaning_up)
+                else True)
 
         except (AttributeError, _exc.ClientException):
             return None

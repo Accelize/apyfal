@@ -73,6 +73,7 @@ class Host(_utl.ABC):
         self._cache = {}
         self._accelerator = None
         self._stop_mode = None
+        self._stopped = False
         self._config_env = {}
         self._config_section = 'host.%s' % self.NAME if self.NAME else 'host'
         self._host_name = None
@@ -96,9 +97,12 @@ class Host(_utl.ABC):
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.stop()
+        self.__del__()
 
     def __del__(self):
+        if self._stopped:
+            return
+        self._stopped = True
         self.stop()
 
     def __str__(self):

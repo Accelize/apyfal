@@ -1,6 +1,14 @@
 Changelog
 =========
 
+1.2.2 (2018/?)
+---------------
+
+Fixes:
+
+- Improve ``stop`` behavior depending if run by user or by garbage collector or
+  ``with`` exit.
+
 1.2.1 (2018/10)
 ---------------
 

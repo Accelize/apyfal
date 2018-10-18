@@ -117,9 +117,12 @@ class AcceleratorClient(_utl.ABC):
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.stop(full_stop=False)
+        self.__del__()
 
     def __del__(self):
+        if self._stopped:
+            # Avoid double call with __exit__ + __del__
+            return
         self.stop(full_stop=False)
 
     def __str__(self):
@@ -170,6 +173,8 @@ class AcceleratorClient(_utl.ABC):
                 configuration operation. Take a look accelerator documentation
                 for more information.
         """
+        self._stopped = False
+
         _get_logger().info("Configuring accelerator...")
 
         # "datafile" backward compatibility
@@ -317,9 +322,6 @@ class AcceleratorClient(_utl.ABC):
                 stop operation. Take a look to accelerator documentation for
                 more information.
         """
-        if self._stopped:
-            # Avoid double call with __exit__ + __del__
-            return
         self._stopped = True
 
         # Stops

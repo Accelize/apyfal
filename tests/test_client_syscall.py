@@ -215,6 +215,9 @@ def test_syscall_client_run_executable():
             self._stopped = False
             self._accelerator_lock = Lock()
 
+        def __del__(self):
+            """Do nothing"""
+
     syscall_call = syscall._call
     syscall._call = dummy_call
     syscall._remove = dummy_remove
