@@ -222,7 +222,7 @@ class Accelerator(_AbstractAsyncAccelerator):
         """
         _wait(self._tasks.copy())
 
-    def start(self, stop_mode=None, src=None, info_dict=False,
+    def start(self, stop_mode=None, src=None, info_dict=None,
               host_env=None, reload=None, reset=None, **parameters):
         """
         Starts and/or configure an accelerator.
@@ -235,8 +235,6 @@ class Accelerator(_AbstractAsyncAccelerator):
                 accelerator, a configuration data need to be loaded before
                 a process can be run.
                 Path-like object can be path, URL or cloud object URL.
-            info_dict (bool): If True, returns a dict containing information on
-                configuration operation.
             parameters (str, path-like object or dict):
                 Accelerator configuration specific
                 parameters Can also be a full configuration parameters
@@ -248,13 +246,9 @@ class Accelerator(_AbstractAsyncAccelerator):
                 Path-like object can be path, URL or cloud object URL.
             reload (bool): Force reload of FPGA bitstream.
             reset (bool): Force reset of FPGA logic.
+            info_dict (dict or None): If a dict passed, this dict is updated
+                with extra information from operation.
             host_env (dict): Overrides Accelerator "env".
-
-        Returns:
-            dict: Optional, only if "info_dict" is True. AcceleratorClient
-                response. AcceleratorClient contain output information from
-                configuration operation. Take a look to accelerator
-                documentation for more information.
         """
         if self._host is not None:
             # Start host if needed (Do nothing if already started)
@@ -271,7 +265,7 @@ class Accelerator(_AbstractAsyncAccelerator):
             src=src, host_env=host_env or dict(), info_dict=info_dict,
             reload=reload, reset=reset, **parameters)
 
-    def process(self, src=None, dst=None, info_dict=False,
+    def process(self, src=None, dst=None, info_dict=None,
                 **parameters):
         """
         Processes with accelerator.
@@ -292,17 +286,15 @@ class Accelerator(_AbstractAsyncAccelerator):
                 dictionary values. Take a look to accelerator documentation for
                 more information on possible parameters.
                 Path-like object can be path, URL or cloud object URL.
-            info_dict (bool): If True, returns a dict containing information on
-                process operation.
+            info_dict (dict or None): If a dict passed, this dict is updated
+                with extra information from current operation.
 
         Returns:
-            dict: Result from process operation, depending used accelerator.
-            dict: Optional, only if "info_dict" is True. AcceleratorClient
-                response. AcceleratorClient contain output information from
-                process operation. Take a look accelerator documentation for
-                more information.
+            Result from process operation, depending used accelerator.
         """
         _enable_logger = _get_logger().isEnabledFor(20)
+        if _enable_logger and info_dict is None:
+            info_dict = dict()
 
         # Process file with accelerator
         process_result = self._client.process(
@@ -310,12 +302,10 @@ class Accelerator(_AbstractAsyncAccelerator):
             info_dict=info_dict or _enable_logger, **parameters)
 
         if _enable_logger:
-            # Logger case
-            self._log_profiling_info(process_result)
-            return process_result if info_dict else process_result[0]
+            self._log_profiling_info(info_dict)
         return process_result
 
-    def process_submit(self, src=None, dst=None, info_dict=False,
+    def process_submit(self, src=None, dst=None, info_dict=None,
                        **parameters):
         """
         Schedules the process operation to be executed and returns a Future
@@ -339,8 +329,9 @@ class Accelerator(_AbstractAsyncAccelerator):
                 dictionary values. Take a look to accelerator documentation for
                 more information on possible parameters.
                 Path-like object can be path, URL or cloud object URL.
-            info_dict (bool): If True, returns a dict containing information on
-                process operation.
+            info_dict (dict or None): If a dict passed, this dict is updated
+                with extra information from current operation.
+                The dict will be updated on task completion.
 
         Returns:
             concurrent.futures.Future: Future object representing execution.
@@ -359,7 +350,7 @@ class Accelerator(_AbstractAsyncAccelerator):
         # Returns future
         return future
 
-    def stop(self, stop_mode=None, info_dict=False):
+    def stop(self, stop_mode=None, info_dict=None):
         """
         Stop accelerator session and accelerator host depending of the
         parameters
@@ -368,14 +359,8 @@ class Accelerator(_AbstractAsyncAccelerator):
             stop_mode (str or int): Host stop mode. If not None, override
                 current "stop_mode" value. See "apyfal.host.Host.stop_mode"
                 property for more information and possible values.
-            info_dict (bool): If True, returns a dict containing information on
-                stop operation.
-
-        Returns:
-            dict: Optional, only if "info_dict" is True. AcceleratorClient
-                response. AcceleratorClient contain output information from
-                stop operation. Take a look to accelerator documentation for
-                more information.
+            info_dict (dict or None): If a dict passed, this dict is updated
+                with extra information from current operation.
         """
         # Waits all tasks are completed before allowing to stop accelerator
         self._wait_completed()
@@ -429,17 +414,17 @@ class Accelerator(_AbstractAsyncAccelerator):
         return host_type, is_local
 
     @staticmethod
-    def _log_profiling_info(process_result):
+    def _log_profiling_info(info_dict):
         """
         Shows profiling and specific information in logger.
 
         Args:
-            process_result (dict): result from AcceleratorClient.process
+            info_dict (dict): info_dict from AcceleratorClient.process
         """
         # Handle profiling info
         try:
-            profiling = process_result[1]['app']['profiling']
-        except KeyError:
+            profiling = info_dict['app']['profiling']
+        except (KeyError, TypeError):
             return None
 
         logger = _get_logger()

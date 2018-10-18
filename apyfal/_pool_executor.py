@@ -24,8 +24,7 @@ class _AbstractAsyncAccelerator(ABC):
         See "apyfal.Accelerator.process" for more information.
         """
 
-    def process_map(self, srcs=None, dsts=None, info_dict=False,
-                    timeout=None, **parameters):
+    def process_map(self, srcs=None, dsts=None, timeout=None, **parameters):
         """
         Map process execution on multiples files.
 
@@ -49,8 +48,6 @@ class _AbstractAsyncAccelerator(ABC):
                 dictionary values. Take a look to accelerator documentation for
                 more information on possible parameters.
                 Path-like object can be path, URL or cloud object URL.
-            info_dict (bool): If True, returns a dict containing information on
-                process operation.
 
         Returns:
             generator: Results.
@@ -90,8 +87,7 @@ class _AbstractAsyncAccelerator(ABC):
             if size_dst:
                 dst = dsts[index]
 
-            futures.append(self.process_submit(
-                src=src, dst=dst, info_dict=info_dict, **parameters))
+            futures.append(self.process_submit(src=src, dst=dst, **parameters))
 
         def result_iterator():
             """
@@ -210,8 +206,8 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
         """
         return [worker.host for worker in self._workers]
 
-    def start(self, stop_mode=None, src=None, info_dict=False, host_env=None,
-              reload=None, reset=None, **parameters):
+    def start(self, stop_mode=None, src=None, host_env=None, reload=None,
+              reset=None, **parameters):
         """
         Starts and/or configure all accelerators in the pool.
 
@@ -223,8 +219,6 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
                 accelerator, a configuration data need to be loaded before
                 a process can be run.
                 Path-like object can be path, URL or cloud object URL.
-            info_dict (bool): If True, returns a dict containing information on
-                configuration operation.
             parameters (str, path-like object or dict):
                 Accelerator configuration specific
                 parameters Can also be a full configuration parameters
@@ -244,8 +238,8 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
         with ThreadPoolExecutor(max_workers=self._workers_count) as executor:
             futures = [executor.submit(
                 worker.start, stop_mode=stop_mode, src=src,
-                info_dict=info_dict, host_env=host_env, reload=reload,
-                reset=reset, **parameters) for worker in self._workers]
+                host_env=host_env, reload=reload, reset=reset, **parameters)
+                for worker in self._workers]
         return [future.result() for future in as_completed(futures)]
 
     def process_submit(self, src=None, dst=None, info_dict=False,
@@ -272,8 +266,9 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
                 dictionary values. Take a look to accelerator documentation for
                 more information on possible parameters.
                 Path-like object can be path, URL or cloud object URL.
-            info_dict (bool): If True, returns a dict containing information on
-                process operation.
+            info_dict (dict or None): If a dict passed, this dict is updated
+                with extra information from current operation.
+                The dict will be updated on task completion.
 
         Returns:
             concurrent.futures.Future: Future object representing execution.
@@ -289,7 +284,7 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
         return self._workers[index].process_submit(
             src=src, dst=dst, info_dict=info_dict, **parameters)
 
-    def stop(self, stop_mode=None, info_dict=False, wait=True):
+    def stop(self, stop_mode=None, wait=True):
         """
         Signal the executor that it should free any resources that it is using
         when the currently pending futures are done executing. Calls to
@@ -303,8 +298,6 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
             stop_mode (str or int): Host stop mode. If not None, override
                 current "stop_mode" value. See "apyfal.host.Host.stop_mode"
                 property for more information and possible values.
-            info_dict (bool): If True, returns a dict containing information on
-                stop operation.
             wait (bool): Waits stop completion before return.
 
         Returns:
@@ -317,8 +310,7 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
 
         with ThreadPoolExecutor(max_workers=self._workers_count) as executor:
             futures = [executor.submit(
-                worker.stop, stop_mode=stop_mode, info_dict=info_dict)
-                for worker in self._workers]
+                worker.stop, stop_mode=stop_mode) for worker in self._workers]
 
         if wait:
             return [future.result() for future in as_completed(futures)]

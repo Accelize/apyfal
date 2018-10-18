@@ -92,11 +92,11 @@ def test_accelerator_pool_executor():
 
     accelerator = 'accelerator'
     workers_count = 4
-    start_kwargs = dict(src='src', info_dict=False,
+    start_kwargs = dict(src='src',
                         host_env='env', stop_mode='term', reset=None,
                         reload=None)
-    stop_kwargs = dict(info_dict=False, stop_mode=None)
-    process_kwargs = dict(arg='arg', info_dict=False, parameters='parameters',
+    stop_kwargs = dict(stop_mode=None)
+    process_kwargs = dict(arg='arg', info_dict=None, parameters='parameters',
                           src='src', dst='dst')
 
     # Mocks Accelerator

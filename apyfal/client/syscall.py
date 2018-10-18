@@ -151,19 +151,15 @@ class SysCallClient(_Client):
             # Reduces verbosity to minimum by default
             extra_args=['-v4'])
 
-    def _stop(self, info_dict):
+    def _stop(self):
         """
         Client specific stop implementation.
 
-        Args:
-            info_dict (bool): Returns response dict.
-
         Returns:
-            dict or None: response.
+            dict: response.
         """
         try:
-            return self._run_executable(
-                mode='2', output_json=str(_uuid()) if info_dict else None)
+            return self._run_executable(mode='2', output_json=str(_uuid()))
         finally:
             _systemctl('stop', 'meteringsession', 'meteringclient')
 

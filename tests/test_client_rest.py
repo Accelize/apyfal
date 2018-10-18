@@ -156,16 +156,22 @@ def test_restclient_start(tmpdir):
     client._cache['_session'] = Session()
 
     # Test: new configuration
+    info_dict = dict()
     assert client.start(
-        src=src, info_dict=True, reset=True, reload=True)
+        src=src, info_dict=info_dict, reset=True, reload=True) is None
+    assert info_dict
 
     # Test "datafile" backward compatibility
+    info_dict.clear()
     assert client.start(
-        datafile=src, info_dict=True, reset=True, reload=True)
+        datafile=src, info_dict=info_dict, reset=True, reload=True) is None
+    assert info_dict
 
     # Test no input file
+    info_dict.clear()
     has_src = False
-    assert client.start(info_dict=True, reset=True, reload=True)
+    assert client.start(info_dict=info_dict, reset=True, reload=True) is None
+    assert info_dict
     has_src = True
 
     # Test: stream SSL Certificate, with DNS and wildcard name
@@ -333,9 +339,10 @@ def test_restclient_stop():
     # Test: AcceleratorClient to stop
     client = Client('Dummy')
     assert not client.call__stop
-    response = client.stop(info_dict=True)
+    info_dict = dict()
+    assert client.stop(info_dict=info_dict) is None
     assert client.call__stop
-    assert response == response_dict
+    assert info_dict == response_dict
 
     # Test: no info dict
     client = Client('Dummy')
@@ -359,7 +366,9 @@ def test_restclient_stop():
 
     # Test: No accelerator to stop
     is_alive = False
-    assert Client('Dummy').stop(info_dict=True) is None
+    info_dict.clear()
+    assert Client('Dummy').stop(info_dict=info_dict) is None
+    assert not info_dict
 
 
 def test_restclient_process():
@@ -480,8 +489,9 @@ def test_restclient_process():
 
     # Test: run process with info_dict
     dst.seek(0)
-    assert client.process(src=src, dst=dst,
-                          info_dict=True) == (dict(), parameters_result)
+    info_dict = dict()
+    assert client.process(src=src, dst=dst, info_dict=info_dict) is None
+    assert info_dict == parameters_result
     dst.seek(0)
     assert dst.read() == file_content
 

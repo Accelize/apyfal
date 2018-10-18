@@ -142,7 +142,7 @@ class AcceleratorClient(_utl.ABC):
         """
         return self._name
 
-    def start(self, src=None, info_dict=False, host_env=None, reload=None,
+    def start(self, src=None, info_dict=None, host_env=None, reload=None,
               reset=None, **parameters):
         """
         Configures accelerator.
@@ -152,8 +152,6 @@ class AcceleratorClient(_utl.ABC):
                 accelerator, a configuration data need to be loaded before
                 a process can be run.
                 Path-like object can be path, URL or cloud object URL.
-            info_dict (bool): If True, returns a dict containing information on
-                configuration operation.
             parameters (str, path-like object or dict):
                 Accelerator configuration specific
                 parameters Can also be a full configuration parameters
@@ -165,13 +163,9 @@ class AcceleratorClient(_utl.ABC):
                 Path-like object can be path, URL or cloud object URL.
             reload (bool): Force reload of FPGA bitstream.
             reset (bool): Force reset of FPGA logic.
+            info_dict (dict or None): If a dict passed, this dict is updated
+                with extra information from current operation.
             host_env (dict): Overrides Accelerator "env".
-
-        Returns:
-            dict: Optional, only if "info_dict" is True. AcceleratorClient
-                response. AcceleratorClient contain output information from
-                configuration operation. Take a look accelerator documentation
-                for more information.
         """
         self._stopped = False
 
@@ -207,9 +201,9 @@ class AcceleratorClient(_utl.ABC):
 
         _get_logger().info("Accelerator ready")
 
-        # Returns optional response
-        if info_dict:
-            return response
+        # Update info dict
+        if info_dict is not None and response:
+            _utl.recursive_update(info_dict, response)
 
     @_abstractmethod
     def _start(self, src, parameters):
@@ -224,7 +218,7 @@ class AcceleratorClient(_utl.ABC):
             dict: response.
         """
 
-    def process(self, src=None, dst=None, info_dict=False,
+    def process(self, src=None, dst=None, info_dict=None,
                 **parameters):
         """
         Processes with accelerator.
@@ -245,15 +239,11 @@ class AcceleratorClient(_utl.ABC):
                 dictionary values. Take a look to accelerator documentation for
                 more information on possible parameters.
                 Path-like object can be path, URL or cloud object URL.
-            info_dict (bool): If True, returns a dict containing information on
-                process operation.
+            info_dict (dict or None): If a dict passed, this dict is updated
+                with extra information from current operation.
 
         Returns:
-            dict: Result from process operation, depending used accelerator.
-            dict: Optional, only if "info_dict" is True. AcceleratorClient
-                response. AcceleratorClient contain output information from
-                process operation. Take a look accelerator documentation for
-                more information.
+            Result from process operation, depending used accelerator.
         """
         # "file_in", "file_out" backward compatibility
         if not src and not dst:
@@ -280,15 +270,14 @@ class AcceleratorClient(_utl.ABC):
         self._raise_for_status(response, "Processing failed: ")
 
         # Get result from response
-        try:
-            result = response['app']['specific']
-        except KeyError:
-            result = dict()
+        result = response['app'].pop('specific', None)
+
+        # Update info dict
+        if info_dict is not None and response:
+            print(1)
+            _utl.recursive_update(info_dict, response)
 
         # Returns result
-        if info_dict:
-            # Returns it with optional response
-            return result, response
         return result
 
     @_abstractmethod
@@ -305,30 +294,24 @@ class AcceleratorClient(_utl.ABC):
             dict: response.
         """
 
-    def stop(self, info_dict=False, full_stop=True):
+    def stop(self, info_dict=None, full_stop=True):
         """
         Stop accelerator.
 
         Args:
-            info_dict (bool): If True, returns a dict containing information on
-                stop operation.
             full_stop (bool): If True, send stop request to accelerator
                 application. If False only clean up accelerator client
                 environment.
-
-        Returns:
-            dict: Optional, only if "info_dict" is True. AcceleratorClient
-                response. AcceleratorClient contain output information from
-                stop operation. Take a look to accelerator documentation for
-                more information.
+            info_dict (dict or None): If a dict passed, this dict is updated
+                with extra information from current operation.
         """
         self._stopped = True
 
         # Stops
         if full_stop:
-            response = self._stop(info_dict)
-        else:
-            response = dict()
+            response = self._stop()
+            if info_dict is not None and response:
+                _utl.recursive_update(info_dict, response)
 
         # Clears temporary directory
         try:
@@ -339,17 +322,10 @@ class AcceleratorClient(_utl.ABC):
         # Clears cache
         self._cache.clear()
 
-        # Returns optional response
-        if info_dict:
-            return response
-
     @_abstractmethod
-    def _stop(self, info_dict):
+    def _stop(self):
         """
         Client specific stop implementation.
-
-        Args:
-            info_dict (bool): Returns response dict.
 
         Returns:
             dict or None: response.

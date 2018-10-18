@@ -283,26 +283,21 @@ class RESTClient(_Client):
             # Deletes process result on server
             self._session.delete(process_url)
 
-    def _stop(self, info_dict):
+    def _stop(self):
         """
         Client specific stop implementation.
 
-        Args:
-            info_dict (bool): Returns response dict.
-
         Returns:
-            dict or None: response.
+            dict : response.
         """
         try:
             self._is_alive()
         except _exc.ClientRuntimeException:
             # No AcceleratorClient to stop
-            return None
+            return dict()
 
         # Sends stop to server
-        response = self._session.get(self.url + self._REST_API['stop'])
-        if info_dict:
-            return response.json()
+        return self._session.get(self.url + self._REST_API['stop']).json()
 
     @staticmethod
     def _raise_for_error(response):

@@ -521,10 +521,7 @@ def test_syscall_client_start_process_stop():
 
         # Stop
         expected_args = dict(mode='2', output_json=str)
-        assert client._stop(True) == dummy_response
-
-        expected_args = dict(mode='2', output_json=None)
-        assert client._stop(False) is None
+        assert client._stop() == dummy_response
 
     # Restore function
     finally:

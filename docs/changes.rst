@@ -1,6 +1,43 @@
 Changelog
 =========
 
+1.2.3 (2018/??)
+---------------
+
+Backward incompatible changes:
+
+- The ``info_dict`` argument behavior was changed. Previously, using it changed
+  the returned result of methods. To avoid this, ``info_dict`` now waits a
+  ``dict`` to populate with extra information. This argument is mainly intended
+  to get debug or profiling information.
+
+  Previous behavior:
+
+    .. code-block:: python
+
+        # This return only the processing result
+        my_accel.process(dst='data.dat')
+
+        # This return a tuple containing the processing result and the
+        # information dict.
+        my_accel.process(dst='data.dat', info_dict=True)
+
+  New behavior:
+
+    .. code-block:: python
+
+        # This return only the processing result
+        my_accel.process(dst='data.dat')
+
+        # This still return only the processing result.
+        # Information are now stored in the "info" dict.
+        info = dict()
+        my_accel.process(dst='data.dat', info_dict=info)
+
+- The ``info_dict`` argument was removed from ``AcceleratorPoolExecutor.start``,
+  ``AcceleratorPoolExecutor.stop``, ``AcceleratorPoolExecutor.process_map`` and
+  ``Accelerator.process_map`` methods.
+
 1.2.2 (2018/10)
 ---------------
 
