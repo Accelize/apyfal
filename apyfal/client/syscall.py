@@ -161,8 +161,11 @@ class SysCallClient(_Client):
         Returns:
             dict or None: response.
         """
-        return self._run_executable(
-            mode='2', output_json=str(_uuid()) if info_dict else None)
+        try:
+            return self._run_executable(
+                mode='2', output_json=str(_uuid()) if info_dict else None)
+        finally:
+            _systemctl('stop', 'meteringsession', 'meteringclient')
 
     def _run_executable(
             self, mode, input_file=None, output_file=None, input_json=None,
