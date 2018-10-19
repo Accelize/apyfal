@@ -173,19 +173,19 @@ def test_accelerator():
 
         # Start
         assert accel.start(
-            src=dummy_src, stop_mode=dummy_stop_mode, info_dict=None,
+            src=dummy_src, stop_mode=dummy_stop_mode,
             parameters=dummy_accelerator_parameters) == dummy_start_result
         assert accel.client.url == dummy_url
 
         # Process
         assert accel.process(
-            src=dummy_src, dst=dummy_dst, info_dict=None,
+            src=dummy_src, dst=dummy_dst,
             parameters=dummy_accelerator_parameters) == dummy_process_result
 
         # Async Process
         process_duration = 0.05
         future = accel.process_submit(
-            src=dummy_src, dst=dummy_dst, info_dict=None,
+            src=dummy_src, dst=dummy_dst,
             parameters=dummy_accelerator_parameters
             )
         assert accel.process_running_count == 1
@@ -194,8 +194,7 @@ def test_accelerator():
         assert accel.process_running_count == 0
 
         # Stop
-        assert accel.stop(stop_mode=dummy_stop_mode,
-                          info_dict=None) == dummy_stop_result
+        assert accel.stop(stop_mode=dummy_stop_mode) == dummy_stop_result
         assert not DummyClient.running
         assert not DummyHost.running
 
@@ -246,7 +245,7 @@ def test_accelerator():
         accel = Accelerator(dummy_accelerator, host_type='localhost')
         assert accel.host is None
         assert accel.start(
-            src=dummy_src, stop_mode=dummy_stop_mode, info_dict=None,
+            src=dummy_src, stop_mode=dummy_stop_mode,
             parameters=dummy_accelerator_parameters) == dummy_start_result
         assert accel.client.url is None
 

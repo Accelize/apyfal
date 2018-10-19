@@ -126,6 +126,6 @@ Then, run Apyfal CLI to set initial configuration of the FPGA device:
 
 The Accelerator is now ready to use.
 
-.. _boto3.session.Session : https://boto3.amazonaws.com/v1/documentation/api/latest/reference/core/session.html
+.. _boto3.session.Session: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/core/session.html
 .. _boto3.session.Session.client: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/core/session.html#boto3.session.Session.client
 .. _boto3.session.Session.resource('ec2').create_instances: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
