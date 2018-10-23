@@ -152,7 +152,14 @@ class RESTClient(_Client):
     def _configuration_url(self):
         """Last configuration URL"""
         # Get last configuration, if any
-        response = self._session.get(self._endpoints['start'])
+        try:
+            endpoint = self._endpoints['start']
+        except KeyError:
+            raise _exc.ClientConfigurationException(
+                'Unknown host URL, please run accelerator "start" method.')
+
+        response = self._session.get(endpoint)
+
         try:
             last_config = response.json()['results'][0]
         except (KeyError, IndexError, ValueError):

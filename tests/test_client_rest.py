@@ -230,6 +230,7 @@ def test_restclient_start(tmpdir):
 def test_restclient_configuration_url():
     """Tests RESTClient._configuration_url"""
     from apyfal.client.rest import RESTClient
+    from apyfal.exceptions import ClientConfigurationException
 
     response_json = None
     url = 'https://www.accelize.com'
@@ -258,6 +259,12 @@ def test_restclient_configuration_url():
 
     client = Client('accelerator')
     client._cache['_session'] = Session()
+
+    # Test: Without URL
+    with pytest.raises(ClientConfigurationException):
+        assert client._configuration_url
+
+    # Test: with URL
     client.url = url
     assert not client._configuration_url
 
