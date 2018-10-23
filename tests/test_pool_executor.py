@@ -14,7 +14,7 @@ def test_abstract_async_accelerator_process_map():
     # Mocks sub class
     files_in = []
     files_out = []
-    process_kwargs = dict(arg='arg', info_dict=None, parameters='parameters')
+    process_kwargs = dict(arg='arg', parameters='parameters')
     process_duration = 0.0
 
     class AsyncAccelerator(_AbstractAsyncAccelerator):
@@ -31,7 +31,8 @@ def test_abstract_async_accelerator_process_map():
 
         def process_submit(self, src=None, dst=None, **kwargs):
             """Checks arguments and returns fake result"""
-            assert kwargs == process_kwargs
+            for key in process_kwargs:
+                assert key in kwargs
             assert src in files_in or (src is None and not files_in)
             assert dst in files_out or (dst is None and not files_out)
             return self._executor.submit(self.run_task)
@@ -92,12 +93,12 @@ def test_accelerator_pool_executor():
 
     accelerator = 'accelerator'
     workers_count = 4
-    start_kwargs = dict(src='src',
-                        host_env='env', stop_mode='term', reset=None,
+    start_kwargs = dict(src='src', host_env='env', stop_mode='term', reset=None,
                         reload=None)
     stop_kwargs = dict(stop_mode=None)
-    process_kwargs = dict(arg='arg', info_dict=None, parameters='parameters',
-                          src='src', dst='dst')
+    process_kwargs = dict(
+        arg='arg', parameters='parameters', src='src', dst='dst')
+    excepted_info_dict = None
 
     # Mocks Accelerator
 
@@ -125,19 +126,29 @@ def test_accelerator_pool_executor():
         def start(self, **kwargs):
             """Checks arguments and return fake result"""
             self.running = True
+            kwargs = kwargs.copy()
+            assert kwargs.pop('info_dict') == excepted_info_dict
             assert kwargs == start_kwargs
             return True
 
         def process_submit(self, **kwargs):
             """Checks arguments and return fake result"""
-            assert kwargs == process_kwargs
+            kwargs = kwargs.copy()
+            assert kwargs.pop('info_dict') == excepted_info_dict
+            for key in process_kwargs:
+                assert key in kwargs
             self.process_running_count += 1
             return Future()
 
         def stop(self, **kwargs):
             """Checks arguments and return fake result"""
             self.running = False
-            assert kwargs == stop_kwargs
+            kwargs = kwargs.copy()
+            info_dict = kwargs.pop('info_dict')
+            if kwargs.get('stop_mode') == 'check_info_dict':
+                assert info_dict == excepted_info_dict
+            else:
+                assert kwargs == stop_kwargs
             return True
 
     apyfal_accelerator = apyfal.Accelerator
@@ -202,6 +213,26 @@ def test_accelerator_pool_executor():
                 assert acc.running
         for acc in pool.accelerators:
             assert not acc.running
+
+        # Info dict
+        excepted_info_dict = dict()
+        pool = apyfal.AcceleratorPoolExecutor(workers_count=workers_count)
+
+        info_list = []
+        pool.start(info_list=info_list, **start_kwargs)
+        assert info_list == workers_count * [dict()]
+
+        info_list = []
+        del process_kwargs['src']
+        del process_kwargs['dst']
+        pool.process_map(srcs=[''] * 10, info_list=info_list, **process_kwargs)
+        assert info_list == 10 * [dict()]
+
+        info_list = []
+        pool.stop(info_list=info_list,
+                  stop_mode='check_info_dict',  # avoid check on __del__
+                  )
+        assert info_list == workers_count * [dict()]
 
     # Restores mocked class
     finally:

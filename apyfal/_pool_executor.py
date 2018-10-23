@@ -24,7 +24,8 @@ class _AbstractAsyncAccelerator(ABC):
         See "apyfal.Accelerator.process" for more information.
         """
 
-    def process_map(self, srcs=None, dsts=None, timeout=None, **parameters):
+    def process_map(self, srcs=None, dsts=None, timeout=None, info_list=None,
+                    **parameters):
         """
         Map process execution on multiples files.
 
@@ -48,6 +49,9 @@ class _AbstractAsyncAccelerator(ABC):
                 dictionary values. Take a look to accelerator documentation for
                 more information on possible parameters.
                 Path-like object can be path, URL or cloud object URL.
+            info_list (list): If a list passed, this list is updated
+                with "info_dict" extra information dicts for each process
+                operation.
 
         Returns:
             generator: Results.
@@ -87,7 +91,9 @@ class _AbstractAsyncAccelerator(ABC):
             if size_dst:
                 dst = dsts[index]
 
-            futures.append(self.process_submit(src=src, dst=dst, **parameters))
+            futures.append(self.process_submit(
+                src=src, dst=dst, info_dict=self._get_info_dict(info_list),
+                **parameters))
 
         def result_iterator():
             """
@@ -108,6 +114,23 @@ class _AbstractAsyncAccelerator(ABC):
                     future.cancel()
 
         return result_iterator()
+
+    @staticmethod
+    def _get_info_dict(info_list):
+        """
+        Return info dict and append it in info list.
+
+        Args:
+            info_list (list or None): info list
+
+        Returns:
+            dict or None: info_dict
+        """
+        if info_list is not None:
+            info_dict = dict()
+            info_list.append(info_dict)
+            return info_dict
+        return None
 
 
 class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
@@ -207,7 +230,7 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
         return [worker.host for worker in self._workers]
 
     def start(self, stop_mode=None, src=None, host_env=None, reload=None,
-              reset=None, **parameters):
+              reset=None, info_list=None, **parameters):
         """
         Starts and/or configure all accelerators in the pool.
 
@@ -231,6 +254,8 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
             reload (bool): Force reload of FPGA bitstream.
             reset (bool): Force reset of FPGA logic.
             host_env (dict): Overrides Accelerator "env".
+            info_list (list): If a list passed, this list is updated
+                with "info_dict" extra information dicts for each accelerator.
 
         Returns:
             list: List of "Accelerator.start" results.
@@ -238,7 +263,8 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
         with ThreadPoolExecutor(max_workers=self._workers_count) as executor:
             futures = [executor.submit(
                 worker.start, stop_mode=stop_mode, src=src,
-                host_env=host_env, reload=reload, reset=reset, **parameters)
+                host_env=host_env, reload=reload, reset=reset,
+                info_dict=self._get_info_dict(info_list), **parameters)
                 for worker in self._workers]
         return [future.result() for future in as_completed(futures)]
 
@@ -284,7 +310,7 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
         return self._workers[index].process_submit(
             src=src, dst=dst, info_dict=info_dict, **parameters)
 
-    def stop(self, stop_mode=None, wait=True):
+    def stop(self, stop_mode=None, wait=True, info_list=None):
         """
         Signal the executor that it should free any resources that it is using
         when the currently pending futures are done executing. Calls to
@@ -299,6 +325,8 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
                 current "stop_mode" value. See "apyfal.host.Host.stop_mode"
                 property for more information and possible values.
             wait (bool): Waits stop completion before return.
+            info_list (list): If a list passed, this list is updated
+                with "info_dict" extra information dicts for each accelerator.
 
         Returns:
             list: List of "Accelerator.stop" results if "info_dict", else
@@ -310,7 +338,9 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
 
         with ThreadPoolExecutor(max_workers=self._workers_count) as executor:
             futures = [executor.submit(
-                worker.stop, stop_mode=stop_mode) for worker in self._workers]
+                worker.stop, stop_mode=stop_mode,
+                info_dict=self._get_info_dict(info_list))
+                for worker in self._workers]
 
         if wait:
             return [future.result() for future in as_completed(futures)]

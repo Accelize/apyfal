@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.2.3 (2018/??)
+1.2.3 (2018/10)
 ---------------
 
 Backward incompatible changes:
@@ -34,9 +34,10 @@ Backward incompatible changes:
         info = dict()
         my_accel.process(dst='data.dat', info_dict=info)
 
-- The ``info_dict`` argument was removed from ``AcceleratorPoolExecutor.start``,
+- The ``info_dict`` argument from ``AcceleratorPoolExecutor.start``,
   ``AcceleratorPoolExecutor.stop``, ``AcceleratorPoolExecutor.process_map`` and
-  ``Accelerator.process_map`` methods.
+  ``Accelerator.process_map`` methods is replaced by ``info_list`` and wait a
+  ``list`` to populate instead of a ``dict``.
 
 1.2.2 (2018/10)
 ---------------
