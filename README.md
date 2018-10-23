@@ -3,6 +3,7 @@
 [![codecov](https://codecov.io/gh/Accelize/apyfal/branch/master/graph/badge.svg)](https://codecov.io/gh/Accelize/apyfal)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/b67c9a1cf17e443290b0191a7970c3d1)](https://www.codacy.com/app/Accelize/apyfal?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Accelize/apyfal&amp;utm_campaign=Badge_Grade)
 [![Documentation Status](https://readthedocs.org/projects/apyfal/badge/?version=latest)](https://apyfal.readthedocs.io/en/latest/?badge=latest)
+[![PyPI](https://img.shields.io/pypi/v/apyfal.svg)](https://pypi.org/project/apyfal)
 
 # Overview
 
