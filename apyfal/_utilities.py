@@ -240,7 +240,7 @@ def handle_request_exceptions(exc_type):
 
 
 def check_url(url, timeout=0.0, max_retries=3, sleep=0.5,
-              request_timeout=2.0):
+              request_timeout=2.0, raise_for_status=None):
     """
     Checking if an URL is up and running.
 
@@ -253,6 +253,9 @@ def check_url(url, timeout=0.0, max_retries=3, sleep=0.5,
         max_retries (int): Number of tries per connexion attempt.
         sleep (float): Period between connexion attempt in seconds.
         request_timeout (float): Single request timeout in seconds
+        raise_for_status (Exception subclass):
+            Raise this exception if URL reached but server in error
+            (HTTP code >= 500).
 
     Returns:
         bool: True if success, False elsewhere
@@ -261,6 +264,7 @@ def check_url(url, timeout=0.0, max_retries=3, sleep=0.5,
     logger = logging.getLogger(requests.packages.urllib3.__package__)
     logger_level = logger.level
     logger.setLevel(logging.ERROR)
+    response = None
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
 
@@ -269,12 +273,21 @@ def check_url(url, timeout=0.0, max_retries=3, sleep=0.5,
             with Timeout(timeout, sleep=sleep) as timeout:
                 while True:
                     try:
-                        http_session(max_retries=max_retries, verify=False).get(
-                            url, timeout=request_timeout).raise_for_status()
+                        response = http_session(
+                            max_retries=max_retries, verify=False).get(
+                            url, timeout=request_timeout)
+                        response.raise_for_status()
                         return True
                     except requests.RequestException:
                         pass
                     if timeout.reached():
+                        # Raise exception if URL exists, but server in error.
+                        if (raise_for_status and response and
+                                response.status_code >= 500):
+                            raise raise_for_status(
+                                '%s Server Error: %s for url: %s' % (
+                                    response.status_code, response.reason,
+                                    response.url))
                         return False
 
     # Restore urllib3 verbosity

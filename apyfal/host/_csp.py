@@ -6,6 +6,7 @@ from contextlib import contextmanager as _contextmanager
 from concurrent.futures import (ThreadPoolExecutor as _ThreadPoolExecutor,
                                 as_completed as _as_completed)
 import os.path as _os_path
+from time import sleep as _sleep
 try:
     # Python 2
     from StringIO import StringIO as _StringIO
@@ -394,7 +395,8 @@ class CSPHost(_Host):
             _get_logger().info("Host ready")
 
         # If URL exists, checks if reachable
-        elif not _utl.check_url(self._url):
+        elif not _utl.check_url(self._url,
+                                raise_for_status=_exc.HostRuntimeException):
             raise _exc.HostRuntimeException(
                 gen_msg=('unable_reach_url', self._url))
 
@@ -467,8 +469,10 @@ class CSPHost(_Host):
             return
 
         _get_logger().info("Waiting instance boot...")
+        _sleep(self._TIMEOUT_SLEEP)
         if not _utl.check_url(self._url, timeout=self.TIMEOUT,
-                              sleep=self._TIMEOUT_SLEEP):
+                              sleep=self._TIMEOUT_SLEEP,
+                              raise_for_status=_exc.HostRuntimeException):
             raise _exc.HostRuntimeException(gen_msg=('timeout', "boot"))
 
     def stop(self, stop_mode=None):
