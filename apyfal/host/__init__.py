@@ -246,7 +246,8 @@ class Host(_utl.ABC):
         """
 
     def _set_accelerator_requirements(
-            self, accelerator=None, accel_parameters=None):
+            self, accelerator=None, accel_parameters=None,
+            request_to_server=True):
         """
         Configures instance with accelerator client parameters.
 
@@ -256,27 +257,26 @@ class Host(_utl.ABC):
             accelerator (str): Name of the accelerator
             accel_parameters (dict): Can override parameters from accelerator
                 client.
+            request_to_server (bool): If True, get parameters from server.
 
         Raises:
             apyfal.exceptions.HostConfigurationException:
                 Parameters are not valid..
         """
         # Gets parameters
-        parameters = dict()
-        if accelerator is not None:
+        self._config_env = dict()
+        if accelerator is not None and request_to_server:
             _utl.recursive_update(
-                parameters, self._config.get_host_requirements(
+                self._config_env, self._config.get_host_requirements(
                     self._host_type, accelerator))
 
         if accel_parameters is not None:
             _utl.recursive_update(
-                parameters, _deepcopy(accel_parameters))
+                self._config_env, _deepcopy(accel_parameters))
 
         # Gets accelerator name
-        self._accelerator = parameters.pop('accelerator')
-
-        # Gets parameters for current region
-        self._config_env = parameters
+        self._accelerator = self._config_env.pop(
+            'accelerator', None) or accelerator
 
     def get_configuration_env(self, **config_env):
         """
@@ -373,15 +373,21 @@ class Host(_utl.ABC):
                 '<Prefix>_accelize_<AcceleratorName>_<DateTime>'"""
         if self._host_name is None:
 
+            if self._accelerator:
+                # Name is based on accelerator Name
+                # '@' is used in some testing configurations but is a
+                # forbidden character for name on some host types
+                accelerator = self._accelerator.replace('@', '_')
+            else:
+                accelerator = ''
+
             self._host_name = '_'.join(
                 name for name in (
                     # Add user and "accelize" prefix
                     self._host_name_prefix, 'accelize',
 
-                    # Name is based on accelerator Name
-                    # '@' is used in some testing configurations but is a
-                    # forbidden character for name on some host types
-                    self._accelerator.replace('@', '_'),
+                    # Accelerator name
+                    accelerator,
 
                     # Add date and time to have unique name
                     _datetime.now().strftime('%y%m%d%H%M%S')) if name)

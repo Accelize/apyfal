@@ -339,7 +339,8 @@ class CSPHost(_Host):
         Initialize CSP security group.
         """
 
-    def start(self, accelerator=None, accel_parameters=None, stop_mode=None):
+    def start(self, accelerator=None, accel_parameters=None, stop_mode=None,
+              image_id=None, instance_type=None):
         """
         Start instance if not already started. Create instance if necessary.
 
@@ -349,6 +350,8 @@ class CSPHost(_Host):
             accelerator (str): Name of the accelerator.
             accel_parameters (dict): Can override parameters from accelerator
                 client.
+            image_id (str): Force the use of specified image ID.
+            instance_type (str): Force the use of specified instance type.
             stop_mode (str or int): See "stop_mode" property for more
                 information.
         """
@@ -359,7 +362,9 @@ class CSPHost(_Host):
         if self._host_ip is None:
 
             # Get parameters from accelerator
-            self._set_accelerator_requirements(accelerator, accel_parameters)
+            self._set_accelerator_requirements(
+                accelerator=accelerator, accel_parameters=accel_parameters,
+                image_id=image_id, instance_type=instance_type)
 
             # Checks CSP credential
             self._check_credential()
@@ -562,7 +567,8 @@ class CSPHost(_Host):
             # Re-raise exception
             raise
 
-    def _set_accelerator_requirements(self, *args, **kwargs):
+    def _set_accelerator_requirements(
+            self, image_id=None, instance_type=None, *args, **kwargs):
         """
         Configures instance with accelerator client parameters.
 
@@ -572,25 +578,33 @@ class CSPHost(_Host):
             accelerator (str): Name of the accelerator
             accel_parameters (dict): Can override parameters from accelerator
                 client.
+            image_id (str): Force the use of specified image ID.
+            instance_type (str): Force the use of specified instance type.
 
         Raises:
             apyfal.exceptions.HostConfigurationException:
                 Parameters are not valid.
         """
-        _Host._set_accelerator_requirements(self, *args, **kwargs)
+        _Host._set_accelerator_requirements(
+            self, request_to_server=not (instance_type and instance_type),
+            *args, **kwargs)
 
         # For CSP, config env are in a region sub category
-        if self._region not in self._config_env.keys():
-            raise _exc.HostConfigurationException(
-                "Region '%s' is not supported. Available regions are: %s" % (
-                    self._region, ', '.join(
-                        region for region in self._config_env
-                        if region != 'accelerator')))
-        self._config_env = self._config_env[self._region]
+        try:
+            self._config_env = self._config_env[self._region]
+        except KeyError:
+            if not image_id or not instance_type:
+                raise _exc.HostConfigurationException(
+                    ("Region '%s' is not supported. "
+                     "Available regions are: %s") % (
+                        self._region, ', '.join(
+                            region for region in self._config_env
+                            if region != 'accelerator')))
 
         # Gets some CSP configuration values from environment
-        self._image_id = self._config_env.pop('image')
-        self._instance_type = self._config_env.pop('instancetype')
+        self._image_id = image_id or self._config_env.pop('image', None)
+        self._instance_type = instance_type or self._config_env.pop(
+            'instancetype', None)
 
     @property
     def _user_data(self):
