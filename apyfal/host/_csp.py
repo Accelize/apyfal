@@ -186,7 +186,9 @@ class CSPHost(_Host):
             apyfal.exceptions.HostRuntimeException:
                 No instance from which get IP.
         """
-        if self._use_private_ip:
+        if self._host_ip is not None:
+            return self._host_ip
+        elif self._use_private_ip:
             return self.private_ip
         return self.public_ip
 
@@ -353,11 +355,11 @@ class CSPHost(_Host):
         # Updates stop mode
         self.stop_mode = stop_mode
 
-        # Get parameters from accelerator
-        self._set_accelerator_requirements(accelerator, accel_parameters)
-
         # Starts instance only if not already started
-        if self._url is None:
+        if self._host_ip is None:
+
+            # Get parameters from accelerator
+            self._set_accelerator_requirements(accelerator, accel_parameters)
 
             # Checks CSP credential
             self._check_credential()
@@ -386,19 +388,19 @@ class CSPHost(_Host):
                 self._wait_instance_ready()
 
             # Update instance URL
+            self._host_ip = self.host_ip
             self._url = _utl.format_url(
-                self.host_ip, force_secure=bool(self._ssl_cert_crt))
+                self._host_ip, force_secure=bool(self._ssl_cert_crt))
 
             # Waiting for the instance to boot
             self._wait_instance_boot()
 
             _get_logger().info("Host ready")
 
-        # If URL exists, checks if reachable
-        elif not _utl.check_url(self._url,
-                                raise_for_status=_exc.HostRuntimeException):
+        # If Host IP exists exists, checks if reachable
+        elif self.ALLOW_PORTS and not _utl.check_port(self.host_ip, 22):
             raise _exc.HostRuntimeException(
-                gen_msg=('unable_reach_url', self._url))
+                gen_msg=('unable_reach_port', self.host_ip, 22))
 
     def _create_instance(self):
         """
@@ -459,20 +461,21 @@ class CSPHost(_Host):
                     _get_logger().info("Waiting instance provisioning...")
 
     def _wait_instance_boot(self):
-        """Waits until instance has booted and webservice is OK
+        """
+        Waits until instance has booted and webservice is OK
 
         Raises:
             apyfal.exceptions.HostRuntimeException:
-                Timeout while booting."""
-        if _utl.check_url(self._url):
-            # Avoid to show message if already booted
+                Timeout while booting.
+        """
+        if not self.ALLOW_PORTS or _utl.check_port(self.host_ip, 22):
+            # Avoid to show message if already booted or not
             return
 
         _get_logger().info("Waiting instance boot...")
         _sleep(self._TIMEOUT_SLEEP)
-        if not _utl.check_url(self._url, timeout=self.TIMEOUT,
-                              sleep=self._TIMEOUT_SLEEP,
-                              raise_for_status=_exc.HostRuntimeException):
+        if not _utl.check_port(self.host_ip, 22, timeout=self.TIMEOUT,
+                               sleep=self._TIMEOUT_SLEEP):
             raise _exc.HostRuntimeException(gen_msg=('timeout', "boot"))
 
     def stop(self, stop_mode=None):

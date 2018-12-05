@@ -276,6 +276,7 @@ def test_csphost_start():
     # Mock variables
     status = 'dummy_status'
     instance = 'dummy_instance'
+    dummy_ip = '127.0.0.1'
     dummy_url = 'http://127.0.0.1'
     instance_id = 'dummy_id'
     raises_on_create_instance = False
@@ -353,14 +354,14 @@ def test_csphost_start():
         @staticmethod
         def _get_public_ip():
             """Marks as executed"""
-            return dummy_url
+            return dummy_ip
 
     # Mock check_url function
     check_url_retry = [0]
 
-    def dummy_check_url(url, **_):
+    def dummy_check_port(address, *_, **__):
         """Checks argument and returns fake result"""
-        assert url == dummy_url
+        assert address == dummy_ip
 
         # Simulate unable to connect to host
         if raises_on_boot:
@@ -372,8 +373,8 @@ def test_csphost_start():
             return False
         return True
 
-    utl_check_url = utl.check_url
-    utl.check_url = dummy_check_url
+    utl_check_port = utl.check_port
+    utl.check_port = dummy_check_port
 
     # Tests
     try:
@@ -521,7 +522,7 @@ def test_csphost_start():
 
     # Restore check_url
     finally:
-        utl.check_url = utl_check_url
+        utl.check_url = utl_check_port
 
 
 def test_csphost_stop(tmpdir):
@@ -718,21 +719,16 @@ def import_from_generic_test(host_type, **kwargs):
         **kwargs)
 
 
-def run_full_real_test_sequence(host_type, environment,
-                                use_full_images=False):
+def run_full_real_test_sequence(host_type, environment):
     """Run common real tests for all CSP.
 
     Args:
         host_type (str): CSP host_type.
         environment (dict): Environment to use
-        use_full_images (bool): If True, uses full
-            images with host application that provides
-            HTTP access.
     """
     from apyfal.configuration import Configuration
     from apyfal.exceptions import AcceleratorException
     from apyfal import iter_accelerators
-    import apyfal._utilities as _utl
 
     # Skip if no correct configuration with this host_type
     config = Configuration()
@@ -767,22 +763,6 @@ def run_full_real_test_sequence(host_type, environment,
     # Add accelerator to environment
     environment['accelerator'] = 'apyfal_testing'
     config['host']['host_name_prefix'] = testing_prefix
-
-    # Mock instance URL check
-    # Since used basic image don't provide HTTP access
-    if not use_full_images:
-
-        def dummy_check_url(_, timeout=0.0, **__):
-            """Don't check URL, only waits if timeout and returns True"""
-            if timeout:
-                time.sleep(60)
-            return True
-
-        utilities_check_url = _utl.check_url
-        _utl.check_url = dummy_check_url
-
-    else:
-        utilities_check_url = None
 
     # Changes Host parameter prefix for default names
     # TODO: replace 'apyfal_testing' by testing_prefix variable once full
@@ -839,10 +819,6 @@ def run_full_real_test_sequence(host_type, environment,
     finally:
         # Restore prefix value
         Host._PARAMETER_PREFIX = host_parameter_prefix
-
-        # Restore check_url
-        if not use_full_images:
-            _utl.check_url = utilities_check_url
 
         # Stops all instances
         time.sleep(5)

@@ -85,7 +85,8 @@ class Host(_utl.ABC):
 
         self._host_type = self._host_type_from_config(host_type, self._config)
 
-        self._url = _utl.format_url(host_ip or section['host_ip'])
+        self._host_ip = host_ip or section['host_ip']
+        self._url = _utl.format_url(self._host_ip)
 
         self.stop_mode = (stop_mode or section['stop_mode'] or
                           ('keep' if host_ip else 'term'))

@@ -11,6 +11,7 @@ import os
 import re
 import sys
 from threading import Lock
+from socket import socket, AF_INET, SOCK_STREAM, SHUT_RDWR
 import time
 
 import requests
@@ -250,8 +251,8 @@ def check_url(url, timeout=0.0, max_retries=3, sleep=0.5,
     Args:
         url (str): URL
         timeout (float): Global timeout value in seconds.
-        max_retries (int): Number of tries per connexion attempt.
-        sleep (float): Period between connexion attempt in seconds.
+        max_retries (int): Number of tries per connection attempt.
+        sleep (float): Period between connection attempt in seconds.
         request_timeout (float): Single request timeout in seconds
         raise_for_status (Exception subclass):
             Raise this exception if URL reached but server in error
@@ -293,6 +294,39 @@ def check_url(url, timeout=0.0, max_retries=3, sleep=0.5,
     # Restore urllib3 verbosity
         finally:
             logger.setLevel(logger_level)
+
+
+def check_port(address, port, timeout=0.0, sleep=0.5, connection_timeout=2.0):
+    """
+    Checking if an port is open on an address.
+
+    Will attempt to connect during "timeout", every "sleep" time
+    with "max_retries" retries per attempt.
+
+    Args:
+        address (str): IP or DNS address.
+        port (int): Port number
+        timeout (float): Global timeout value in seconds.
+        sleep (float): Period between connection attempt in seconds.
+        connection_timeout (float): Single connection timeout in seconds
+
+    Returns:
+        bool: True if success, False elsewhere
+    """
+    with Timeout(timeout, sleep=sleep) as timeout:
+        while True:
+            sock = socket(AF_INET, SOCK_STREAM)
+            sock.settimeout(connection_timeout)
+            try:
+                sock.connect((address, port))
+                sock.shutdown(SHUT_RDWR)
+                return True
+            except OSError:
+                pass
+            finally:
+                sock.close()
+            if timeout.reached():
+                return False
 
 
 def format_url(url_or_ip, force_secure=False):
@@ -487,7 +521,8 @@ def gen_msg(message_id, *args):
         unable_to_named="Unable to %s %s",
         unable_to_status="Unable to %s instance, last status: %s",
         unable_find_from="Unable to find %s '%s', please contact %s.",
-        unable_reach_url="Unable to reach URL '%s'"
+        unable_reach_url="Unable to reach URL '%s'",
+        unable_reach_port="Unable to reach host '%s' on port %s"
     )[message_id]
 
     # Merge arguments

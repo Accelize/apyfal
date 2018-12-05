@@ -1,6 +1,13 @@
 Changelog
 =========
 
+1.2.4 (2018/12)
+---------------
+
+Fixes:
+
+- ``Apyfal.host.Host`` now checks instance boot using port 22 instead of 80.
+
 1.2.3 (2018/10)
 ---------------
 
