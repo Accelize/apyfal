@@ -1,6 +1,15 @@
 Changelog
 =========
 
+1.2.5 (2019/01)
+---------------
+
+Improvements:
+
+- ``Apyfal.aws.AWSHost`` now enable ``DeleteOnTermination`` on all instance
+  block devices by default. This behavior can be disabled and reset to AWS
+  default using the ``delete_volumes_on_termination=False`` argument.
+
 1.2.4 (2018/12)
 ---------------
 

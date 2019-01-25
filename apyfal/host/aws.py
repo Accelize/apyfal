@@ -141,6 +141,9 @@ class AWSHost(_CSPHost):
             not specified). Note that this ssl_cert_key is only safe if other
             client verify it by providing "ssl_cert_crt". No Certificate
             Authority are available to trust this ssl_cert_key.
+        delete_volumes_on_termination (bool): If True, force the volumes
+            deletion on instance termination, else use AWS default behavior
+            (Not deleting volumes except root device). Default to True.
         boto3_session_kwargs (dict): Extra keyword arguments for
             boto3.session.Session
         boto3_client_kwargs (dict): Extra keyword arguments for
@@ -180,18 +183,23 @@ class AWSHost(_CSPHost):
     _INFO_NAMES = _CSPHost._INFO_NAMES.copy()
     _INFO_NAMES.update(['_role', '_policy'])
 
-    def __init__(self, role=None, policy=None, boto3_session_kwargs=None,
+    def __init__(self, role=None, policy=None,
+                 delete_volumes_on_termination=None, boto3_session_kwargs=None,
                  boto3_client_kwargs=None, boto3_create_instances_kwargs=None,
                  **kwargs):
         _CSPHost.__init__(self, **kwargs)
 
         # Get AWS specific arguments
+        section = self._config[self._config_section]
         self._role, self._policy = self._get_role_and_policy(role, policy)
         self._policy_arn = None
         self._instance_profile_name = 'AccelizeLoadFPGA'
+        self._delete_volumes_on_termination = (
+            delete_volumes_on_termination or
+            section.get_literal('delete_volumes_on_termination') or True)
+        self._block_devices = None
 
         # Session, clients and resources are lazy instantiated
-        section = self._config[self._config_section]
         self._boto3_session_kwargs = (
             boto3_session_kwargs or
             section.get_literal('boto3_session_kwargs') or dict())
@@ -464,6 +472,35 @@ class AWSHost(_CSPHost):
         _get_logger().debug(
             _utl.gen_msg('authorized_ip', public_ip, self._security_group))
 
+    def _init_block_device_mappings(self):
+        """
+        Initialize block device mapping
+        """
+        if self._delete_volumes_on_termination:
+            # Get block devices for specified image
+            with _exception_handler():
+                block_devices = self._ec2_resource.Image(
+                    self._image_id).block_device_mappings
+
+            # Configure block devices
+            for block_device in block_devices:
+                ebs = block_device['Ebs']
+
+                # AWS don't allow both SnapshotId and Encrypted values
+                if 'SnapshotId' in ebs and 'Encrypted' in ebs:
+                    del ebs['Encrypted']
+
+                # Force termination if not forced
+                if not ebs.get('DeleteOnTermination', False):
+                    ebs['DeleteOnTermination'] = True
+
+                    _get_logger().debug(
+                        'Enable "DeleteOnTermination" on "%s" volume.',
+                        block_device['DeviceName'])
+
+                    # Pass parameter if at least a disk parameter changed
+                    self._block_devices = block_devices
+
     def _get_instance(self):
         """
         Returns current instance.
@@ -523,7 +560,8 @@ class AWSHost(_CSPHost):
             policy = executor.submit(self._init_policy)
             role = executor.submit(self._init_role)
             instance_profile = executor.submit(self._init_instance_profile)
-            for method in (self._init_key_pair, self._init_security_group):
+            for method in (self._init_key_pair, self._init_security_group,
+                           self._init_block_device_mappings):
                 futures.append(executor.submit(method))
 
             # Wait that role, instance_profile and policy are completed
@@ -557,6 +595,10 @@ class AWSHost(_CSPHost):
                     {'Key': 'Name', 'Value': self._get_host_name()},
                     {'Key': 'Apyfal', 'Value': self._get_tag()}]}],
                 MinCount=1, MaxCount=1, UserData=self._user_data)
+
+        if self._block_devices:
+            kwargs['BlockDeviceMappings'] = self._block_devices
+
         _utl.recursive_update(kwargs, self._boto3_create_instances_kwargs)
 
         # Create instance
