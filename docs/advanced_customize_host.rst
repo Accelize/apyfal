@@ -39,11 +39,11 @@ Example with AWS EC2.
             'InstanceMarketOptions': {
                 'MarketType': 'spot',
                 'SpotOptions': {
-                    'MaxPrice': '0.75',
-                    'SpotInstanceType': 'persistent',
-                    'InstanceInterruptionBehavior': 'stop'
-                }
-            }
+                    'SpotInstanceType': 'one-time',
+                    'InstanceInterruptionBehavior': 'terminate',
+                    }
+                },
+            'InstanceInitiatedShutdownBehavior': 'terminate',
         }
 
        # On Accelerator instantiation, pass the dict to the
