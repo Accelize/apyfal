@@ -1,6 +1,15 @@
 Changelog
 =========
 
+1.2.6 (2019/02)
+---------------
+
+Improvements:
+
+- ``Apyfal.aws.AWSHost``: Fix error with non existing EBS section in block
+  devices.
+
+
 1.2.5 (2019/01)
 ---------------
 
