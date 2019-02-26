@@ -484,7 +484,9 @@ class AWSHost(_CSPHost):
 
             # Configure block devices
             for block_device in block_devices:
-                ebs = block_device['Ebs']
+                ebs = block_device.get('Ebs')
+                if ebs is None:
+                    continue
 
                 # AWS don't allow both SnapshotId and Encrypted values
                 if 'SnapshotId' in ebs and 'Encrypted' in ebs:
