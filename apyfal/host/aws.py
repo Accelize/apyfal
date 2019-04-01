@@ -144,6 +144,10 @@ class AWSHost(_CSPHost):
         delete_volumes_on_termination (bool): If True, force the volumes
             deletion on instance termination, else use AWS default behavior
             (Not deleting volumes except root device). Default to True.
+        spot_instance (bool): If True, use spot instance. Default to True.
+        spot_block_duration (int): Spot instance blocks duration in minutes.
+            Must be multiple of 60, >= 60 and <= 360.
+            If set to None, use AWS default spot block (60 minutes).
         boto3_session_kwargs (dict): Extra keyword arguments for
             boto3.session.Session
         boto3_client_kwargs (dict): Extra keyword arguments for
@@ -176,6 +180,17 @@ class AWSHost(_CSPHost):
             "Effect": "Allow", "Principal": {"Service": "ec2.amazonaws.com"},
             "Action": "sts:AssumeRole"}}
 
+    #: Spot instance configuration
+    SPOT_INSTANCE_MARKET_OPTIONS = {
+        'InstanceMarketOptions': {
+            'MarketType': 'spot',
+            'SpotOptions': {
+                'SpotInstanceType': 'one-time',
+                'InstanceInterruptionBehavior': 'terminate',
+            }
+        }
+    }
+
     STATUS_RUNNING = 'running'
     STATUS_STOPPED = 'stopped'
     STATUS_STOPPING = 'stopping'
@@ -184,7 +199,8 @@ class AWSHost(_CSPHost):
     _INFO_NAMES.update(['_role', '_policy'])
 
     def __init__(self, role=None, policy=None,
-                 delete_volumes_on_termination=None, boto3_session_kwargs=None,
+                 delete_volumes_on_termination=None, spot_instance=None,
+                 spot_block_duration=None,  boto3_session_kwargs=None,
                  boto3_client_kwargs=None, boto3_create_instances_kwargs=None,
                  **kwargs):
         _CSPHost.__init__(self, **kwargs)
@@ -197,6 +213,11 @@ class AWSHost(_CSPHost):
         self._delete_volumes_on_termination = (
             delete_volumes_on_termination or
             section.get_literal('delete_volumes_on_termination') or True)
+        self._spot_instance = (
+                spot_instance or section.get_literal('spot_instance') or True)
+        self._spot_block_duration = (
+                spot_block_duration or section.get_literal(
+            'spot_block_duration'))
         self._block_devices = None
 
         # Session, clients and resources are lazy instantiated
@@ -590,7 +611,7 @@ class AWSHost(_CSPHost):
                 ImageId=self._image_id, InstanceType=self._instance_type,
                 KeyName=self._key_pair, SecurityGroups=[self._security_group],
                 IamInstanceProfile={'Name': 'AccelizeLoadFPGA'},
-                InstanceInitiatedShutdownBehavior='stop',
+                InstanceInitiatedShutdownBehavior='terminate',
                 TagSpecifications=[{'ResourceType': 'instance', 'Tags': [
                     {'Key': 'Generated',
                      'Value': _utl.gen_msg('accelize_generated')},
@@ -600,6 +621,12 @@ class AWSHost(_CSPHost):
 
         if self._block_devices:
             kwargs['BlockDeviceMappings'] = self._block_devices
+
+        if self._spot_instance:
+            _utl.recursive_update(kwargs, self.SPOT_INSTANCE_MARKET_OPTIONS)
+            if self._spot_block_duration:
+                kwargs['InstanceMarketOptions']['SpotOptions'][
+                    'BlockDurationMinutes'] = self._spot_block_duration
 
         _utl.recursive_update(kwargs, self._boto3_create_instances_kwargs)
 
