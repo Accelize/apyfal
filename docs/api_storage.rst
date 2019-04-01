@@ -11,4 +11,3 @@ apyfal.storage
    api_storage_alibaba
    api_storage_aws
    api_storage_openstack
-   api_storage_ovh

@@ -1,6 +1,17 @@
 Changelog
 =========
 
+1.2.7 (2019/04)
+---------------
+
+Deprecations:
+
+- Deprecate OVH support (OVH stopped FPGA support).
+- Warn about Python 3.4 pending deprecation.
+- Remove links to the deprecated AccelStore (Move to the
+  Accelize distribution platform)
+
+
 1.2.6 (2019/02)
 ---------------
 

@@ -96,7 +96,6 @@ You can also install these optional extras:
 -  ``Alibaba``: Requirements for Alibaba.
 -  ``AWS``: Requirements for AWS (Installed by default).
 -  ``OpenStack``: Requirements for OpenStack.
--  ``OVH``: Requirements for OVH.
 
 Example for installing the ``all`` extra:
 

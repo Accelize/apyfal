@@ -17,9 +17,6 @@ and password), which are required to unlock the accelerator:
 
 -  `Accelize credential`_
 
-Your `AccelStore account`_ also provides metering information about your
-accelerator use
-
 Host configuration
 ~~~~~~~~~~~~~~~~~~
 
@@ -69,5 +66,4 @@ See :doc:`api` for more information.
 If both the configuration file and arguments are used to configure an
 accelerator, configuration by arguments override configuration file values.
 
-.. _Accelize credential: https://accelstore.accelize.com/user/applications
-.. _AccelStore account: https://accelstore.accelize.com/user/metering
+.. _Accelize credential: https://drmportal.accelize.com/front/customer/apicredential

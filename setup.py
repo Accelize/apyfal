@@ -40,9 +40,8 @@ PACKAGE_INFO = dict(
     project_urls={
         'Documentation': 'https://apyfal.readthedocs.io',
         'Download': 'https://pypi.org/project/apyfal',
-        'AccelStore': 'https://accelstore.accelize.com',
         'Accelize Website': 'https://www.accelize.com',
-        'Contact': 'https://www.accelize.com/contact',
+        'Contact': 'https://www.accelize.com/contact-us',
     },
     license='Apache License, Version 2.0',
     python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',
@@ -78,10 +77,6 @@ PACKAGE_INFO = dict(
     zip_safe=True,
     command_options={},
     entry_points={'console_scripts': ['apyfal=apyfal.__main__:_run_command']})
-
-# Add OpenStack sub extra:
-PACKAGE_INFO['extras_require']['OVH'] = PACKAGE_INFO[
-    'extras_require']['OpenStack']
 
 # Gets package __version__ from package
 SETUP_DIR = abspath(dirname(__file__))

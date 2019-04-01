@@ -66,10 +66,7 @@ class SysCallClient(_Client):
 
     Args:
         accelize_client_id (str): Accelize Client ID.
-            Client ID is part of the access key generate from
-            "https:/accelstore.accelize.com/user/applications".
-        accelize_secret_id (str): Accelize Secret ID. Secret ID come with
-            client_id.
+        accelize_secret_id (str): Accelize Secret ID.
         host_type (str): Type of the current host.
         region (str): Region of the current host.
         config (apyfal.configuration.Configuration, path-like object or file-like object):

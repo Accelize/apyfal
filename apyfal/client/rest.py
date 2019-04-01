@@ -24,14 +24,9 @@ class RESTClient(_Client):
     Remote Accelerator OpenAPI REST client.
 
     Args:
-        accelerator (str): Name of the accelerator to initialize,
-            to know the accelerator list please visit
-            "https://accelstore.accelize.com".
+        accelerator (str): Name of the accelerator to initialize.
         accelize_client_id (str): Accelize Client ID.
-            Client ID is part of the access key generate from
-            "https:/accelstore.accelize.com/user/applications".
-        accelize_secret_id (str): Accelize Secret ID. Secret ID come with
-            client_id.
+        accelize_secret_id (str): Accelize Secret ID.
         host_ip (str): IP or URL address of the accelerator host.
         ssl_cert_crt (path-like object or file-like object or bool):
             Public ".crt" key file of the SSL ssl_cert_key used by host to

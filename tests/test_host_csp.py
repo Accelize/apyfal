@@ -13,7 +13,7 @@ def test_csphost_new_init():
     from apyfal.configuration import Configuration
     from apyfal.host import Host
     from apyfal.host._csp import CSPHost
-    from apyfal.host.ovh import OVHHost
+    from apyfal.host.aws import AWSHost
     from apyfal.exceptions import HostConfigurationException
 
     # Mock arguments and configuration
@@ -31,7 +31,7 @@ def test_csphost_new_init():
               'config': config}
 
     # Test: Existing CSP class and module
-    assert isinstance(Host(host_type="OVH", **kwargs), OVHHost)
+    assert isinstance(Host(host_type="AWS", **kwargs), AWSHost)
 
     # Test: Not existing CSP module
     with pytest.raises(HostConfigurationException):
@@ -42,19 +42,19 @@ def test_csphost_new_init():
         Host(host_type="_csp")
 
     # Test: direct instantiation of subclass without specify host_type
-    host = OVHHost(**kwargs)
+    host = AWSHost(**kwargs)
 
     # Test: repr
     assert repr(host) == str(host)
 
     # Test: Instantiation with missing mandatory arguments
     with pytest.raises(HostConfigurationException):
-        Host(host_type="OVH", config=config)
+        Host(host_type="AWS", config=config)
 
     kwargs_no_client_id = kwargs.copy()
     del kwargs_no_client_id['client_id']
     with pytest.raises(HostConfigurationException):
-        Host(host_type="OVH", **kwargs_no_client_id)
+        Host(host_type="AWS", **kwargs_no_client_id)
 
     # Test: Abstract class
     class UncompletedCSP(CSPHost):

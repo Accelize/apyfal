@@ -16,7 +16,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-__version__ = "1.2.6"
+__version__ = "1.2.7"
 __copyright__ = "Copyright 2018 Accelize"
 __licence__ = "Apache 2.0"
 __all__ = ['Accelerator', 'AcceleratorPoolExecutor', 'iter_accelerators',
@@ -26,6 +26,10 @@ from sys import version_info as _py
 if (_py[0] < 2) or (_py[0] == 2 and _py[1] < 7) or (_py[0] == 3 and _py[1] < 4):
     from sys import version
     raise ImportError('Python %s is not supported by Apyfal' % version)
+elif _py[0] == 3 and _py[1] == 4:
+    import warnings
+    warnings.warn(
+        "Next Apyfal version will not support Python 3.4.", DeprecationWarning)
 del _py
 
 from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor, \
@@ -52,19 +56,14 @@ class Accelerator(_AbstractAsyncAccelerator):
     Accelerator and its host.
 
     Args:
-        accelerator (str): Name of the accelerator to initialize,
-            to know the accelerator list please visit
-            "https://accelstore.accelize.com".
+        accelerator (str): Name of the accelerator to initialize.
         config (apyfal.configuration.Configuration, path-like object or file-like object):
             If not set, will search it in current working directory,
             in current user "home" folder. If none found, will use default
             configuration values.
             Path-like object can be path, URL or cloud object URL.
         accelize_client_id (str): Accelize Client ID.
-            Client ID is part of the access key generated on
-            "https:/accelstore.accelize.com/user/applications".
-        accelize_secret_id (str): Accelize Secret ID. Secret ID come with
-            xlz_client_id.
+        accelize_secret_id (str): Accelize Secret ID.
         host_type (str): Type of host to use.
         host_ip (str): IP or URL address of an already existing host to use.
             If not specified, create a new host.

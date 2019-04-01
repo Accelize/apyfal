@@ -142,19 +142,14 @@ class AcceleratorPoolExecutor(_AbstractAsyncAccelerator):
     Accelerator and its host.
 
     Args:
-        accelerator (str): Name of the accelerator to initialize,
-            to know the accelerator list please visit
-            "https://accelstore.accelize.com".
+        accelerator (str): Name of the accelerator to initialize.
         config (apyfal.configuration.Configuration, path-like object or file-like object):
             If not set, will search it in current working directory,
             in current user "home" folder. If none found, will use default
             configuration values.
             Path-like object can be path, URL or cloud object URL.
         accelize_client_id (str): Accelize Client ID.
-            Client ID is part of the access key generated on
-            "https:/accelstore.accelize.com/user/applications".
-        accelize_secret_id (str): Accelize Secret ID. Secret ID come with
-            xlz_client_id.
+        accelize_secret_id (str): Accelize Secret ID.
         host_type (str): Type of host to use.
         stop_mode (str or int): Host stop mode.
             Default to 'term' if new host, or 'keep' if already existing host.

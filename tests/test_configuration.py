@@ -367,7 +367,7 @@ def test_configuration_get_requirements_real():
     # Test: Invalid AcceleratorClient name
     with pytest.raises(exc.ClientConfigurationException):
         try:
-            config.get_host_requirements('OVH', 'accelerator_not_exists')
+            config.get_host_requirements('AWS', 'accelerator_not_exists')
         except exc.ClientAuthenticationException:
             pytest.skip("No valid Accelize credential")
             return
@@ -378,7 +378,7 @@ def test_configuration_get_requirements_real():
 
     # Test: Everything OK
     name = 'axonerve_hyperfire'
-    response = config.get_host_requirements('OVH', 'axonerve_hyperfire')
+    response = config.get_host_requirements('AWS', 'axonerve_hyperfire')
     assert response['accelerator'] == name
 
 

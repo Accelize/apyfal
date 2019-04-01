@@ -20,7 +20,7 @@ Some reasons to use Apyfal :
 
 Apyfal provides a variety of accelerated functions.
 
-Browse our web site `AccelStore <https://accelstore.accelize.com>`_, to
+Browse our `Distribution platform <https://drmportal.accelize.com/front/customer/listpurchase>`_, to
 discover them.
 
 **Basic Python code example**
@@ -72,7 +72,6 @@ Features
    api
    cli
    rest
-   accelerator_executable
 
 .. toctree::
    :maxdepth: 2
@@ -85,11 +84,11 @@ Features
    :maxdepth: 2
    :caption: Accelize links
 
-   AccelStore <https://accelstore.accelize.com>
+   Distribution platform <https://drmportal.accelize.com/front/customer/listpurchase>
    Apyfal on GitHub <https://github.com/Accelize/apyfal>
    Apyfal on PyPI <https://pypi.org/project/apyfal>
    Accelize Website <https://www.accelize.com>
-   Contact us <https://www.accelize.com/contact>
+   Contact us <https://www.accelize.com/contact-us>
 
 Indices and tables
 ==================

@@ -21,6 +21,5 @@ Available marks:
     need_csp: Require a CSP to run.
     need_csp_alibaba: Require Alibaba host to run.
     need_csp_aws: Require AWS host to run.
-    need_csp_ovh: Require OVH host to run.
     need_accelize: Require Accelize server
 """

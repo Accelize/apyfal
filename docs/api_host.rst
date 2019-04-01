@@ -11,4 +11,3 @@ apyfal.host
    api_host_alibaba
    api_host_aws
    api_host_openstack
-   api_host_ovh

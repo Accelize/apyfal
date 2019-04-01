@@ -42,13 +42,6 @@ The bucket name needs to be specified just before the file path in URL.
 See :doc:`api_storage` for information available storage services and the scheme
 to use.
 
-Example:
-
-* ``s3://my_bucket/my_file``: File with ``my_file`` key on AWS S3 ``my_bucket``
-  bucket.
-* ``ovh://my_container/my_file``: File with ``my_file`` name on OVH Object Store
-  ``my_container`` container.
-
 The ``host`` scheme
 ~~~~~~~~~~~~~~~~~~~
 

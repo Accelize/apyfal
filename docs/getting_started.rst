@@ -13,7 +13,7 @@ See :doc:`installation` and :doc:`configuration` for more information.
 You also need the name of the accelerator you want to use (The ``accelerator``
 parameter in following example)
 
-See `AccelStore <https://accelstore.accelize.com>`_ for more information.
+See our `distribution platform <https://drmportal.accelize.com/front/customer/listpurchase`_ for more information.
 
 *The examples below use configuration by arguments for clarity,
 but you can also set them using the configuration file.*
@@ -368,6 +368,6 @@ A ``process_map`` function also exists to submit directly iterables to process.
 Metering information
 --------------------
 
-Using Accelerators consumes “coins” based on the amount of processed data.
+Using Accelerators consumes “units” based on your pricing plan.
 You can access your metering information via your
-`AccelStore account <https://accelstore.accelize.com/user/applications>`_.
+`Accelize account <https://drmportal.accelize.com/front/customer/apicredential>`_.

@@ -54,14 +54,10 @@ AWS: How to run more Accelerator instances on AWS ?
     Request an adjustment of the limit of AWS EC2 F1 instances you can launch
     to `AWS support`_ (0 by default).
 
-OVH: How to create access keys ?
-    See "`Configure user access to Horizon`_" on OVH documentation.
-
-.. _contact Accelize: https://www.accelize.com/contact
+.. _contact Accelize: https://www.accelize.com/contact-us
 .. _open an issue on Github: https://github.com/Accelize/apyfal/issues
 .. _venv: https://docs.python.org/3/library/venv.html
 .. _Virtualenv: https://virtualenv.pypa.io
 .. _Pipenv: https://pipenv.readthedocs.io
 .. _Managing Access Keys for IAM Users: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html
 .. _AWS support: http://aws.amazon.com/contact-us/ec2-request
-.. _Configure user access to Horizon: https://docs.ovh.com/ie/en/public-cloud/configure_user_access_to_horizon/

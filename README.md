@@ -21,7 +21,7 @@ Some reasons to use Apyfal :
 
 Apyfal provides a variety of accelerated functions.
 
-Browse our web site [AccelStore](https://accelstore.accelize.com), to discover them.
+Browse our [distribution platform](https://drmportal.accelize.com/front/customer/listpurchase), to discover them.
 
 ## Basic Python code example
 
@@ -57,7 +57,7 @@ pip install apyfal[all]
 ```
 
 # Support and enhancement requests
-[Contact us](https://www.accelize.com/contact) for any support or enhancement request.
+[Contact us](https://www.accelize.com/contact-us) for any support or enhancement request.
 
 
 # Footnotes
