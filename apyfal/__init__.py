@@ -23,13 +23,9 @@ __all__ = ['Accelerator', 'AcceleratorPoolExecutor', 'iter_accelerators',
            'get_logger']
 
 from sys import version_info as _py
-if (_py[0] < 2) or (_py[0] == 2 and _py[1] < 7) or (_py[0] == 3 and _py[1] < 4):
+if (_py[0] < 2) or (_py[0] == 2 and _py[1] < 7) or (_py[0] == 3 and _py[1] < 5):
     from sys import version
     raise ImportError('Python %s is not supported by Apyfal' % version)
-elif _py[0] == 3 and _py[1] == 4:
-    import warnings
-    warnings.warn(
-        "Next Apyfal version will not support Python 3.4.", DeprecationWarning)
 del _py
 
 from concurrent.futures import ThreadPoolExecutor as _ThreadPoolExecutor, \

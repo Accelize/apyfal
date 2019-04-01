@@ -27,7 +27,6 @@ PACKAGE_INFO = dict(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
@@ -44,7 +43,7 @@ PACKAGE_INFO = dict(
         'Contact': 'https://www.accelize.com/contact-us',
     },
     license='Apache License, Version 2.0',
-    python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',
+    python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*',
     install_requires=[
         'requests>=2.9.0',
         'requests_toolbelt>=0.7.1',

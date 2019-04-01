@@ -11,6 +11,10 @@ Improvements:
   Spot block duration can be specified using the ``spot_block_duration``
   parameter.
 
+Deprecations:
+
+- Python 3.4 support is deprecated.
+
 1.2.7 (2019/04)
 ---------------
 
