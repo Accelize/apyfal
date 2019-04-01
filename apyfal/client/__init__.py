@@ -166,14 +166,6 @@ class AcceleratorClient(_utl.ABC):
 
         _get_logger().info("Configuring accelerator...")
 
-        # "datafile" backward compatibility
-        if not src:
-            import warnings
-            warnings.warn(
-                '"datafile" argument is replaced by "src" and '
-                'will be deprecated in future.', PendingDeprecationWarning)
-            src = parameters.pop('datafile', None)
-
         # Configure start
         parameters = self._get_parameters(
             parameters, self._configuration_parameters)
@@ -240,16 +232,6 @@ class AcceleratorClient(_utl.ABC):
         Returns:
             Result from process operation, depending used accelerator.
         """
-        # "file_in", "file_out" backward compatibility
-        if not src and not dst:
-            import warnings
-            warnings.warn(
-                '"file_in" and "file_out" arguments are replaced by "src" and '
-                '"dst" and will be deprecated in future.',
-                PendingDeprecationWarning)
-            src = parameters.pop('file_in', None)
-            dst = parameters.pop('file_out', None)
-
         # Configures processing
         parameters = self._get_parameters(parameters, self._process_parameters)
 
