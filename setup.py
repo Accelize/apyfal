@@ -45,7 +45,7 @@ PACKAGE_INFO = dict(
     license='Apache License, Version 2.0',
     python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*',
     install_requires=[
-        'requests>=2.9.0',
+        'requests>=2.20.0',
         'requests_toolbelt>=0.7.1',
         'pycosio>1.0.0',
         'cryptography>=2.1',
