@@ -1,20 +1,6 @@
 Changelog
 =========
 
-2.0.0 (2019/XX)
----------------
-
-Improvements:
-
-- ``Apyfal.aws.AWSHost`` now support and use of spot instances by default.
-  This can be disabled with the ``spot_instance=False`` parameter.
-  Spot block duration can be specified using the ``spot_block_duration``
-  parameter.
-
-Deprecations:
-
-- Python 3.4 support is deprecated.
-
 1.2.7 (2019/04)
 ---------------
 

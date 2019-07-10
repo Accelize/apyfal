@@ -403,9 +403,9 @@ class CSPHost(_Host):
             _get_logger().info("Host ready")
 
         # If Host IP exists exists, checks if reachable
-        elif self.ALLOW_PORTS and not _utl.check_port(self.host_ip, 22):
+        elif self.ALLOW_PORTS and not _utl.check_port(self.host_ip, 80):
             raise _exc.HostRuntimeException(
-                gen_msg=('unable_reach_port', self.host_ip, 22))
+                gen_msg=('unable_reach_port', self.host_ip, 80))
 
     def _create_instance(self):
         """
@@ -473,13 +473,13 @@ class CSPHost(_Host):
             apyfal.exceptions.HostRuntimeException:
                 Timeout while booting.
         """
-        if not self.ALLOW_PORTS or _utl.check_port(self.host_ip, 22):
+        if not self.ALLOW_PORTS or _utl.check_port(self.host_ip, 80):
             # Avoid to show message if already booted or not
             return
 
         _get_logger().info("Waiting instance boot...")
         _sleep(self._TIMEOUT_SLEEP)
-        if not _utl.check_port(self.host_ip, 22, timeout=self.TIMEOUT,
+        if not _utl.check_port(self.host_ip, 80, timeout=self.TIMEOUT,
                                sleep=self._TIMEOUT_SLEEP):
             raise _exc.HostRuntimeException(gen_msg=('timeout', "boot"))
 
