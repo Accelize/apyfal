@@ -1,8 +1,4 @@
-## This project is deprecated
-
-Please look at [Accelpy](https://github.com/Accelize/accelpy) if you are looking
-for FPGA based application provisioning.
-
+:warning: **This project is cancelled and unmaintened**
 
 ### Repository content
 
